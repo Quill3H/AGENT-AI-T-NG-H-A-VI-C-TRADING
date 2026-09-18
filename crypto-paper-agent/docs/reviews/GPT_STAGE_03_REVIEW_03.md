@@ -50,7 +50,7 @@ NewsCalendarFilter giữ enabled=True, events=[], log warning; gate trả (True,
 Review 02 đã yêu cầu readiness/giả định rõ; implementation mới chỉ xử lý enabled mismatch.
 Sửa:
 - Thêm trạng thái nạp lịch/readiness + lý do lỗi, phân biệt 'đã nạp lịch hợp lệ và không có sự kiện tại thời điểm này' với 'không nạp được lịch'.
-- Khi news disabled=False? Quy ước chính xác: news_filter.enabled=false => bypass như hiện tại. enabled=true và missing/unreadable/malformed calendar => gate reject NOT_READY/CALENDAR_LOAD_ERROR.
+- Quy ước: news_filter.enabled=false => bypass như hiện tại. enabled=true và missing/unreadable/malformed calendar => gate reject NOT_READY/CALENDAR_LOAD_ERROR.
 - Không dùng events=[] đơn thuần làm readiness. Lịch hợp lệ rỗng cần policy tường minh; fixture unit test có events do test inject cần khởi tạo readiness hợp lệ qua giao diện/fixture rõ ràng, không chỉ bật enabled.
 - File calendar thiếu cột/parse lỗi cần trạng thái chất lượng rõ. Không im lặng skip dòng HIGH lỗi rồi tuyên bố fully ready; tối thiểu reject lịch không đủ hợp lệ cho policy strict, ghi lý do.
 - Ghi rõ coverage/giả định của lịch thủ công nếu cần; không yêu cầu nguồn tin API mới.
