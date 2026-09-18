@@ -19,8 +19,8 @@
 - **Giai đoạn 3:** Anti sửa qua ba vòng. Code cuối đã kiểm tra: `44014393a2ed6dba7188096a6d1de600daa972d0`.
 - **GPT Review 04:** đạt kiểm tra kỹ thuật G1–G3 và hồi quy offline đã thực thi; khuyến nghị nghiệm thu, người dùng đã yêu cầu tiếp tục Giai đoạn 4. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_03_REVIEW_04.md`.
 - **Phê duyệt người dùng:** sau kết luận Review 04, người dùng đã yêu cầu tạo prompt để tiếp tục giai đoạn tiếp theo. Giai đoạn 3 được chấp thuận theo phạm vi Review 04; cho phép Antigravity triển khai riêng Giai đoạn 4 theo task dưới đây.
-- **Giai đoạn 4 — Paper Execution Engine:** Antigravity đã hoàn thành triển khai mã nguồn (`src/execution/order_models.py`, `src/execution/paper_broker.py`, `src/execution/__init__.py`), 17 unit/integration tests mới (`tests/test_execution_models.py`, `tests/test_execution_accounting.py`, `tests/test_paper_broker.py`, `tests/test_execution_no_lookahead.py`), kịch bản mô phỏng (`scripts/simulate_paper_execution.py`), ADR 0007, và Báo cáo tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_GIAI_DOAN_4.md`. Toàn bộ 175 tests (170 offline + 5 network) pass 100%. Đã đối soát kế toán khớp từng bit với bài toán Oracle (10,038.88 USD).
-- **Trạng thái hiện tại:** Antigravity đã hoàn tất Giai đoạn 4, commit và push lên GitHub. DỪNG CHỜ GPT REVIEW (Review 05). Tuyệt đối chưa bắt đầu Giai đoạn 5.
+- **Giai đoạn 4 — Paper Execution Engine:** code được reviewer kiểm tra tại `e4cb87b975d3404fbe73b31281d1d9697522cce0`. **CHƯA NGHIỆM THU theo GPT Review 05**: tám nhóm E1–E8 về funding, collateral/liquidation, rolling breaker/forced exits, equity stale, admission/lifecycle, thời gian transactional, exit/stop/finalize và config validation. Tác giả báo 175/175 pass; reviewer xác minh 168 passed, 2 skipped, 5 network deselected. Bộ 26 probes riêng: **24 failed, 2 passed**. Oracle LONG và demo synthetic cơ bản đạt; real-cache demo chưa reviewer xác minh vì thiếu cache.
+- **Trạng thái hiện tại:** cần Anti sửa E1–E8 theo `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_05.md` và task Giai đoạn 4. Bộ probes: `crypto-paper-agent/docs/reviews/test_stage_04_review_05.py`. Sau sửa/tests/commit/push dừng chờ Review 06. Chưa cho phép Giai đoạn 5.
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -29,7 +29,7 @@ Các đường dẫn dưới đây tính từ gốc repository:
 1. `crypto-paper-agent/PROJECT_STATE.md`: quyết định, checklist, giới hạn đã ghi nhận.
 2. `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`: đặc tả; đọc phần tương ứng giai đoạn đang làm.
 3. `crypto-paper-agent/docs/decisions/`: ADR 0001–0006 và phụ lục.
-4. `crypto-paper-agent/docs/reviews/GPT_STAGE_03_REVIEW_04.md`: kết luận review mới nhất.
+4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_05.md`: review mới nhất và prompt sửa E1–E8. Review 04 là kết luận Giai đoạn 3 đã được chấp thuận.
    Task tiếp theo: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`.
 5. `crypto-paper-agent/CHANGELOG.md` và code/tests tại commit thực tế.
 6. `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/`: báo cáo triển khai của Anti.
@@ -62,7 +62,7 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `d121cf6449599c71867dfbe3db5b7808094587f4` | Review 02 | F1–F5: ngân sách khai báo, malformed input/margin, admission/news, đồng hồ breaker, solver ngoài bracket. Anti sửa tại 2f3bc30 |
 | `2f3bc30709fa3e24ccb0a0ebbc7823f0ef779522` | Review 03 | G1–G3: config/multiplier NaN, gate lùi thời gian crash, enabled news thiếu lịch vẫn pass. Anti sửa tại 4401439 |
 | `44014393a2ed6dba7188096a6d1de600daa972d0` | Review 04 | Các tái hiện G1–G3 và hồi quy độc lập đạt; người dùng đã yêu cầu tiếp tục Giai đoạn 4 |
-| `HEAD` (Stage 4) | Review 05 | Triển khai hoàn tất Stage 4 (Paper Execution Engine), Oracle 10,038.88 USD, 175/175 tests pass; DỪNG CHỜ GPT REVIEW |
+| `e4cb87b975d3404fbe73b31281d1d9697522cce0` | Review 05 | Chưa đạt: E1–E8, probes 24 failed/2 passed; cần sửa Giai đoạn 4, không sang 5 |
 
 Review 02/03 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006 ghi quyết định risk qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
 
