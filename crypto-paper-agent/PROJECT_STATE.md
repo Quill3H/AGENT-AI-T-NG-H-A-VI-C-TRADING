@@ -16,8 +16,7 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO PHẠM VI GPT REVIEW 04 tại code `4401439`; reviewer xác minh 151 passed, 2 skipped, 5 network deselected + 9 kiểm thử độc lập đạt; tác giả báo 158/158 trên môi trường riêng. Người dùng đã yêu cầu tiếp tục Giai đoạn 4.)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`; ĐÃ GIAO TASK, ĐƯỢC PHÉP TRIỂN KHAI, CHƯA REVIEW. Đọc `docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`; hoàn tất phải dừng chờ GPT review, chưa được sang Giai đoạn 5.)
+- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN THÀNH TRIỂN KHAI, ĐỐI SOÁT VÀ TEST 175/175 PASS; DỪNG CHỜ GPT REVIEW. Tuyệt đối chưa được sang Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
@@ -51,10 +50,16 @@
     - **G1:** Validate nghiêm ngặt `math.isfinite` và kiểu dữ liệu cho `config.risk` (`max_leverage`, `min_liquidation_buffer_pct`, `conviction_tiers`), `fees.taker_pct` và trạng thái `cb_state.risk_multiplier` (trong $(0, 1.0]$ và khớp trạng thái hợp lệ). Chặn đứng việc vô hiệu hóa so sánh buffer do `NaN` hoặc ngầm fallback 1.0 nhận full rủi ro.
     - **G2:** Phát hiện và chặn lùi thời gian tại cổng (`admission_time < cb_state.current_timestamp`) bằng mã lỗi `INVARIANT_FAIL_TIME_REVERSAL`, không gọi component gây unhandled exception, bảo toàn nguyên vẹn đồng hồ và trạng thái Breaker.
     - **G3:** Kiểm soát trạng thái sẵn sàng (`is_ready: bool`, `load_error`) của `NewsCalendarFilter` khi `enabled = True`. Từ chối lệnh nếu thiếu file hoặc lịch bị hỏng schema/timestamp; phân biệt rõ với lịch rỗng hợp lệ (Tham chiếu: Phụ lục 2 ADR 0006).
+14. **Kiến trúc Paper Execution Engine & Quy trình 5 Pha Chống Nhìn Trước (ADR 0007):**
+    - Mô hình Linear USDT-Margined Isolated Futures.
+    - 5 pha bất biến: Open Time & Gap Exits -> Funding Settlement -> Pending Market Entry & Risk Gate -> Intrabar Protection (Liquidation > SL > TP) -> Close Time & Mark-to-Market.
+    - Hạch toán kế toán chuẩn xác từng bit (Oracle test pass 100%), đối soát tự động sau mỗi nến.
+    - Tích hợp 2 chiều với Circuit Breaker (khóa 24h khi lỗ ngày 5%, giảm 50% risk sau 3 thua, phục hồi sau 3 thắng).
+    - Ràng buộc tối đa 1 vị thế/symbol, thắt chặt SL một chiều (tightening only) (Tham chiếu: ADR 0007).
 
 ---
 
-## 3. BẢN ĐỒ CÁC FILE QUAN TRỌNG VÀ VAI TRÒ
+## 3. BẢN ĐỒ CÁC FILE QUAN TRỌNG VAI TRÒ
 
 | Đường dẫn File | Vai trò chính |
 | :--- | :--- |
@@ -74,7 +79,11 @@
 | `src/risk/invariant_checks.py` | Tra MMR tier từ brackets, giải P_liq nhất quán theo Tier, kiểm tra Hard Invariants và đối soát margin. |
 | `src/risk/circuit_breakers.py` | Quản lý Circuit Breaker, khóa 24h khi lỗ 5%, giảm 50% risk, phục hồi after_3_wins, làm sạch đầu vào. |
 | `src/risk/__init__.py` | Export module và các hàm tiện ích của Risk Manager. |
+| `src/execution/order_models.py` | Enums và dataclasses cho Paper Execution (OrderRequest, Position, TradeRecord, Snapshot). |
+| `src/execution/paper_broker.py` | Paper Broker 5 pha chống nhìn trước, khớp lệnh isolated futures, funding, gap exit. |
+| `src/execution/__init__.py` | Export module và các lớp thực thi cốt lõi của Giai đoạn 4. |
 | `scripts/simulate_risk_manager_10_trades.py` | Kịch bản mô phỏng 10 lệnh minh bạch 100% (2 Phase độc lập, đối soát vốn tự động). |
+| `scripts/simulate_paper_execution.py` | Kịch bản mô phỏng khớp lệnh Paper Execution (Phần A Synthetic + Phần B Real Cached Data). |
 | `tests/test_data_layer.py` | 25 unit/integration tests cho Data Layer, cache và hybrid OI. |
 | `tests/test_indicators.py` | 9 unit tests cho các chỉ báo kỹ thuật, so sánh chéo fallback và TA-Lib. |
 | `tests/test_oi_features.py` | 6 unit tests cho OI delta và cơ chế lan truyền NaN. |
@@ -85,8 +94,12 @@
 | `tests/test_circuit_breakers.py` | 16 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng/hòa, sliding window pruning & F4. |
 | `tests/test_invariant_checks.py` | 41 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check, F1-F3, G1-G3. |
 | `tests/test_news_calendar.py` | 9 unit tests cho News Calendar Filter, blackout window, readiness, corrupted rows & reload. |
-| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0006). |
-| `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn. |
+| `tests/test_execution_models.py` | 4 unit tests cho dataclasses, validation, deterministic IDs, immutability của order models. |
+| `tests/test_execution_accounting.py` | 3 unit tests cho bài toán Oracle bắt buộc và kiểm tra bất biến kế toán sau mỗi sự kiện. |
+| `tests/test_paper_broker.py` | 7 unit tests cho Paper Broker: 1 position/symbol, SL over TP, gap exit, trailing tightening, CB streak, Liq priority, replay determinism. |
+| `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
+| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007). |
+| `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
 
 ---
 

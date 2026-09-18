@@ -19,11 +19,8 @@
 - **Giai đoạn 3:** Anti sửa qua ba vòng. Code cuối đã kiểm tra: `44014393a2ed6dba7188096a6d1de600daa972d0`.
 - **GPT Review 04:** đạt kiểm tra kỹ thuật G1–G3 và hồi quy offline đã thực thi; khuyến nghị nghiệm thu, người dùng đã yêu cầu tiếp tục Giai đoạn 4. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_03_REVIEW_04.md`.
 - **Phê duyệt người dùng:** sau kết luận Review 04, người dùng đã yêu cầu tạo prompt để tiếp tục giai đoạn tiếp theo. Giai đoạn 3 được chấp thuận theo phạm vi Review 04; cho phép Antigravity triển khai riêng Giai đoạn 4 theo task dưới đây.
-- **Giai đoạn 4 — Paper Execution Engine:** đã giao task, chưa có bằng chứng code hoàn thành. Task hiện hành: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`. Bước tiếp theo: Anti đọc task, triển khai/kiểm thử/commit/push rồi GPT review. Không cho phép Giai đoạn 5.
-- Test reviewer: **151 passed, 2 skipped, 5 network deselected**; thêm **9/9 kiểm thử độc lập đạt**, mô phỏng vốn đạt. Không cộng 9 bài ngoài repo vào số collected chính thức.
-- Anti báo **158/158 passed** tại môi trường riêng; reviewer chưa chạy lại network và thiếu pandas-ta cho 2 test.
-- Không có blocker còn mở trong tập G1–G3 đã tái hiện. Ghi chú phạm vi/contract component và sửa con số tài liệu nằm trong Review 04.
-- Nếu main đã tiến thêm commit: không tự gắn kết luận này cho code mới. Xem diff và review phần thay đổi trước.
+- **Giai đoạn 4 — Paper Execution Engine:** Antigravity đã hoàn thành triển khai mã nguồn (`src/execution/order_models.py`, `src/execution/paper_broker.py`, `src/execution/__init__.py`), 17 unit/integration tests mới (`tests/test_execution_models.py`, `tests/test_execution_accounting.py`, `tests/test_paper_broker.py`, `tests/test_execution_no_lookahead.py`), kịch bản mô phỏng (`scripts/simulate_paper_execution.py`), ADR 0007, và Báo cáo tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_GIAI_DOAN_4.md`. Toàn bộ 175 tests (170 offline + 5 network) pass 100%. Đã đối soát kế toán khớp từng bit với bài toán Oracle (10,038.88 USD).
+- **Trạng thái hiện tại:** Antigravity đã hoàn tất Giai đoạn 4, commit và push lên GitHub. DỪNG CHỜ GPT REVIEW (Review 05). Tuyệt đối chưa bắt đầu Giai đoạn 5.
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -65,6 +62,7 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `d121cf6449599c71867dfbe3db5b7808094587f4` | Review 02 | F1–F5: ngân sách khai báo, malformed input/margin, admission/news, đồng hồ breaker, solver ngoài bracket. Anti sửa tại 2f3bc30 |
 | `2f3bc30709fa3e24ccb0a0ebbc7823f0ef779522` | Review 03 | G1–G3: config/multiplier NaN, gate lùi thời gian crash, enabled news thiếu lịch vẫn pass. Anti sửa tại 4401439 |
 | `44014393a2ed6dba7188096a6d1de600daa972d0` | Review 04 | Các tái hiện G1–G3 và hồi quy độc lập đạt; người dùng đã yêu cầu tiếp tục Giai đoạn 4 |
+| `HEAD` (Stage 4) | Review 05 | Triển khai hoàn tất Stage 4 (Paper Execution Engine), Oracle 10,038.88 USD, 175/175 tests pass; DỪNG CHỜ GPT REVIEW |
 
 Review 02/03 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006 ghi quyết định risk qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
 

@@ -2,6 +2,37 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Paper Execution Engine (2026-09-19)
+### Đã triển khai
+- **Mô hình Dữ liệu Đơn lệnh & Vị thế (`src/execution/order_models.py`):**
+  - Định nghĩa Enums: `OrderDirection`, `OrderStatus`, `ExitReason`, `PositionStatus`.
+  - Đóng gói dataclasses chặt chẽ: `OrderRequest` (sinh client_order_id tất định từ SHA-256), `OrderExecutionRecord`, `Position` (Isolated Margin riêng biệt), `FundingEventRecord`, `TradeRecord`, `AccountSnapshot`.
+  - Xác thực đầu vào toàn diện: loại trừ `bool`, `NaN`, `Inf`, số âm, kiểm tra múi giờ UTC nghiêm ngặt.
+- **Động cơ Khớp lệnh Paper Broker 5 Pha Chống Nhìn Trước (`src/execution/paper_broker.py`):**
+  - **Pha 1 (Open Time & Gap Exits):** Nhận diện gap nến mở cửa qua Stop Loss hoặc Liquidation price, cưỡng chế thoát lệnh tại giá Open thực tế kèm slippage bán/mua.
+  - **Pha 2 (Funding Settlement):** Khớp mốc funding settlement định kỳ (00:00, 08:00, 16:00 UTC), tính toán dòng tiền funding theo đúng chiều LONG/SHORT và cập nhật cả ví và collateral.
+  - **Pha 3 (Pending Market Entry & Risk Gate Admission):** Lọc lệnh chờ `signal_time <= open_time`, tính giá fill Open + Slippage, tính toán kích thước vị thế và giá thanh lý, chụp snapshot tài khoản và đưa qua cổng `check_all_invariants` (Giai đoạn 3).
+  - **Pha 4 (Intrabar Protection):** Quét biên độ [Low, High] theo thứ tự ưu tiên bảo thủ tuyệt đối: `Liquidation > Stop Loss > Take Profit`.
+  - **Pha 5 (Close Time & Mark-to-Market):** Đánh giá lại unrealized PnL theo giá Close, cập nhật equity, lưu snapshot tài khoản và đối soát tự động các bất biến kế toán.
+  - Quản lý ràng buộc: tối đa 1 vị thế/symbol, không nhồi lệnh, không hedging, không tự động đảo chiều.
+  - Trailing Stop Loss chỉ cho phép thắt chặt một chiều (`update_stop_loss` tightening only).
+  - Tích hợp 2 chiều với `CircuitBreakerState` từ Giai đoạn 3: cập nhật net trade PnL, giảm 50% risk sau 3 thua, phục hồi 100% risk sau 3 thắng, khóa 24h khi chạm daily loss 5%.
+- **Bộ kiểm thử Kế toán, Oracle & Chống Nhìn Trước:**
+  - `tests/test_execution_models.py` (4 tests): Kiểm tra dataclasses, validation, deterministic ID.
+  - `tests/test_execution_accounting.py` (3 tests): Bài toán Oracle bắt buộc (Mục 8 Spec) khớp số liệu từng bit (10,038.88 USD final equity), short funding âm, verification invariants.
+  - `tests/test_paper_broker.py` (7 tests): Giới hạn 1 vị thế/symbol, SL over TP, gap exit, trailing SL, CB streak, Liq over SL, replay determinism.
+  - `tests/test_execution_no_lookahead.py` (3 tests): Entry nến sau, sizing độc lập High/Low/Close, future perturbation bất biến.
+- **Kịch bản Mô phỏng Thực tế (`scripts/simulate_paper_execution.py`):**
+  - Phần A: Mô phỏng tổng hợp (Synthetic Deterministic) kiểm thử vòng đời hoàn chỉnh: win, loss streak, funding, gap exit, daily loss lock, 24h unlock, recovery wins.
+  - Phần B: Mô phỏng trên dữ liệu thật Binance cached (BTCUSDT 15m + Funding Rate 8h) đi qua 3 kỳ funding thực tế và kiểm tra Risk Gate chặn lệnh vi phạm.
+- **Tài liệu Kiến trúc & Báo cáo:**
+  - `docs/decisions/0007-paper-execution-engine-architecture.md` (ADR 0007).
+  - `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_GIAI_DOAN_4.md`.
+### Kết quả kiểm thử
+- **Pytest Offline:** **170/170 tests PASSED** trong 1.63s.
+- **Pytest Network:** **5/5 tests PASSED** trong 12.24s.
+- **Tổng cộng:** **175/175 tests PASSED (100% xanh)**.
+
 ---
 
 ## [Giai đoạn 3] - Risk Manager Refinements Lần 3 (Theo GPT Review 03) (2026-09-19)
