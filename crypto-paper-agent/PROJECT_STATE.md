@@ -16,7 +16,7 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW LẦN 2 — 135/135 tests passed 100%, sẵn sàng nghiệm thu, DỪNG CHỜ REVIEW CHƯA SANG GIAI ĐOẠN 4)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW LẦN 3 — 158/158 tests passed 100%, sẵn sàng nghiệm thu, DỪNG CHỜ REVIEW CHƯA SANG GIAI ĐOẠN 4)
 - [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
@@ -47,6 +47,10 @@
     - **F3:** Phân lập `account_state['current_time']` (Admission Time) làm thẩm quyền duyệt lệnh duy nhất; chặn lách tin tức bằng signal cũ; phát hiện lệch cấu hình news filter.
     - **F4:** Thống nhất đồng hồ đơn nhất `advance_time` cho Circuit Breaker; giải quyết triệt để Scenario A và Scenario B; chuyển trạng thái `is_halted = True` khi cháy vốn; kiểm soát danh mục `recovery_mode`.
     - **F5:** Giải thuật thanh lý nghiêm ngặt: kiểm tra tính liên tục của bracket, từ chối vượt trần bracket tối đa (không ngoại suy), từ chối vị thế vi phạm ngay tại entry, ràng buộc phương hướng nghiệm, loại bỏ fallback tier cuối, kiểm chứng độc lập phương trình cân bằng ký quỹ (Tham chiếu: Phụ lục ADR 0006).
+13. **Chuẩn hóa Tinh chỉnh Giai đoạn 3 theo GPT Review Lần 3 (G1 – G3):**
+    - **G1:** Validate nghiêm ngặt `math.isfinite` và kiểu dữ liệu cho `config.risk` (`max_leverage`, `min_liquidation_buffer_pct`, `conviction_tiers`), `fees.taker_pct` và trạng thái `cb_state.risk_multiplier` (trong $(0, 1.0]$ và khớp trạng thái hợp lệ). Chặn đứng việc vô hiệu hóa so sánh buffer do `NaN` hoặc ngầm fallback 1.0 nhận full rủi ro.
+    - **G2:** Phát hiện và chặn lùi thời gian tại cổng (`admission_time < cb_state.current_timestamp`) bằng mã lỗi `INVARIANT_FAIL_TIME_REVERSAL`, không gọi component gây unhandled exception, bảo toàn nguyên vẹn đồng hồ và trạng thái Breaker.
+    - **G3:** Kiểm soát trạng thái sẵn sàng (`is_ready: bool`, `load_error`) của `NewsCalendarFilter` khi `enabled = True`. Từ chối lệnh nếu thiếu file hoặc lịch bị hỏng schema/timestamp; phân biệt rõ với lịch rỗng hợp lệ (Tham chiếu: Phụ lục 2 ADR 0006).
 
 ---
 
@@ -64,6 +68,7 @@
 | `src/features/indicators.py` | Tính EMA (20/50/200), RSI (14), MACD (12/26/9), ATR (14) từ config + fallback. |
 | `src/features/oi_features.py` | Tính `oi_delta_pct` với cơ chế lan truyền NaN và tương thích OI confluence. |
 | `src/features/cvd.py` | Tính Cumulative Volume Delta và phát hiện CVD Divergence chống lookahead 100%. |
+| `src/features/news_calendar.py` | Quản lý lịch sự kiện vĩ mô, blackout window ±15m, quản lý trạng thái readiness và load_error. |
 | `src/features/__init__.py` | Export module và cung cấp hàm pipeline tổng hợp `add_all_features`. |
 | `src/risk/position_sizing.py` | Tính position size, required margin, stop distance, bắt lỗi chia 0 và sanitization chặt chẽ. |
 | `src/risk/invariant_checks.py` | Tra MMR tier từ brackets, giải P_liq nhất quán theo Tier, kiểm tra Hard Invariants và đối soát margin. |
@@ -78,7 +83,8 @@
 | `tests/test_position_sizing.py` | 21 unit tests cho Position Sizing, so khớp số liệu tính tay, sanitization, biên số học. |
 | `tests/test_liquidation_calc.py` | 15 unit tests cho Tier-Consistent Solver, benchmark GPT review, bracket validation & F5. |
 | `tests/test_circuit_breakers.py` | 16 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng/hòa, sliding window pruning & F4. |
-| `tests/test_invariant_checks.py` | 30 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check & F1-F3. |
+| `tests/test_invariant_checks.py` | 41 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check, F1-F3, G1-G3. |
+| `tests/test_news_calendar.py` | 9 unit tests cho News Calendar Filter, blackout window, readiness, corrupted rows & reload. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0006). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn. |
 

@@ -307,8 +307,140 @@ def check_all_invariants(
     rejection_reasons: List[str] = []
 
     # -------------------------------------------------------------
-    # 0. Xác thực Account State cơ bản
+    # 0. Xác thực Config & Account State cơ bản (G1)
     # -------------------------------------------------------------
+    if not isinstance(config, dict):
+        return False, ["INVARIANT_FAIL_CONFIG_ERROR: config must be a dictionary."]
+
+    # Risk subconfig validation
+    if "risk" in config:
+        risk_cfg = config["risk"]
+        if not isinstance(risk_cfg, dict):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.risk must be a dictionary, got {type(risk_cfg).__name__}: {risk_cfg!r}"
+            )
+            risk_cfg = {}
+            risk_cfg_valid = False
+        else:
+            risk_cfg_valid = True
+    else:
+        risk_cfg = {}
+        risk_cfg_valid = True
+
+    # max_leverage: default 5.0 only when omitted
+    if "max_leverage" not in risk_cfg:
+        max_leverage = 5.0
+        max_lev_valid = True
+    else:
+        raw_max_lev = risk_cfg["max_leverage"]
+        if type(raw_max_lev) is bool or not isinstance(raw_max_lev, (int, float)):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.max_leverage must be numeric, got {type(raw_max_lev).__name__}: {raw_max_lev!r}"
+            )
+            max_leverage = 5.0
+            max_lev_valid = False
+        else:
+            f_max_lev = float(raw_max_lev)
+            if not math.isfinite(f_max_lev) or f_max_lev < 1.0:
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.max_leverage must be finite >= 1.0, got {f_max_lev}"
+                )
+                max_leverage = 5.0
+                max_lev_valid = False
+            else:
+                max_leverage = f_max_lev
+                max_lev_valid = True
+
+    # min_liquidation_buffer_pct: default 0.30 only when omitted
+    if "min_liquidation_buffer_pct" not in risk_cfg:
+        min_buffer_pct = 0.30
+        min_buffer_valid = True
+    else:
+        raw_buffer = risk_cfg["min_liquidation_buffer_pct"]
+        if type(raw_buffer) is bool or not isinstance(raw_buffer, (int, float)):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.min_liquidation_buffer_pct must be numeric, got {type(raw_buffer).__name__}: {raw_buffer!r}"
+            )
+            min_buffer_pct = 0.30
+            min_buffer_valid = False
+        else:
+            f_buf = float(raw_buffer)
+            if not math.isfinite(f_buf) or not (0 < f_buf < 1.0):
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.min_liquidation_buffer_pct must be finite in (0, 1), got {f_buf}"
+                )
+                min_buffer_pct = 0.30
+                min_buffer_valid = False
+            else:
+                min_buffer_pct = f_buf
+                min_buffer_valid = True
+
+    # conviction_tiers in config: default only when omitted
+    if "conviction_tiers" not in risk_cfg:
+        conviction_tiers = {
+            "low": 0.01,
+            "normal": 0.02,
+            "high": 0.05,
+            "ultra_high": 0.10,
+        }
+        tiers_cfg_valid = True
+    else:
+        raw_tiers = risk_cfg["conviction_tiers"]
+        if not isinstance(raw_tiers, dict):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.conviction_tiers must be a dictionary, got {type(raw_tiers).__name__}: {raw_tiers!r}"
+            )
+            conviction_tiers = {}
+            tiers_cfg_valid = False
+        else:
+            conviction_tiers = {}
+            tiers_cfg_valid = True
+            for k, v in raw_tiers.items():
+                if type(v) is bool or not isinstance(v, (int, float)) or not math.isfinite(float(v)) or float(v) <= 0:
+                    rejection_reasons.append(
+                        f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.conviction_tiers['{k}'] must be positive finite numeric, got {v!r}"
+                    )
+                    tiers_cfg_valid = False
+                else:
+                    conviction_tiers[str(k)] = float(v)
+
+    # fees subconfig: default taker_pct 0.0005 only when omitted
+    if "fees" in config:
+        fees_cfg = config["fees"]
+        if not isinstance(fees_cfg, dict):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.fees must be a dictionary, got {type(fees_cfg).__name__}: {fees_cfg!r}"
+            )
+            fees_valid = False
+            taker_pct = 0.0005
+        elif "taker_pct" in fees_cfg:
+            raw_taker = fees_cfg["taker_pct"]
+            if type(raw_taker) is bool or not isinstance(raw_taker, (int, float)):
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_CONFIG_ERROR: config.fees.taker_pct must be numeric, got {type(raw_taker).__name__}: {raw_taker!r}"
+                )
+                fees_valid = False
+                taker_pct = 0.0005
+            else:
+                f_taker = float(raw_taker)
+                if not math.isfinite(f_taker) or f_taker < 0:
+                    rejection_reasons.append(
+                        f"INVARIANT_FAIL_CONFIG_ERROR: config.fees.taker_pct must be finite and >= 0, got {f_taker}"
+                    )
+                    fees_valid = False
+                    taker_pct = 0.0005
+                else:
+                    taker_pct = f_taker
+                    fees_valid = True
+        else:
+            taker_pct = 0.0005
+            fees_valid = True
+    else:
+        fees_cfg = {}
+        taker_pct = 0.0005
+        fees_valid = True
+
+    # Account State validation
     if not isinstance(account_state, dict):
         return False, ["INVARIANT_FAIL_INVALID_ACCOUNT_STATE: account_state must be a dictionary."]
 
@@ -354,17 +486,62 @@ def check_all_invariants(
         else:
             avail_margin_valid = True
 
-    # Circuit breaker component check (F2: Kiểm tra callable để không crash khi nhận object lạ)
+    # Circuit breaker component check (F2/G1: Kiểm tra callable và contract trạng thái hợp lệ)
     cb_state = account_state.get("circuit_breaker_state")
-    cb_valid = (
-        cb_state is not None
-        and hasattr(cb_state, "is_trading_allowed")
-        and callable(getattr(cb_state, "is_trading_allowed"))
-    )
-    if not cb_valid:
+    if cb_state is None:
         rejection_reasons.append(
             "INVARIANT_FAIL_MISSING_CIRCUIT_BREAKER: account_state must contain a valid CircuitBreakerState instance."
         )
+        cb_valid = False
+        cb_multiplier = 0.0
+    elif not hasattr(cb_state, "is_trading_allowed") or not callable(getattr(cb_state, "is_trading_allowed")):
+        rejection_reasons.append(
+            "INVARIANT_FAIL_MISSING_CIRCUIT_BREAKER: circuit_breaker_state object must provide a callable is_trading_allowed method."
+        )
+        cb_valid = False
+        cb_multiplier = 0.0
+    else:
+        # Kiểm tra contract & internal state validity (G1)
+        raw_cb_mult = getattr(cb_state, "risk_multiplier", None)
+        if raw_cb_mult is None or type(raw_cb_mult) is bool or not isinstance(raw_cb_mult, (int, float)):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE: circuit_breaker_state.risk_multiplier must be numeric, got {type(raw_cb_mult).__name__}: {raw_cb_mult!r}"
+            )
+            cb_valid = False
+            cb_multiplier = 0.0
+        else:
+            f_mult = float(raw_cb_mult)
+            if not math.isfinite(f_mult) or not (0 < f_mult <= 1.0 + 1e-6):
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE: circuit_breaker_state.risk_multiplier must be finite in (0, 1.0], got {f_mult}"
+                )
+                cb_valid = False
+                cb_multiplier = 0.0
+            else:
+                streak_red = getattr(cb_state, "risk_reduction_on_streak", None)
+                if streak_red is None and isinstance(config, dict):
+                    streak_red = config.get("circuit_breakers", {}).get("risk_reduction_on_streak", 0.5)
+                if streak_red is not None and type(streak_red) is not bool and isinstance(streak_red, (int, float)) and math.isfinite(float(streak_red)):
+                    valid_states = (1.0, float(streak_red))
+                    if not any(abs(f_mult - s) < 1e-6 for s in valid_states):
+                        rejection_reasons.append(
+                            f"INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE: circuit_breaker_state.risk_multiplier ({f_mult}) must be in valid states (1.0 or {float(streak_red)})."
+                        )
+                        cb_valid = False
+                        cb_multiplier = 0.0
+                    else:
+                        cb_multiplier = f_mult
+                        cb_valid = True
+                else:
+                    cb_multiplier = f_mult
+                    cb_valid = True
+
+        raw_locked = getattr(cb_state, "is_locked", None)
+        if raw_locked is None or not isinstance(raw_locked, bool):
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE: circuit_breaker_state.is_locked must be boolean, got {type(raw_locked).__name__}: {raw_locked!r}"
+            )
+            cb_valid = False
 
     # Thời điểm thẩm quyền duyệt lệnh (Admission Time - F3: account current_time là nguồn thẩm quyền)
     raw_admission_time = account_state.get("current_time")
@@ -423,9 +600,6 @@ def check_all_invariants(
             entry_valid = True
 
     # Leverage
-    risk_cfg = config.get("risk", {}) if isinstance(config, dict) else {}
-    raw_max_lev = risk_cfg.get("max_leverage", 5.0)
-    max_leverage = float(raw_max_lev) if (type(raw_max_lev) is not bool and isinstance(raw_max_lev, (int, float)) and math.isfinite(float(raw_max_lev))) else 5.0
     raw_lev = order.get("leverage")
     if type(raw_lev) is bool or not isinstance(raw_lev, (int, float)):
         rejection_reasons.append(
@@ -440,7 +614,7 @@ def check_all_invariants(
                 f"INVARIANT_FAIL_INVALID_LEVERAGE: leverage must be >= 1.0, got {leverage}"
             )
             leverage_valid = False
-        elif leverage > max_leverage:
+        elif max_lev_valid and leverage > max_leverage:
             rejection_reasons.append(
                 f"INVARIANT_FAIL_LEVERAGE_EXCEEDED: Requested leverage {leverage}x exceeds max allowable leverage {max_leverage}x."
             )
@@ -449,12 +623,6 @@ def check_all_invariants(
             leverage_valid = True
 
     # Conviction tier (F2: Kiểm tra kiểu str trước membership để tránh TypeError unhashable)
-    conviction_tiers = risk_cfg.get("conviction_tiers", {
-        "low": 0.01,
-        "normal": 0.02,
-        "high": 0.05,
-        "ultra_high": 0.10,
-    })
     raw_tier = order.get("conviction_tier")
     if not isinstance(raw_tier, str):
         rejection_reasons.append(
@@ -462,7 +630,7 @@ def check_all_invariants(
         )
         tier_valid = False
         tier_limit = 0.0
-    elif raw_tier not in conviction_tiers:
+    elif not tiers_cfg_valid or raw_tier not in conviction_tiers:
         rejection_reasons.append(
             f"INVARIANT_FAIL_UNKNOWN_CONVICTION_TIER: Conviction tier '{raw_tier}' is not defined in configuration. "
             f"Allowed tiers: {list(conviction_tiers.keys())}."
@@ -470,16 +638,8 @@ def check_all_invariants(
         tier_valid = False
         tier_limit = 0.0
     else:
-        raw_limit = conviction_tiers[raw_tier]
-        if type(raw_limit) is bool or not isinstance(raw_limit, (int, float)) or not math.isfinite(float(raw_limit)) or float(raw_limit) <= 0:
-            rejection_reasons.append(
-                f"INVARIANT_FAIL_CONFIG_ERROR: Configured limit for tier '{raw_tier}' must be positive finite, got {raw_limit}"
-            )
-            tier_valid = False
-            tier_limit = 0.0
-        else:
-            tier_limit = float(raw_limit)
-            tier_valid = True
+        tier_limit = conviction_tiers[raw_tier]
+        tier_valid = True
 
     # Stop-Loss check
     raw_sl = order.get("stop_loss_price")
@@ -514,10 +674,8 @@ def check_all_invariants(
         else:
             sl_valid = False
 
-    # Risk Percent, Base Risk Percent & Breaker Multiplier (F1)
-    raw_cb_mult = getattr(cb_state, "risk_multiplier", 1.0) if cb_valid else 1.0
-    cb_multiplier = float(raw_cb_mult) if (type(raw_cb_mult) is not bool and isinstance(raw_cb_mult, (int, float)) and math.isfinite(float(raw_cb_mult)) and float(raw_cb_mult) > 0) else 1.0
-    effective_tier_ceiling = tier_limit * cb_multiplier
+    # Risk Percent, Base Risk Percent & Breaker Multiplier (F1/G1)
+    effective_tier_ceiling = tier_limit * cb_multiplier if cb_valid else 0.0
 
     has_base = "base_risk_percent" in order
     has_effective = "risk_percent" in order
@@ -552,28 +710,36 @@ def check_all_invariants(
                     eff_val = f_eff
 
         if has_base and has_effective and base_val is not None and eff_val is not None:
-            expected_eff = base_val * cb_multiplier
-            if abs(eff_val - expected_eff) > 1e-6:
-                rejection_reasons.append(
-                    f"INVARIANT_FAIL_RISK_PERCENT_MISMATCH: Provided risk_percent ({eff_val * 100:.2f}%) "
-                    f"does not match base_risk_percent * cb_multiplier ({base_val * 100:.2f}% * {cb_multiplier:.2f} = {expected_eff * 100:.2f}%)."
-                )
-                order_effective_risk_pct = eff_val
-                risk_pct_valid = False
+            if cb_valid:
+                expected_eff = base_val * cb_multiplier
+                if abs(eff_val - expected_eff) > 1e-6:
+                    rejection_reasons.append(
+                        f"INVARIANT_FAIL_RISK_PERCENT_MISMATCH: Provided risk_percent ({eff_val * 100:.2f}%) "
+                        f"does not match base_risk_percent * cb_multiplier ({base_val * 100:.2f}% * {cb_multiplier:.2f} = {expected_eff * 100:.2f}%)."
+                    )
+                    order_effective_risk_pct = eff_val
+                    risk_pct_valid = False
+                else:
+                    order_effective_risk_pct = eff_val
+                    risk_pct_valid = True
             else:
                 order_effective_risk_pct = eff_val
-                risk_pct_valid = True
+                risk_pct_valid = False
         elif has_effective and eff_val is not None:
             order_effective_risk_pct = eff_val
             risk_pct_valid = True
         elif has_base and base_val is not None:
-            order_effective_risk_pct = base_val * cb_multiplier
-            risk_pct_valid = True
+            if cb_valid:
+                order_effective_risk_pct = base_val * cb_multiplier
+                risk_pct_valid = True
+            else:
+                order_effective_risk_pct = 0.0
+                risk_pct_valid = False
         else:
             order_effective_risk_pct = 0.0
             risk_pct_valid = False
 
-    if tier_valid and risk_pct_valid:
+    if tier_valid and risk_pct_valid and cb_valid:
         if order_effective_risk_pct > effective_tier_ceiling + 1e-6:
             rejection_reasons.append(
                 f"INVARIANT_FAIL_RISK_TIER_EXCEEDED: Requested effective risk_percent {order_effective_risk_pct * 100:.2f}% "
@@ -600,7 +766,7 @@ def check_all_invariants(
             else:
                 pos_size_valid = True
     else:
-        if entry_valid and sl_valid and equity_valid and risk_pct_valid:
+        if entry_valid and sl_valid and equity_valid and risk_pct_valid and cb_valid:
             stop_dist_pct = abs(entry_price - stop_loss_price) / entry_price
             position_size_usd = (equity * min(order_effective_risk_pct, effective_tier_ceiling)) / stop_dist_pct
             pos_size_valid = True
@@ -625,23 +791,20 @@ def check_all_invariants(
     # -------------------------------------------------------------
     if pos_size_valid and leverage_valid and avail_margin_valid:
         required_margin_usd = position_size_usd / leverage
-        fees_cfg = config.get("fees", {}) if isinstance(config, dict) else {}
-        raw_taker = fees_cfg.get("taker_pct", 0.0005)
-        taker_pct = float(raw_taker) if (type(raw_taker) is not bool and isinstance(raw_taker, (int, float)) and math.isfinite(float(raw_taker)) and float(raw_taker) >= 0) else 0.0005
-        est_entry_fee_usd = position_size_usd * taker_pct
-        total_required_capital = required_margin_usd + est_entry_fee_usd
+        if fees_valid:
+            est_entry_fee_usd = position_size_usd * taker_pct
+            total_required_capital = required_margin_usd + est_entry_fee_usd
 
-        if total_required_capital > available_margin + 1e-4:
-            rejection_reasons.append(
-                f"INVARIANT_FAIL_INSUFFICIENT_MARGIN: Required initial margin and fee "
-                f"({total_required_capital:.2f} USD = {required_margin_usd:.2f} margin + {est_entry_fee_usd:.2f} fee) "
-                f"exceeds available margin ({available_margin:.2f} USD)."
-            )
+            if total_required_capital > available_margin + 1e-4:
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_INSUFFICIENT_MARGIN: Required initial margin and fee "
+                    f"({total_required_capital:.2f} USD = {required_margin_usd:.2f} margin + {est_entry_fee_usd:.2f} fee) "
+                    f"exceeds available margin ({available_margin:.2f} USD)."
+                )
 
     # -------------------------------------------------------------
-    # 3. Hard Invariant C: Min Liquidation Buffer (Tier-Consistent)
+    # 3. Hard Invariant C: Min Liquidation Buffer (Tier-Consistent) (G1)
     # -------------------------------------------------------------
-    min_buffer_pct = float(risk_cfg.get("min_liquidation_buffer_pct", 0.30))
     symbol = str(order.get("symbol", "BTCUSDT"))
     brackets_cfg = config.get("leverage_brackets") if isinstance(config, dict) else None
 
@@ -667,7 +830,7 @@ def check_all_invariants(
                     f"INVARIANT_FAIL_LIQUIDATION_BEFORE_SL: Estimated liquidation price ({liq_price:.2f}) "
                     f"would trigger before stop loss ({stop_loss_price:.2f}) on SHORT position."
                 )
-            else:
+            elif min_buffer_valid:
                 buffer_pct = abs(liq_price - stop_loss_price) / entry_price
                 if buffer_pct < min_buffer_pct - 1e-6:
                     rejection_reasons.append(
@@ -678,19 +841,32 @@ def check_all_invariants(
             rejection_reasons.append(f"INVARIANT_FAIL_LIQUIDATION_CALC_ERROR: {e}")
 
     # -------------------------------------------------------------
-    # 4. Hard Invariant E: Circuit Breaker Lock check (F3: tại admission_time)
+    # 4. Hard Invariant E: Circuit Breaker Lock check (F3/G2: tại admission_time và chống time reversal)
     # -------------------------------------------------------------
     if cb_valid and admission_time is not None:
-        if not cb_state.is_trading_allowed(admission_time):
-            locked_until_str = str(getattr(cb_state, "locked_until", "unknown"))
+        cb_clock = getattr(cb_state, "current_timestamp", None)
+        if cb_clock is not None and admission_time < cb_clock:
             rejection_reasons.append(
-                f"INVARIANT_FAIL_CIRCUIT_BREAKER_LOCKED: Trading is currently locked by circuit breaker until {locked_until_str}."
+                f"INVARIANT_FAIL_TIME_REVERSAL: Admission time {admission_time.isoformat()} "
+                f"is earlier than circuit breaker clock {cb_clock.isoformat()} (time reversal)."
             )
+        else:
+            try:
+                allowed = cb_state.is_trading_allowed(admission_time)
+                if not allowed:
+                    locked_until_str = str(getattr(cb_state, "locked_until", "unknown"))
+                    rejection_reasons.append(
+                        f"INVARIANT_FAIL_CIRCUIT_BREAKER_LOCKED: Trading is currently locked by circuit breaker until {locked_until_str}."
+                    )
+            except ValueError as e:
+                rejection_reasons.append(f"INVARIANT_FAIL_CIRCUIT_BREAKER_ERROR: {e}")
 
     # -------------------------------------------------------------
-    # 5. Hard Invariant F: News Blackout Window check (F3: tại admission_time và config check)
+    # 5. Hard Invariant F: News Blackout Window check (F3/G3: tại admission_time và readiness check)
     # -------------------------------------------------------------
-    news_cfg = config.get("news_filter", {}) if isinstance(config, dict) else {}
+    news_cfg = config.get("news_filter") if isinstance(config, dict) else {}
+    if news_cfg is None:
+        news_cfg = {}
     news_enabled = bool(news_cfg.get("enabled", False))
 
     if news_enabled:
@@ -702,6 +878,11 @@ def check_all_invariants(
         elif not getattr(news_filter, "enabled", True):
             rejection_reasons.append(
                 "INVARIANT_FAIL_NEWS_FILTER_CONFIG_MISMATCH: Configuration specifies news_filter enabled=True, but account_state['news_filter'] instance has enabled=False."
+            )
+        elif not getattr(news_filter, "is_ready", True):
+            load_err = getattr(news_filter, "load_error", "CALENDAR_LOAD_ERROR")
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_NEWS_FILTER_NOT_READY: news_filter is enabled but calendar is not ready. Reason: {load_err}"
             )
         elif admission_time is not None:
             is_blackout, event_name = news_filter.is_in_blackout(admission_time)

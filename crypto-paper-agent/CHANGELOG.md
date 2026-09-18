@@ -4,6 +4,38 @@ Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRY
 
 ---
 
+## [Giai đoạn 3] - Risk Manager Refinements Lần 3 (Theo GPT Review 03) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 3 nhóm phát hiện G1–G3)
+- **G1 - Xác thực Nghiêm ngặt Cấu hình & Trạng thái (`src/risk/invariant_checks.py`):**
+  - Kiểm tra `math.isfinite` và kiểu số thực cho `config.risk` (`max_leverage >= 1.0`, `min_liquidation_buffer_pct in (0, 1)`, `conviction_tiers > 0`) và `config.fees.taker_pct >= 0`. Nếu sai kiểu/NaN/Inf/chuỗi sai, từ chối với `INVARIANT_FAIL_CONFIG_ERROR`.
+  - Bỏ qua so sánh liquidation buffer nếu `min_buffer_valid` là False, ngăn chặn việc `min_liquidation_buffer_pct = NaN` làm tê liệt phép so sánh và lọt lệnh rủi ro cao.
+  - Kiểm tra `cb_state.risk_multiplier` phải là số thực hữu hạn trong $(0, 1.0]$ và khớp với trạng thái hợp lệ ($1.0$ hoặc `risk_reduction_on_streak`). Nếu sai, từ chối với `INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE`, tuyệt đối không tự ý fallback về 1.0 full risk.
+  - Kiểm tra `cb_state.is_locked` bắt buộc là kiểu `bool`.
+- **G2 - Cổng Duyệt & Lùi Thời gian Breaker (`src/risk/invariant_checks.py`):**
+  - Phát hiện `admission_time < cb_state.current_timestamp` tại cổng duyệt lệnh và từ chối với `INVARIANT_FAIL_TIME_REVERSAL`.
+  - Không gọi `cb_state.is_trading_allowed(admission_time)` khi lùi thời gian, giúp bảo toàn nguyên vẹn đồng hồ, lịch sử giao dịch và trạng thái khóa của Circuit Breaker mà không văng unhandled exception.
+  - Tiếp tục thu thập các lỗi vi phạm độc lập khác (nếu có) thay vì dừng sớm.
+  - Giữ nguyên vẹn hợp đồng toán học trực tiếp của `CircuitBreakerState` (`advance_time` và `record_trade_result` ném `ValueError` khi lùi thời gian).
+- **G3 - Quản lý Trạng thái Sẵn sàng của Bộ lọc Tin tức (`src/features/news_calendar.py`, `src/risk/invariant_checks.py`):**
+  - Bổ sung `is_ready: bool` và `load_error: Optional[str]` cho `NewsCalendarFilter`.
+  - Quy ước: `enabled = False` => bypass (`is_ready = True`). Khi `enabled = True`, bắt buộc nạp lịch thành công.
+  - Nếu file lịch không tồn tại, thiếu cột bắt buộc (`datetime_utc`/`timestamp` hoặc `event`/`event_name`), hoặc chứa dòng timestamp/sự kiện hỏng (`NaT`, rác) -> đánh dấu `is_ready = False` và lưu `load_error = "CALENDAR_LOAD_ERROR: ..."` (không nuốt lỗi).
+  - Cổng duyệt lệnh lập tức chặn mở lệnh nếu `news_filter` chưa sẵn sàng với `INVARIANT_FAIL_NEWS_FILTER_NOT_READY`.
+  - File CSV có header nhưng 0 dòng sự kiện được công nhận là lịch hợp lệ (`is_ready = True`, `events = []`).
+  - Cung cấp API `set_events` và cơ chế reload khôi phục `is_ready = True`.
+- **Bộ kiểm thử mở rộng:**
+  - Bổ sung 11 unit tests mới trong `tests/test_invariant_checks.py` (tổng: 41 tests).
+  - Bổ sung 6 unit tests mới trong `tests/test_news_calendar.py` (tổng: 9 tests).
+  - Báo cáo: `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_03.md`.
+  - Cập nhật Phụ lục 2 trong `docs/decisions/0006-circuit-breaker-and-risk-gate-refinements.md`.
+### Kết quả kiểm thử
+- **Pytest Offline:** **153/153 tests PASSED** trong 1.64s.
+- **Pytest Network:** **5/5 tests PASSED** trong 11.62s.
+- **Tổng cộng:** **158/158 tests PASSED (100% xanh)**.
+- **Mô phỏng 10 lệnh:** Chạy thông suốt 2 Phase, đối soát tài chính chính xác 100%.
+
+---
+
 ## [Giai đoạn 3] - Risk Manager Refinements Lần 2 (Theo GPT Review 02) (2026-09-19)
 ### Đã triển khai (Khắc phục toàn diện 5 nhóm phát hiện F1–F5)
 - **F1 - Ngân sách Rủi ro Khai báo & Chống Double Reduction (`src/risk/invariant_checks.py`):**

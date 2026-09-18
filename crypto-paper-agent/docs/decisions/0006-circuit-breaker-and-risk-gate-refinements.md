@@ -88,3 +88,27 @@ Sau đợt triển khai ban đầu của Giai đoạn 3 (Risk Manager), đợt r
 - Nghiệm được kiểm chứng toán học độc lập thỏa mãn phương trình cân bằng ký quỹ:
   $$\text{Initial Margin} \pm q \times (\Delta P) = q \times P_{liq} \times \text{MMR} - \text{cum}$$
 
+## Phụ lục 2: Tinh chỉnh sau GPT Review 03 (G1, G2, G3)
+
+Theo kết quả đánh giá tại `docs/reviews/GPT_STAGE_03_REVIEW_03.md`, hệ thống hoàn thiện thêm 3 chốt bảo vệ ở tầng cổng duyệt lệnh (Risk Admission Gate):
+
+### G1. Xác thực Nghiêm ngặt Cấu hình & Trạng thái (Config & State Validation)
+- **Vô hiệu hóa so sánh do NaN**: Trước đây, nếu `config.risk.min_liquidation_buffer_pct` bằng `NaN`, phép so sánh `buffer < min_buffer_pct` trả về `False` khiến các lệnh đòn bẩy cao vi phạm buffer bị lọt cổng. Nay mọi tham số trong `config.risk` (`max_leverage`, `min_liquidation_buffer_pct`, `conviction_tiers`) và `config.fees` (`taker_pct`) đều phải trải qua kiểm tra `math.isfinite` và miền giá trị hợp lệ trước khi tính toán. Nếu sai kiểu hoặc mang giá trị `NaN`/`Inf`/chuỗi sai, cổng từ chối ngay với `INVARIANT_FAIL_CONFIG_ERROR`.
+- **Trạng thái Circuit Breaker**: Thuộc tính `cb_state.risk_multiplier` bắt buộc phải là số thực hữu hạn nằm trong $(0, 1.0]$ và thuộc tập trạng thái hợp lệ ($1.0$ hoặc `risk_reduction_on_streak`). Nếu mang giá trị `NaN`, `bool`, âm hoặc sai lệch, cổng từ chối với `INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE`, tuyệt đối không fallback ngầm về $1.0$ nhận full rủi ro. Thuộc tính `cb_state.is_locked` bắt buộc là kiểu `bool`.
+
+### G2. Cổng Đồng hồ Ngắt mạch & Chống Lùi Thời gian (Clock Gate & Time Reversal)
+- Tại cổng duyệt lệnh, nếu $\text{account\_state['current\_time']} < \text{cb\_state.current\_timestamp}$, cổng nhận diện đây là hành vi lùi thời gian (Time Reversal) và từ chối lệnh với mã lỗi `INVARIANT_FAIL_TIME_REVERSAL`.
+- Cổng **không gọi** `cb_state.is_trading_allowed(admission_time)` khi có lùi thời gian, nhờ đó bảo toàn nguyên vẹn đồng hồ nội bộ, lịch sử giao dịch và trạng thái khóa của Circuit Breaker mà không làm văng unhandled exception.
+- Lỗi lùi thời gian được gom chung cùng các lỗi vi phạm độc lập khác (nếu có) thay vì làm dừng sớm tiến trình kiểm tra invariant.
+- Hợp đồng toán học trực tiếp của `CircuitBreakerState` (`advance_time` và `record_trade_result` ném `ValueError` khi lùi thời gian) vẫn được giữ nguyên vẹn.
+
+### G3. Cơ chế Sẵn sàng của Bộ lọc Tin tức (News Calendar Readiness)
+- Phân biệt rõ rệt giữa hai trạng thái: (1) "Lịch hợp lệ và không có sự kiện cấm tại thời điểm này" và (2) "Không nạp được lịch hoặc lịch bị hỏng".
+- Khi `news_filter.enabled = True`:
+  - Bắt buộc `news_filter.is_ready = True`.
+  - Nếu file lịch không tồn tại, thiếu cột bắt buộc (`datetime_utc`/`timestamp` hoặc `event`/`event_name`), hoặc chứa dòng có timestamp/sự kiện bị hỏng (`NaT`, rác), `news_filter` chuyển sang `is_ready = False` và lưu `load_error = "CALENDAR_LOAD_ERROR: ..."`.
+  - Cổng duyệt lệnh lập tức chặn mở vị thế với mã lỗi `INVARIANT_FAIL_NEWS_FILTER_NOT_READY: ... Reason: CALENDAR_LOAD_ERROR: ...`.
+- Trường hợp file CSV rỗng nhưng có header hợp lệ: Được xác định là lịch hợp lệ không có sự kiện (`is_ready = True`, `events = []`), cho phép giao dịch bình thường.
+- Hỗ trợ khôi phục qua `load_calendar` và cung cấp phương thức `set_events(events, is_ready=True)` tường minh cho các bài test và fixture.
+
+

@@ -454,3 +454,299 @@ class TestInvariantChecks:
         assert is_valid is False
         assert any("INVARIANT_FAIL_NEWS_FILTER_CONFIG_MISMATCH" in r for r in reasons)
 
+    # -------------------------------------------------------------
+    # G1 Regression Tests: Config & State Validation Robustness
+    # -------------------------------------------------------------
+    def test_g1_min_liquidation_buffer_nan_rejected(self, base_order, base_account, config):
+        """
+        G1: config.risk.min_liquidation_buffer_pct = NaN không được vô hiệu hóa so sánh buffer.
+        Phải bị từ chối với INVARIANT_FAIL_CONFIG_ERROR.
+        """
+        cfg = dict(config)
+        cfg["risk"] = dict(config["risk"])
+        cfg["risk"]["min_liquidation_buffer_pct"] = float("nan")
+
+        order = dict(base_order)
+        order["leverage"] = 5.0
+
+        is_valid, reasons = check_all_invariants(order, base_account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+        assert any("min_liquidation_buffer_pct" in r for r in reasons)
+
+    def test_g1_min_liquidation_buffer_string_rejected_no_crash(self, base_order, base_account, config):
+        """G1: config.risk.min_liquidation_buffer_pct = 'bad' không gây unhandled ValueError."""
+        cfg = dict(config)
+        cfg["risk"] = dict(config["risk"])
+        cfg["risk"]["min_liquidation_buffer_pct"] = "bad"
+
+        order = dict(base_order)
+        order["leverage"] = 5.0
+
+        is_valid, reasons = check_all_invariants(order, base_account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+
+    def test_g1_circuit_breaker_multiplier_nan_rejected(self, base_order, base_account, config):
+        """
+        G1: cb.risk_multiplier = NaN không được fallback 1.0 nhận full risk order.
+        Phải bị từ chối với INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE.
+        """
+        cb = CircuitBreakerState()
+        cb.risk_multiplier = float("nan")
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+
+        is_valid, reasons = check_all_invariants(base_order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE" in r for r in reasons)
+
+    def test_g1_circuit_breaker_multiplier_invalid_values_rejected(self, base_order, base_account, config):
+        """G1: cb.risk_multiplier với các giá trị bất thường (0.0, -0.5, 1.5, 'bad', True, Inf)."""
+        for bad_val in [0.0, -0.5, 1.5, "0.5", True, float("inf")]:
+            cb = CircuitBreakerState()
+            cb.risk_multiplier = bad_val
+
+            account = dict(base_account)
+            account["circuit_breaker_state"] = cb
+
+            is_valid, reasons = check_all_invariants(base_order, account, config)
+            assert is_valid is False
+            assert any("INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE" in r for r in reasons)
+
+    def test_g1_circuit_breaker_is_locked_non_bool_rejected(self, base_order, base_account, config):
+        """G1: cb.is_locked không phải boolean phải bị từ chối."""
+        cb = CircuitBreakerState()
+        cb.is_locked = "locked"  # type: ignore
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+
+        is_valid, reasons = check_all_invariants(base_order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE" in r for r in reasons)
+
+    def test_g1_max_leverage_invalid_rejected(self, base_order, base_account, config):
+        """G1: config.risk.max_leverage là NaN, Inf, < 1.0 hoặc string phải bị từ chối."""
+        for bad_lev in [float("nan"), float("inf"), 0.5, "5.0", False]:
+            cfg = dict(config)
+            cfg["risk"] = dict(config["risk"])
+            cfg["risk"]["max_leverage"] = bad_lev
+
+            is_valid, reasons = check_all_invariants(base_order, base_account, cfg)
+            assert is_valid is False
+            assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+
+    def test_g1_conviction_tiers_corrupted_rejected(self, base_order, base_account, config):
+        """G1: conviction_tiers chứa giá trị NaN, âm hoặc sai kiểu dữ liệu."""
+        cfg = dict(config)
+        cfg["risk"] = dict(config["risk"])
+        cfg["risk"]["conviction_tiers"] = {"normal": float("nan")}
+
+        is_valid, reasons = check_all_invariants(base_order, base_account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+
+    def test_g1_taker_fee_invalid_rejected(self, base_order, base_account, config):
+        """G1: config.fees.taker_pct là NaN, âm hoặc string."""
+        for bad_fee in [float("nan"), -0.01, "free", True]:
+            cfg = dict(config)
+            cfg["fees"] = dict(config.get("fees", {}))
+            cfg["fees"]["taker_pct"] = bad_fee
+
+            is_valid, reasons = check_all_invariants(base_order, base_account, cfg)
+            assert is_valid is False
+            assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+
+    def test_g1_multiple_independent_errors_all_collected(self, base_order, base_account, config):
+        """G1: Nhiều lỗi độc lập cùng xuất hiện: không crash, thu thập đủ tất cả lý do."""
+        cfg = dict(config)
+        cfg["risk"] = dict(config["risk"])
+        cfg["risk"]["min_liquidation_buffer_pct"] = float("nan")
+
+        cb = CircuitBreakerState()
+        cb.risk_multiplier = float("nan")
+
+        order = dict(base_order)
+        order["stop_loss_price"] = None  # Lỗi 1: thiếu SL
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb  # Lỗi 2: cb state hỏng
+
+        is_valid, reasons = check_all_invariants(order, account, cfg)  # Lỗi 3: config hỏng
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_STOP_LOSS_MISSING" in r for r in reasons)
+        assert any("INVARIANT_FAIL_INVALID_CIRCUIT_BREAKER_STATE" in r for r in reasons)
+        assert any("INVARIANT_FAIL_CONFIG_ERROR" in r for r in reasons)
+
+    # -------------------------------------------------------------
+    # G2 Regression Tests: Circuit Breaker Clock Gate & Time Reversal
+    # -------------------------------------------------------------
+    def test_g2_time_reversal_rejected_cleanly_without_exception(self, base_order, base_account, config):
+        """
+        G2: cb.advance_time(T + 1h), sau đó gate được gọi với account.current_time = T.
+        Gate phải trả (False, reasons) chứa INVARIANT_FAIL_TIME_REVERSAL, KHÔNG ném ValueError.
+        Đồng hồ, history, lock của cb phải được bảo toàn nguyên vẹn.
+        """
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        t_future = datetime(2026, 9, 1, 11, 0, tzinfo=timezone.utc)
+
+        cb = CircuitBreakerState()
+        cb.advance_time(t_future)
+        assert cb.current_timestamp == t_future
+
+        order = dict(base_order)
+        order["timestamp"] = t0
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+        account["current_time"] = t0  # admission_time < cb.current_timestamp
+
+        is_valid, reasons = check_all_invariants(order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_TIME_REVERSAL" in r for r in reasons)
+
+        # Kiểm tra tính bất biến của CircuitBreakerState sau khi bị gate từ chối
+        assert cb.current_timestamp == t_future
+        assert cb.is_locked is False
+        assert cb.consecutive_losses == 0
+
+    def test_g2_time_reversal_accumulates_independent_errors(self, base_order, base_account, config):
+        """G2: Time reversal không làm dừng sớm việc thu thập các lỗi độc lập khác (như thiếu Stop Loss)."""
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        t_future = datetime(2026, 9, 1, 11, 0, tzinfo=timezone.utc)
+
+        cb = CircuitBreakerState()
+        cb.advance_time(t_future)
+
+        order = dict(base_order)
+        order["timestamp"] = t0
+        order["stop_loss_price"] = None  # Lỗi độc lập
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+        account["current_time"] = t0
+
+        is_valid, reasons = check_all_invariants(order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_TIME_REVERSAL" in r for r in reasons)
+        assert any("INVARIANT_FAIL_STOP_LOSS_MISSING" in r for r in reasons)
+
+    def test_g2_direct_circuit_breaker_still_raises_value_error(self):
+        """G2: Gọi trực tiếp advance_time hoặc record_trade_result lùi thời gian vẫn ném ValueError chuẩn."""
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        t_future = datetime(2026, 9, 1, 11, 0, tzinfo=timezone.utc)
+
+        cb = CircuitBreakerState()
+        cb.advance_time(t_future)
+
+        with pytest.raises(ValueError, match=r"(?i)time reversal"):
+            cb.advance_time(t0)
+
+        with pytest.raises(ValueError, match=r"(?i)time reversal"):
+            cb.record_trade_result(pnl=100.0, timestamp=t0, equity=10000.0)
+
+    # -------------------------------------------------------------
+    # G3 Regression Tests: News Filter Readiness at Invariant Gate
+    # -------------------------------------------------------------
+    def test_g3_news_filter_enabled_missing_file_rejected_at_gate(self, base_order, base_account, config, tmp_path):
+        """G3: news_filter.enabled=True nhưng file lịch không tồn tại -> gate reject NOT_READY / CALENDAR_LOAD_ERROR."""
+        missing_csv = str(tmp_path / "missing_calendar.csv")
+        cfg = dict(config)
+        cfg["news_filter"] = {
+            "enabled": True,
+            "calendar_file": missing_csv,
+        }
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        assert news_filter.is_ready is False
+
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(base_order, account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_NEWS_FILTER_NOT_READY" in r for r in reasons)
+        assert any("CALENDAR_LOAD_ERROR" in r for r in reasons)
+
+    def test_g3_news_filter_enabled_malformed_csv_rejected_at_gate(self, base_order, base_account, config, tmp_path):
+        """G3: news_filter.enabled=True nhưng file CSV thiếu cột bắt buộc -> gate reject."""
+        bad_csv = tmp_path / "bad_schema.csv"
+        bad_csv.write_text("random_col1,random_col2\nval1,val2\n", encoding="utf-8")
+
+        cfg = dict(config)
+        cfg["news_filter"] = {
+            "enabled": True,
+            "calendar_file": str(bad_csv),
+        }
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        assert news_filter.is_ready is False
+
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(base_order, account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_NEWS_FILTER_NOT_READY" in r for r in reasons)
+
+    def test_g3_news_filter_enabled_corrupted_rows_rejected_at_gate(self, base_order, base_account, config, tmp_path):
+        """G3: news_filter.enabled=True nhưng file CSV chứa timestamp hỏng (NaT/rác) -> gate reject."""
+        corrupt_csv = tmp_path / "corrupt_rows.csv"
+        corrupt_csv.write_text("datetime_utc,event,impact\nnot-a-datetime,US CPI,HIGH\n", encoding="utf-8")
+
+        cfg = dict(config)
+        cfg["news_filter"] = {
+            "enabled": True,
+            "calendar_file": str(corrupt_csv),
+        }
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        assert news_filter.is_ready is False
+
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(base_order, account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_NEWS_FILTER_NOT_READY" in r for r in reasons)
+
+    def test_g3_news_filter_enabled_empty_valid_csv_passes(self, base_order, base_account, config, tmp_path):
+        """G3: File CSV có header hợp lệ nhưng 0 dòng sự kiện -> is_ready=True, gate cho phép giao dịch bình thường."""
+        empty_valid_csv = tmp_path / "empty_valid.csv"
+        empty_valid_csv.write_text("datetime_utc,event,impact\n", encoding="utf-8")
+
+        cfg = dict(config)
+        cfg["news_filter"] = {
+            "enabled": True,
+            "calendar_file": str(empty_valid_csv),
+        }
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        assert news_filter.is_ready is True
+        assert len(news_filter.events) == 0
+
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(base_order, account, cfg)
+        assert is_valid is True
+        assert len(reasons) == 0
+
+    def test_g3_news_filter_disabled_bypasses_even_if_unready(self, base_order, base_account, config, tmp_path):
+        """G3: Mặc định news_filter.enabled=False thì bypass, không yêu cầu lịch và không bao giờ bị chặn."""
+        cfg = dict(config)
+        cfg["news_filter"] = {
+            "enabled": False,
+            "calendar_file": str(tmp_path / "nonexistent.csv"),
+        }
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(base_order, account, cfg)
+        assert is_valid is True
+        assert len(reasons) == 0
+
