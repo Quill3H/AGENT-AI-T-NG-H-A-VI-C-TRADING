@@ -127,6 +127,67 @@ class TestLiquidationCalculation:
         expected = (50000.0 * 1.2 + (50.0 / qty)) / 1.005
         assert pytest.approx(liq, rel=1e-5) == expected
 
+    def test_gpt_benchmark_long_tier_crossing(self, config):
+        """
+        GPT Review Benchmark - LONG:
+        Entry = 50,000 USD, Position size = 60,000 USD, Leverage = 3x (Quantity = 1.2 BTC).
+        Notional at entry: 60,000 USD -> Tier 1 (MMR=0.005, cum=50).
+        Nhưng tại giá thanh lý candidate P_cand, notional q * P_cand <= 50,000 USD -> rơi vào Tier 0!
+        Tier-Consistent Solver giải ra:
+        P_liq = [50000 * (1 - 1/3) - 0] / (1 - 0.004) = 33333.3333 / 0.996 = 33,467.202142 USD.
+        """
+        brackets = config.get("leverage_brackets", {})
+        liq = calculate_estimated_liquidation_price(
+            direction="LONG",
+            entry_price=50000.0,
+            position_size_usd=60000.0,
+            leverage=3.0,
+            symbol="BTCUSDT",
+            leverage_brackets=brackets,
+        )
+        assert pytest.approx(liq, abs=0.01) == 33467.20
+        # Notional at liq price: 1.2 * 33467.202142 = 40,160.64 USD <= 50,000 (chính xác Tier 0)
+        assert (60000.0 / 50000.0) * liq <= 50000.0
+
+    def test_gpt_benchmark_short_tier_crossing(self, config):
+        """
+        GPT Review Benchmark - SHORT:
+        Entry = 50,000 USD, Position size = 45,000 USD, Leverage = 3x (Quantity = 0.9 BTC).
+        Notional at entry: 45,000 USD -> Tier 0 (MMR=0.004, cum=0).
+        Nhưng tại giá thanh lý candidate P_cand, notional q * P_cand > 50,000 USD -> rơi vào Tier 1!
+        Tier-Consistent Solver giải ra:
+        P_liq = [50000 * (1 + 1/3) + (50 / 0.9)] / (1 + 0.005)
+              = (66666.6667 + 55.5556) / 1.005 = 66,390.270868 USD.
+        """
+        brackets = config.get("leverage_brackets", {})
+        liq = calculate_estimated_liquidation_price(
+            direction="SHORT",
+            entry_price=50000.0,
+            position_size_usd=45000.0,
+            leverage=3.0,
+            symbol="BTCUSDT",
+            leverage_brackets=brackets,
+        )
+        assert pytest.approx(liq, abs=0.01) == 66390.27
+        # Notional at liq price: 0.9 * 66390.270868 = 59,751.24 USD > 50,000 (chính xác Tier 1)
+        assert (45000.0 / 50000.0) * liq > 50000.0
+
+    def test_unknown_symbol_raises(self, config):
+        """Nếu cấu hình leverage_brackets có sẵn nhưng không chứa symbol yêu cầu -> Raise ValueError."""
+        brackets = config.get("leverage_brackets", {})
+        with pytest.raises(ValueError, match="not found in provided leverage brackets configuration"):
+            calculate_estimated_liquidation_price(
+                "LONG", 50000.0, 30000.0, 5.0, symbol="SOLUSDT", leverage_brackets=brackets
+            )
+
+    def test_invalid_bracket_structure_raises(self):
+        """Leverage brackets không hợp lệ (cap không tăng dần, rỗng) phải bị từ chối."""
+        bad_brackets = {"BTCUSDT": [[50000, 0.004, 0], [40000, 0.005, 50]]}
+        with pytest.raises(ValueError, match="Bracket cap must be strictly increasing"):
+            calculate_estimated_liquidation_price(
+                "LONG", 50000.0, 30000.0, 5.0, symbol="BTCUSDT", leverage_brackets=bad_brackets
+            )
+
     def test_invalid_arguments_raise(self):
         with pytest.raises(ValueError, match="entry_price must be positive"):
             calculate_estimated_liquidation_price("LONG", -50000, 10000, 5)
@@ -136,3 +197,7 @@ class TestLiquidationCalculation:
             calculate_estimated_liquidation_price("LONG", 50000, 10000, 0.5)
         with pytest.raises(ValueError, match="Invalid direction"):
             calculate_estimated_liquidation_price("INVALID", 50000, 10000, 5)
+        with pytest.raises(TypeError, match="entry_price must be numeric"):
+            calculate_estimated_liquidation_price("LONG", True, 10000, 5)
+        with pytest.raises(ValueError, match="entry_price must be finite"):
+            calculate_estimated_liquidation_price("LONG", float("nan"), 10000, 5)

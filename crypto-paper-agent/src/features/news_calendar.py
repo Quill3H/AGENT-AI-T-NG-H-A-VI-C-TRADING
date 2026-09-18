@@ -1,4 +1,4 @@
-﻿"""
+"""
 news_calendar.py - News Filter & Economic Calendar (Placeholder)
 ================================================================
 Quản lý lịch kinh tế (CPI, FOMC, NFP) từ file CSV và kiểm tra
@@ -11,36 +11,51 @@ Theo quyết định mục 10.1:
 """
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
+import math
 import pandas as pd
 from loguru import logger
+
+def parse_utc_datetime(ts: Any) -> datetime:
+    """Chuyển đổi timestamp bất kỳ (datetime, Unix seconds/ms, ISO string) thành UTC datetime."""
+    if isinstance(ts, datetime):
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+    if isinstance(ts, (int, float)):
+        if type(ts) is bool or not math.isfinite(float(ts)):
+            raise ValueError(f"Invalid timestamp value: {ts}")
+        val = float(ts)
+        if val > 1e11:
+            val = val / 1000.0
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    if isinstance(ts, str):
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    raise TypeError(f"Unsupported timestamp type: {type(ts)}")
 
 
 class EconomicEvent:
     """Đại diện cho 1 sự kiện kinh tế quan trọng."""
-    def __init__(self, timestamp: datetime, event_name: str, impact: str = "HIGH"):
-        if timestamp.tzinfo is None:
-            self.timestamp = timestamp.replace(tzinfo=timezone.utc)
-        else:
-            self.timestamp = timestamp.astimezone(timezone.utc)
+    def __init__(self, timestamp: Union[datetime, int, float, str], event_name: str, impact: str = "HIGH"):
+        self.timestamp = parse_utc_datetime(timestamp)
         self.event_name = event_name
         self.impact = impact
 
     def in_blackout_window(
         self,
-        current_time: datetime,
+        current_time: Union[datetime, int, float, str],
         minutes_before: int = 15,
         minutes_after: int = 15
     ) -> bool:
         """Kiểm tra current_time có nằm trong [event - before, event + after] không."""
-        if current_time.tzinfo is None:
-            current_time = current_time.replace(tzinfo=timezone.utc)
-        else:
-            current_time = current_time.astimezone(timezone.utc)
-
+        dt = parse_utc_datetime(current_time)
         start_window = self.timestamp - timedelta(minutes=minutes_before)
         end_window = self.timestamp + timedelta(minutes=minutes_after)
-        return start_window <= current_time <= end_window
+        return start_window <= dt <= end_window
+
 
 
 class NewsCalendarFilter:
@@ -127,7 +142,7 @@ class NewsCalendarFilter:
             )
             self.events = []
 
-    def is_in_blackout(self, check_time: datetime) -> Tuple[bool, Optional[str]]:
+    def is_in_blackout(self, check_time: Union[datetime, int, float, str]) -> Tuple[bool, Optional[str]]:
         """
         Kiểm tra thời điểm hiện tại có bị cấm giao dịch vì tin tức không.
         Returns:

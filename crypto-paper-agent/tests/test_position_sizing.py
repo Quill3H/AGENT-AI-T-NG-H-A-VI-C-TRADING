@@ -2,8 +2,12 @@
 test_position_sizing.py - Unit tests for Position Sizing
 =========================================================
 Kiểm thử tính toán position size theo công thức chuẩn trong Master Spec,
-đối chiếu từng trường kết quả với số liệu tính tay, và kiểm tra bắt lỗi đầy đủ.
+đối chiếu từng trường kết quả với số liệu tính tay, và kiểm tra bắt lỗi đầy đủ theo ADR 0006 và GPT review R1:
+- Từ chối NaN, +Inf, -Inf, bool, string sai
+- Bắt lỗi chia cho 0 khi stop_price == entry_price
+- Kiểm tra các ràng buộc biên số học và overflow.
 """
+import math
 import pytest
 from src.risk.position_sizing import calculate_position_size
 
@@ -71,21 +75,35 @@ class TestPositionSizing:
             )
 
     @pytest.mark.parametrize(
-        "equity,risk_percent,entry,stop,leverage,err_match",
+        "equity,risk_percent,entry,stop,leverage,err_match,err_type",
         [
-            (-1000.0, 0.02, 50000.0, 49000.0, 5.0, "Account equity must be positive"),
-            (0.0, 0.02, 50000.0, 49000.0, 5.0, "Account equity must be positive"),
-            (10000.0, -0.01, 50000.0, 49000.0, 5.0, "Risk percent must be positive"),
-            (10000.0, 0.0, 50000.0, 49000.0, 5.0, "Risk percent must be positive"),
-            (10000.0, 0.02, -50000.0, 49000.0, 5.0, "Entry price must be positive"),
-            (10000.0, 0.02, 50000.0, -49000.0, 5.0, "Stop price must be positive"),
-            (10000.0, 0.02, 50000.0, 49000.0, 0.5, "Leverage must be at least 1.0"),
+            (-1000.0, 0.02, 50000.0, 49000.0, 5.0, "strictly greater than", ValueError),
+            (0.0, 0.02, 50000.0, 49000.0, 5.0, "strictly greater than", ValueError),
+            (10000.0, -0.01, 50000.0, 49000.0, 5.0, "strictly greater than", ValueError),
+            (10000.0, 0.0, 50000.0, 49000.0, 5.0, "strictly greater than", ValueError),
+            (10000.0, 0.02, -50000.0, 49000.0, 5.0, "strictly greater than", ValueError),
+            (10000.0, 0.02, 50000.0, -49000.0, 5.0, "strictly greater than", ValueError),
+            (10000.0, 0.02, 50000.0, 49000.0, 0.5, "greater than or equal to", ValueError),
+            # R1 Regression: Nan and Inf
+            (float("nan"), 0.02, 50000.0, 49000.0, 5.0, "finite number", ValueError),
+            (10000.0, float("nan"), 50000.0, 49000.0, 5.0, "finite number", ValueError),
+            (10000.0, 0.02, float("nan"), 49000.0, 5.0, "finite number", ValueError),
+            (10000.0, 0.02, 50000.0, float("nan"), 5.0, "finite number", ValueError),
+            (10000.0, 0.02, 50000.0, 49000.0, float("nan"), "finite number", ValueError),
+            (float("inf"), 0.02, 50000.0, 49000.0, 5.0, "finite number", ValueError),
+            (10000.0, 0.02, float("inf"), 49000.0, 5.0, "finite number", ValueError),
+            # R1 Regression: bool rejection
+            (True, 0.02, 50000.0, 49000.0, 5.0, "numeric float or int", TypeError),
+            (10000.0, False, 50000.0, 49000.0, 5.0, "numeric float or int", TypeError),
+            (10000.0, 0.02, 50000.0, 49000.0, True, "numeric float or int", TypeError),
+            # R1 Regression: strings rejection
+            ("10000", 0.02, 50000.0, 49000.0, 5.0, "numeric float or int", TypeError),
         ],
     )
-    def test_invalid_arguments_raise_value_error(
-        self, equity, risk_percent, entry, stop, leverage, err_match
+    def test_invalid_arguments_raise_error(
+        self, equity, risk_percent, entry, stop, leverage, err_match, err_type
     ):
-        with pytest.raises(ValueError, match=err_match):
+        with pytest.raises(err_type, match=err_match):
             calculate_position_size(
                 equity=equity,
                 risk_percent=risk_percent,

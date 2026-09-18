@@ -145,3 +145,115 @@ class TestCircuitBreakers:
         assert cb.is_trading_allowed(unlock_time)
         assert not cb.is_locked
         assert cb.locked_until is None
+
+    def test_invalid_inputs_rejected(self):
+        """Kiểm tra từ chối các giá trị phi số, NaN, Inf, âm không hợp lệ."""
+        cb = CircuitBreakerState()
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        
+        # pnl là NaN / Inf / bool / str
+        with pytest.raises(ValueError, match="pnl must be finite"):
+            cb.record_trade_result(pnl=float("nan"), timestamp=t0, equity=10000.0)
+        with pytest.raises(ValueError, match="pnl must be finite"):
+            cb.record_trade_result(pnl=float("inf"), timestamp=t0, equity=10000.0)
+        with pytest.raises(TypeError, match="pnl must be numeric"):
+            cb.record_trade_result(pnl=True, timestamp=t0, equity=10000.0)
+        with pytest.raises(TypeError, match="pnl must be numeric"):
+            cb.record_trade_result(pnl="50.0", timestamp=t0, equity=10000.0)
+
+        # equity là âm, NaN, bool
+        with pytest.raises(ValueError, match="equity must be non-negative"):
+            cb.record_trade_result(pnl=50.0, timestamp=t0, equity=-100.0)
+        with pytest.raises(ValueError, match="equity must be non-negative"):
+            cb.record_trade_result(pnl=50.0, timestamp=t0, equity=float("nan"))
+        with pytest.raises(TypeError, match="equity must be numeric"):
+            cb.record_trade_result(pnl=50.0, timestamp=t0, equity=False)
+
+        # get_effective_risk_percent với input không hợp lệ
+        with pytest.raises(ValueError, match="base_risk_percent must be positive"):
+            cb.get_effective_risk_percent(-0.01)
+        with pytest.raises(ValueError, match="base_risk_percent must be positive"):
+            cb.get_effective_risk_percent(float("nan"))
+        with pytest.raises(TypeError, match="base_risk_percent must be numeric"):
+            cb.get_effective_risk_percent(True)
+
+    def test_time_reversal_rejected(self):
+        """Từ chối ghi nhận sự kiện lùi thời gian (time reversal)."""
+        cb = CircuitBreakerState()
+        t1 = datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+
+        cb.record_trade_result(pnl=50.0, timestamp=t1, equity=10000.0)
+        with pytest.raises(ValueError, match="time reversal"):
+            cb.record_trade_result(pnl=50.0, timestamp=t0, equity=10050.0)
+
+    def test_breakeven_trade_resets_streaks(self):
+        """
+        Lệnh hòa (pnl == 0) ngắt cả chuỗi thắng và thua về 0 theo ADR 0006,
+        nhưng giữ nguyên mức risk_multiplier hiện tại.
+        """
+        cb = CircuitBreakerState(
+            consecutive_losses_threshold=3,
+            consecutive_wins_to_recover=3,
+            risk_reduction_on_streak=0.5,
+        )
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        equity = 10000.0
+
+        # Thua 2 lệnh
+        cb.record_trade_result(pnl=-50.0, timestamp=t0, equity=equity)
+        cb.record_trade_result(pnl=-50.0, timestamp=t0 + timedelta(hours=1), equity=equity)
+        assert cb.consecutive_losses == 2
+
+        # Lệnh hòa (pnl = 0) -> Reset consecutive_losses về 0
+        cb.record_trade_result(pnl=0.0, timestamp=t0 + timedelta(hours=2), equity=equity)
+        assert cb.consecutive_losses == 0
+        assert cb.consecutive_wins == 0
+        assert cb.risk_multiplier == 1.0
+
+        # Thua tiếp 3 lệnh -> kích hoạt risk 0.5
+        for i in range(3):
+            cb.record_trade_result(pnl=-50.0, timestamp=t0 + timedelta(hours=3 + i), equity=equity)
+        assert cb.risk_multiplier == 0.5
+
+        # Thắng 2 lệnh
+        cb.record_trade_result(pnl=50.0, timestamp=t0 + timedelta(hours=7), equity=equity)
+        cb.record_trade_result(pnl=50.0, timestamp=t0 + timedelta(hours=8), equity=equity)
+        assert cb.consecutive_wins == 2
+
+        # Lệnh hòa xen giữa -> Reset consecutive_wins về 0, risk_multiplier vẫn là 0.5
+        cb.record_trade_result(pnl=0.0, timestamp=t0 + timedelta(hours=9), equity=equity)
+        assert cb.consecutive_wins == 0
+        assert cb.risk_multiplier == 0.5
+
+    def test_sliding_window_pruning_in_is_trading_allowed(self):
+        """is_trading_allowed tự động loại bỏ các lệnh cũ hơn 24h ngay cả khi không có lệnh mới."""
+        cb = CircuitBreakerState()
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        equity = 10000.0
+
+        cb.record_trade_result(pnl=-200.0, timestamp=t0, equity=equity)
+        assert cb.rolling_24h_pnl == -200.0
+        assert len(cb.trade_history_24h) == 1
+
+        # Tại t0 + 25h: is_trading_allowed prune các giao dịch cũ
+        allowed = cb.is_trading_allowed(t0 + timedelta(hours=25))
+        assert allowed is True
+        assert cb.rolling_24h_pnl == 0.0
+        assert len(cb.trade_history_24h) == 0
+
+    def test_non_extended_lockout(self):
+        """Trong thời gian bị khóa, ghi nhận thêm lệnh không được gia hạn mốc locked_until."""
+        cb = CircuitBreakerState(daily_loss_limit_pct=0.05)
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        equity = 10000.0
+
+        # Lỗ 600$ (6%) -> Khóa 24h đến t0 + 24h
+        cb.record_trade_result(pnl=-600.0, timestamp=t0, equity=equity)
+        expected_lock_until = t0 + timedelta(hours=24)
+        assert cb.locked_until == expected_lock_until
+
+        # Tại t0 + 2h ghi nhận thêm PnL (ví dụ lệnh đóng trễ) -> locked_until không bị kéo dài đến t0 + 26h
+        cb.record_trade_result(pnl=-100.0, timestamp=t0 + timedelta(hours=2), equity=equity)
+        assert cb.locked_until == expected_lock_until
+

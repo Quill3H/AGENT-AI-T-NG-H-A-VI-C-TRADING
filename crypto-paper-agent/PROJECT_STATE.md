@@ -16,7 +16,7 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH — 85/85 tests passed, chờ review chốt)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW — 113/113 tests passed, chờ nghiệm thu)
 - [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
@@ -40,6 +40,7 @@
 8. **Đóng gói hàm Cache Manager:** Chuẩn hóa các hàm public `ensure_utc_index` và `timeframe_to_timedelta` trong `cache_manager.py`, giữ alias tương thích ngược.
 9. **Chống Lookahead Bias tuyệt đối cho CVD Divergence:** Nến $i$ là Swing Point được xác nhận tại nến $t = i + k$ ($k = 3$). Tín hiệu phân kỳ chỉ ghi nhận tại nến $t$, **tuyệt đối không gán ngược** về nến $i$ (Tham chiếu: ADR 0003).
 10. **Tầng Fallback cho Chỉ báo Kỹ thuật:** Ưu tiên `pandas-ta`, nhưng luôn có tầng Fallback bằng pure pandas (`_ema_presma`, Wilder RMA) theo đúng chuẩn TA-Lib với log cảnh báo rõ ràng (Tham chiếu: ADR 0004).
+11. **Chuẩn hóa Refinements cho Risk Manager theo Independent GPT Review (ADR 0006):** Khắc phục toàn diện 6 vấn đề R1–R6: Loại trừ bool/NaN/Inf khỏi sizing, đối soát rủi ro thực tế $Q \times |Entry - Stop|$ với ngân sách rủi ro và available margin, loại bỏ fallback wall-clock `datetime.now()` (bắt buộc timestamp UTC mô phỏng), làm sạch Circuit Breaker (sliding window $(T-24h, T]$, monotonic time, breakeven streak reset, lockout non-extension), giải giá thanh lý nhất quán theo Tier (Tier-Consistent Solver), kịch bản mô phỏng 100% minh bạch (Tham chiếu: ADR 0006).
 
 ---
 
@@ -58,21 +59,21 @@
 | `src/features/oi_features.py` | Tính `oi_delta_pct` với cơ chế lan truyền NaN và tương thích OI confluence. |
 | `src/features/cvd.py` | Tính Cumulative Volume Delta và phát hiện CVD Divergence chống lookahead 100%. |
 | `src/features/__init__.py` | Export module và cung cấp hàm pipeline tổng hợp `add_all_features`. |
-| `src/risk/position_sizing.py` | Tính position size, required margin, stop distance, bắt lỗi chia 0. |
-| `src/risk/invariant_checks.py` | Tra MMR tier từ brackets, tính P_liq chính xác, kiểm tra 6 Hard Invariants. |
-| `src/risk/circuit_breakers.py` | Quản lý Circuit Breaker, khóa 24h khi lỗ 5%, giảm 50% risk, phục hồi after_3_wins. |
+| `src/risk/position_sizing.py` | Tính position size, required margin, stop distance, bắt lỗi chia 0 và sanitization chặt chẽ. |
+| `src/risk/invariant_checks.py` | Tra MMR tier từ brackets, giải P_liq nhất quán theo Tier, kiểm tra Hard Invariants và đối soát margin. |
+| `src/risk/circuit_breakers.py` | Quản lý Circuit Breaker, khóa 24h khi lỗ 5%, giảm 50% risk, phục hồi after_3_wins, làm sạch đầu vào. |
 | `src/risk/__init__.py` | Export module và các hàm tiện ích của Risk Manager. |
-| `scripts/simulate_risk_manager_10_trades.py` | Kịch bản chạy mô phỏng 10 lệnh liên tiếp qua toàn bộ Risk Manager. |
+| `scripts/simulate_risk_manager_10_trades.py` | Kịch bản mô phỏng 10 lệnh minh bạch 100% (2 Phase độc lập, đối soát vốn tự động). |
 | `tests/test_data_layer.py` | 25 unit/integration tests cho Data Layer, cache và hybrid OI. |
 | `tests/test_indicators.py` | 9 unit tests cho các chỉ báo kỹ thuật, so sánh chéo fallback và TA-Lib. |
 | `tests/test_oi_features.py` | 6 unit tests cho OI delta và cơ chế lan truyền NaN. |
 | `tests/test_cvd.py` | 4 unit tests cho CVD và nhận diện phân kỳ Bullish/Bearish. |
 | `tests/test_no_lookahead.py` | 6 unit tests xáo trộn tương lai, chứng minh tính bất biến nhân quả quá khứ. |
-| `tests/test_position_sizing.py` | 10 unit tests cho Position Sizing, so khớp số liệu tính tay và exception. |
-| `tests/test_liquidation_calc.py` | 6 unit tests cho tra cứu MMR tier và công thức giá thanh lý Long/Short. |
-| `tests/test_circuit_breakers.py` | 5 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng và khóa 24h. |
-| `tests/test_invariant_checks.py` | 11 unit tests kiểm tra 6 invariant riêng lẻ, case all-pass và multiple-fails. |
-| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0005). |
+| `tests/test_position_sizing.py` | 21 unit tests cho Position Sizing, so khớp số liệu tính tay, sanitization, biên số học. |
+| `tests/test_liquidation_calc.py` | 10 unit tests cho Tier-Consistent Solver, benchmark GPT review, bracket validation. |
+| `tests/test_circuit_breakers.py` | 10 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng/hòa, sliding window pruning. |
+| `tests/test_invariant_checks.py` | 19 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check. |
+| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0006). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn. |
 
 ---

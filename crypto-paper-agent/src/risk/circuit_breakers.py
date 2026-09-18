@@ -1,37 +1,48 @@
 """
 circuit_breakers.py - Circuit Breakers Module
 =============================================
-Quản lý trạng thái ngắt mạch bảo vệ tài khoản (Circuit Breakers):
-1. Rolling 24h PnL Loss Limit: Nếu tổng lỗ ròng trong 24h qua vượt daily_loss_limit_pct (5%),
-   khóa giao dịch trong 24 giờ.
-2. Consecutive Losses Streak: Nếu thua liên tiếp >= consecutive_losses_threshold (3 lệnh),
-   giảm risk_percent xuống 50% (risk_multiplier = 0.5).
-3. Recovery Mode (after_3_wins - ADR 0002): Khi đang ở mức risk 50%, cần đúng 3 lệnh
-   thắng liên tiếp để phục hồi về 100% (risk_multiplier = 1.0). Nếu có bất kỳ lệnh
-   thua nào xen giữa, chuỗi thắng lập tức reset về 0 (không cộng dồn xuyên qua lệnh thua).
+Quản lý trạng thái ngắt mạch bảo vệ tài khoản (Circuit Breakers) tuân thủ ADR 0002 và ADR 0006:
+1. Rolling 24h PnL Loss Limit:
+   - Cửa sổ trượt là khoảng nửa mở nửa đóng (T - 24h, T].
+   - Tự động làm mới khi thời gian tiến lên (trong cả record_trade_result và is_trading_allowed).
+   - Nếu tổng lỗ ròng rolling 24h <= -1 * (equity * daily_loss_limit_pct) -> khóa giao dịch đúng 24h kể từ lần kích hoạt đầu.
+   - Các lệnh tất toán phát sinh trong thời gian đang bị khóa không kéo dài thêm locked_until.
+2. Consecutive Losses Streak:
+   - Thua liên tiếp >= consecutive_losses_threshold (3 lệnh) -> giảm risk_multiplier = 0.5.
+3. Recovery Mode (after_3_wins - ADR 0002):
+   - Đang ở mức risk 0.5, cần đúng 3 lệnh thắng liên tiếp để phục hồi về 1.0.
+   - Nếu có lệnh thua hoặc lệnh hòa xen giữa, chuỗi thắng lập tức reset về 0 (không cộng dồn).
+4. Lệnh hòa (pnl == 0):
+   - Reset cả chuỗi thắng và chuỗi thua về 0, nhưng giữ nguyên risk_multiplier hiện tại.
+5. Vệ sinh dữ liệu & Thời gian đơn điệu:
+   - Từ chối NaN/Inf/bool/chuỗi sai cho pnl và equity; không mutate state khi input lỗi.
+   - Từ chối sự kiện lùi thời gian (t < last_recorded_time).
 """
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple, Union
+import math
+from typing import Any, List, Optional, Tuple, Union
 from loguru import logger
 
 
-def _ensure_utc_datetime(ts: Union[datetime, int, float, str]) -> datetime:
-    """Chuyển đổi timestamp thành timezone-aware UTC datetime."""
+def _ensure_utc_datetime(ts: Any) -> datetime:
+    """Chuyển đổi timestamp bất kỳ thành timezone-aware UTC datetime."""
     if isinstance(ts, datetime):
         if ts.tzinfo is None:
             return ts.replace(tzinfo=timezone.utc)
         return ts.astimezone(timezone.utc)
     if isinstance(ts, (int, float)):
-        # Nếu > 1e11 coi như milliseconds
-        if ts > 1e11:
-            ts = ts / 1000.0
-        return datetime.fromtimestamp(ts, tz=timezone.utc)
+        if type(ts) is bool or not math.isfinite(float(ts)):
+            raise ValueError(f"Invalid timestamp value: {ts}")
+        val = float(ts)
+        if val > 1e11:
+            val = val / 1000.0
+        return datetime.fromtimestamp(val, tz=timezone.utc)
     if isinstance(ts, str):
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         if dt.tzinfo is None:
             return dt.replace(tzinfo=timezone.utc)
         return dt.astimezone(timezone.utc)
-    raise TypeError(f"Unsupported timestamp type: {type(ts)}")
+    raise TypeError(f"Unsupported timestamp type: {type(ts).__name__}: {ts!r}")
 
 
 class CircuitBreakerState:
@@ -46,9 +57,29 @@ class CircuitBreakerState:
         consecutive_wins_to_recover: int = 3,
         recovery_mode: str = "after_3_wins",
     ):
-        self.daily_loss_limit_pct: float = daily_loss_limit_pct
+        # Validate tham số cấu hình
+        if type(daily_loss_limit_pct) is bool or not isinstance(daily_loss_limit_pct, (int, float)) or not (0 < daily_loss_limit_pct < 1.0):
+            raise ValueError(f"daily_loss_limit_pct must be between 0 and 1, got {daily_loss_limit_pct}")
+        if type(consecutive_losses_threshold) is bool or not isinstance(consecutive_losses_threshold, int) or consecutive_losses_threshold < 1:
+            raise ValueError(f"consecutive_losses_threshold must be integer >= 1, got {consecutive_losses_threshold}")
+        if type(risk_reduction_on_streak) is bool or not isinstance(risk_reduction_on_streak, (int, float)) or not (0 < risk_reduction_on_streak < 1.0):
+            raise ValueError(f"risk_reduction_on_streak must be between 0 and 1, got {risk_reduction_on_streak}")
+        if type(consecutive_wins_to_recover) is bool or not isinstance(consecutive_wins_to_recover, int) or consecutive_wins_to_recover < 1:
+            raise ValueError(f"consecutive_wins_to_recover must be integer >= 1, got {consecutive_wins_to_recover}")
+
+        # Kiểm tra tính nhất quán giữa recovery_mode và consecutive_wins_to_recover
+        if recovery_mode == "after_3_wins" and consecutive_wins_to_recover != 3:
+            raise ValueError(
+                f"Configuration mismatch: recovery_mode is '{recovery_mode}' but consecutive_wins_to_recover is {consecutive_wins_to_recover}"
+            )
+        if recovery_mode == "after_1_win" and consecutive_wins_to_recover != 1:
+            raise ValueError(
+                f"Configuration mismatch: recovery_mode is '{recovery_mode}' but consecutive_wins_to_recover is {consecutive_wins_to_recover}"
+            )
+
+        self.daily_loss_limit_pct: float = float(daily_loss_limit_pct)
         self.consecutive_losses_threshold: int = consecutive_losses_threshold
-        self.risk_reduction_on_streak: float = risk_reduction_on_streak
+        self.risk_reduction_on_streak: float = float(risk_reduction_on_streak)
         self.consecutive_wins_to_recover: int = consecutive_wins_to_recover
         self.recovery_mode: str = recovery_mode
 
@@ -60,18 +91,30 @@ class CircuitBreakerState:
         self.risk_multiplier: float = 1.0
         self.is_locked: bool = False
         self.locked_until: Optional[datetime] = None
+        self.last_event_time: Optional[datetime] = None
 
     @classmethod
     def from_config(cls, config: dict) -> "CircuitBreakerState":
         """Khởi tạo instance từ dictionary cấu hình hệ thống."""
         cb_cfg = config.get("circuit_breakers", {})
         return cls(
-            daily_loss_limit_pct=float(cb_cfg.get("daily_loss_limit_pct", 0.05)),
-            consecutive_losses_threshold=int(cb_cfg.get("consecutive_losses_threshold", 3)),
-            risk_reduction_on_streak=float(cb_cfg.get("risk_reduction_on_streak", 0.5)),
-            consecutive_wins_to_recover=int(cb_cfg.get("consecutive_wins_to_recover", 3)),
-            recovery_mode=str(cb_cfg.get("recovery_mode", "after_3_wins")),
+            daily_loss_limit_pct=cb_cfg.get("daily_loss_limit_pct", 0.05),
+            consecutive_losses_threshold=cb_cfg.get("consecutive_losses_threshold", 3),
+            risk_reduction_on_streak=cb_cfg.get("risk_reduction_on_streak", 0.5),
+            consecutive_wins_to_recover=cb_cfg.get("consecutive_wins_to_recover", 3),
+            recovery_mode=cb_cfg.get("recovery_mode", "after_3_wins"),
         )
+
+    def _prune_window(self, current_time: datetime) -> None:
+        """
+        Làm mới cửa sổ trượt 24h: loại bỏ các giao dịch đã cũ hơn 24h tính đến current_time.
+        Cửa sổ quy ước: (current_time - 24h, current_time].
+        """
+        cutoff_time = current_time - timedelta(hours=24)
+        self.trade_history_24h = [
+            (t, p) for t, p in self.trade_history_24h if t > cutoff_time
+        ]
+        self.rolling_24h_pnl = sum(p for _, p in self.trade_history_24h)
 
     def record_trade_result(
         self,
@@ -81,35 +124,67 @@ class CircuitBreakerState:
     ) -> None:
         """
         Ghi nhận kết quả PnL của 1 lệnh đã đóng và cập nhật trạng thái ngắt mạch.
+        Xác thực đầu vào trước khi mutate state; reject event lùi thời gian.
 
         Args:
-            pnl: Lợi nhuận/thua lỗ ròng bằng USD (dương là thắng, âm là thua).
+            pnl: Lợi nhuận/thua lỗ ròng bằng USD.
             timestamp: Thời điểm đóng lệnh.
             equity: Số dư vốn hiện tại của tài khoản (USD) tại thời điểm đóng lệnh.
         """
+        # 1. Validate PnL
+        if type(pnl) is bool or not isinstance(pnl, (int, float)):
+            raise TypeError(f"pnl must be numeric float or int, got {type(pnl).__name__}: {pnl!r}")
+        f_pnl = float(pnl)
+        if not math.isfinite(f_pnl):
+            raise ValueError(f"pnl must be finite, got {f_pnl}")
+
+        # 2. Validate Equity
+        if type(equity) is bool or not isinstance(equity, (int, float)):
+            raise TypeError(f"equity must be numeric float or int, got {type(equity).__name__}: {equity!r}")
+        f_eq = float(equity)
+        if not math.isfinite(f_eq) or f_eq < 0:
+            raise ValueError(f"equity must be non-negative finite number, got {f_eq}")
+
+        # 3. Validate Timestamp & Thứ tự đơn điệu
         dt = _ensure_utc_datetime(timestamp)
-
-        # 1. Cập nhật cửa sổ trượt 24h
-        cutoff_time = dt - timedelta(hours=24)
-        self.trade_history_24h = [
-            (t, p) for t, p in self.trade_history_24h if t >= cutoff_time
-        ]
-        self.trade_history_24h.append((dt, pnl))
-        self.rolling_24h_pnl = sum(p for _, p in self.trade_history_24h)
-
-        # 2. Kiểm tra Daily Loss Limit (ngưỡng 5% vốn hiện tại)
-        loss_limit_usd = equity * self.daily_loss_limit_pct
-        if self.rolling_24h_pnl <= -1.0 * loss_limit_usd:
-            self.is_locked = True
-            self.locked_until = dt + timedelta(hours=24)
-            logger.warning(
-                "[CircuitBreaker] KÍCH HOẠT KHÓA 24H! Rolling 24h PnL: {:.2f}$ vượt ngưỡng lỗ tối đa: -{:.2f}$ ({:.1f}%). "
-                "Khóa giao dịch tới: {}",
-                self.rolling_24h_pnl, loss_limit_usd, self.daily_loss_limit_pct * 100, self.locked_until.isoformat()
+        if self.last_event_time is not None and dt < self.last_event_time:
+            raise ValueError(
+                f"Cannot record trade with timestamp {dt.isoformat()} earlier than "
+                f"last recorded event {self.last_event_time.isoformat()} (time reversal)."
             )
+        self.last_event_time = dt
 
-        # 3. Quản lý chuỗi thắng / thua và điều chỉnh risk_multiplier
-        if pnl < 0:
+        # Xử lý tài khoản cạn vốn (cháy tài khoản)
+        if f_eq == 0:
+            self.is_locked = True
+            self.locked_until = dt + timedelta(days=3650)  # Khóa vô thời hạn
+            logger.error("[CircuitBreaker] Tài khoản cạn vốn (equity = 0)! Khóa giao dịch hoàn toàn.")
+            return
+
+        # 4. Cập nhật cửa sổ trượt 24h
+        self.trade_history_24h.append((dt, f_pnl))
+        self._prune_window(dt)
+
+        # 5. Kiểm tra Daily Loss Limit (ngưỡng % trên equity hiện tại sau lệnh)
+        loss_limit_usd = f_eq * self.daily_loss_limit_pct
+        if self.rolling_24h_pnl <= -1.0 * loss_limit_usd:
+            if not self.is_locked:
+                self.is_locked = True
+                self.locked_until = dt + timedelta(hours=24)
+                logger.warning(
+                    "[CircuitBreaker] KÍCH HOẠT KHÓA 24H! Rolling 24h PnL: {:.2f}$ vượt ngưỡng lỗ tối đa: -{:.2f}$ ({:.1f}%). "
+                    "Khóa giao dịch tới: {}",
+                    self.rolling_24h_pnl, loss_limit_usd, self.daily_loss_limit_pct * 100, self.locked_until.isoformat()
+                )
+            else:
+                # Đang bị khóa: Không gia hạn thêm locked_until
+                logger.info(
+                    "[CircuitBreaker] Đang trong thời gian khóa, ghi nhận thêm PnL: {:.2f}$. Giữ nguyên mốc khóa: {}",
+                    f_pnl, self.locked_until.isoformat()
+                )
+
+        # 6. Quản lý chuỗi thắng / thua và điều chỉnh risk_multiplier
+        if f_pnl < 0:
             # Lệnh THUA
             self.consecutive_losses += 1
             self.consecutive_wins = 0  # BẮT BUỘC reset chuỗi thắng nếu có lệnh thua xen giữa
@@ -122,7 +197,7 @@ class CircuitBreakerState:
                         self.consecutive_losses, self.consecutive_losses_threshold,
                         self.risk_reduction_on_streak * 100, self.risk_multiplier
                     )
-        elif pnl > 0:
+        elif f_pnl > 0:
             # Lệnh THẮNG
             self.consecutive_losses = 0
             if self.risk_multiplier < 1.0:
@@ -142,27 +217,39 @@ class CircuitBreakerState:
             else:
                 self.consecutive_wins += 1
         else:
-            # Lệnh HÒA (pnl == 0): Không làm thay đổi chuỗi thắng/thua
-            pass
+            # Lệnh HÒA (f_pnl == 0.0): Theo ADR 0006, ngắt cả chuỗi thắng và thua, giữ nguyên multiplier
+            self.consecutive_losses = 0
+            self.consecutive_wins = 0
+            logger.info("[CircuitBreaker] Lệnh hòa (pnl=0). Reset cả chuỗi thắng và thua về 0.")
 
     def get_effective_risk_percent(self, base_risk_percent: float) -> float:
         """
         Tính tỷ lệ rủi ro hiệu lực sau khi áp dụng hệ số ngắt mạch.
         """
-        return base_risk_percent * self.risk_multiplier
+        if type(base_risk_percent) is bool or not isinstance(base_risk_percent, (int, float)):
+            raise TypeError(f"base_risk_percent must be numeric, got {type(base_risk_percent).__name__}")
+        f_brp = float(base_risk_percent)
+        if not math.isfinite(f_brp) or f_brp <= 0:
+            raise ValueError(f"base_risk_percent must be positive finite number, got {f_brp}")
+        return f_brp * self.risk_multiplier
 
     def is_trading_allowed(self, current_timestamp: Union[datetime, int, float, str]) -> bool:
         """
         Kiểm tra xem hệ thống có đang được phép mở lệnh mới tại thời điểm hiện tại không.
+        Tự động làm mới cửa sổ trượt 24h và kiểm tra hết hạn khóa.
 
         Returns:
             True nếu được phép giao dịch.
             False nếu đang trong thời gian khóa ngắt mạch 24h.
         """
+        dt = _ensure_utc_datetime(current_timestamp)
+
+        # Tự động cập nhật cửa sổ trượt 24h khi thời gian tiến lên
+        self._prune_window(dt)
+
         if not self.is_locked:
             return True
 
-        dt = _ensure_utc_datetime(current_timestamp)
         if self.locked_until is not None and dt >= self.locked_until:
             # Khóa 24h đã hết hạn -> Tự động mở khóa
             logger.info(
@@ -184,3 +271,4 @@ class CircuitBreakerState:
         self.risk_multiplier = 1.0
         self.is_locked = False
         self.locked_until = None
+        self.last_event_time = None

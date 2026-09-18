@@ -4,6 +4,44 @@ Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRY
 
 ---
 
+## [Giai đoạn 3] - Risk Manager Refinements (Theo Independent GPT Review) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 6 vấn đề R1-R6 theo ADR 0006)
+- **ADR 0006 (`docs/decisions/0006-circuit-breaker-and-risk-gate-refinements.md`):** Quy chuẩn hóa các quyết định kiến trúc: cửa sổ trượt $(T-24h, T]$, monotonic time, breakeven trade streak reset, lockout non-extension, Tier-Consistent Liquidation Solver, đối soát tổn thất giá thực tế.
+- **R1 - Input Sanitization & Admission Gate (`src/risk/position_sizing.py`, `src/risk/invariant_checks.py`):**
+  - Hàm `_validate_numeric`: Chặn dứt khoát `bool`, `NaN`, `+/-Inf`, số âm/không dương, overflow.
+  - Từ chối dứt khoát `conviction_tier` không có trong cấu hình (`INVARIANT_FAIL_UNKNOWN_CONVICTION_TIER`), xóa bỏ hoàn toàn fallback âm thầm 10%.
+- **R2 - Đối soát rủi ro thực tế & Ký quỹ khả dụng (`src/risk/invariant_checks.py`):**
+  - Đối soát tổn thất giá $Q \times |Entry - Stop| \le \text{Max Effective Risk USD}$ (`INVARIANT_FAIL_ACTUAL_RISK_EXCEEDED`).
+  - Kiểm tra ký quỹ yêu cầu $\le \text{Available Margin}$ (`INVARIANT_FAIL_INSUFFICIENT_MARGIN`).
+- **R3 - Tính toàn vẹn của bảo vệ & Chuẩn hóa UTC (`src/features/news_calendar.py`, `src/risk/invariant_checks.py`):**
+  - Nâng cấp `parse_utc_datetime`: Hỗ trợ Unix float/int timestamp, chống crash.
+  - Loại bỏ hoàn toàn fallback `datetime.now()`, bắt buộc dùng timestamp UTC mô phỏng (`INVARIANT_FAIL_MISSING_TIMESTAMP`).
+  - Kiểm tra bắt buộc có `CircuitBreakerState` và `NewsCalendarFilter` khi enabled.
+- **R4 - Làm sạch Circuit Breaker (`src/risk/circuit_breakers.py`):**
+  - Validate numeric cho PnL và equity (chặn NaN, Inf, bool).
+  - Kiểm tra thứ tự thời gian đơn điệu, chặn time reversal.
+  - Tự động tỉa cửa sổ trượt `_prune_window` cả trong `is_trading_allowed`.
+  - Lệnh hòa vốn ($pnl=0$) reset cả chuỗi thắng và thua về 0.
+  - Giữ nguyên `locked_until` 24h ban đầu khi có thêm lệnh trong thời gian khóa (không kéo dài vô tận).
+- **R5 - Thuật toán giải giá thanh lý nhất quán theo Tier (`src/risk/invariant_checks.py`):**
+  - Triển khai Tier-Consistent Solver: $q \times P_{cand} \in (\text{tier\_min}, \text{tier\_max}]$.
+  - Khớp chính xác 100% với 2 benchmark của GPT Review: Long $33,467.20$ USD và Short $66,390.27$ USD.
+- **R6 - Minh bạch kịch bản mô phỏng (`scripts/simulate_risk_manager_10_trades.py`):**
+  - Xóa bỏ toàn bộ lệnh ngầm ("lệnh 4b").
+  - Tách bạch rõ 2 Phase: Phase 1 (10 lệnh giả lập cho chuỗi thua, giảm 50% risk, khóa 24h) và Phase 2 (3 lệnh post-unlock phục hồi 100% risk).
+  - Đối soát vốn tự động `assert abs(final_equity - (start_equity + total_pnl)) < 1e-4`.
+- **Tập test mở rộng:** Bổ sung 28 unit tests chuyên sâu.
+  - `tests/test_position_sizing.py`: 21 tests (tăng từ 10).
+  - `tests/test_liquidation_calc.py`: 10 tests (tăng từ 6).
+  - `tests/test_circuit_breakers.py`: 10 tests (tăng từ 5).
+  - `tests/test_invariant_checks.py`: 19 tests (tăng từ 11).
+  - Báo cáo: `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW.md`.
+### Kết quả kiểm thử
+- **Pytest:** **113/113 tests PASSED (100% xanh)** trong 12.70s.
+- **Mô phỏng:** 2 Phase chạy mượt mà, đối soát vốn chính xác 100%.
+
+---
+
 ## [Giai đoạn 3] - Risk Manager (2026-09-18)
 ### Đã triển khai
 - `src/risk/position_sizing.py`: Tính toán Position Size, Required Margin, Stop Distance, Quantity; xử lý ngoại lệ chia cho 0 khi stop == entry và validation input.
