@@ -1,0 +1,138 @@
+# ============================================================
+# default_config.yaml - Crypto Paper-Trading Research Agent
+# Toàn bộ tham số hệ thống. KHÔNG lưu API key hoặc thông tin nhạy cảm ở đây.
+# Mọi giá trị có thể override qua CLI hoặc config riêng cho từng chiến lược.
+# ============================================================
+
+account:
+  initial_equity_usd: 10000
+  base_currency: USDT
+
+risk:
+  conviction_tiers:
+    low:        0.01   # 1% equity per trade
+    normal:     0.02   # 2%
+    high:       0.05   # 5%
+    ultra_high: 0.10   # 10%
+  max_leverage: 5
+  # Khoảng cách tối thiểu giữa giá thanh lý và stop-loss (tính theo % entry price)
+  # Hard invariant: |liq_price - stop_price| / entry_price >= 0.30
+  min_liquidation_buffer_pct: 0.30
+
+circuit_breakers:
+  # Nếu lỗ ròng trong rolling 24h vượt mức này → đóng toàn bộ, khóa trading 24h
+  daily_loss_limit_pct: 0.05
+  # Chuỗi lệnh thua liên tiếp → giảm risk_percent xuống 50%
+  consecutive_losses_threshold: 3
+  risk_reduction_on_streak: 0.5    # hệ số nhân (0.5 = giảm 50%)
+  # Điều kiện phục hồi risk về mức chuẩn: sau 3 lệnh thắng liên tiếp
+  # Đã chốt với người dùng: after_3_wins
+  recovery_mode: "after_3_wins"
+  consecutive_wins_to_recover: 3
+
+fees:
+  taker_pct: 0.0005   # 0.05% (mặc định Binance Futures)
+  maker_pct: 0.0002   # 0.02%
+  slippage_pct: 0.0003  # 0.03% slippage mô phỏng
+
+data:
+  symbol: "BTC/USDT"
+  timeframes:
+    - "4h"
+    - "15m"
+    - "1m"
+  exchange: "binance"
+  # Khoảng backtest: 2021-01-01 → 2026-09-01 (~5.5 năm)
+  # Bao phủ: bull run 2021, bear 2022 (LUNA/FTX), hồi phục 2023-2024, 2025-2026
+  start_date: "2021-01-01"
+  end_date:   "2026-09-01"
+  # Thư mục cache local (Parquet)
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  # Binance Futures sử dụng symbol format khác cho futures: BTCUSDT (không có /)
+  futures_symbol: "BTCUSDT"
+
+# Open Interest fetch config
+open_interest:
+  # Binance Futures public endpoint, không cần API key
+  # ccxt sẽ gọi GET /fapi/v1/openInterestHist (chỉ lưu 30 ngày gần nhất)
+  lookback_periods: 500   # số nến OI tối thiểu cần cho indicators
+  # Dữ liệu lịch sử sâu từ Binance Data Vision (data.binance.vision)
+  use_binance_vision_historical: true
+
+# OI Confluence (Phương án B: xử lý khi thiếu hoặc có dữ liệu OI)
+oi_confluence:
+  # "optional": nếu có dữ liệu OI thì kiểm tra đồng thuận; nếu NaN thì fallback bỏ qua
+  # "strict": nếu NaN thì từ chối vào lệnh
+  # "disabled": tắt hoàn toàn kiểm tra OI
+  mode: "optional"
+  fallback_when_nan: true
+  nan_log_note: "OI_BYPASSED_HISTORICAL"
+
+# Funding rate config
+funding_rate:
+  # Funding settlement: 00:00, 08:00, 16:00 UTC (Binance standard)
+  settlement_hours_utc: [0, 8, 16]
+  # Forward-fill tối đa N nến để không leak dữ liệu tương lai
+  max_forward_fill_candles: 480   # tối đa 480 nến 1m = 8h (1 chu kỳ funding)
+
+# Feature Engine
+features:
+  ema_periods: [20, 50, 200]
+  rsi_period: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  atr_period: 14
+  # OI delta: % thay đổi OI so với N nến trước
+  oi_delta_lookback: 20
+  # CVD divergence: so sánh đỉnh/đáy giá với đỉnh/đáy CVD trong N nến
+  cvd_divergence_lookback: 50
+
+# SMC (Smart Money Concepts) - dùng cho Giai đoạn 9
+smc:
+  # Swing High/Low: nến có high > N nến trước + N nến sau
+  swing_n: 3
+  # Minimum BOS/CHoCH breakout để tính hợp lệ (% so với entry)
+  min_bos_pct: 0.001   # 0.1%
+
+# News Filter (placeholder - disabled cho giai đoạn 0-4)
+# Khi enabled: true, sẽ đọc file CSV chứa các mốc CPI/FOMC/NFP
+# Blackout: không mở lệnh trong ±15 phút quanh sự kiện
+news_filter:
+  enabled: false
+  blackout_minutes_before: 15
+  blackout_minutes_after: 15
+  calendar_source: "manual_csv"
+  calendar_file: "data/news_calendar.csv"   # người dùng tự chuẩn bị
+
+# Logging
+logging:
+  trade_log_db: "data/trades.db"
+  trade_log_json_dir: "data/trade_logs"
+  log_level: "INFO"
+
+# Backtest Engine
+backtest:
+  # Random seed để đảm bảo reproducibility
+  random_seed: 42
+  # Chuẩn thực thi: quyết định dựa trên nến đã đóng, thực thi ở nến kế tiếp
+  # (tránh lookahead bias - không dùng giá close của nến hiện tại để vào lệnh)
+  signal_on_close: true    # tín hiệu khi nến đóng
+  execute_on_next_open: true   # thực thi ở open nến sau (hoặc dùng open làm entry)
+
+# Binance Futures leverage brackets (dùng để tính MMR chính xác)
+# Nguồn: https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
+# Format: [max_notional_usd, mmr_pct, cumulative_maintenance_amount]
+leverage_brackets:
+  BTCUSDT:
+    - [50000,      0.004, 0]
+    - [250000,     0.005, 50]
+    - [1000000,    0.01,  1300]
+    - [10000000,   0.025, 16300]
+    - [20000000,   0.05,  266300]
+    - [50000000,   0.10,  1266300]
+    - [100000000,  0.125, 2516300]
+    - [200000000,  0.15,  5016300]
+    - [300000000,  0.25,  25016300]
+    - [500000000,  0.50,  100016300]

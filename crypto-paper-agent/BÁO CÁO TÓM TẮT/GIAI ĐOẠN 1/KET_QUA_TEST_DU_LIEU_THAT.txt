@@ -1,0 +1,60 @@
+﻿======================================================================
+KET QUA TEST KEO DU LIEU THAT (GIAI DOAN 1 - DATA LAYER - HYBRID OI)
+======================================================================
+
+[TEST 1] Keo OHLCV that 7 ngay gan nhat (4h, 15m):
+  - OHLCV 4h: 43 candles, Range: 2026-09-11 08:00:00+00:00 -> 2026-09-18 08:00:00+00:00
+    Gaps: 0 days 04:00:00, NaNs: 0
+  - OHLCV 15m: 673 candles, Range: 2026-09-11 08:00:00+00:00 -> 2026-09-18 08:00:00+00:00
+    Gaps: 0 days 00:15:00, NaNs: 0
+
+[TEST 2] Keo HYBRID Open Interest 60 ngay gan nhat (since = now - 60d, until = now):
+  - Tong so nen OI 4h thu duoc: 361 candles
+  - Thoi gian: 2026-07-20 08:00:00+00:00 -> 2026-09-18 08:00:00+00:00
+  - Tong so NaN trong cot open_interest: 0
+
+  - Chi tiet 12 nen 4h cuoi cung (48 gio gan nhat - phan REST API):
+    2026-09-16 12:00:00+00:00 | OI: 106,614.12 BTC
+    2026-09-16 16:00:00+00:00 | OI: 107,316.81 BTC
+    2026-09-16 20:00:00+00:00 | OI: 108,166.19 BTC
+    2026-09-17 00:00:00+00:00 | OI: 107,918.18 BTC
+    2026-09-17 04:00:00+00:00 | OI: 108,245.03 BTC
+    2026-09-17 08:00:00+00:00 | OI: 108,358.78 BTC
+    2026-09-17 12:00:00+00:00 | OI: 108,505.15 BTC
+    2026-09-17 16:00:00+00:00 | OI: 108,490.40 BTC
+    2026-09-17 20:00:00+00:00 | OI: 108,199.42 BTC
+    2026-09-18 00:00:00+00:00 | OI: 108,245.18 BTC
+    2026-09-18 04:00:00+00:00 | OI: 108,297.36 BTC
+    2026-09-18 08:00:00+00:00 | OI: 108,445.74 BTC
+  - So luong NaN o duoi 48 gio gan nhat: 0 (YEU CAU: 0)
+
+  - Chi tiet 12 nen 4h dau tien (phan Binance Data Vision):
+    2026-07-20 08:00:00+00:00 | OI: 101,998.05 BTC
+    2026-07-20 12:00:00+00:00 | OI: 102,334.78 BTC
+    2026-07-20 16:00:00+00:00 | OI: 104,101.99 BTC
+    2026-07-20 20:00:00+00:00 | OI: 102,469.11 BTC
+    2026-07-21 00:00:00+00:00 | OI: 101,231.06 BTC
+    2026-07-21 04:00:00+00:00 | OI: 101,785.07 BTC
+    2026-07-21 08:00:00+00:00 | OI: 104,970.84 BTC
+    2026-07-21 12:00:00+00:00 | OI: 105,447.95 BTC
+    2026-07-21 16:00:00+00:00 | OI: 106,788.64 BTC
+    2026-07-21 20:00:00+00:00 | OI: 104,824.26 BTC
+    2026-07-22 00:00:00+00:00 | OI: 104,234.70 BTC
+    2026-07-22 04:00:00+00:00 | OI: 104,091.39 BTC
+  - So luong NaN o dau chuoi: 0 (YEU CAU: 0)
+
+[TEST 3] Keo Funding Rate that va Merge OHLCV + OI + Funding:
+  - Funding Rate: 21 records (settle moi 8h)
+  - Merged DataFrame: 43 candles
+  - Cot du lieu: ['open', 'high', 'low', 'close', 'volume', 'taker_buy_base_volume', 'open_interest', 'funding_rate']
+  - Kiem tra lookahead: OI tai moi nen chi lay tu qua khu (direction='backward').
+  - 5 nen moi nhat sau khi merge:
+    2026-09-17 16:00:00+00:00 | Close: 76,561.10 | OI: 108,490.40 | Funding: 0.000085
+    2026-09-17 20:00:00+00:00 | Close: 76,385.90 | OI: 108,199.42 | Funding: 0.000085
+    2026-09-18 00:00:00+00:00 | Close: 77,349.00 | OI: 108,245.18 | Funding: 0.000085
+    2026-09-18 04:00:00+00:00 | Close: 77,776.10 | OI: 108,297.36 | Funding: 0.000078
+    2026-09-18 08:00:00+00:00 | Close: 78,061.20 | OI: 108,445.74 | Funding: 0.000078
+
+======================================================================
+XAC NHAN: TAT CA CAC BAI TEST DU LIEU THAT DAT 100% YEU CAU!
+======================================================================

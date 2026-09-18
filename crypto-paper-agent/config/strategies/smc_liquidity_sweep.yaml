@@ -1,0 +1,37 @@
+# smc_liquidity_sweep.yaml - Strategy Config: SMC Liquidity Sweep
+# Implement ở Giai đoạn 9 (phức tạp nhất)
+# Expected win rate benchmark: 45-60%
+
+strategy:
+  name: "SMC_LIQUIDITY_SWEEP"
+  enabled: true
+  timeframe_structure: "4h"   # xác định cấu trúc thị trường (BOS/CHoCH)
+  timeframe_entry: "15m"      # tìm FVG và Order Block entry
+  timeframe_scalp: "1m"       # tùy chọn: tinh chỉnh entry 1m
+
+default_conviction: "high"    # 5% risk per trade (SMC setup thường có RRR cao)
+
+# SMC Parameters (theo định nghĩa trong spec mục 4.3)
+smc:
+  swing_n: 3                  # N nến hai bên để xác định Swing High/Low
+  min_bos_pct: 0.001          # BOS tối thiểu 0.1%
+  fvg_min_size_atr: 0.3       # FVG tối thiểu 0.3x ATR (lọc FVG quá nhỏ)
+
+# Entry: tại 50% của FVG
+entry:
+  method: "fvg_50pct"
+  require_order_block_confluence: true   # cần OB trùng với FVG
+
+# Cấu hình OI Confluence (Phương án B: fallback khi thiếu dữ liệu lịch sử)
+oi_confluence:
+  mode: "optional"          # "strict" | "optional" | "disabled"
+  fallback_when_nan: true
+  nan_log_note: "OI_BYPASSED_HISTORICAL"
+
+stop_loss:
+  method: "beyond_order_block"   # SL bên ngoài Order Block
+  buffer_pct: 0.002             # thêm 0.2% buffer
+
+take_profit:
+  method: "previous_high_low"   # TP tại đỉnh/đáy cấu trúc trước
+  rrr_min: 2.0

@@ -1,0 +1,84 @@
+# PROJECT_STATE.md - Trạng thái Sống của Dự án
+
+> [!IMPORTANT]
+> **QUY TẮC SỐNG CỦA DỰ ÁN (BẮT BUỘC ĐỌC ĐẦU MỖI PHIÊN LÀM VIỆC):**
+> 1. Trước khi viết bất kỳ dòng code nào, **BẮT BUỘC ĐỌC FILE NÀY** (`PROJECT_STATE.md`) kết hợp với mục liên quan trong [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md). Tuyệt đối không dựa vào trí nhớ hội thoại để nhớ lại quyết định cũ.
+> 2. **Đường dẫn PROJECT_ROOT duy nhất và chính thức:**
+>    `D:\Tài liệu\Default Project\crypto-paper-agent` (Unicode NFD: `Ta\u0300i lie\u0323\u0302u`).
+>    Tuyệt đối không tự ý quét ổ đĩa, không suy luận hoặc tạo thêm thư mục ở đường dẫn khác. Nếu nghi ngờ có bản copy trùng, **DỪNG LẠI VÀ HỎI NGƯỜI DÙNG**.
+> 3. Sau khi hoàn thành một giai đoạn: Chạy toàn bộ pytest, cập nhật `PROJECT_STATE.md`, `CHANGELOG.md`, lưu báo cáo vào `BÁO CÁO TÓM TẮT/GIAI ĐOẠN X/` trước khi báo cáo hoàn thành.
+> 4. Nếu cuộc trò chuyện kéo dài qua nhiều giờ/nhiều lượt, chủ động đề xuất người dùng mở phiên hội thoại mới để tránh trôi ngữ cảnh.
+
+---
+
+## 1. CHECKLIST TIẾN ĐỘ CÁC GIAI ĐOẠN
+
+- [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
+- [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
+- [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH — 85/85 tests passed, chờ review chốt)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`)
+- [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
+- [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
+- [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
+- [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
+- [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (`smc_features.py`, Order Block, FVG)
+- [ ] **Giai đoạn 10 — Tổng hợp & So sánh đa chiến lược** (Walk-forward testing)
+- [ ] **Giai đoạn 11 — Reinforcement Learning (Optional, nâng cao)**
+
+---
+
+## 2. DANH SÁCH TOÀN BỘ QUYẾT ĐỊNH ĐÃ CHỐT
+
+1. **News Filter (`news_filter`):** Mặc định `enabled: false`. Không chặn lệnh cho đến khi người dùng nạp file lịch CSV thực tế (Tham chiếu: Mục 10.1 Spec).
+2. **Khoảng thời gian Backtest (`data.start_date`):** Bắt đầu từ `"2021-01-01"` đến `"2026-09-01"` (~5.5 năm), bao phủ đầy đủ chu kỳ bull 2021, bear 2022 (LUNA/FTX), hồi phục 2023-2024 và hiện tại (Tham chiếu: Mục 10.3 Spec).
+3. **Phục hồi Risk sau chuỗi thua (`circuit_breakers.recovery_mode`):** Chọn `"after_3_wins"`. Cần đúng **3 lệnh thắng liên tiếp** để khôi phục risk về 100% mức chuẩn (Tham chiếu: Mục 10.2 Spec, ADR 0002).
+4. **Loại bỏ phần thừa Reinforcement Learning:** Không đưa tham số RL vào `default_config.yaml` của giai đoạn 0-10; toàn bộ logic RL để dành riêng cho Giai đoạn 11 (Tham chiếu: Mục 10.4 Spec).
+5. **Môi trường Python 3.13 & Thư viện:** Nâng cấp `requirements.txt` lên `numpy>=2.1.0` và `pandas>=2.2.3` để tương thích chính thức Python 3.13 (Tham chiếu: ADR 0004).
+6. **Cơ chế Hybrid Open Interest:** Dùng Binance Data Vision (`binance_vision_downloader.py`) cho lịch sử xa >28 ngày; dùng Binance REST API cho 2 ngày gần nhất. Không để trống dữ liệu ở phần đuôi (Tham chiếu: ADR 0001).
+7. **Cơ chế OI Confluence & Fallback:** Cấu hình `oi_confluence.mode: "optional"`, `fallback_when_nan: true`. Khi OI là NaN, `oi_delta_pct` tự động lan truyền NaN và chiến lược tự động fallback bỏ qua điều kiện OI, không ném exception (Tham chiếu: ADR 0005).
+8. **Đóng gói hàm Cache Manager:** Chuẩn hóa các hàm public `ensure_utc_index` và `timeframe_to_timedelta` trong `cache_manager.py`, giữ alias tương thích ngược.
+9. **Chống Lookahead Bias tuyệt đối cho CVD Divergence:** Nến $i$ là Swing Point được xác nhận tại nến $t = i + k$ ($k = 3$). Tín hiệu phân kỳ chỉ ghi nhận tại nến $t$, **tuyệt đối không gán ngược** về nến $i$ (Tham chiếu: ADR 0003).
+10. **Tầng Fallback cho Chỉ báo Kỹ thuật:** Ưu tiên `pandas-ta`, nhưng luôn có tầng Fallback bằng pure pandas (`_ema_presma`, Wilder RMA) theo đúng chuẩn TA-Lib với log cảnh báo rõ ràng (Tham chiếu: ADR 0004).
+
+---
+
+## 3. BẢN ĐỒ CÁC FILE QUAN TRỌNG VÀ VAI TRÒ
+
+| Đường dẫn File | Vai trò chính |
+| :--- | :--- |
+| `PROJECT_STATE.md` | Bảng trạng thái sống của dự án, đọc đầu tiên ở mỗi phiên làm việc. |
+| `CHANGELOG.md` | Nhật ký ghi nhận các thay đổi và kết quả test qua từng giai đoạn. |
+| `config/default_config.yaml` | Toàn bộ tham số hệ thống: vốn, risk tiers, circuit breakers, phí, periods chỉ báo. |
+| `config/strategies/` | File cấu hình riêng cho từng chiến lược (`trend_following.yaml`, `smc_liquidity_sweep.yaml`). |
+| `src/data_layer/fetcher.py` | Kéo dữ liệu OHLCV, funding rate và hybrid OI từ Binance, merge không lookahead. |
+| `src/data_layer/binance_vision_downloader.py` | Tải dữ liệu OI lịch sử sâu từ Binance Data Vision, giải nén và downsample. |
+| `src/data_layer/cache_manager.py` | Quản lý đọc/ghi cache Parquet local, kiểm tra gap dữ liệu. |
+| `src/features/indicators.py` | Tính EMA (20/50/200), RSI (14), MACD (12/26/9), ATR (14) từ config + fallback. |
+| `src/features/oi_features.py` | Tính `oi_delta_pct` với cơ chế lan truyền NaN và tương thích OI confluence. |
+| `src/features/cvd.py` | Tính Cumulative Volume Delta và phát hiện CVD Divergence chống lookahead 100%. |
+| `src/features/__init__.py` | Export module và cung cấp hàm pipeline tổng hợp `add_all_features`. |
+| `src/risk/position_sizing.py` | Tính position size, required margin, stop distance, bắt lỗi chia 0. |
+| `src/risk/invariant_checks.py` | Tra MMR tier từ brackets, tính P_liq chính xác, kiểm tra 6 Hard Invariants. |
+| `src/risk/circuit_breakers.py` | Quản lý Circuit Breaker, khóa 24h khi lỗ 5%, giảm 50% risk, phục hồi after_3_wins. |
+| `src/risk/__init__.py` | Export module và các hàm tiện ích của Risk Manager. |
+| `scripts/simulate_risk_manager_10_trades.py` | Kịch bản chạy mô phỏng 10 lệnh liên tiếp qua toàn bộ Risk Manager. |
+| `tests/test_data_layer.py` | 25 unit/integration tests cho Data Layer, cache và hybrid OI. |
+| `tests/test_indicators.py` | 9 unit tests cho các chỉ báo kỹ thuật, so sánh chéo fallback và TA-Lib. |
+| `tests/test_oi_features.py` | 6 unit tests cho OI delta và cơ chế lan truyền NaN. |
+| `tests/test_cvd.py` | 4 unit tests cho CVD và nhận diện phân kỳ Bullish/Bearish. |
+| `tests/test_no_lookahead.py` | 6 unit tests xáo trộn tương lai, chứng minh tính bất biến nhân quả quá khứ. |
+| `tests/test_position_sizing.py` | 10 unit tests cho Position Sizing, so khớp số liệu tính tay và exception. |
+| `tests/test_liquidation_calc.py` | 6 unit tests cho tra cứu MMR tier và công thức giá thanh lý Long/Short. |
+| `tests/test_circuit_breakers.py` | 5 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng và khóa 24h. |
+| `tests/test_invariant_checks.py` | 11 unit tests kiểm tra 6 invariant riêng lẻ, case all-pass và multiple-fails. |
+| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0005). |
+| `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn. |
+
+---
+
+## 4. CÁC VẤN ĐỀ ĐÃ BIẾT NHƯNG CỐ Ý ĐỂ LẠI (KNOWN LIMITATIONS)
+
+1. **Giới hạn Binance REST API cho OI:** Endpoint `/fapi/v1/openInterestHist` chỉ trả về tối đa 30 ngày. Đã giải quyết bằng cơ chế Hybrid kết hợp Binance Data Vision cho dữ liệu sâu.
+2. **Warm-up Period 199 nến đầu của EMA 200 là NaN:** Đây là tính chất toán học chuẩn mực của TA-Lib (`presma=True`), không phải bug. Các chiến lược khi chạy backtest sẽ bắt đầu quét lệnh sau khi đã đủ 200 nến.
+3. **CVD Flatline khi thiếu Taker Buy Volume:** Nếu klines API không có cột `taker_buy_base_volume` (hoặc có giá trị `NaN`), hệ thống ước tính bằng 50% volume $\to \text{delta} = 0$, khiến đường CVD đi ngang (flatline) thay vì ném ngoại lệ làm crash engine. Đã thêm log cảnh báo chi tiết trong `cvd.py`. **LƯU Ý NGHIỆP VỤ:** Nếu sau này thấy `cvd_divergence` có vẻ bất thường ở một giai đoạn cụ thể, đây là nghi phạm đầu tiên cần kiểm tra xem dữ liệu sàn trong giai đoạn đó có bị khuyết taker buy volume hay không.

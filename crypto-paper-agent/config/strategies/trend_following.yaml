@@ -1,0 +1,51 @@
+# trend_following.yaml - Strategy Config: Trend Following
+# Implement ở Giai đoạn 5
+# Expected win rate benchmark: 35-45%
+
+strategy:
+  name: "TREND_FOLLOWING"
+  enabled: true
+  timeframe_signal: "4h"    # khung tín hiệu chính
+  timeframe_entry: "15m"    # khung tinh chỉnh entry
+
+# Conviction tier mặc định cho chiến lược này
+default_conviction: "normal"   # 2% risk per trade
+
+# Điều kiện entry LONG:
+# - EMA 20 > EMA 50 > EMA 200 (aligned trend)
+# - RSI 14 > 50 (momentum xác nhận)
+# - OI delta dương (tăng OI = tiền vào)
+# - Không có CVD divergence bearish
+entry_long:
+  ema_aligned: true         # ema_20 > ema_50 > ema_200
+  rsi_min: 50
+  oi_delta_positive: true
+  cvd_divergence_block: "bearish"   # chặn nếu có bearish divergence
+
+# Cấu hình OI Confluence (Phương án B: fallback khi thiếu dữ liệu lịch sử)
+oi_confluence:
+  mode: "optional"          # "strict" | "optional" | "disabled"
+  fallback_when_nan: true
+  nan_log_note: "OI_BYPASSED_HISTORICAL"
+
+# Điều kiện entry SHORT (ngược lại)
+entry_short:
+  ema_aligned_bear: true    # ema_20 < ema_50 < ema_200
+  rsi_max: 50
+  oi_delta_positive: true
+  cvd_divergence_block: "bullish"
+
+# Stop-loss: dựa trên ATR
+stop_loss:
+  method: "atr_multiple"
+  atr_multiple: 2.0         # SL = entry ± 2x ATR_14
+
+# Take profit: dựa trên RRR cố định
+take_profit:
+  method: "rrr_fixed"
+  rrr: 2.0                  # TP = entry + 2x (entry - SL)
+  partial_tp:
+    - level: 1.5            # đóng 50% ở RR 1.5
+      close_pct: 0.50
+    - level: 2.0            # đóng 50% còn lại ở RR 2.0
+      close_pct: 0.50

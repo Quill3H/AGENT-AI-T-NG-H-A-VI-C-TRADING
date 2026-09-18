@@ -1,0 +1,62 @@
+crypto-paper-agent/
+├── README.md
+├── config/
+│   ├── default_config.yaml
+│   └── strategies/
+│       ├── breakout_retest.yaml
+│       ├── funding_arbitrage.yaml
+│       ├── smc_liquidity_sweep.yaml
+│       └── trend_following.yaml
+├── data/
+│   ├── news_calendar.csv
+│   ├── processed/
+│   └── raw/
+├── notebooks/
+├── pytest.ini
+├── requirements.txt
+├── run_backtest.py
+├── src/
+│   ├── __init__.py
+│   ├── backtest/
+│   │   ├── __init__.py
+│   │   └── engine.py
+│   ├── data_layer/
+│   │   ├── __init__.py
+│   │   ├── cache_manager.py
+│   │   └── fetcher.py
+│   ├── execution/
+│   │   ├── __init__.py
+│   │   ├── order_models.py
+│   │   └── paper_broker.py
+│   ├── features/
+│   │   ├── __init__.py
+│   │   ├── cvd.py
+│   │   ├── indicators.py
+│   │   ├── news_calendar.py
+│   │   ├── oi_features.py
+│   │   └── smc_features.py
+│   ├── logging/
+│   │   ├── __init__.py
+│   │   └── trade_logger.py
+│   ├── report/
+│   │   ├── __init__.py
+│   │   └── metrics.py
+│   ├── risk/
+│   │   ├── __init__.py
+│   │   ├── circuit_breakers.py
+│   │   ├── invariant_checks.py
+│   │   └── position_sizing.py
+│   └── strategies/
+│       ├── __init__.py
+│       ├── base_strategy.py
+│       ├── breakout_retest.py
+│       ├── funding_arbitrage.py
+│       ├── smc_liquidity_sweep.py
+│       └── trend_following.py
+└── tests/
+    ├── conftest.py
+    ├── test_circuit_breakers.py
+    ├── test_liquidation_calc.py
+    ├── test_news_calendar.py
+    ├── test_no_lookahead.py
+    └── test_position_sizing.py

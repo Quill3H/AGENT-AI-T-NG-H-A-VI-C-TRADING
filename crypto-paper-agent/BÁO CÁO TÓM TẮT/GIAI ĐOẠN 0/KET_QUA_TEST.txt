@@ -1,0 +1,15 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+cachedir: .pytest_cache
+plugins: cov-7.1.0
+collecting ... collected 7 items
+
+tests/test_no_lookahead.py::test_synthetic_data_creation PASSED       [ 14%]
+tests/test_news_calendar.py::test_economic_event_blackout_window PASSED [ 28%]
+tests/test_news_calendar.py::test_news_filter_disabled_by_default PASSED [ 42%]
+tests/test_news_calendar.py::test_news_filter_enabled_with_csv PASSED [ 57%]
+tests/test_position_sizing.py::test_placeholder SKIPPED                 [ 71%]
+tests/test_circuit_breakers.py::test_placeholder SKIPPED                [ 85%]
+tests/test_liquidation_calc.py::test_placeholder SKIPPED                [100%]
+
+======================== 4 passed, 3 skipped in 0.31s =========================

@@ -1,0 +1,69 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\\Ta\u0300i lie\u0323\u0302u\\Default Project\\crypto-paper-agent\\venv\\Scripts\\python.exe
+cachedir: .pytest_cache
+rootdir: D:\\Ta\u0300i lie\u0323\u0302u\\Default Project\\crypto-paper-agent
+configfile: pytest.ini
+testpaths: tests
+plugins: cov-7.1.0
+collecting ... collected 53 items
+
+tests/test_cvd.py::TestCVD::test_cvd_calculation_known_values PASSED     [  1%]
+tests/test_cvd.py::TestCVD::test_cvd_divergence_bullish_scenario PASSED  [  3%]
+tests/test_cvd.py::TestCVD::test_cvd_divergence_bearish_scenario PASSED  [  5%]
+tests/test_cvd.py::TestCVD::test_cvd_divergence_none_when_in_agreement PASSED [  7%]
+tests/test_data_layer.py::TestCacheManager::test_get_cache_path_no_slash PASSED [  9%]
+tests/test_data_layer.py::TestCacheManager::test_get_cache_path_structure PASSED [ 11%]
+tests/test_data_layer.py::TestCacheManager::test_save_and_load_roundtrip PASSED [ 13%]
+tests/test_data_layer.py::TestCacheManager::test_save_merge_no_duplicates PASSED [ 15%]
+tests/test_data_layer.py::TestCacheManager::test_load_returns_none_if_missing PASSED [ 16%]
+tests/test_data_layer.py::TestCacheManager::test_detect_gaps_no_gaps PASSED [ 18%]
+tests/test_data_layer.py::TestCacheManager::test_detect_gaps_with_gap PASSED [ 20%]
+tests/test_data_layer.py::TestCacheManager::test_timeframe_to_timedelta PASSED [ 22%]
+tests/test_data_layer.py::TestCacheManager::test_timeframe_invalid_raises PASSED [ 24%]
+tests/test_data_layer.py::TestCacheManager::test_ensure_utc_index PASSED [ 26%]
+tests/test_data_layer.py::TestFetcherLogic::test_candles_to_dataframe_basic PASSED [ 28%]
+tests/test_data_layer.py::TestFetcherLogic::test_candles_to_dataframe_no_duplicates PASSED [ 30%]
+tests/test_data_layer.py::TestFetcherLogic::test_timeframe_to_ms PASSED  [ 32%]
+tests/test_data_layer.py::TestFetcherLogic::test_map_to_oi_timeframe PASSED [ 33%]
+tests/test_data_layer.py::TestFetcherLogic::test_merge_uses_backward_direction PASSED [ 35%]
+tests/test_data_layer.py::TestFetcherLogic::test_funding_rate_no_backfill PASSED [ 37%]
+tests/test_data_layer.py::TestFetcherLogic::test_funding_rate_ffill_limit PASSED [ 39%]
+tests/test_data_layer.py::test_fetch_real_ohlcv_7days PASSED             [ 41%]
+tests/test_data_layer.py::test_fetch_real_funding_rate PASSED            [ 43%]
+tests/test_data_layer.py::test_no_lookahead_in_live_merge PASSED         [ 45%]
+tests/test_data_layer.py::TestBinanceVisionDownloader::test_downsample_5m_to_4h_no_lookahead PASSED [ 47%]
+tests/test_data_layer.py::TestBinanceVisionDownloader::test_downsample_5m_to_1m_forward_fill PASSED [ 49%]
+tests/test_data_layer.py::TestBinanceVisionDownloader::test_oi_confluence_config_loaded PASSED [ 50%]
+tests/test_data_layer.py::TestBinanceVisionDownloader::test_vision_live_download_single_day PASSED [ 52%]
+tests/test_data_layer.py::TestBinanceVisionDownloader::test_hybrid_oi_fetch_recent_60d PASSED [ 54%]
+tests/test_indicators.py::TestIndicators::test_ema_known_small_series PASSED [ 56%]
+tests/test_indicators.py::TestIndicators::test_ema_fallback_matches_pandas_ta PASSED [ 58%]
+tests/test_indicators.py::TestIndicators::test_rsi_constant_and_trending PASSED [ 60%]
+tests/test_indicators.py::TestIndicators::test_rsi_fallback_matches_pandas_ta PASSED [ 62%]
+tests/test_indicators.py::TestIndicators::test_macd_formula PASSED       [ 64%]
+tests/test_indicators.py::TestIndicators::test_atr_positive_and_matches_tr PASSED [ 66%]
+tests/test_indicators.py::TestIndicators::test_calculate_indicators_all_columns_present PASSED [ 67%]
+tests/test_indicators.py::TestIndicators::test_warmup_period_ema200 PASSED [ 69%]
+tests/test_indicators.py::TestIndicators::test_missing_required_columns_raises PASSED [ 71%]
+tests/test_news_calendar.py::test_economic_event_blackout_window PASSED  [ 73%]
+tests/test_news_calendar.py::test_news_filter_disabled_by_default PASSED [ 75%]
+tests/test_news_calendar.py::test_news_filter_enabled_with_csv PASSED    [ 77%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[False-80] PASSED [ 79%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[False-150] PASSED [ 81%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[False-220] PASSED [ 83%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[True-80] PASSED [ 84%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[True-150] PASSED [ 86%]
+tests/test_no_lookahead.py::TestNoLookaheadBias::test_future_data_tampering_does_not_alter_past_features[True-220] PASSED [ 88%]
+tests/test_oi_features.py::TestOIFeatures::test_oi_delta_pct_known_values PASSED [ 90%]
+tests/test_oi_features.py::TestOIFeatures::test_oi_delta_pct_lookback_from_config PASSED [ 92%]
+tests/test_oi_features.py::TestOIFeatures::test_nan_propagation_when_oi_has_nan PASSED [ 94%]
+tests/test_oi_features.py::TestOIFeatures::test_missing_oi_column_does_not_raise PASSED [ 96%]
+tests/test_oi_features.py::TestOIFeatures::test_all_nan_oi_column_does_not_raise PASSED [ 98%]
+tests/test_oi_features.py::TestOIFeatures::test_original_columns_not_mutated PASSED [100%]
+
+============================== warnings summary ===============================
+venv\Lib\site-packages\pandas_ta\__init__.py:37
+  D:\\Ta\u0300i lie\u0323\u0302u\\Default Project\\crypto-paper-agent\\venv\\Lib\\site-packages\\pandas_ta\\__init__.py:37: Pandas4Warning: The 'mode.copy_on_write' option is deprecated. Copy-on-Write can no longer be disabled (it is always enabled with pandas >= 3.0), and setting the option has no impact. This option will be removed in pandas 4.0.\n    from pandas_ta.core import AnalysisIndicators
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 53 passed, 1 warning in 11.65s ========================
