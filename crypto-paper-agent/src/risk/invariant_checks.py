@@ -42,12 +42,17 @@ def _normalize_symbol(symbol: str) -> str:
 
 
 def _validate_brackets(brackets: List[List[Union[float, int]]], symbol: str) -> List[Tuple[float, float, float]]:
-    """Xác thực cấu trúc bảng brackets: cap tăng dần, mmr hợp lệ, cum hợp lệ."""
+    """
+    Xác thực cấu trúc bảng brackets:
+    - Cap và MMR tăng dần nghiêm ngặt.
+    - Duy trì tính liên tục của Maintenance Margin tại các điểm ranh giới giữa các tier kề nhau.
+    """
     if not isinstance(brackets, list) or len(brackets) == 0:
         raise ValueError(f"Leverage brackets for symbol '{symbol}' must be a non-empty list.")
     
-    parsed = []
+    parsed: List[Tuple[float, float, float]] = []
     last_cap = 0.0
+    last_mmr = 0.0
     for idx, row in enumerate(brackets):
         if not isinstance(row, (list, tuple)) or len(row) < 3:
             raise ValueError(f"Invalid bracket row {idx} for symbol '{symbol}': {row}")
@@ -58,10 +63,26 @@ def _validate_brackets(brackets: List[List[Union[float, int]]], symbol: str) -> 
             raise ValueError(f"Bracket cap must be strictly increasing at row {idx} for symbol '{symbol}': {cap} <= {last_cap}")
         if not (0.0 < mmr < 1.0):
             raise ValueError(f"Invalid MMR rate {mmr} at row {idx} for symbol '{symbol}'")
+        if mmr <= last_mmr:
+            raise ValueError(f"Bracket MMR must be strictly increasing at row {idx} for symbol '{symbol}': {mmr} <= {last_mmr}")
         if cum < 0.0:
             raise ValueError(f"Invalid cum amount {cum} at row {idx} for symbol '{symbol}'")
+        if idx == 0 and cum != 0.0:
+            raise ValueError(f"First bracket tier must have cumulative maintenance amount == 0, got {cum}")
+        if idx > 0:
+            # Kiểm tra tính liên tục của ký quỹ duy trì tại điểm biên last_cap
+            prev_cap, prev_mmr, prev_cum = parsed[-1]
+            maint_prev = prev_cap * prev_mmr - prev_cum
+            maint_curr = prev_cap * mmr - cum
+            if abs(maint_prev - maint_curr) > 1e-3:
+                raise ValueError(
+                    f"Bracket maintenance margin discontinuity at row {idx} for symbol '{symbol}': "
+                    f"tier {idx-1} maint={maint_prev:.4f} != tier {idx} maint={maint_curr:.4f}"
+                )
+
         parsed.append((cap, mmr, cum))
         last_cap = cap
+        last_mmr = mmr
     return parsed
 
 
@@ -92,6 +113,7 @@ def get_mmr_tier(
 ) -> Tuple[float, float]:
     """
     Tra bảng leverage brackets để lấy MMR và cum_amt theo quy mô vị thế danh nghĩa position_size_usd.
+    Từ chối nếu quy mô vượt quá trần hỗ trợ của bracket snapshot.
     """
     if type(position_size_usd) is bool or not isinstance(position_size_usd, (int, float)):
         raise TypeError(f"position_size_usd must be numeric, got {type(position_size_usd).__name__}")
@@ -104,7 +126,10 @@ def get_mmr_tier(
         if notional <= max_notional:
             return mmr_pct, cum_amt
 
-    return brackets[-1][1], brackets[-1][2]
+    raise ValueError(
+        f"Position size {notional:,.2f} USD exceeds maximum supported leverage bracket cap "
+        f"{brackets[-1][0]:,.2f} USD for symbol '{symbol}'."
+    )
 
 
 def calculate_estimated_liquidation_price(
@@ -119,13 +144,18 @@ def calculate_estimated_liquidation_price(
     Tính giá thanh lý ước tính theo chuẩn Binance Futures Isolated Margin và ADR 0006:
     Giải nhất quán theo tier của quy mô vị thế tại chính giá thanh lý (q * P_liq).
 
-    Mô hình cân bằng:
-    - Long:  M + q * (P - entry) = q * P * mmr - cum
+    Mô hình cân bằng độc lập:
+    - Long:  Initial_Margin + q * (P - entry) = Maintenance_Margin(P)
+             => q * entry / lev + q * (P - entry) = q * P * mmr - cum
              => P = [entry * (1 - 1/leverage) - cum/q] / (1 - mmr)
-    - Short: M + q * (entry - P) = q * P * mmr - cum
+    - Short: Initial_Margin + q * (entry - P) = Maintenance_Margin(P)
+             => q * entry / lev + q * (entry - P) = q * P * mmr - cum
              => P = [entry * (1 + 1/leverage) + cum/q] / (1 + mmr)
 
-    Nghiệm P phải thỏa mãn: q * P nằm trong khoảng (lower_bound, upper_bound] của tier đó.
+    Nghiệm P phải thỏa mãn:
+    1. q * P nằm trong khoảng (lower_bound, upper_bound] của tier đó.
+    2. Chiều giá thanh lý hợp lệ: Long P_liq < Entry; Short P_liq > Entry.
+    3. Không ngoại suy ngoài miền bracket; báo lỗi rõ nếu initial margin <= maintenance margin tại entry.
     """
     # 1. Validate numeric inputs
     for val, name in [
@@ -154,9 +184,28 @@ def calculate_estimated_liquidation_price(
         raise ValueError(f"Invalid direction: '{direction}'. Expected 'LONG' or 'SHORT'.")
 
     brackets = get_brackets_for_symbol(symbol, leverage_brackets)
-    q = f_notional / f_entry
+    max_supported_cap = brackets[-1][0]
+    if f_notional > max_supported_cap:
+        raise ValueError(
+            f"Position size {f_notional:,.2f} USD exceeds maximum supported leverage bracket cap "
+            f"{max_supported_cap:,.2f} USD for symbol '{symbol}'."
+        )
 
-    # 2. Duyệt qua từng tier để tìm nghiệm tự nhất quán (Tier-Consistent Solution)
+    # 2. Kiểm tra Initial Margin vs Maintenance Margin tại giá vào lệnh (Entry)
+    entry_mmr, entry_cum = get_mmr_tier(f_notional, symbol, leverage_brackets)
+    entry_maintenance_margin = f_notional * entry_mmr - entry_cum
+    initial_margin = f_notional / f_lev
+    if initial_margin <= entry_maintenance_margin:
+        raise ValueError(
+            f"Initial margin ({initial_margin:.2f} USD) is <= maintenance margin ({entry_maintenance_margin:.2f} USD) "
+            f"at entry price. Position is already liquidatable (insufficient initial margin)."
+        )
+
+    q = f_notional / f_entry
+    if not (math.isfinite(q) and q > 0):
+        raise ValueError(f"Invalid calculated quantity: {q}")
+
+    # 3. Duyệt qua từng tier để tìm nghiệm tự nhất quán (Tier-Consistent Solution)
     lower_bound = 0.0
     for idx, (upper_bound, mmr, cum) in enumerate(brackets):
         cum_per_q = cum / q
@@ -165,47 +214,53 @@ def calculate_estimated_liquidation_price(
             # P = [entry * (1 - 1/lev) - cum/q] / (1 - mmr)
             numerator = f_entry * (1.0 - 1.0 / f_lev) - cum_per_q
             denominator = 1.0 - mmr
-            if denominator <= 0 or numerator <= 0:
-                # Giá thanh lý <= 0 nghĩa là vị thế không thể bị thanh lý
+            if denominator <= 0:
+                continue
+
+            if f_lev == 1.0 and numerator <= 0:
+                candidate_p = 0.0
+            elif numerator <= 0:
                 candidate_p = 0.0
             else:
                 candidate_p = numerator / denominator
 
-            candidate_notional = q * candidate_p
-            # Kiểm tra candidate_notional có thuộc tier này không
-            is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
-            # Nếu ở tier cuối cùng và notional vượt upper_bound, dùng tier cuối
-            if idx == len(brackets) - 1 and candidate_notional > upper_bound:
-                is_in_tier = True
+            if not (math.isfinite(candidate_p) and candidate_p >= 0):
+                continue
+            # Long: Giá thanh lý phải nhỏ hơn giá vào lệnh
+            if candidate_p >= f_entry:
+                continue
 
+            candidate_notional = q * candidate_p
+            is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
             if is_in_tier:
-                return max(0.0, float(candidate_p))
+                return float(candidate_p)
 
         else:
             # Short: P = [entry * (1 + 1/lev) + cum/q] / (1 + mmr)
             numerator = f_entry * (1.0 + 1.0 / f_lev) + cum_per_q
             denominator = 1.0 + mmr
+            if denominator <= 0:
+                continue
             candidate_p = numerator / denominator
+
+            if not (math.isfinite(candidate_p) and candidate_p > 0):
+                continue
+            # Short: Giá thanh lý phải cao hơn giá vào lệnh
+            if candidate_p <= f_entry:
+                continue
 
             candidate_notional = q * candidate_p
             is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
-            if idx == len(brackets) - 1 and candidate_notional > upper_bound:
-                is_in_tier = True
-
             if is_in_tier:
                 return float(candidate_p)
 
         lower_bound = upper_bound
 
-    # Fallback an toàn nếu không rơi vào tier nào (dùng tier cuối)
-    last_upper, last_mmr, last_cum = brackets[-1]
-    if dir_str in ("LONG", "BUY"):
-        num = f_entry * (1.0 - 1.0 / f_lev) - (last_cum / q)
-        p = max(0.0, num / (1.0 - last_mmr))
-    else:
-        num = f_entry * (1.0 + 1.0 / f_lev) + (last_cum / q)
-        p = num / (1.0 + last_mmr)
-    return float(p)
+    # Tuyệt đối không fallback sang tier cuối nếu không có nghiệm hợp lệ trong miền
+    raise ValueError(
+        f"No tier-consistent liquidation price found within supported leverage brackets for "
+        f"{dir_str} position (entry={f_entry}, size={f_notional}, lev={f_lev}, symbol='{symbol}')."
+    )
 
 
 def parse_simulation_timestamp(ts: Any) -> Optional[datetime]:
@@ -222,7 +277,10 @@ def parse_simulation_timestamp(ts: Any) -> Optional[datetime]:
         val = float(ts)
         if val > 1e11:
             val = val / 1000.0
-        return datetime.fromtimestamp(val, tz=timezone.utc)
+        try:
+            return datetime.fromtimestamp(val, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
     if isinstance(ts, str):
         try:
             dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
@@ -254,38 +312,66 @@ def check_all_invariants(
     if not isinstance(account_state, dict):
         return False, ["INVARIANT_FAIL_INVALID_ACCOUNT_STATE: account_state must be a dictionary."]
 
+    # Equity
     raw_equity = account_state.get("equity")
     if type(raw_equity) is bool or not isinstance(raw_equity, (int, float)):
         rejection_reasons.append(
             f"INVARIANT_FAIL_INVALID_ACCOUNT_EQUITY: Account equity must be numeric, got {type(raw_equity).__name__}: {raw_equity!r}"
         )
         equity = 0.0
+        equity_valid = False
     else:
         equity = float(raw_equity)
         if not math.isfinite(equity) or equity <= 0:
             rejection_reasons.append(
                 f"INVARIANT_FAIL_INVALID_ACCOUNT_EQUITY: Account equity must be positive and finite, got {equity}"
             )
+            equity_valid = False
+        else:
+            equity_valid = True
 
-    # Circuit breaker component check
+    # Available Margin (F2: Không ngầm lấy equity; bắt buộc khai báo và kiểm tra hữu hạn >= 0)
+    raw_avail_margin = account_state.get("available_margin")
+    if raw_avail_margin is None:
+        rejection_reasons.append(
+            "INVARIANT_FAIL_MISSING_AVAILABLE_MARGIN: account_state must explicitly specify available_margin."
+        )
+        avail_margin_valid = False
+        available_margin = 0.0
+    elif type(raw_avail_margin) is bool or not isinstance(raw_avail_margin, (int, float)):
+        rejection_reasons.append(
+            f"INVARIANT_FAIL_INVALID_AVAILABLE_MARGIN: available_margin must be numeric, got {type(raw_avail_margin).__name__}: {raw_avail_margin!r}"
+        )
+        avail_margin_valid = False
+        available_margin = 0.0
+    else:
+        available_margin = float(raw_avail_margin)
+        if not math.isfinite(available_margin) or available_margin < 0:
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_INVALID_AVAILABLE_MARGIN: available_margin must be non-negative and finite, got {available_margin}"
+            )
+            avail_margin_valid = False
+        else:
+            avail_margin_valid = True
+
+    # Circuit breaker component check (F2: Kiểm tra callable để không crash khi nhận object lạ)
     cb_state = account_state.get("circuit_breaker_state")
-    if cb_state is None or not hasattr(cb_state, "is_trading_allowed"):
+    cb_valid = (
+        cb_state is not None
+        and hasattr(cb_state, "is_trading_allowed")
+        and callable(getattr(cb_state, "is_trading_allowed"))
+    )
+    if not cb_valid:
         rejection_reasons.append(
             "INVARIANT_FAIL_MISSING_CIRCUIT_BREAKER: account_state must contain a valid CircuitBreakerState instance."
         )
 
-    # Xác định thời điểm mô phỏng (Admission Time) - KHÔNG dùng datetime.now() fallback
-    order_ts = parse_simulation_timestamp(order.get("timestamp")) if isinstance(order, dict) else None
-    account_ts = parse_simulation_timestamp(account_state.get("current_time"))
-    admission_time = order_ts or account_ts
-
+    # Thời điểm thẩm quyền duyệt lệnh (Admission Time - F3: account current_time là nguồn thẩm quyền)
+    raw_admission_time = account_state.get("current_time")
+    admission_time = parse_simulation_timestamp(raw_admission_time)
     if admission_time is None:
         rejection_reasons.append(
-            "INVARIANT_FAIL_MISSING_TIMESTAMP: A valid simulation timestamp must be provided in order['timestamp'] or account_state['current_time']."
-        )
-    elif order_ts is not None and account_ts is not None and order_ts > account_ts:
-        rejection_reasons.append(
-            f"INVARIANT_FAIL_FUTURE_ORDER_TIMESTAMP: Order timestamp {order_ts.isoformat()} cannot be later than admission time {account_ts.isoformat()}."
+            "INVARIANT_FAIL_MISSING_ADMISSION_TIME: account_state must provide a valid current_time as authoritative admission timestamp."
         )
 
     # -------------------------------------------------------------
@@ -293,6 +379,19 @@ def check_all_invariants(
     # -------------------------------------------------------------
     if not isinstance(order, dict):
         return False, ["INVARIANT_FAIL_INVALID_ORDER: order must be a dictionary."]
+
+    # Order Timestamp (Signal time - F3: Phải hợp lệ và không được trễ hơn admission time)
+    raw_order_ts = order.get("timestamp")
+    order_ts = parse_simulation_timestamp(raw_order_ts)
+    if order_ts is None:
+        rejection_reasons.append(
+            "INVARIANT_FAIL_MISSING_ORDER_TIMESTAMP: order must provide a valid simulation timestamp (signal time)."
+        )
+    elif admission_time is not None and order_ts > admission_time:
+        rejection_reasons.append(
+            f"INVARIANT_FAIL_FUTURE_ORDER_TIMESTAMP: Order signal timestamp {order_ts.isoformat()} "
+            f"cannot be later than admission time {admission_time.isoformat()}."
+        )
 
     # Direction
     raw_dir = order.get("direction")
@@ -325,7 +424,8 @@ def check_all_invariants(
 
     # Leverage
     risk_cfg = config.get("risk", {}) if isinstance(config, dict) else {}
-    max_leverage = float(risk_cfg.get("max_leverage", 5.0))
+    raw_max_lev = risk_cfg.get("max_leverage", 5.0)
+    max_leverage = float(raw_max_lev) if (type(raw_max_lev) is not bool and isinstance(raw_max_lev, (int, float)) and math.isfinite(float(raw_max_lev))) else 5.0
     raw_lev = order.get("leverage")
     if type(raw_lev) is bool or not isinstance(raw_lev, (int, float)):
         rejection_reasons.append(
@@ -348,45 +448,40 @@ def check_all_invariants(
         else:
             leverage_valid = True
 
-    # Conviction tier & Risk percent
+    # Conviction tier (F2: Kiểm tra kiểu str trước membership để tránh TypeError unhashable)
     conviction_tiers = risk_cfg.get("conviction_tiers", {
         "low": 0.01,
         "normal": 0.02,
         "high": 0.05,
         "ultra_high": 0.10,
     })
-    tier_name = order.get("conviction_tier")
-    if tier_name is None or tier_name not in conviction_tiers:
+    raw_tier = order.get("conviction_tier")
+    if not isinstance(raw_tier, str):
         rejection_reasons.append(
-            f"INVARIANT_FAIL_UNKNOWN_CONVICTION_TIER: Conviction tier '{tier_name}' is not defined in configuration. "
+            f"INVARIANT_FAIL_INVALID_CONVICTION_TIER_TYPE: conviction_tier must be string, got {type(raw_tier).__name__}: {raw_tier!r}"
+        )
+        tier_valid = False
+        tier_limit = 0.0
+    elif raw_tier not in conviction_tiers:
+        rejection_reasons.append(
+            f"INVARIANT_FAIL_UNKNOWN_CONVICTION_TIER: Conviction tier '{raw_tier}' is not defined in configuration. "
             f"Allowed tiers: {list(conviction_tiers.keys())}."
         )
-        tier_limit = 0.0
         tier_valid = False
+        tier_limit = 0.0
     else:
-        tier_limit = float(conviction_tiers[tier_name])
-        tier_valid = True
-
-    raw_risk_pct = order.get("risk_percent")
-    if type(raw_risk_pct) is bool or not isinstance(raw_risk_pct, (int, float)):
-        rejection_reasons.append(
-            f"INVARIANT_FAIL_INVALID_RISK_PERCENT: risk_percent must be numeric, got {type(raw_risk_pct).__name__}: {raw_risk_pct!r}"
-        )
-        risk_percent = 0.0
-        risk_pct_valid = False
-    else:
-        risk_percent = float(raw_risk_pct)
-        if not math.isfinite(risk_percent) or risk_percent <= 0:
+        raw_limit = conviction_tiers[raw_tier]
+        if type(raw_limit) is bool or not isinstance(raw_limit, (int, float)) or not math.isfinite(float(raw_limit)) or float(raw_limit) <= 0:
             rejection_reasons.append(
-                f"INVARIANT_FAIL_INVALID_RISK_PERCENT: risk_percent must be positive and finite, got {risk_percent}"
+                f"INVARIANT_FAIL_CONFIG_ERROR: Configured limit for tier '{raw_tier}' must be positive finite, got {raw_limit}"
             )
-            risk_pct_valid = False
+            tier_valid = False
+            tier_limit = 0.0
         else:
-            risk_pct_valid = True
+            tier_limit = float(raw_limit)
+            tier_valid = True
 
-    # -------------------------------------------------------------
-    # 2. Hard Invariant A: Stop-Loss check
-    # -------------------------------------------------------------
+    # Stop-Loss check
     raw_sl = order.get("stop_loss_price")
     if raw_sl is None or type(raw_sl) is bool or not isinstance(raw_sl, (int, float)):
         rejection_reasons.append(
@@ -419,18 +514,71 @@ def check_all_invariants(
         else:
             sl_valid = False
 
-    # -------------------------------------------------------------
-    # 3. Hard Invariant D: Effective Risk Limit & True Risk Reconciliation (R2)
-    # -------------------------------------------------------------
-    cb_multiplier = getattr(cb_state, "risk_multiplier", 1.0) if cb_state else 1.0
-    effective_tier_risk = tier_limit * cb_multiplier
+    # Risk Percent, Base Risk Percent & Breaker Multiplier (F1)
+    raw_cb_mult = getattr(cb_state, "risk_multiplier", 1.0) if cb_valid else 1.0
+    cb_multiplier = float(raw_cb_mult) if (type(raw_cb_mult) is not bool and isinstance(raw_cb_mult, (int, float)) and math.isfinite(float(raw_cb_mult)) and float(raw_cb_mult) > 0) else 1.0
+    effective_tier_ceiling = tier_limit * cb_multiplier
+
+    has_base = "base_risk_percent" in order
+    has_effective = "risk_percent" in order
+
+    if not has_base and not has_effective:
+        rejection_reasons.append("INVARIANT_FAIL_INVALID_RISK_PERCENT: Order must specify 'risk_percent' or 'base_risk_percent'.")
+        order_effective_risk_pct = 0.0
+        risk_pct_valid = False
+    else:
+        base_val = None
+        if has_base:
+            raw_base = order.get("base_risk_percent")
+            if type(raw_base) is bool or not isinstance(raw_base, (int, float)):
+                rejection_reasons.append(f"INVARIANT_FAIL_INVALID_RISK_PERCENT: base_risk_percent must be numeric, got {type(raw_base).__name__}")
+            else:
+                f_base = float(raw_base)
+                if not math.isfinite(f_base) or f_base <= 0:
+                    rejection_reasons.append(f"INVARIANT_FAIL_INVALID_RISK_PERCENT: base_risk_percent must be positive finite, got {f_base}")
+                else:
+                    base_val = f_base
+
+        eff_val = None
+        if has_effective:
+            raw_eff = order.get("risk_percent")
+            if type(raw_eff) is bool or not isinstance(raw_eff, (int, float)):
+                rejection_reasons.append(f"INVARIANT_FAIL_INVALID_RISK_PERCENT: risk_percent must be numeric, got {type(raw_eff).__name__}")
+            else:
+                f_eff = float(raw_eff)
+                if not math.isfinite(f_eff) or f_eff <= 0:
+                    rejection_reasons.append(f"INVARIANT_FAIL_INVALID_RISK_PERCENT: risk_percent must be positive finite, got {f_eff}")
+                else:
+                    eff_val = f_eff
+
+        if has_base and has_effective and base_val is not None and eff_val is not None:
+            expected_eff = base_val * cb_multiplier
+            if abs(eff_val - expected_eff) > 1e-6:
+                rejection_reasons.append(
+                    f"INVARIANT_FAIL_RISK_PERCENT_MISMATCH: Provided risk_percent ({eff_val * 100:.2f}%) "
+                    f"does not match base_risk_percent * cb_multiplier ({base_val * 100:.2f}% * {cb_multiplier:.2f} = {expected_eff * 100:.2f}%)."
+                )
+                order_effective_risk_pct = eff_val
+                risk_pct_valid = False
+            else:
+                order_effective_risk_pct = eff_val
+                risk_pct_valid = True
+        elif has_effective and eff_val is not None:
+            order_effective_risk_pct = eff_val
+            risk_pct_valid = True
+        elif has_base and base_val is not None:
+            order_effective_risk_pct = base_val * cb_multiplier
+            risk_pct_valid = True
+        else:
+            order_effective_risk_pct = 0.0
+            risk_pct_valid = False
 
     if tier_valid and risk_pct_valid:
-        if risk_percent > effective_tier_risk + 1e-6:
+        if order_effective_risk_pct > effective_tier_ceiling + 1e-6:
             rejection_reasons.append(
-                f"INVARIANT_FAIL_RISK_TIER_EXCEEDED: Requested risk_percent {risk_percent * 100:.2f}% "
-                f"exceeds effective conviction tier '{tier_name}' limit of {effective_tier_risk * 100:.2f}% "
-                f"(base: {tier_limit * 100:.2f}%, breaker multiplier: {cb_multiplier:.2f})."
+                f"INVARIANT_FAIL_RISK_TIER_EXCEEDED: Requested effective risk_percent {order_effective_risk_pct * 100:.2f}% "
+                f"exceeds effective conviction tier '{raw_tier}' ceiling of {effective_tier_ceiling * 100:.2f}% "
+                f"(base tier limit: {tier_limit * 100:.2f}%, circuit breaker multiplier: {cb_multiplier:.2f})."
             )
 
     # Position size và đối soát rủi ro thực tế (Quantity * |Entry - Stop|)
@@ -452,41 +600,46 @@ def check_all_invariants(
             else:
                 pos_size_valid = True
     else:
-        # Nếu chưa truyền, tự tính toán nếu các tham số liên quan hợp lệ
-        if entry_valid and sl_valid and equity > 0 and risk_pct_valid:
+        if entry_valid and sl_valid and equity_valid and risk_pct_valid:
             stop_dist_pct = abs(entry_price - stop_loss_price) / entry_price
-            position_size_usd = (equity * min(risk_percent, effective_tier_risk)) / stop_dist_pct
+            position_size_usd = (equity * min(order_effective_risk_pct, effective_tier_ceiling)) / stop_dist_pct
             pos_size_valid = True
         else:
             pos_size_valid = False
             position_size_usd = 0.0
 
-    # Đối soát rủi ro thực tế khi chạm Stop Loss
-    if pos_size_valid and entry_valid and sl_valid and equity > 0:
+    # Đối soát rủi ro thực tế khi chạm Stop Loss (F1: So sánh với order risk budget thay vì chỉ trần tier)
+    if pos_size_valid and entry_valid and sl_valid and equity_valid and risk_pct_valid:
         quantity = position_size_usd / entry_price
         actual_price_risk_usd = quantity * abs(entry_price - stop_loss_price)
-        max_allowed_risk_usd = equity * effective_tier_risk
+        order_risk_budget_usd = equity * order_effective_risk_pct
 
-        if actual_price_risk_usd > max_allowed_risk_usd + 1e-4:
+        if actual_price_risk_usd > order_risk_budget_usd + 1e-4:
             rejection_reasons.append(
                 f"INVARIANT_FAIL_ACTUAL_RISK_EXCEEDED: Actual stop-loss risk ({actual_price_risk_usd:.2f} USD) "
-                f"exceeds maximum allowed risk budget ({max_allowed_risk_usd:.2f} USD = {effective_tier_risk * 100:.2f}% equity)."
+                f"exceeds order declared risk budget ({order_risk_budget_usd:.2f} USD = {order_effective_risk_pct * 100:.2f}% equity)."
             )
 
     # -------------------------------------------------------------
-    # 4. Ký quỹ Khả dụng (Available Margin Check)
+    # 2. Ký quỹ Khả dụng & Phí vào lệnh (F2: Required Margin & Fee Check)
     # -------------------------------------------------------------
-    if pos_size_valid and leverage_valid and equity > 0:
+    if pos_size_valid and leverage_valid and avail_margin_valid:
         required_margin_usd = position_size_usd / leverage
-        available_margin = float(account_state.get("available_margin", equity))
-        if required_margin_usd > available_margin + 1e-4:
+        fees_cfg = config.get("fees", {}) if isinstance(config, dict) else {}
+        raw_taker = fees_cfg.get("taker_pct", 0.0005)
+        taker_pct = float(raw_taker) if (type(raw_taker) is not bool and isinstance(raw_taker, (int, float)) and math.isfinite(float(raw_taker)) and float(raw_taker) >= 0) else 0.0005
+        est_entry_fee_usd = position_size_usd * taker_pct
+        total_required_capital = required_margin_usd + est_entry_fee_usd
+
+        if total_required_capital > available_margin + 1e-4:
             rejection_reasons.append(
-                f"INVARIANT_FAIL_INSUFFICIENT_MARGIN: Required margin ({required_margin_usd:.2f} USD) "
+                f"INVARIANT_FAIL_INSUFFICIENT_MARGIN: Required initial margin and fee "
+                f"({total_required_capital:.2f} USD = {required_margin_usd:.2f} margin + {est_entry_fee_usd:.2f} fee) "
                 f"exceeds available margin ({available_margin:.2f} USD)."
             )
 
     # -------------------------------------------------------------
-    # 5. Hard Invariant C: Min Liquidation Buffer (Tier-Consistent)
+    # 3. Hard Invariant C: Min Liquidation Buffer (Tier-Consistent)
     # -------------------------------------------------------------
     min_buffer_pct = float(risk_cfg.get("min_liquidation_buffer_pct", 0.30))
     symbol = str(order.get("symbol", "BTCUSDT"))
@@ -525,9 +678,9 @@ def check_all_invariants(
             rejection_reasons.append(f"INVARIANT_FAIL_LIQUIDATION_CALC_ERROR: {e}")
 
     # -------------------------------------------------------------
-    # 6. Hard Invariant E: Circuit Breaker Lock check
+    # 4. Hard Invariant E: Circuit Breaker Lock check (F3: tại admission_time)
     # -------------------------------------------------------------
-    if cb_state is not None and admission_time is not None:
+    if cb_valid and admission_time is not None:
         if not cb_state.is_trading_allowed(admission_time):
             locked_until_str = str(getattr(cb_state, "locked_until", "unknown"))
             rejection_reasons.append(
@@ -535,22 +688,26 @@ def check_all_invariants(
             )
 
     # -------------------------------------------------------------
-    # 7. Hard Invariant F: News Blackout Window check
+    # 5. Hard Invariant F: News Blackout Window check (F3: tại admission_time và config check)
     # -------------------------------------------------------------
     news_cfg = config.get("news_filter", {}) if isinstance(config, dict) else {}
     news_enabled = bool(news_cfg.get("enabled", False))
 
     if news_enabled:
         news_filter = account_state.get("news_filter")
-        if news_filter is None or not hasattr(news_filter, "is_in_blackout"):
+        if news_filter is None or not hasattr(news_filter, "is_in_blackout") or not callable(getattr(news_filter, "is_in_blackout")):
             rejection_reasons.append(
                 "INVARIANT_FAIL_MISSING_NEWS_FILTER: news_filter is enabled in configuration but missing or invalid in account_state."
+            )
+        elif not getattr(news_filter, "enabled", True):
+            rejection_reasons.append(
+                "INVARIANT_FAIL_NEWS_FILTER_CONFIG_MISMATCH: Configuration specifies news_filter enabled=True, but account_state['news_filter'] instance has enabled=False."
             )
         elif admission_time is not None:
             is_blackout, event_name = news_filter.is_in_blackout(admission_time)
             if is_blackout:
                 rejection_reasons.append(
-                    f"INVARIANT_FAIL_NEWS_BLACKOUT: Simulation time {admission_time.isoformat()} "
+                    f"INVARIANT_FAIL_NEWS_BLACKOUT: Admission time {admission_time.isoformat()} "
                     f"falls within blackout window of economic event '{event_name}'."
                 )
 

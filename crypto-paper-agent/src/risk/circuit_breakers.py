@@ -36,12 +36,18 @@ def _ensure_utc_datetime(ts: Any) -> datetime:
         val = float(ts)
         if val > 1e11:
             val = val / 1000.0
-        return datetime.fromtimestamp(val, tz=timezone.utc)
+        try:
+            return datetime.fromtimestamp(val, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError) as e:
+            raise ValueError(f"Timestamp value out of valid platform range: {ts!r}") from e
     if isinstance(ts, str):
-        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except (ValueError, OverflowError, OSError) as e:
+            raise ValueError(f"Malformed or out-of-range ISO timestamp string: {ts!r}") from e
     raise TypeError(f"Unsupported timestamp type: {type(ts).__name__}: {ts!r}")
 
 
@@ -49,6 +55,8 @@ class CircuitBreakerState:
     """
     Quản lý trạng thái và luật ngắt mạch của hệ thống paper trading.
     """
+    SUPPORTED_RECOVERY_MODES = {"after_3_wins", "after_1_win"}
+
     def __init__(
         self,
         daily_loss_limit_pct: float = 0.05,
@@ -58,6 +66,11 @@ class CircuitBreakerState:
         recovery_mode: str = "after_3_wins",
     ):
         # Validate tham số cấu hình
+        if recovery_mode not in self.SUPPORTED_RECOVERY_MODES:
+            raise ValueError(
+                f"Unsupported recovery_mode '{recovery_mode}'. Supported modes: {sorted(self.SUPPORTED_RECOVERY_MODES)}"
+            )
+
         if type(daily_loss_limit_pct) is bool or not isinstance(daily_loss_limit_pct, (int, float)) or not (0 < daily_loss_limit_pct < 1.0):
             raise ValueError(f"daily_loss_limit_pct must be between 0 and 1, got {daily_loss_limit_pct}")
         if type(consecutive_losses_threshold) is bool or not isinstance(consecutive_losses_threshold, int) or consecutive_losses_threshold < 1:
@@ -90,8 +103,14 @@ class CircuitBreakerState:
         self.consecutive_wins: int = 0
         self.risk_multiplier: float = 1.0
         self.is_locked: bool = False
+        self.is_halted: bool = False
         self.locked_until: Optional[datetime] = None
         self.last_event_time: Optional[datetime] = None
+
+    @property
+    def current_timestamp(self) -> Optional[datetime]:
+        """Thời điểm sự kiện hoặc truy vấn gần nhất của đồng hồ ngắt mạch."""
+        return self.last_event_time
 
     @classmethod
     def from_config(cls, config: dict) -> "CircuitBreakerState":
@@ -116,6 +135,33 @@ class CircuitBreakerState:
         ]
         self.rolling_24h_pnl = sum(p for _, p in self.trade_history_24h)
 
+    def advance_time(self, current_timestamp: Union[datetime, int, float, str]) -> datetime:
+        """
+        Tiến đồng hồ hệ thống ngắt mạch đến current_timestamp.
+        - Kiểm tra tính đơn điệu của thời gian (chống time reversal).
+        - Cắt tỉa các giao dịch cũ hơn 24h: (current_time - 24h, current_time].
+        - Tự động mở khóa nếu đã hết hạn locked_until.
+        """
+        dt = _ensure_utc_datetime(current_timestamp)
+        if self.last_event_time is not None and dt < self.last_event_time:
+            raise ValueError(
+                f"Cannot advance time backwards: timestamp {dt.isoformat()} is earlier than "
+                f"last recorded time {self.last_event_time.isoformat()} (time reversal)."
+            )
+        self.last_event_time = dt
+        self._prune_window(dt)
+
+        # Kiểm tra hết hạn khóa 24h
+        if self.is_locked and self.locked_until is not None and dt >= self.locked_until:
+            logger.info(
+                "[CircuitBreaker] Thời gian khóa 24h đã hết hạn tại {}. Mở lại quyền giao dịch.",
+                dt.isoformat()
+            )
+            self.is_locked = False
+            self.locked_until = None
+
+        return dt
+
     def record_trade_result(
         self,
         pnl: float,
@@ -124,7 +170,7 @@ class CircuitBreakerState:
     ) -> None:
         """
         Ghi nhận kết quả PnL của 1 lệnh đã đóng và cập nhật trạng thái ngắt mạch.
-        Xác thực đầu vào trước khi mutate state; reject event lùi thời gian.
+        Xác thực đầu vào trước khi mutate state; sử dụng advance_time đồng bộ.
 
         Args:
             pnl: Lợi nhuận/thua lỗ ròng bằng USD.
@@ -145,25 +191,20 @@ class CircuitBreakerState:
         if not math.isfinite(f_eq) or f_eq < 0:
             raise ValueError(f"equity must be non-negative finite number, got {f_eq}")
 
-        # 3. Validate Timestamp & Thứ tự đơn điệu
-        dt = _ensure_utc_datetime(timestamp)
-        if self.last_event_time is not None and dt < self.last_event_time:
-            raise ValueError(
-                f"Cannot record trade with timestamp {dt.isoformat()} earlier than "
-                f"last recorded event {self.last_event_time.isoformat()} (time reversal)."
-            )
-        self.last_event_time = dt
+        # 3. Tiến thời gian đồng bộ và giải phóng khóa hết hạn (nếu có)
+        dt = self.advance_time(timestamp)
 
         # Xử lý tài khoản cạn vốn (cháy tài khoản)
         if f_eq == 0:
+            self.is_halted = True
             self.is_locked = True
-            self.locked_until = dt + timedelta(days=3650)  # Khóa vô thời hạn
-            logger.error("[CircuitBreaker] Tài khoản cạn vốn (equity = 0)! Khóa giao dịch hoàn toàn.")
+            self.locked_until = None
+            logger.error("[CircuitBreaker] Tài khoản cạn vốn (equity = 0)! Kích hoạt HALTED hoàn toàn.")
             return
 
-        # 4. Cập nhật cửa sổ trượt 24h
+        # 4. Ghi nhận giao dịch mới vào lịch sử 24h
         self.trade_history_24h.append((dt, f_pnl))
-        self._prune_window(dt)
+        self.rolling_24h_pnl = sum(p for _, p in self.trade_history_24h)
 
         # 5. Kiểm tra Daily Loss Limit (ngưỡng % trên equity hiện tại sau lệnh)
         loss_limit_usd = f_eq * self.daily_loss_limit_pct
@@ -236,31 +277,21 @@ class CircuitBreakerState:
     def is_trading_allowed(self, current_timestamp: Union[datetime, int, float, str]) -> bool:
         """
         Kiểm tra xem hệ thống có đang được phép mở lệnh mới tại thời điểm hiện tại không.
-        Tự động làm mới cửa sổ trượt 24h và kiểm tra hết hạn khóa.
+        Tự động tiến đồng hồ và làm mới trạng thái khóa.
 
         Returns:
             True nếu được phép giao dịch.
-            False nếu đang trong thời gian khóa ngắt mạch 24h.
+            False nếu đang trong thời gian khóa ngắt mạch hoặc tài khoản bị halted.
         """
-        dt = _ensure_utc_datetime(current_timestamp)
+        dt = self.advance_time(current_timestamp)
 
-        # Tự động cập nhật cửa sổ trượt 24h khi thời gian tiến lên
-        self._prune_window(dt)
+        if self.is_halted:
+            return False
 
-        if not self.is_locked:
-            return True
+        if self.is_locked:
+            return False
 
-        if self.locked_until is not None and dt >= self.locked_until:
-            # Khóa 24h đã hết hạn -> Tự động mở khóa
-            logger.info(
-                "[CircuitBreaker] Thời gian khóa 24h đã hết hạn tại {}. Mở lại quyền giao dịch.",
-                dt.isoformat()
-            )
-            self.is_locked = False
-            self.locked_until = None
-            return True
-
-        return False
+        return True
 
     def reset(self) -> None:
         """Reset toàn bộ trạng thái về ban đầu (dùng khi khởi động lại backtest)."""
@@ -270,5 +301,6 @@ class CircuitBreakerState:
         self.consecutive_wins = 0
         self.risk_multiplier = 1.0
         self.is_locked = False
+        self.is_halted = False
         self.locked_until = None
         self.last_event_time = None

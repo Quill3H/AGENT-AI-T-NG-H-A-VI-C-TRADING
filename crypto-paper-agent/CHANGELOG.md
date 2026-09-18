@@ -4,6 +4,47 @@ Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRY
 
 ---
 
+## [Giai đoạn 3] - Risk Manager Refinements Lần 2 (Theo GPT Review 02) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 5 nhóm phát hiện F1–F5)
+- **F1 - Ngân sách Rủi ro Khai báo & Chống Double Reduction (`src/risk/invariant_checks.py`):**
+  - Đối soát tổn thất giá thực tế $Q \times |Entry - Stop|$ với ngân sách rủi ro khai báo của lệnh (`order_declared_budget_usd = equity * order_effective_risk_pct`), thay vì chỉ đối soát với trần tier.
+  - Ép buộc kiểm tra đẳng thức `risk_percent == base_risk_percent * cb_multiplier` (sai số $10^{-6}$) khi truyền cả hai, chống double reduction.
+- **F2 - Cung ứng Ký quỹ Bắt buộc & Độ Bền Input (`src/risk/invariant_checks.py`, `src/features/news_calendar.py`):**
+  - Yêu cầu bắt buộc `available_margin` hữu hạn $\ge 0$, loại bỏ fallback ngầm dùng `equity`.
+  - Kiểm tra tổng vốn cần trước khi mở vị thế bao gồm cả ký quỹ ban đầu và phí vào lệnh ước tính: `required_margin + est_entry_fee <= available_margin`.
+  - Kiểm tra an toàn `isinstance(conviction_tier, str)` trước khi tra cứu dict (chống `TypeError` khi input là unhashable list/dict).
+  - Kiểm tra `callable(getattr(cb_state, "is_trading_allowed"))` (chống `AttributeError` khi truyền object lạ).
+  - Bọc try/except `(OverflowError, OSError, ValueError)` khi parse timestamp (chống crash khi gặp giá trị cực lớn như `1e100`).
+- **F3 - Phân lập Thẩm quyền Admission Time (`src/risk/invariant_checks.py`):**
+  - Thiết lập `account_state['current_time']` là nguồn thời gian thẩm quyền duy nhất tại cổng duyệt lệnh (Admission Time).
+  - Ràng buộc nhân quả: `order['timestamp'] <= account_state['current_time']`.
+  - Đánh giá trạng thái Circuit Breaker và News Blackout Window nghiêm ngặt tại Admission Time, loại bỏ hoàn toàn lỗ hổng dùng signal cũ ngoài giờ cấm để lách qua blackout.
+  - Bổ sung kiểm tra mâu thuẫn cấu hình tin tức (`INVARIANT_FAIL_NEWS_FILTER_CONFIG_MISMATCH`).
+- **F4 - Đồng hồ Đơn nhất & Khóa Breaker Tuyệt đối (`src/risk/circuit_breakers.py`):**
+  - Xây dựng phương thức chuẩn hóa `advance_time(current_timestamp)` dùng chung cho cả `is_trading_allowed` và `record_trade_result`, đảm bảo thời gian đơn điệu monotonic.
+  - Giải quyết triệt để Scenario A (query tiến thời gian khóa chặn sự kiện quá khứ) và Scenario B (tự động giải phóng khóa cũ và bắt vi phạm mới ngay tại thời điểm sự kiện mà không cần query thăm dò xen giữa).
+  - Khi `equity <= 0` (cháy vốn): chuyển sang trạng thái `self.is_halted = True`, khóa giao dịch vĩnh viễn thay vì dùng số ngày tượng trưng.
+  - Kiểm soát danh mục `recovery_mode` hợp lệ qua `SUPPORTED_RECOVERY_MODES = {"after_3_wins", "after_1_win"}`.
+- **F5 - Giải thuật Thanh lý Nghiêm ngặt (Strict Liquidation Solver) (`src/risk/invariant_checks.py`):**
+  - Kiểm tra tính liên tục của bảng leverage brackets tại các ranh giới tier ($C_i \cdot \text{MMR}_i - \text{cum}_i == C_i \cdot \text{MMR}_{i+1} - \text{cum}_{i+1}$).
+  - Từ chối vị thế danh nghĩa vượt quá trần tối đa của bảng bracket với `ValueError` (không ngoại suy).
+  - Từ chối vị thế vi phạm điều kiện thanh lý ngay tại entry (`initial_margin <= maintenance_margin_entry`) với `ValueError("already liquidatable")`.
+  - Ràng buộc phương hướng nghiệm: Long $P_{cand} < P_{entry}$, Short $P_{cand} > P_{entry}$.
+  - Loại bỏ hoàn toàn fallback sang tier cuối; ném `ValueError` nếu không có nghiệm hợp lệ trong miền bracket.
+  - Kiểm chứng độc lập nghiệm với phương trình cân bằng ký quỹ độc lập.
+- **Bộ kiểm thử mở rộng:**
+  - Bổ sung 11 unit tests mới trong `tests/test_invariant_checks.py` (tổng: 30 tests).
+  - Bổ sung 6 unit tests mới trong `tests/test_circuit_breakers.py` (tổng: 16 tests).
+  - Bổ sung 5 unit tests mới trong `tests/test_liquidation_calc.py` (tổng: 15 tests).
+  - Báo cáo: `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_02.md`.
+### Kết quả kiểm thử
+- **Pytest Offline:** **130/130 tests PASSED** trong 1.52s.
+- **Pytest Network:** **5/5 tests PASSED** trong 13.37s.
+- **Tổng cộng:** **135/135 tests PASSED (100% xanh)**.
+- **Mô phỏng 10 lệnh:** Chạy thông suốt 2 Phase, đối soát tài chính chính xác 100%.
+
+---
+
 ## [Giai đoạn 3] - Risk Manager Refinements (Theo Independent GPT Review) (2026-09-19)
 ### Đã triển khai (Khắc phục toàn diện 6 vấn đề R1-R6 theo ADR 0006)
 - **ADR 0006 (`docs/decisions/0006-circuit-breaker-and-risk-gate-refinements.md`):** Quy chuẩn hóa các quyết định kiến trúc: cửa sổ trượt $(T-24h, T]$, monotonic time, breakeven trade streak reset, lockout non-extension, Tier-Consistent Liquidation Solver, đối soát tổn thất giá thực tế.

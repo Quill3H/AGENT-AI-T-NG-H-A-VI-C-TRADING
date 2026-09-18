@@ -36,6 +36,7 @@ class TestInvariantChecks:
     def base_account(self):
         return {
             "equity": 10000.0,
+            "available_margin": 10000.0,
             "circuit_breaker_state": CircuitBreakerState(),
             "news_filter": None,
             "current_time": datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc),
@@ -246,7 +247,8 @@ class TestInvariantChecks:
 
         is_valid, reasons = check_all_invariants(order, account, config)
         assert is_valid is False
-        assert any("INVARIANT_FAIL_MISSING_TIMESTAMP" in r for r in reasons)
+        assert any("INVARIANT_FAIL_MISSING_ADMISSION_TIME" in r for r in reasons)
+        assert any("INVARIANT_FAIL_MISSING_ORDER_TIMESTAMP" in r for r in reasons)
 
     def test_invariant_fail_future_order_timestamp(self, base_order, base_account, config):
         """Thời điểm của lệnh order['timestamp'] không được lớn hơn admission time (current_time)."""
@@ -270,4 +272,185 @@ class TestInvariantChecks:
         is_valid, reasons = check_all_invariants(order, base_account, config)
         assert is_valid is False
         assert any("INVARIANT_FAIL_STOP_LOSS_DIRECTION" in r for r in reasons)
+
+    # -------------------------------------------------------------
+    # F1 Regression Tests: Risk budget & base/effective consistency
+    # -------------------------------------------------------------
+    def test_f1_high_tier_low_risk_actual_exceeds_declared_budget(self, base_order, base_account, config):
+        """
+        F1: Khi order thuộc conviction_tier 'high' (trần 3%), nhưng trader khai báo
+        risk_percent = 0.01 (1% = 100$ budget trên equity 10,000$).
+        Nếu position_size_usd = 30,000$ và SL = 49,500$ (khoảng cách 500$, risk = 300$),
+        300$ <= 300$ (trần tier high), nhưng 300$ > 100$ (ngân sách khai báo của lệnh) -> PHẢI BỊ TỪ CHỐI!
+        """
+        order = dict(base_order)
+        order["conviction_tier"] = "high"
+        order["risk_percent"] = 0.01
+        order["position_size_usd"] = 30000.0
+        order["stop_loss_price"] = 49500.0  # (30000 / 50000) * 500 = 300$ > 100$
+
+        is_valid, reasons = check_all_invariants(order, base_account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_ACTUAL_RISK_EXCEEDED" in r for r in reasons)
+
+    def test_f1_base_and_effective_risk_no_double_reduction(self, base_order, base_account, config):
+        """
+        F1: Tránh double-reduction:
+        Khi CircuitBreaker có risk_multiplier = 0.5:
+        - base_risk_percent = 0.02 -> expected effective = 0.01
+        - Nếu truyền cả risk_percent = 0.01 -> hợp lệ (pass)
+        - Nếu truyền risk_percent = 0.005 (đã bị nhân 0.5 2 lần) -> REJECT
+        - Nếu chỉ truyền base_risk_percent = 0.02 -> tự suy ra 0.01 (pass)
+        """
+        cb = CircuitBreakerState()
+        cb.risk_multiplier = 0.5
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+
+        order_valid = dict(base_order)
+        order_valid["base_risk_percent"] = 0.02
+        order_valid["risk_percent"] = 0.01
+        # Position size điều chỉnh theo risk 1% = 100$: Qty = 100 / 1000 = 0.1 BTC -> 5000 USD
+        order_valid["position_size_usd"] = 5000.0
+        is_valid, reasons = check_all_invariants(order_valid, account, config)
+        assert is_valid is True
+
+        order_mismatch = dict(order_valid)
+        order_mismatch["risk_percent"] = 0.005  # double reduction
+        is_valid_m, reasons_m = check_all_invariants(order_mismatch, account, config)
+        assert is_valid_m is False
+        assert any("INVARIANT_FAIL_RISK_PERCENT_MISMATCH" in r for r in reasons_m)
+
+        order_only_base = dict(order_valid)
+        del order_only_base["risk_percent"]
+        is_valid_b, _ = check_all_invariants(order_only_base, account, config)
+        assert is_valid_b is True
+
+    # -------------------------------------------------------------
+    # F2 Regression Tests: Margin, Types & Input Robustness
+    # -------------------------------------------------------------
+    def test_f2_available_margin_nan_or_bool_rejected(self, base_order, base_account, config):
+        """F2: available_margin là NaN, Inf, bool, string phải bị từ chối sạch sẽ."""
+        for bad_val in [float("nan"), float("inf"), True, False, "10000"]:
+            account = dict(base_account)
+            account["available_margin"] = bad_val
+            is_valid, reasons = check_all_invariants(base_order, account, config)
+            assert is_valid is False
+            assert any("INVARIANT_FAIL_INVALID_AVAILABLE_MARGIN" in r for r in reasons)
+
+    def test_f2_available_margin_missing_rejected(self, base_order, base_account, config):
+        """F2: account thiếu available_margin phải bị từ chối (không ngầm dùng equity)."""
+        account = dict(base_account)
+        del account["available_margin"]
+        is_valid, reasons = check_all_invariants(base_order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_MISSING_AVAILABLE_MARGIN" in r for r in reasons)
+
+    def test_f2_breaker_object_without_callable_does_not_crash(self, base_order, base_account, config):
+        """F2: Đối tượng circuit_breaker_state thiếu method is_trading_allowed hoặc không callable."""
+        account = dict(base_account)
+        account["circuit_breaker_state"] = object()
+        is_valid, reasons = check_all_invariants(base_order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_MISSING_CIRCUIT_BREAKER" in r for r in reasons)
+
+    def test_f2_conviction_tier_unhashable_list_does_not_crash(self, base_order, base_account, config):
+        """F2: conviction_tier là list [] (unhashable) không làm crash TypeError."""
+        order = dict(base_order)
+        order["conviction_tier"] = ["normal"]
+        is_valid, reasons = check_all_invariants(order, base_account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_INVALID_CONVICTION_TIER_TYPE" in r for r in reasons)
+
+    def test_f2_timestamp_overflow_does_not_crash(self, base_order, base_account, config):
+        """F2: Timestamp cực lớn (1e100) không gây crash OverflowError/OSError."""
+        order = dict(base_order)
+        order["timestamp"] = 1e100
+        is_valid, reasons = check_all_invariants(order, base_account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_MISSING_ORDER_TIMESTAMP" in r for r in reasons)
+
+    def test_f2_entry_fee_provision_checks_margin(self, base_order, base_account, config):
+        """
+        F2: Ký quỹ khả dụng đủ cho initial margin nhưng KHÔNG ĐỦ cho initial margin + entry taker fee.
+        Position = 30,000$, lev = 3x -> initial margin = 10,000$. Taker fee 0.05% = 15$.
+        Tổng vốn cần = 10,015$. Nếu available_margin = 10,005$ -> BỊ CHẶN!
+        """
+        account = dict(base_account)
+        account["available_margin"] = 10005.0  # Đủ 10,000 margin nhưng thiếu 10$ tiền phí
+
+        order = dict(base_order)
+        order["position_size_usd"] = 30000.0
+        order["leverage"] = 3.0
+        order["conviction_tier"] = "high"
+        order["risk_percent"] = 0.03
+        order["stop_loss_price"] = 49500.0  # SL risk = 0.6 * 500 = 300$ <= 300$ budget
+
+        is_valid, reasons = check_all_invariants(order, account, config)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_INSUFFICIENT_MARGIN" in r for r in reasons)
+
+    # -------------------------------------------------------------
+    # F3 Regression Tests: Admission Time & Authority Clock
+    # -------------------------------------------------------------
+    def test_f3_stale_signal_cannot_bypass_current_blackout(self, base_order, base_account, config):
+        """
+        F3: Lệnh sinh lúc 09:00 (không có tin), nhưng được gửi duyệt vào hệ thống lúc 10:00
+        (đang có tin US CPI lúc 10:10, blackout +-15m). Hệ thống PHẢI CHẶN tại admission time!
+        """
+        cfg = dict(config)
+        cfg["news_filter"] = {"enabled": True, "blackout_minutes_before": 15, "blackout_minutes_after": 15}
+
+        news_filter = NewsCalendarFilter(config=cfg)
+        event_dt = datetime(2026, 9, 1, 10, 10, tzinfo=timezone.utc)
+        news_filter.events = [EconomicEvent(timestamp=event_dt, event_name="US CPI Release")]
+
+        order = dict(base_order)
+        order["timestamp"] = datetime(2026, 9, 1, 9, 0, tzinfo=timezone.utc)  # Tín hiệu cũ ngoài blackout
+
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+        account["current_time"] = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)  # Duyệt lúc 10:00 (trong blackout)
+
+        is_valid, reasons = check_all_invariants(order, account, cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_NEWS_BLACKOUT" in r for r in reasons)
+
+    def test_f3_stale_signal_with_lockout_expired_at_admission(self, base_order, base_account, config):
+        """
+        F3: Tín hiệu sinh ra lúc Circuit Breaker còn đang bị khóa (09:00),
+        nhưng thời điểm admission duyệt lệnh (12:00) thì lockout đã hết hạn.
+        Trạng thái ngắt mạch được đánh giá tại admission_time -> được phép duyệt.
+        """
+        cb = CircuitBreakerState()
+        cb.is_locked = True
+        cb.locked_until = datetime(2026, 9, 1, 11, 0, tzinfo=timezone.utc)  # Hết khóa lúc 11:00
+
+        order = dict(base_order)
+        order["timestamp"] = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)  # Signal sinh lúc 10:00 (lúc đang lock)
+
+        account = dict(base_account)
+        account["circuit_breaker_state"] = cb
+        account["current_time"] = datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)  # Duyệt lúc 12:00 (đã hết lock)
+
+        is_valid, reasons = check_all_invariants(order, account, config)
+        assert is_valid is True
+        assert len(reasons) == 0
+
+    def test_f3_news_config_enabled_but_filter_disabled_mismatch(self, base_order, base_account, config):
+        """
+        F3: Config yêu cầu bật news_filter (config.news_filter.enabled = True),
+        nhưng đối tượng account['news_filter'] lại có enabled = False (lệch cấu hình).
+        Hệ thống phát hiện mâu thuẫn và từ chối.
+        """
+        cfg = dict(config)
+        cfg["news_filter"] = {"enabled": True}
+
+        news_filter = NewsCalendarFilter(config={"news_filter": {"enabled": False}})
+        account = dict(base_account)
+        account["news_filter"] = news_filter
+
+        is_valid, reasons = check_all_invariants(order=base_order, account_state=account, config=cfg)
+        assert is_valid is False
+        assert any("INVARIANT_FAIL_NEWS_FILTER_CONFIG_MISMATCH" in r for r in reasons)
 

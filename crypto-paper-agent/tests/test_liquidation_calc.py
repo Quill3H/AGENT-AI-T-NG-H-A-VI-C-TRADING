@@ -201,3 +201,104 @@ class TestLiquidationCalculation:
             calculate_estimated_liquidation_price("LONG", True, 10000, 5)
         with pytest.raises(ValueError, match="entry_price must be finite"):
             calculate_estimated_liquidation_price("LONG", float("nan"), 10000, 5)
+
+    # -------------------------------------------------------------
+    # F5 Regression Tests: Bracket Rigor, Bounds & Margin Balance
+    # -------------------------------------------------------------
+    def test_f5_notional_exceeds_max_cap_rejected(self, config):
+        """
+        F5: Vị thế vượt trần bracket tối đa (max cap = 500,000,000 USD)
+        phải bị từ chối với ValueError, tuyệt đối không âm thầm suy diễn ngoại suy.
+        """
+        brackets = config.get("leverage_brackets", {})
+        with pytest.raises(ValueError, match="exceeds maximum supported leverage bracket cap"):
+            get_mmr_tier(600000000.0, symbol="BTCUSDT", leverage_brackets=brackets)
+
+        with pytest.raises(ValueError, match="exceeds maximum supported leverage bracket cap"):
+            calculate_estimated_liquidation_price(
+                "LONG", 50000.0, 600000000.0, 5.0, symbol="BTCUSDT", leverage_brackets=brackets
+            )
+
+    def test_f5_initial_margin_le_maintenance_margin_at_entry_rejected(self, config):
+        """
+        F5: Ký quỹ ban đầu không đủ bù maintenance margin ngay tại thời điểm mở vị thế
+        (1/leverage <= MMR_entry -> đã vi phạm điều kiện thanh lý ngay từ đầu).
+        """
+        brackets = config.get("leverage_brackets", {})
+        # Leverage = 300x -> 1/300 = 0.00333 < MMR = 0.004
+        with pytest.raises(ValueError, match="already liquidatable"):
+            calculate_estimated_liquidation_price(
+                "LONG", 50000.0, 30000.0, 300.0, symbol="BTCUSDT", leverage_brackets=brackets
+            )
+
+    def test_f5_independent_margin_balance_equation_verification(self, config):
+        """
+        F5: Kiểm chứng toán học độc lập:
+        Nghiệm P_liq giải ra phải thỏa mãn chính xác phương trình cân bằng ký quỹ:
+        Long:  M_initial + q * (P_liq - P_entry) = q * P_liq * MMR - cum
+        Short: M_initial + q * (P_entry - P_liq) = q * P_liq * MMR - cum
+        """
+        brackets = config.get("leverage_brackets", {})
+        test_cases = [
+            ("LONG", 50000.0, 60000.0, 3.0),
+            ("LONG", 65000.0, 150000.0, 5.0),
+            ("SHORT", 50000.0, 45000.0, 3.0),
+            ("SHORT", 55000.0, 300000.0, 4.0),
+        ]
+
+        for direction, entry, size, lev in test_cases:
+            liq = calculate_estimated_liquidation_price(
+                direction=direction,
+                entry_price=entry,
+                position_size_usd=size,
+                leverage=lev,
+                symbol="BTCUSDT",
+                leverage_brackets=brackets,
+            )
+            q = size / entry
+            initial_margin = size / lev
+            notional_at_liq = q * liq
+            mmr, cum = get_mmr_tier(notional_at_liq, symbol="BTCUSDT", leverage_brackets=brackets)
+            maintenance_margin_at_liq = notional_at_liq * mmr - cum
+
+            if direction == "LONG":
+                equity_at_liq = initial_margin + q * (liq - entry)
+            else:
+                equity_at_liq = initial_margin + q * (entry - liq)
+
+            assert pytest.approx(equity_at_liq, abs=1e-3) == maintenance_margin_at_liq
+
+    def test_f5_long_1x_leverage_zero_liquidation(self, config):
+        """
+        F5: Vị thế LONG đòn bẩy 1x (không vay nợ ký quỹ, tương đương Spot).
+        P_liq = [Entry * (1 - 1/1) - 0] / (1 - MMR) = 0.
+        Không thể bị thanh lý khi giá > 0.
+        """
+        brackets = config.get("leverage_brackets", {})
+        liq = calculate_estimated_liquidation_price(
+            direction="LONG",
+            entry_price=50000.0,
+            position_size_usd=10000.0,
+            leverage=1.0,
+            symbol="BTCUSDT",
+            leverage_brackets=brackets,
+        )
+        assert liq == 0.0
+
+    def test_f5_bracket_maintenance_discontinuity_rejected(self):
+        """
+        F5: Cấu hình bracket có bước nhảy (discontinuity) trong maintenance margin
+        tại ranh giới giữa 2 tier phải bị từ chối ngay từ khâu validation.
+        Tier 1 cap 50k, MMR 0.004, cum 0 -> maint = 200.
+        Tier 2 cap 100k, MMR 0.006, cum 0 -> maint tại 50k = 300 != 200 -> Discontinuous!
+        """
+        discontinuous_brackets = {
+            "BTCUSDT": [
+                [50000.0, 0.004, 0.0],
+                [100000.0, 0.006, 0.0],  # Không có cum phù hợp bù chênh lệch
+            ]
+        }
+        with pytest.raises(ValueError, match="maintenance margin discontinuity"):
+            calculate_estimated_liquidation_price(
+                "LONG", 50000.0, 10000.0, 3.0, symbol="BTCUSDT", leverage_brackets=discontinuous_brackets
+            )

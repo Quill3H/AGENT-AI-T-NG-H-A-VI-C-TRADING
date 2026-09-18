@@ -28,12 +28,18 @@ def parse_utc_datetime(ts: Any) -> datetime:
         val = float(ts)
         if val > 1e11:
             val = val / 1000.0
-        return datetime.fromtimestamp(val, tz=timezone.utc)
+        try:
+            return datetime.fromtimestamp(val, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError) as e:
+            raise ValueError(f"Timestamp value out of valid platform range: {ts!r}") from e
     if isinstance(ts, str):
-        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except (ValueError, OverflowError, OSError) as e:
+            raise ValueError(f"Malformed or out-of-range ISO timestamp string: {ts!r}") from e
     raise TypeError(f"Unsupported timestamp type: {type(ts)}")
 
 

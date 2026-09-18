@@ -257,3 +257,95 @@ class TestCircuitBreakers:
         cb.record_trade_result(pnl=-100.0, timestamp=t0 + timedelta(hours=2), equity=equity)
         assert cb.locked_until == expected_lock_until
 
+    # -------------------------------------------------------------
+    # F4 Regression Tests: Unified Clock & Breaker Resilience
+    # -------------------------------------------------------------
+    def test_f4_scenario_a_query_advances_time_and_blocks_past_event(self):
+        """
+        F4 Scenario A: Đồng hồ đơn nhất monotonic.
+        Sau khi is_trading_allowed(T2) được gọi, đồng hồ nội bộ tiến tới T2.
+        Nếu sau đó record_trade_result(T1) với T1 < T2 được gọi, hệ thống phải
+        từ chối do lùi thời gian (time reversal).
+        """
+        cb = CircuitBreakerState()
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        t1 = t0 + timedelta(hours=1)
+        t2 = t0 + timedelta(hours=2)
+
+        cb.record_trade_result(pnl=50.0, timestamp=t0, equity=10000.0)
+        assert cb.current_timestamp == t0
+
+        # Query kiểm tra tại T2 -> Đồng hồ nội bộ nhảy tới T2
+        assert cb.is_trading_allowed(t2) is True
+        assert cb.current_timestamp == t2
+
+        # Ghi nhận kết quả giao dịch tại T1 (< T2) -> PHẢI BỊ TỪ CHỐI
+        with pytest.raises(ValueError, match="time reversal"):
+            cb.record_trade_result(pnl=50.0, timestamp=t1, equity=10050.0)
+
+    def test_f4_scenario_b_lock_expiry_and_new_breach_without_intervening_query(self):
+        """
+        F4 Scenario B: Khóa hết hạn và kích hoạt khóa mới mà không cần có lệnh query xen giữa.
+        Tại T0: vi phạm lỗ 24h -> khóa 24h đến T0 + 24h.
+        Không có lệnh is_trading_allowed nào được gọi trong 24h.
+        Tại T0 + 25h: có kết quả trade mới lỗ 600$ (vốn 10,000$).
+        record_trade_result tự động advance_time tới T0 + 25h, mở khóa cũ đã hết hạn,
+        prune khoản lỗ 25h trước, và kích hoạt KHÓA MỚI 24h đến T0 + 49h!
+        """
+        cb = CircuitBreakerState(daily_loss_limit_pct=0.05)
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        equity = 10000.0
+
+        # Kích hoạt khóa 24h tại T0
+        cb.record_trade_result(pnl=-600.0, timestamp=t0, equity=equity)
+        assert cb.is_locked is True
+        assert cb.locked_until == t0 + timedelta(hours=24)
+
+        # KHÔNG GỌI is_trading_allowed, mà ghi nhận trực tiếp kết quả tại T0 + 25h
+        t_new = t0 + timedelta(hours=25)
+        cb.record_trade_result(pnl=-600.0, timestamp=t_new, equity=equity)
+
+        # Phải kích hoạt khóa MỚI từ t_new
+        assert cb.is_locked is True
+        assert cb.locked_until == t_new + timedelta(hours=24)
+        assert cb.rolling_24h_pnl == -600.0  # Khoản lỗ cũ tại t0 đã bị prune
+
+    def test_f4_query_going_backwards_rejected(self):
+        """F4: Gọi is_trading_allowed với thời gian lùi lại quá khứ phải bị từ chối."""
+        cb = CircuitBreakerState()
+        t2 = datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+
+        assert cb.is_trading_allowed(t2) is True
+        with pytest.raises(ValueError, match="time reversal"):
+            cb.is_trading_allowed(t1)
+
+    def test_f4_same_timestamp_multiple_events(self):
+        """F4: Nhiều giao dịch đóng tại cùng một timestamp (t0 == t0) được phép ghi nhận bình thường."""
+        cb = CircuitBreakerState()
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        cb.record_trade_result(pnl=-100.0, timestamp=t0, equity=10000.0)
+        cb.record_trade_result(pnl=-150.0, timestamp=t0, equity=9900.0)
+
+        assert cb.rolling_24h_pnl == -250.0
+        assert len(cb.trade_history_24h) == 2
+        assert cb.current_timestamp == t0
+
+    def test_f4_unsupported_recovery_mode_rejected(self):
+        """F4: Cấu hình recovery_mode không nằm trong danh mục hỗ trợ phải raise ValueError."""
+        with pytest.raises(ValueError, match="Unsupported recovery_mode"):
+            CircuitBreakerState(recovery_mode="unsupported_custom_mode")
+
+    def test_f4_zero_equity_halts_trading(self):
+        """F4: Khi equity giảm về <= 0 (cháy tài khoản), hệ thống chuyển sang halted vĩnh viễn."""
+        cb = CircuitBreakerState()
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        cb.record_trade_result(pnl=-10000.0, timestamp=t0, equity=0.0)
+
+        assert cb.is_halted is True
+        assert cb.is_locked is True
+        # Thậm chí 10 năm sau vẫn không được phép giao dịch
+        t_future = t0 + timedelta(days=3650)
+        assert cb.is_trading_allowed(t_future) is False
+
+

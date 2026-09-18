@@ -16,7 +16,7 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW — 113/113 tests passed, chờ nghiệm thu)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW LẦN 2 — 135/135 tests passed 100%, sẵn sàng nghiệm thu, DỪNG CHỜ REVIEW CHƯA SANG GIAI ĐOẠN 4)
 - [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
@@ -40,7 +40,13 @@
 8. **Đóng gói hàm Cache Manager:** Chuẩn hóa các hàm public `ensure_utc_index` và `timeframe_to_timedelta` trong `cache_manager.py`, giữ alias tương thích ngược.
 9. **Chống Lookahead Bias tuyệt đối cho CVD Divergence:** Nến $i$ là Swing Point được xác nhận tại nến $t = i + k$ ($k = 3$). Tín hiệu phân kỳ chỉ ghi nhận tại nến $t$, **tuyệt đối không gán ngược** về nến $i$ (Tham chiếu: ADR 0003).
 10. **Tầng Fallback cho Chỉ báo Kỹ thuật:** Ưu tiên `pandas-ta`, nhưng luôn có tầng Fallback bằng pure pandas (`_ema_presma`, Wilder RMA) theo đúng chuẩn TA-Lib với log cảnh báo rõ ràng (Tham chiếu: ADR 0004).
-11. **Chuẩn hóa Refinements cho Risk Manager theo Independent GPT Review (ADR 0006):** Khắc phục toàn diện 6 vấn đề R1–R6: Loại trừ bool/NaN/Inf khỏi sizing, đối soát rủi ro thực tế $Q \times |Entry - Stop|$ với ngân sách rủi ro và available margin, loại bỏ fallback wall-clock `datetime.now()` (bắt buộc timestamp UTC mô phỏng), làm sạch Circuit Breaker (sliding window $(T-24h, T]$, monotonic time, breakeven streak reset, lockout non-extension), giải giá thanh lý nhất quán theo Tier (Tier-Consistent Solver), kịch bản mô phỏng 100% minh bạch (Tham chiếu: ADR 0006).
+43. 11. **Chuẩn hóa Refinements cho Risk Manager theo Independent GPT Review (ADR 0006):** Khắc phục toàn diện 6 vấn đề R1–R6: Loại trừ bool/NaN/Inf khỏi sizing, đối soát rủi ro thực tế $Q \times |Entry - Stop|$ với ngân sách rủi ro và available margin, loại bỏ fallback wall-clock `datetime.now()` (bắt buộc timestamp UTC mô phỏng), làm sạch Circuit Breaker (sliding window $(T-24h, T]$, monotonic time, breakeven streak reset, lockout non-extension), giải giá thanh lý nhất quán theo Tier (Tier-Consistent Solver), kịch bản mô phỏng 100% minh bạch (Tham chiếu: ADR 0006).
+44. 12. **Chuẩn hóa Toàn diện Giai đoạn 3 theo GPT Review Lần 2 (F1 – F5):**
+    - **F1:** Đối soát rủi ro thực tế với ngân sách khai báo của lệnh (`order_declared_budget_usd`), chống double reduction giữa `base_risk_percent` và `risk_percent`.
+    - **F2:** Bắt buộc `available_margin` hữu hạn $\ge 0$, kiểm tra ký quỹ bao gồm phí vào lệnh ước tính, loại bỏ hoàn toàn crash `TypeError` (unhashable types), `AttributeError` (non-callable breaker) và `OverflowError` (timestamp).
+    - **F3:** Phân lập `account_state['current_time']` (Admission Time) làm thẩm quyền duyệt lệnh duy nhất; chặn lách tin tức bằng signal cũ; phát hiện lệch cấu hình news filter.
+    - **F4:** Thống nhất đồng hồ đơn nhất `advance_time` cho Circuit Breaker; giải quyết triệt để Scenario A và Scenario B; chuyển trạng thái `is_halted = True` khi cháy vốn; kiểm soát danh mục `recovery_mode`.
+    - **F5:** Giải thuật thanh lý nghiêm ngặt: kiểm tra tính liên tục của bracket, từ chối vượt trần bracket tối đa (không ngoại suy), từ chối vị thế vi phạm ngay tại entry, ràng buộc phương hướng nghiệm, loại bỏ fallback tier cuối, kiểm chứng độc lập phương trình cân bằng ký quỹ (Tham chiếu: Phụ lục ADR 0006).
 
 ---
 
@@ -70,9 +76,9 @@
 | `tests/test_cvd.py` | 4 unit tests cho CVD và nhận diện phân kỳ Bullish/Bearish. |
 | `tests/test_no_lookahead.py` | 6 unit tests xáo trộn tương lai, chứng minh tính bất biến nhân quả quá khứ. |
 | `tests/test_position_sizing.py` | 21 unit tests cho Position Sizing, so khớp số liệu tính tay, sanitization, biên số học. |
-| `tests/test_liquidation_calc.py` | 10 unit tests cho Tier-Consistent Solver, benchmark GPT review, bracket validation. |
-| `tests/test_circuit_breakers.py` | 10 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng/hòa, sliding window pruning. |
-| `tests/test_invariant_checks.py` | 19 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check. |
+| `tests/test_liquidation_calc.py` | 15 unit tests cho Tier-Consistent Solver, benchmark GPT review, bracket validation & F5. |
+| `tests/test_circuit_breakers.py` | 16 unit tests cho các kịch bản ngắt mạch, chuỗi thua/thắng/hòa, sliding window pruning & F4. |
+| `tests/test_invariant_checks.py` | 30 unit tests kiểm tra invariant, gates từ chối, actual risk đối soát, margin check & F1-F3. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0006). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn. |
 
