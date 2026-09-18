@@ -16,8 +16,8 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ HOÀN THÀNH & KHẮC PHỤC TRIỆT ĐỂ THEO GPT REVIEW LẦN 3 — 158/158 tests passed 100%, sẵn sàng nghiệm thu, DỪNG CHỜ REVIEW CHƯA SANG GIAI ĐOẠN 4)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO PHẠM VI GPT REVIEW 04 tại code `4401439`; reviewer xác minh 151 passed, 2 skipped, 5 network deselected + 9 kiểm thử độc lập đạt; tác giả báo 158/158 trên môi trường riêng. Người dùng đã yêu cầu tiếp tục Giai đoạn 4.)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (`paper_broker.py`, `order_models.py`; ĐÃ GIAO TASK, ĐƯỢC PHÉP TRIỂN KHAI, CHƯA REVIEW. Đọc `docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`; hoàn tất phải dừng chờ GPT review, chưa được sang Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
