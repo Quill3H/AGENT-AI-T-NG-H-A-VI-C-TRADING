@@ -16,7 +16,7 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN THÀNH TRIỂN KHAI, ĐỐI SOÁT VÀ TEST 175/175 PASS; DỪNG CHỜ GPT REVIEW. Tuyệt đối chưa được sang Giai đoạn 5.)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (CHƯA NGHIỆM THU THEO GPT REVIEW 05 tại `e4cb87b`: cần sửa E1–E8 trong `docs/reviews/GPT_STAGE_04_REVIEW_05.md`. Reviewer: 168 passed, 2 skipped, 5 network deselected; probes riêng 24 failed, 2 passed. Tác giả báo 175/175 ở môi trường riêng. Sau sửa dừng chờ Review 06, chưa sang Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
