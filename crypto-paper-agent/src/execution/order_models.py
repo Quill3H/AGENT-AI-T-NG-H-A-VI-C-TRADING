@@ -165,6 +165,7 @@ class OrderExecutionRecord:
     notional_usd: float = 0.0
     fee_usd: float = 0.0
     rejection_reasons: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def is_filled(self) -> bool:
         return self.status == OrderStatus.FILLED
@@ -195,6 +196,12 @@ class Position:
     exit_reason: Optional[ExitReason] = None
     entry_fee: float = 0.0
     exit_fee: float = 0.0
+    initial_stop_loss_price: Optional[float] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.initial_stop_loss_price is None:
+            self.initial_stop_loss_price = self.stop_loss_price
 
     def notional_value(self, current_price: float) -> float:
         """Giá trị danh nghĩa theo giá hiện tại."""
@@ -238,6 +245,20 @@ class TradeRecord:
     exit_reason: ExitReason
     intrabar_estimated: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
+    initial_stop_loss_price: Optional[float] = None
+    initial_risk_usd: Optional[float] = None
+    realized_r_multiple: Optional[float] = None
+    conviction_tier: str = "normal"
+    estimated_liquidation_price: Optional[float] = None
+    take_profit_levels: List[float] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.initial_stop_loss_price is None and "initial_stop_loss_price" in self.metadata:
+            self.initial_stop_loss_price = self.metadata["initial_stop_loss_price"]
+        if self.initial_stop_loss_price is not None and self.initial_risk_usd is None:
+            self.initial_risk_usd = self.quantity * abs(self.entry_price - self.initial_stop_loss_price)
+        if self.initial_risk_usd is not None and self.initial_risk_usd > 0 and self.realized_r_multiple is None:
+            self.realized_r_multiple = self.net_pnl / self.initial_risk_usd
 
 
 @dataclass

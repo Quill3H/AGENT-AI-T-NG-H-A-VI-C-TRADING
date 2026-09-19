@@ -30,6 +30,12 @@ scratch/
 tmp/
 *.tmp
 
+# Backtest Reports and Databases (Stage 6)
+reports/
+*.sqlite
+*.sqlite3
+*.db
+
 # IDE / Editor configurations
 .vscode/
 .idea/

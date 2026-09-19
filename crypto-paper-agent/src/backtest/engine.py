@@ -266,112 +266,19 @@ class BacktestEngine:
         return metrics
 
     def _calculate_metrics(self, finalize_summary: Dict[str, Any], force_close: bool) -> Dict[str, Any]:
-        """Tổng hợp số liệu thống kê chi tiết của phiên backtest."""
-        trades = self.broker.trade_history
-        total_trades = len(trades)
+        """Tổng hợp số liệu thống kê chi tiết của phiên backtest theo chuẩn Stage 6."""
+        from src.report.metrics import calculate_backtest_metrics
+        return calculate_backtest_metrics(
+            broker=self.broker,
+            config=self.config,
+            start_time=self.data_15m.index[0],
+            end_time=self.data_15m.index[-1],
+            bars_15m_count=len(self.data_15m),
+            bars_4h_count=len(self.data_4h),
+            setup_count=getattr(self.strategy, "setup_count", 0),
+            candidate_count=getattr(self.strategy, "candidate_count", 0),
+            submitted_orders_count=self.submitted_orders_count,
+            force_close=force_close,
+            finalize_summary=finalize_summary,
+        )
 
-        long_trades = [t for t in trades if t.direction == OrderDirection.LONG]
-        short_trades = [t for t in trades if t.direction == OrderDirection.SHORT]
-
-        win_trades = [t for t in trades if t.net_pnl > 0]
-        loss_trades = [t for t in trades if t.net_pnl < 0]
-        be_trades = [t for t in trades if t.net_pnl == 0]
-
-        long_wins = [t for t in long_trades if t.net_pnl > 0]
-        short_wins = [t for t in short_trades if t.net_pnl > 0]
-
-        win_rate = (len(win_trades) / total_trades * 100.0) if total_trades > 0 else 0.0
-        win_rate_long = (len(long_wins) / len(long_trades) * 100.0) if len(long_trades) > 0 else 0.0
-        win_rate_short = (len(short_wins) / len(short_trades) * 100.0) if len(short_trades) > 0 else 0.0
-
-        total_gross_pnl = sum(t.gross_price_pnl for t in trades)
-        total_fees = sum(t.entry_fee + t.exit_fee for t in trades)
-        total_funding_trades = sum(t.funding_cashflow for t in trades)
-        total_net_pnl = sum(t.net_pnl for t in trades)
-
-        start_equity = self.broker.initial_balance
-        final_equity = self.broker.equity
-        total_return_pct = ((final_equity - start_equity) / start_equity * 100.0) if start_equity > 0 else 0.0
-
-        # Max Drawdown từ account_snapshots
-        max_dd_usd = 0.0
-        max_dd_pct = 0.0
-        peak_equity = start_equity
-
-        for snap in self.broker.account_snapshots:
-            eq = snap.equity
-            if eq > peak_equity:
-                peak_equity = eq
-            dd_usd = peak_equity - eq
-            dd_pct = (dd_usd / peak_equity * 100.0) if peak_equity > 0 else 0.0
-            if dd_usd > max_dd_usd:
-                max_dd_usd = dd_usd
-            if dd_pct > max_dd_pct:
-                max_dd_pct = dd_pct
-
-        # Thống kê lệnh
-        orders = self.broker.order_history
-        orders_filled = sum(1 for o in orders if o.status == OrderStatus.FILLED)
-        orders_rejected = sum(1 for o in orders if o.status == OrderStatus.REJECTED)
-        orders_cancelled = sum(1 for o in orders if o.status == OrderStatus.CANCELLED)
-
-        # Thống kê lý do từ chối lệnh
-        rejection_reasons_tally: Dict[str, int] = {}
-        for o in orders:
-            for r in o.rejection_reasons:
-                reason_key = r.split(":")[0].strip()
-                rejection_reasons_tally[reason_key] = rejection_reasons_tally.get(reason_key, 0) + 1
-
-        # Thống kê lý do đóng vị thế
-        exit_reasons_tally: Dict[str, int] = {}
-        for t in trades:
-            rk = t.exit_reason.value if hasattr(t.exit_reason, "value") else str(t.exit_reason)
-            exit_reasons_tally[rk] = exit_reasons_tally.get(rk, 0) + 1
-
-        # Thống kê tín hiệu từ chiến lược
-        setup_count = getattr(self.strategy, "setup_count", 0)
-        candidate_count = getattr(self.strategy, "candidate_count", 0)
-
-        # Xác thực kiểm toán sổ cái kế toán
-        self.broker.verify_accounting_invariants()
-
-        return {
-            "symbol": self.symbol,
-            "timeframe_signal": self.timeframe_signal,
-            "timeframe_execution": self.timeframe_execution,
-            "start_time": self.data_15m.index[0],
-            "end_time": self.data_15m.index[-1],
-            "bars_15m_count": len(self.data_15m),
-            "bars_4h_count": len(self.data_4h),
-            "start_equity": start_equity,
-            "final_equity": final_equity,
-            "wallet_balance": self.broker.wallet_balance,
-            "available_margin": self.broker.available_margin,
-            "total_return_pct": total_return_pct,
-            "max_drawdown_usd": max_dd_usd,
-            "max_drawdown_pct": max_dd_pct,
-            "setup_count": setup_count,
-            "candidate_count": candidate_count,
-            "total_trades": total_trades,
-            "long_trades_count": len(long_trades),
-            "short_trades_count": len(short_trades),
-            "win_trades_count": len(win_trades),
-            "loss_trades_count": len(loss_trades),
-            "breakeven_trades_count": len(be_trades),
-            "win_rate": win_rate,
-            "win_rate_long": win_rate_long,
-            "win_rate_short": win_rate_short,
-            "total_gross_pnl": total_gross_pnl,
-            "total_fees": total_fees,
-            "total_funding_trades": total_funding_trades,
-            "total_net_pnl": total_net_pnl,
-            "submitted_orders_count": self.submitted_orders_count,
-            "orders_filled_count": orders_filled,
-            "orders_rejected_count": orders_rejected,
-            "orders_cancelled_count": orders_cancelled,
-            "rejection_reasons": rejection_reasons_tally,
-            "exit_reasons": exit_reasons_tally,
-            "force_close_on_finalize": force_close,
-            "finalize_summary": finalize_summary,
-            "accounting_invariants_verified": True,
-        }

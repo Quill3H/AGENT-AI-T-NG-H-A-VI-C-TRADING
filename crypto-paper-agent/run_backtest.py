@@ -38,6 +38,7 @@ from src.data_layer.cache_manager import (
     load_from_cache,
 )
 from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
+from src.report.generator import ReportGenerator
 from src.strategies.trend_following import TrendFollowingStrategy
 
 
@@ -112,7 +113,28 @@ def main():
         default=True,
         help="Force close all open positions on finalize (default: True)",
     )
+    parser.add_argument(
+        "--output-dir",
+        default="reports",
+        help="Thư mục xuất báo cáo (default: reports)",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Mã định danh phiên backtest (default: tự động sinh run_{strategy}_{symbol}_{YYYYMMDD_HHMMSS})",
+    )
+    parser.add_argument(
+        "--db-path",
+        default=None,
+        help="Đường dẫn file SQLite tuỳ chọn (mặc định: <output-dir>/<run-id>/trades.sqlite)",
+    )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Chạy backtest nhưng không xuất file báo cáo (artifacts)",
+    )
     args = parser.parse_args()
+
 
     # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
     if args.strategy != "trend_following":
@@ -181,8 +203,26 @@ def main():
     exchange = config.get("data", {}).get("exchange", "binance")
     timeframes = ["4h", "15m"]
 
+    # Xử lý output_dir, run_id và db_path (Stage 6)
+    output_dir_val = Path(args.output_dir)
+    if not output_dir_val.is_absolute():
+        if args.output_dir == "reports":
+            output_dir = (PROJECT_ROOT / "reports").resolve()
+        else:
+            output_dir = output_dir_val.resolve()
+    else:
+        output_dir = output_dir_val.resolve()
+
+    db_path = Path(args.db_path).resolve() if args.db_path else None
+
+    run_id = args.run_id
+    if not run_id:
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        sym_clean = symbol.replace("/", "").replace(":", "").lower()
+        run_id = f"run_{args.strategy}_{sym_clean}_{now_str}"
+
     print("=" * 70)
-    print(" CRYPTO FUTURES PAPER-TRADING RESEARCH AGENT - STAGE 5 BACKTEST")
+    print(" CRYPTO FUTURES PAPER-TRADING RESEARCH AGENT - BACKTEST RUNNER")
     print(" OUT OF SCOPE: No real API keys, no live orders, pure simulation")
     print("=" * 70)
     print(f"Git Commit SHA : {_get_git_commit_sha()}")
@@ -192,6 +232,8 @@ def main():
     print(f"Time Range UTC : {start_dt.isoformat()} -> {end_dt.isoformat()}")
     print(f"Cache Directory: {raw_dir}")
     print(f"Fetch Mode     : {'LOCAL CACHE ONLY (--no-fetch)' if args.no_fetch else 'AUTO FETCH/CACHE'}")
+    print(f"Run ID         : {run_id}")
+    print(f"Report Output  : {'DISABLED (--no-report)' if args.no_report else str(output_dir / run_id)}")
     print("=" * 70)
 
     # 5. Tải / Kiểm tra dữ liệu
@@ -300,6 +342,17 @@ def main():
     print(f"Final Equity         : {metrics['final_equity']:,.2f} USDT")
     print(f"Total Return         : {metrics['total_return_pct']:+.2f}%")
     print(f"Max Drawdown         : -{metrics['max_drawdown_usd']:,.2f} USDT (-{metrics['max_drawdown_pct']:.2f}%)")
+    sharpe_val = metrics.get("sharpe_ratio")
+    sharpe_str = f"{sharpe_val:.2f}" if sharpe_val is not None else "N/A"
+    pf_val = metrics.get("profit_factor")
+    pf_str = f"{pf_val:.2f}" if pf_val is not None else "N/A (loss=0)"
+    exp_r_val = metrics.get("expectancy_r")
+    exp_r_str = f"{exp_r_val:+.2f} R" if exp_r_val is not None else "N/A"
+
+    print(f"Daily Sharpe Ratio   : {sharpe_str}")
+    print(f"Profit Factor        : {pf_str}")
+    print(f"Expectancy (USD)     : {metrics.get('expectancy_usd', 0.0):+,.2f} USDT")
+    print(f"Expectancy (R)       : {exp_r_str}")
     print("-" * 70)
     print(f"Total Orders Sent    : {metrics['submitted_orders_count']}")
     print(f"Orders Filled        : {metrics['orders_filled_count']}")
@@ -330,6 +383,23 @@ def main():
     print(f"Accounting Audit     : {'PASSED (wallet_balance matches ledger)' if metrics['accounting_invariants_verified'] else 'FAILED'}")
     print(f"Finalize Mode        : force_close={metrics['force_close_on_finalize']}")
     print("=" * 70)
+
+    # 9. Ghi nhận sự kiện và xuất bộ artifacts báo cáo Giai đoạn 6
+    if not args.no_report:
+        print("\n[Report] Generating Stage 6 artifacts (SQLite, JSON, CSV, PNG, MD)...")
+        generator = ReportGenerator(base_reports_dir=output_dir)
+        artifacts = generator.generate_all(
+            run_id=run_id,
+            config=config,
+            metrics=metrics,
+            broker=engine.broker,
+            custom_output_dir=output_dir,
+            db_path=db_path,
+        )
+        report_folder = artifacts["summary.json"].parent
+        print(f"  - Artifacts generated in: {report_folder}")
+        for art_name, art_path in artifacts.items():
+            print(f"    * {art_name}: {art_path.name}")
 
     print("\nBacktest completed successfully.")
     return 0

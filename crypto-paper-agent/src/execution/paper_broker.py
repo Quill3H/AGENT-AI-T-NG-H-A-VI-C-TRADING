@@ -721,6 +721,8 @@ class PaperBroker:
                     opened_at=open_time,
                     conviction_tier=req.conviction_tier,
                     entry_fee=entry_fee,
+                    initial_stop_loss_price=req.stop_loss_price,
+                    metadata=dict(req.metadata) if hasattr(req, "metadata") and req.metadata else {},
                 )
                 self.positions[symbol] = new_pos
 
@@ -888,6 +890,11 @@ class PaperBroker:
             return_pct=return_pct,
             exit_reason=exit_reason,
             intrabar_estimated=intrabar_estimated,
+            metadata=dict(position.metadata) if hasattr(position, "metadata") and position.metadata else {},
+            initial_stop_loss_price=getattr(position, "initial_stop_loss_price", position.stop_loss_price),
+            conviction_tier=getattr(position, "conviction_tier", "normal"),
+            estimated_liquidation_price=getattr(position, "liquidation_price", None),
+            take_profit_levels=[position.take_profit_price] if getattr(position, "take_profit_price", None) is not None else [],
         )
         self.trade_history.append(trade_rec)
 
