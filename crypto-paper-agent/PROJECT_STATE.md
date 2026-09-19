@@ -149,7 +149,7 @@
 | `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
 | `tests/test_stage_04_review_07_coverage.py` | 16 unit tests độc lập bao phủ các trường hợp biên J1-J3 và K1 theo yêu cầu Review 07/08/09. |
 | `tests/test_trend_following_strategy.py` | 23 unit tests bao phủ các quy tắc Trend Following (crossover, pullback, expiry, invalidation, RSI, OI, swing SL, trailing). |
-| `tests/test_backtest_engine.py` | 8 unit/integration tests bao phủ BacktestEngine (multi-timeframe sync, future perturbation, next-open fill, funding fail-closed, determinism, CLI). |
+| `tests/test_backtest_engine.py` | 15 unit/integration tests bao phủ BacktestEngine (multi-timeframe sync, future perturbation, next-open fill, funding fail-closed, determinism, CLI, hermetic CWD isolation). |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0008). |
 | `docs/reviews/GPT_STAGE_04_REVIEW_09.md` | Kết luận nghiệm thu chính thức Giai đoạn 4 tại commit `b16fa1e0...`. |
 | `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md` | Nhiệm vụ có thẩm quyền duy nhất cho triển khai Giai đoạn 5; cấm tự chạy sang Giai đoạn 6+. |

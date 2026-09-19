@@ -1,11 +1,15 @@
 # BÁO CÁO TỔNG KẾT GIAI ĐOẠN 5: TREND FOLLOWING STRATEGY & BACKTEST ENGINE
-*(Bản cập nhật hoàn thiện theo các blocker GPT Review 10 sơ bộ)*
+*(Bản cập nhật hoàn thiện theo 3 blocker bắt buộc của GPT Review 10)*
 
 **Thời điểm hoàn thành:** 2026-09-19  
 **Tác giả:** Quill3H & Antigravity  
 **Trạng thái nghiệm thu:** **CHƯA NGHIỆM THU — ĐANG CHỜ GPT REVIEW 10 ĐÁNH GIÁ**  
 **Kiến trúc tham chiếu:** ADR 0008 (Trạng thái: PENDING REVIEW)  
-**Trạng thái kiểm thử:** 240/240 tests PASSED (235 offline + 5 network) — 100% Xanh  
+**Code-under-test commit:** `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`  
+**Documentation commit:** *(Commit B chứa báo cáo này)*  
+**Trạng thái kiểm thử:**
+- **Unit & Integration Tests (`tests/`):** 240/240 tests PASSED (235 offline + 5 network) — 100% Xanh
+- **Historical Probes (`docs/reviews/`):** 40/40 tests PASSED (Review 05: 26, Review 06: 11, Review 07: 3) — 100% Xanh
 **Dữ liệu Benchmark:** 3 năm BTCUSDT (2021-01-01 đến 2023-12-31) — **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED**  
 
 ---
@@ -17,14 +21,14 @@ Giai đoạn 5 triển khai chiến lược giao dịch xu hướng (**Trend Fol
 ### Các nguyên tắc thực thi cốt lõi:
 1. **Loại trừ nhìn trước (Zero Lookahead Bias):** Tín hiệu và bộ lọc xác định hoàn toàn trên nến 4h đã đóng (`candle[t-1]`), lệnh được khớp vào nến 15m tiếp theo tại giá Open (`candle[t]`).
 2. **Kế toán bất biến đóng kín:** Tính toán đầy đủ chi phí (phí taker 0.05%, trượt giá slippage 0.03%, funding rate settlement định kỳ), bảo toàn dòng tiền ví và ký quỹ cô lập (Isolated Margin).
-3. **Fail-Closed Funding Provenance (Blocker 1):** Không ép kiểu lỏng lẻo (`bool(row_15m["funding_readiness"])`). Dữ liệu sai kiểu (string, int, float, NaN), missing, future hoặc stale bị từ chối tuyệt đối (fail-closed) trước khi gây ra bất kỳ biến đổi trạng thái nào trên broker/account.
-4. **Độc lập CWD (Blocker 3):** CLI runner và đường dẫn cấu hình, dữ liệu cache được resolve tuyệt đối từ `PROJECT_ROOT`, hoạt động độc lập với thư mục thực thi hiện hành.
+3. **Fail-Closed Funding Provenance:** Không ép kiểu lỏng lẻo (`bool(row_15m["funding_readiness"])`). Dữ liệu sai kiểu (string, int, float, NaN), missing, future hoặc stale bị từ chối tuyệt đối (fail-closed) trước khi gây ra bất kỳ biến đổi trạng thái nào trên broker/account.
+4. **Độc lập CWD & Hermetic Cache:** CLI runner và đường dẫn cấu hình, dữ liệu cache được resolve tuyệt đối từ `PROJECT_ROOT`, hoạt động độc lập với thư mục thực thi hiện hành. Bộ kiểm thử CWD tự tạo cache tạm cô lập trong `tmp_path`, không phụ thuộc thư mục `data/raw` bị gitignore.
 
 ---
 
 ## 2. CHI TIẾT KHẮC PHỤC CÁC BLOCKER GPT REVIEW 10
 
-### 2.1 Blocker 1: Funding Provenance Fail-Closed & Zero Mutation
+### 2.1 Blocker 1 (Sơ bộ): Funding Provenance Fail-Closed & Zero Mutation
 - **Vấn đề cũ:** Tại `BacktestEngine.run()`, dòng lệnh `bool(row_15m["funding_readiness"])` đã biến các giá trị sai như chuỗi `"False"`, số `1`, hoặc `NaN` thành `True`, làm lách qua tầng kiểm soát của `PaperBroker`.
 - **Khắc phục:**
   - Loại bỏ hoàn toàn `bool(...)` ép kiểu lỏng lẻo.
@@ -35,7 +39,7 @@ Giai đoạn 5 triển khai chiến lược giao dịch xu hướng (**Trend Fol
   - Khẳng định tính bất biến trạng thái: Trong mọi trường hợp lỗi, `broker.wallet_balance`, `broker.positions["BTCUSDT"].isolated_collateral`, `broker.reserved_collateral`, và `broker.trade_history` không bị biến đổi bất kỳ giá trị nào (Zero Mutation).
   - Bổ sung kiểm thử `test_funding_metadata_valid_zero_rate` kiểm chứng `funding_rate = 0.0` hợp lệ với đầy đủ provenance được thanh toán bình thường với dòng tiền bằng 0.
 
-### 2.2 Blocker 2: Future-Perturbation Test Phi-Rỗng & Tái Tính Chỉ Báo
+### 2.2 Blocker 2 (Sơ bộ): Future-Perturbation Test Phi-Rỗng & Tái Tính Chỉ Báo
 - **Vấn đề cũ:** Test cũ tạo danh sách `trades_before_T_1` và `trades_before_T_2` nhưng không assert, đồng thời giữ nguyên các cột chỉ báo đã tính sẵn sau khi sửa dữ liệu OHLC.
 - **Khắc phục (`test_future_perturbation_invariance`):**
   - Xây dựng kịch bản dữ liệu thực tế tạo ra setup ARMED, lệnh chờ và giao dịch đã khớp/đóng hoàn tất trước thời điểm $T$.
@@ -44,20 +48,32 @@ Giai đoạn 5 triển khai chiến lược giao dịch xu hướng (**Trend Fol
   - Đưa dữ liệu 4h nhiễu qua pipeline tính toán chỉ báo thật (`add_all_features`) để các chỉ báo sau $T$ thay đổi thực sự theo dữ liệu mới.
   - Kiểm chứng bất biến: Toàn bộ orders, trades và account snapshots trước hoặc tại $T$ giữa 2 lần chạy giống hệt nhau 100%.
 
-### 2.3 Blocker 3: Test CWD Independence với Strategy Thật
-- **Vấn đề cũ:** Test cũ gọi `--strategy breakout_retest` khiến CLI thoát trước khi thẩm định đường dẫn config và cache.
-- **Khắc phục (`test_cli_cwd_independence`):**
-  - Chạy chiến lược `trend_following` thật từ thư mục tạm ngoài project (`cwd=str(tmp_path)`).
-  - Truyền đầy đủ các cờ: `--config config/default_config.yaml`, `--strategy trend_following`, `--start 2021-01-01`, `--end 2021-01-03`, `--no-fetch`.
-  - Khẳng định lệnh thực thi thành công (exit code 0), xuất báo cáo hoàn chỉnh và vượt qua đối soát kế toán.
+### 2.3 Blocker 1 (Chính thức): Làm Test CWD Hoàn Toàn Hermetic
+- **Vấn đề cũ:** `test_cli_cwd_independence` dựa vào cache cục bộ `data/raw` (vốn bị `.gitignore`), dẫn đến nguy cơ fail trên một clean clone.
+- **Khắc phục:**
+  - Tự động sinh dữ liệu tổng hợp tối thiểu đa khung 4h và 15m (3 ngày) trực tiếp trong `tmp_path/mock_cache`.
+  - Đảm bảo đầy đủ các tệp: `4h/ohlcv.parquet`, `15m/ohlcv.parquet`, `4h/open_interest.parquet`, `15m/open_interest.parquet`, `8h/funding_rate.parquet`, `15m/funding_rate.parquet`.
+  - Tạo cấu hình YAML tạm `hermetic_test_config.yaml` trong `tmp_path` trỏ `data.raw_data_dir` về `mock_cache`.
+  - Nâng cấp `run_backtest.py` cho phép `config_path` và `raw_data_dir` nhận cả đường dẫn tuyệt đối lẫn tương đối từ CWD hiện hành.
+  - Nâng cấp `has_complete_cache` trong `cache_manager.py` đọc đúng schema column `__index_level_0__` khi index name mặc định.
+  - Chạy subprocess với `cwd=str(tmp_path)` bên ngoài project root với các cờ: `--config`, `--strategy trend_following`, `--start 2023-01-01`, `--end 2023-01-02`, `--no-fetch`.
+  - Xác nhận test pass 100% trên clean clone mà không cần bất kỳ tệp dữ liệu nào trong `data/raw`.
 
-### 2.4 Blocker 4: Khớp Test Evidence với Cây Git Thực Tế
-- Danh mục tệp kiểm thử trong báo cáo được đối chiếu chính xác từng tệp có trong Git commit, loại bỏ các tên tệp không tồn tại.
-- Toàn bộ các probe test Giai đoạn 4 (`test_stage_04_review_06_coverage.py`, `test_stage_04_review_07_coverage.py`...) được giữ nguyên vẹn 100%, không né tránh assertion.
+### 2.4 Blocker 2 (Chính thức): Chạy Đầy Đủ Probe Lịch Sử
+- **Thực thi probe độc lập:** Vì `pytest.ini` chỉ thu thập thư mục `tests/`, các probe lịch sử Giai đoạn 4 trong `docs/reviews/` đã được chạy riêng và đối chiếu:
+  - Lệnh: `python -m pytest docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q`
+  - Kết quả: **40/40 probes PASSED** (Review 05: 26/26, Review 06: 11/11, Review 07: 3/3).
+  - Không có bất kỳ probe nào bị né tránh, bỏ qua hay sửa đổi assertion.
+
+### 2.5 Blocker 3 (Chính thức): Luồng Commit Có Truy Vết & Báo Cáo Trung Thực
+- **Commit A (`060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`):** Chứa toàn bộ code triển khai (`run_backtest.py`, `src/data_layer/cache_manager.py`) và test hoàn thiện (`tests/test_backtest_engine.py`).
+- **Thực thi kiểm thử trên Commit A:** Toàn bộ test suites (offline, network, probes) được chạy trực tiếp trên cây git của Commit A để lấy số liệu thực.
+- **Commit B:** Cập nhật tài liệu, báo cáo nghiệm thu và changelog trỏ đúng vào Commit A SHA.
+- **Tuyên bố Benchmark:** Gắn nhãn minh bạch `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED` cho toàn bộ kết quả backtest 3 năm.
 
 ---
 
-## 3. KẾT QUẢ KIỂM THỬ TỰ ĐỘNG (PYTEST SUITE)
+## 3. KẾT QUẢ KIỂM THỬ TỰ ĐỘNG (TRÊN COMMIT A: `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`)
 
 ### 3.1 Môi trường thực thi
 - **Hệ điều hành:** Windows 11 (win32)
@@ -87,17 +103,38 @@ tests\test_stage_04_review_06_coverage.py ...........                    [ 83%]
 tests\test_stage_04_review_07_coverage.py ................               [ 90%]
 tests\test_trend_following_strategy.py .......................           [100%]
 
-================ 235 passed, 5 deselected, 1 warning in 7.74s =================
+================ 235 passed, 5 deselected, 1 warning in 6.95s =================
 ```
 
 ### 3.3 Bộ kiểm thử Network (5/5 tests PASSED)
 Lệnh thực thi: `python -m pytest -m "network" -q`
 ```text
 tests\test_data_layer.py .....                                           [100%]
-================ 5 passed, 235 deselected, 1 warning in 12.39s ================
+================ 5 passed, 235 deselected, 1 warning in 12.34s ================
 ```
 
-**Tổng cộng:** **240/240 tests PASSED (100% Xanh)**.
+### 3.4 Bộ kiểm thử Probe Lịch Sử (40/40 tests PASSED)
+Lệnh thực thi: `python -m pytest docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q`
+```text
+docs\reviews\test_stage_04_review_05.py ..........................       [ 65%]
+docs\reviews\test_stage_04_review_06.py ...........                      [ 92%]
+docs\reviews\test_stage_04_review_07.py ...                              [100%]
+
+======================== 40 passed, 1 warning in 0.86s ========================
+```
+- `docs/reviews/test_stage_04_review_05.py`: **26/26 passed** (0.94s)
+- `docs/reviews/test_stage_04_review_06.py`: **11/11 passed** (0.60s)
+- `docs/reviews/test_stage_04_review_07.py`: **3/3 passed** (0.54s)
+
+### 3.5 Độ bao phủ mã nguồn (Coverage: 73% tổng thể)
+Lệnh thực thi: `python -m pytest -m "not network" --cov=src --cov-report=term-missing -q`
+- `src/backtest/engine.py`: **90%**
+- `src/strategies/trend_following.py`: **85%**
+- `src/execution/order_models.py`: **92%**
+- `src/features/indicators.py`: **91%**
+- `src/features/oi_features.py`: **100%**
+- `src/features/cvd.py`: **93%**
+- `src/risk/position_sizing.py`: **91%**
 
 ---
 
@@ -119,7 +156,7 @@ python run_backtest.py --config config/default_config.yaml --strategy trend_foll
                    BACKTEST EXECUTION REPORT
    [STATUS: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED]
 ======================================================================
-Git Commit SHA       : [Ghi nhận commit mới tại thời điểm push]
+Git Commit SHA       : 060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac
 Python Environment   : Python 3.13.14 | pandas 3.0.6 | numpy 2.2.6
 Strategy & Symbol    : trend_following | BTCUSDT
 Time Range 15m       : 2021-01-01 00:00:00+00:00 -> 2023-12-31 23:45:00+00:00
@@ -180,8 +217,8 @@ Finalize Mode        : force_close=True
 
 ## 6. HỒ SƠ DỰ ÁN VÀ TRẠNG THÁI BÀN GIAO
 
-- `PROJECT_STATE.md`: Đã khôi phục dòng Giai đoạn 4 trong checklist; cập nhật Giai đoạn 5 ở trạng thái chờ nghiệm thu.
-- `PLANNER_HANDOVER.md`: Đã ghi rõ Giai đoạn 5 do tác giả triển khai nhưng chưa được nghiệm thu, đang chờ GPT Review 10.
+- `PROJECT_STATE.md`: Đã khôi phục dòng Giai đoạn 4 trong checklist; cập nhật số lượng test của `test_backtest_engine.py` (15 tests); cập nhật Giai đoạn 5 ở trạng thái chờ nghiệm thu.
+- `PLANNER_HANDOVER.md`: Đã ghi rõ Giai đoạn 5 do tác giả triển khai với Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` nhưng chưa được nghiệm thu, đang chờ GPT Review 10.
 - `ADR 0008`: Đã chuyển trạng thái sang `PENDING REVIEW`.
 - `docs/reviews/GPT_STAGE_04_REVIEW_07.md`: Đã bổ sung ghi chú superseded trỏ tới Review 08 và Review 09.
 
@@ -189,7 +226,10 @@ Finalize Mode        : force_close=True
 
 ## 7. KẾT LUẬN VÀ DỪNG CHỜ REVIEW
 
-Tác giả đã hoàn thành việc sửa đổi toàn bộ 8 blocker theo góp ý của GPT Review 10 sơ bộ:
+Tác giả đã hoàn thành việc sửa đổi toàn bộ các blocker theo yêu cầu của GPT Review 10:
+- Đã làm test CWD hoàn toàn hermetic, không phụ thuộc `data/raw`.
+- Đã chạy đầy đủ và chứng minh pass 100% cả 3 probe lịch sử Review 05, 06, 07.
+- Đã thực hiện luồng commit có truy vết với Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`.
 - Không bắt đầu Giai đoạn 6.
 - Không triển khai các chiến lược khác.
 - Không kết nối testnet hay tiền thật.

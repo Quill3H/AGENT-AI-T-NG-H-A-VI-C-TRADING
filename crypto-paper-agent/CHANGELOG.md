@@ -37,21 +37,31 @@ Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRY
   - Tự động cấu hình stdout/stderr UTF-8 trên Windows chống lỗi `cp1252 charmap`.
 - **Bộ Kiểm Thử Bắt Buộc (Mục 6 Task Spec):**
   - `tests/test_trend_following_strategy.py`: 23 unit tests bao phủ các hạng mục 1–7 (Crossover, Pullback, Expiry, Invalidation, RSI, OI, Swing SL, Trailing, Warm-up EMA200).
-  - `tests/test_backtest_engine.py`: 8 unit/integration tests bao phủ các hạng mục 8–13 (Sync 4h/15m, Future perturbation invariance, Next-open fill, Funding metadata fail-closed, Determinism & Invariants, CLI behavior).
+  - `tests/test_backtest_engine.py`: 15 unit/integration tests bao phủ các hạng mục 8–13 (Sync 4h/15m, Future perturbation invariance, Next-open fill, Funding metadata fail-closed, Determinism & Invariants, CLI behavior, Hermetic CWD isolation).
 - **Tải Dữ Liệu Benchmark 3 Năm (`scripts/download_benchmark_data.py`):**
   - Tải và lưu cache parquet toàn bộ dữ liệu BTCUSDT từ `2021-01-01` đến `2023-12-31` (6,570 nến 4h, 105,120 nến 15m, 3,285 bản ghi funding rate, 1095 ngày Open Interest từ Binance Vision).
 
-### Cập nhật bổ sung theo phản hồi sơ bộ GPT Review 10 (Blockers 1–8)
-- **Funding Provenance Fail-Closed (Blocker 1):** Loại bỏ ép kiểu `bool(row_15m["funding_readiness"])`, giữ nguyên kiểu thô để `PaperBroker` kiểm tra `type is bool` nghiêm ngặt; bổ sung 7 ca kiểm thử tích hợp (`missing`, `False`, `"False"`, `1`, `NaN`, `future`, `stale`) và ca `funding_rate = 0.0` hợp lệ; xác minh tính bất biến tuyệt đối (Zero Mutation) trên broker/account khi lỗi.
-- **Future-Perturbation Invariance Test Phi-Rỗng (Blocker 2):** Xây dựng kịch bản có ít nhất 1 setup, 1 lệnh và 1 giao dịch phát sinh trước $T$; sau khi nhiễu dữ liệu tương lai, tái tính toàn bộ chỉ báo 4h qua pipeline thật `add_all_features`; chứng minh toàn bộ orders, trades và account snapshots trước $T$ bất biến 100%.
-- **Test CWD Independence (Blocker 3):** Chạy chiến lược `trend_following` thật từ thư mục ngoài project root với đầy đủ cờ `--config`, `--strategy`, `--start`, `--end`, `--no-fetch`; xác minh resolve path độc lập CWD và đối soát kế toán đạt.
-- **Đính chính Báo cáo & Phân tích (Blockers 5 & 6):** Bổ sung đếm setups (70) và candidates (22); đính chính win rate 50.00% trên quy mô mẫu nhỏ $N=16$ không khái quát hóa được; phân định rõ lỗi ký quỹ Risk Gate với Circuit Breaker; không dùng Daily Loss Limit 5% để đánh giá Max Drawdown 16.15%; gắn nhãn minh bạch `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
-- **Hồ sơ Dự án (Blocker 7):** Khôi phục dòng Giai đoạn 4 trong `PROJECT_STATE.md`; chuyển ADR 0008 sang `PENDING REVIEW`; cập nhật `PLANNER_HANDOVER.md` ghi nhận chờ GPT Review 10.
+### Cập nhật bổ sung theo 3 blocker bắt buộc của GPT Review 10
+- **Làm Test CWD Hoàn Toàn Hermetic (Blocker 1):**
+  - Khắc phục `test_cli_cwd_independence` không còn phụ thuộc cache `data/raw` bị gitignore.
+  - Tự động sinh dữ liệu tổng hợp đa khung 4h/15m trong `tmp_path/mock_cache` kèm cấu hình tạm `hermetic_test_config.yaml`.
+  - Hỗ trợ `run_backtest.py` giải quyết linh hoạt đường dẫn config và cache khi chạy từ bất kỳ CWD nào.
+  - Sửa `has_complete_cache` trong `cache_manager.py` đọc đúng schema index `__index_level_0__`.
+  - Test pass 100% trên một clean git clone không có thư mục `data/raw`.
+- **Chạy Đầy Đủ Probe Lịch Sử (Blocker 2):**
+  - Chạy riêng biệt bộ probe kiểm thử lịch sử Giai đoạn 4: `python -m pytest docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q`.
+  - Kết quả: **40/40 probes PASSED** (Review 05: 26/26, Review 06: 11/11, Review 07: 3/3), giữ nguyên 100% assertions.
+- **Luồng Commit Có Truy Vết & Báo Cáo Trung Thực (Blocker 3):**
+  - Commit A (`060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`): chứa toàn bộ code và tests hoàn thiện.
+  - Chạy toàn bộ test suites trên đúng commit này để lấy số liệu thực.
+  - Commit B: cập nhật tài liệu báo cáo nghiệm thu và changelog trỏ đúng Commit A SHA; benchmark gắn nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 
-### Kết quả kiểm thử thực tế
-- **Toàn bộ Unit Tests Offline (`tests/`):** **235/235 tests PASSED** (5 deselected network tests) trong 7.74s.
-- **Toàn bộ Network Tests (`tests/`):** **5/5 tests PASSED** (235 deselected offline tests) trong 12.39s.
-- **Tổng cộng:** **240/240 tests PASSED (100% Xanh)**.
+### Kết quả kiểm thử thực tế (trên Commit A: `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac`)
+- **Bộ Kiểm Thử Offline (`tests/`):** **235/235 tests PASSED** (5 deselected network tests) trong 6.95s.
+- **Bộ Kiểm Thử Network (`tests/`):** **5/5 tests PASSED** (235 deselected offline tests) trong 12.34s.
+- **Bộ Probe Lịch Sử (`docs/reviews/`):** **40/40 tests PASSED** trong 0.86s (R05: 26, R06: 11, R07: 3).
+- **Tổng cộng:** **280/280 tests PASSED (100% Xanh)**.
+- **Độ bao phủ mã nguồn (Coverage):** 73% tổng thể (`engine.py` 90%, `trend_following.py` 85%, `order_models.py` 92%, `indicators.py` 91%, `oi_features.py` 100%, `cvd.py` 93%).
 
 ### Kết quả Backtest Benchmark 3 Năm (2021-2023 BTCUSDT - AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED)
 - Lệnh: `python run_backtest.py --config config/default_config.yaml --strategy trend_following --start 2021-01-01 --end 2023-12-31 --no-fetch`

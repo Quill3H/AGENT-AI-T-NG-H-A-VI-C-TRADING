@@ -33,7 +33,7 @@
   - 237/237 unit tests offline pass (5 deselected network tests).
   - Script mô phỏng Phần A và Phần B đạt đối soát 100%.
   - Báo cáo sửa đổi chi tiết tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_08.md`.
-- **Giai đoạn 5 — Trend Following:** Tác giả (Antigravity) đã triển khai toàn bộ mã nguồn, cấu hình, kiểm thử đa khung thời gian và script benchmark; tuy nhiên **Giai đoạn 5 CHƯA ĐƯỢC NGHIỆM THU**, hiện đang chờ đợt đánh giá chính thức GPT Review 10 sau khi hoàn tất khắc phục các phản hồi sơ bộ (Blockers 1–8).
+- **Giai đoạn 5 — Trend Following:** Tác giả (Antigravity) đã hoàn thiện toàn bộ mã nguồn, cấu hình, kiểm thử đa khung thời gian và script benchmark tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` (240/240 tests pass + 40/40 historical probes pass); tuy nhiên **Giai đoạn 5 CHƯA ĐƯỢC NGHIỆM THU**, hiện đang chờ đợt đánh giá chính thức GPT Review 10 sau khi hoàn tất khắc phục toàn bộ các blocker (bao gồm test CWD hermetic, chạy probes lịch sử và luồng commit có truy vết).
 - **Quyền hiện tại:** Chỉ được phép sửa đổi, hoàn thiện và đối soát Giai đoạn 5. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 6** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
 
 ## 3. Tài liệu nguồn cần đọc
