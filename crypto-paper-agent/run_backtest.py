@@ -11,6 +11,8 @@ Tuân thủ nghiêm ngặt ANTIGRAVITY_STAGE_05_TASK.md:
 """
 import argparse
 from datetime import datetime, timezone
+import hashlib
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -204,22 +206,37 @@ def main():
     timeframes = ["4h", "15m"]
 
     # Xử lý output_dir, run_id và db_path (Stage 6)
+    # Nguyên tắc: relative path phải resolve từ PROJECT_ROOT; absolute path giữ nguyên
     output_dir_val = Path(args.output_dir)
-    if not output_dir_val.is_absolute():
-        if args.output_dir == "reports":
-            output_dir = (PROJECT_ROOT / "reports").resolve()
-        else:
-            output_dir = output_dir_val.resolve()
-    else:
+    if output_dir_val.is_absolute():
         output_dir = output_dir_val.resolve()
+    else:
+        output_dir = (PROJECT_ROOT / output_dir_val).resolve()
 
-    db_path = Path(args.db_path).resolve() if args.db_path else None
+    if args.db_path:
+        db_path_val = Path(args.db_path)
+        if db_path_val.is_absolute():
+            db_path = db_path_val.resolve()
+        else:
+            db_path = (PROJECT_ROOT / db_path_val).resolve()
+    else:
+        db_path = None
+
+    # Run ID mặc định phải deterministic từ: code SHA + strategy + symbol + start/end + canonical config hash
+    code_sha = _get_git_commit_sha()
+    strat_clean = str(args.strategy).lower()
+    sym_clean = symbol.replace("/", "").replace(":", "").lower()
+    start_iso = start_dt.isoformat()
+    end_iso = end_dt.isoformat()
+    config_canonical = json.dumps(config, sort_keys=True, ensure_ascii=False, default=str)
+    config_hash = hashlib.sha256(config_canonical.encode("utf-8")).hexdigest()
+
+    run_seed = f"{code_sha}|{strat_clean}|{sym_clean}|{start_iso}|{end_iso}|{config_hash}"
+    deterministic_hash = hashlib.sha256(run_seed.encode("utf-8")).hexdigest()[:12]
 
     run_id = args.run_id
     if not run_id:
-        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        sym_clean = symbol.replace("/", "").replace(":", "").lower()
-        run_id = f"run_{args.strategy}_{sym_clean}_{now_str}"
+        run_id = f"run_{strat_clean}_{sym_clean}_{deterministic_hash}"
 
     print("=" * 70)
     print(" CRYPTO FUTURES PAPER-TRADING RESEARCH AGENT - BACKTEST RUNNER")
@@ -387,6 +404,11 @@ def main():
     # 9. Ghi nhận sự kiện và xuất bộ artifacts báo cáo Giai đoạn 6
     if not args.no_report:
         print("\n[Report] Generating Stage 6 artifacts (SQLite, JSON, CSV, PNG, MD)...")
+        metrics["code_commit_sha"] = code_sha
+        metrics["no_fetch"] = args.no_fetch
+        cmd_args = sys.argv[1:]
+        metrics["reproduction_command"] = f"python run_backtest.py {' '.join(cmd_args)}"
+
         generator = ReportGenerator(base_reports_dir=output_dir)
         artifacts = generator.generate_all(
             run_id=run_id,

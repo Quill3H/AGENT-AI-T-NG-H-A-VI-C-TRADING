@@ -3,11 +3,15 @@ tests/test_trade_logger.py - Test suite for SQLite Event Store and JSON Exporter
 ================================================================================
 Kiểm tra nghiêm ngặt:
 1. Cấu trúc bảng SQLite (runs, orders, trades, funding_events, account_snapshots, run_metrics)
-2. Bật Foreign Keys (PRAGMA foreign_keys = ON) và từ chối cascade trái phép
+2. Bật Foreign Keys (PRAGMA foreign_keys = ON) và từ chối chèn mồ côi
 3. Tính toàn vẹn Transaction (Rollback khi có lỗi)
-4. Tính luỹ thừa (Idempotency) khi ghi trùng run_id cùng payload
-5. Từ chối xung đột (Conflict Rejection / Fail-closed) khi trùng run_id khác payload
-6. Xuất JSON trade chuẩn Section 4.6 (không chứa NaN, timestamp epoch UTC, unmeasured null)
+4. Tính luỹ thừa (Idempotency) khi ghi trùng run_id cùng canonical hash
+5. Từ chối xung đột (Conflict Rejection / Fail-closed) khi thay đổi config, rejection reason, trade, funding, snapshot
+6. Xuất JSON trade đúng nguyên văn schema Master Spec Mục 4.6 (tập key chính xác, cấu trúc nested)
+7. Ràng buộc khóa ghép composite primary keys: không va chạm ID giữa các run
+8. Hạch toán AccountSnapshot đúng các trường: reserved_collateral, available_margin, open_positions_count, is_halted
+9. Bảo toàn event_id và position_id cho funding_events
+10. Đọc cấu hình lồng chuẩn production (nested YAML) mà không serialize dictionary thành string
 """
 from datetime import datetime, timezone
 import json
@@ -24,7 +28,7 @@ from src.execution.order_models import (
     OrderType,
     TradeRecord,
 )
-from src.logging.trade_logger import TradeLogger
+from src.logging.trade_logger import TradeLogger, parse_config_metadata
 
 
 @pytest.fixture
@@ -36,9 +40,16 @@ def temp_logger(tmp_path):
 def _make_dummy_run_data(run_id="run_test_001"):
     now = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
     config = {
-        "strategy": "trend_following",
-        "symbol": "BTCUSDT",
-        "timeframe": "15m",
+        "strategy": {
+            "name": "TREND_FOLLOWING",
+            "timeframe_signal": "4h",
+            "timeframe_execution": "15m",
+        },
+        "data": {
+            "futures_symbol": "BTCUSDT",
+            "start_date": "2023-01-01",
+            "end_date": "2023-01-02",
+        },
         "initial_capital": 10000.0,
     }
     metrics = {
@@ -63,6 +74,7 @@ def _make_dummy_run_data(run_id="run_test_001"):
         filled_quantity=0.5,
         notional_usd=10005.0,
         fee_usd=4.0,
+        rejection_reasons=["INVARIANT_FAIL_INSUFFICIENT_MARGIN: test"],
         metadata={"signal_tier": "A"},
     )
     trade = TradeRecord(
@@ -87,7 +99,9 @@ def _make_dummy_run_data(run_id="run_test_001"):
         initial_stop_loss_price=19000.0,
         initial_risk_usd=505.0,
         realized_r_multiple=0.978,
-        conviction_tier="strong",
+        conviction_tier="NORMAL_2_PERCENT",
+        estimated_liquidation_price=15000.0,
+        take_profit_levels=[21010.0],
     )
     funding = FundingEvent(
         event_id="FE_001",
@@ -98,15 +112,17 @@ def _make_dummy_run_data(run_id="run_test_001"):
         settlement_mark_price=20050.0,
         position_quantity=0.5,
         cashflow_usd=1.0025,
+        direction=OrderDirection.LONG,
     )
     snapshot = AccountSnapshot(
         timestamp=now,
         wallet_balance=10000.0,
-        reserved_collateral=0.0,
-        available_margin=10000.0,
+        reserved_collateral=5000.0,
+        available_margin=5000.0,
         unrealized_pnl=0.0,
         equity=10000.0,
-        open_positions_count=0,
+        open_positions_count=1,
+        is_halted=False,
     )
     return run_id, config, metrics, [order], [trade], [funding], [snapshot]
 
@@ -125,18 +141,16 @@ def test_schema_tables_created(temp_logger):
 def test_foreign_keys_enforced(temp_logger):
     """Kiểm tra foreign keys được bật và từ chối chèn mồ côi không có run cha."""
     with temp_logger.get_connection() as conn:
-        # Kiểm tra pragma
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys;")
         fk_status = cursor.fetchone()[0]
         assert fk_status == 1, "Foreign keys must be ENABLED"
 
-        # Cố gắng insert vào orders với run_id không tồn tại
         with pytest.raises(sqlite3.IntegrityError):
             conn.execute(
                 """
-                INSERT INTO orders (order_id, run_id, symbol, direction, order_type, status, requested_at)
-                VALUES ('ORD_ORPHAN', 'NON_EXISTENT_RUN', 'BTCUSDT', 'LONG', 'MARKET', 'FILLED', '2023-01-01')
+                INSERT INTO orders (run_id, order_id, symbol, direction, order_type, status, requested_at)
+                VALUES ('NON_EXISTENT_RUN', 'ORD_ORPHAN', 'BTCUSDT', 'LONG', 'MARKET', 'FILLED', '2023-01-01')
                 """
             )
 
@@ -156,11 +170,12 @@ def test_log_run_and_retrieve_roundtrip(temp_logger):
     )
     assert success is True
 
-    # Đọc lại
+    # Đọc lại run
     run_row = temp_logger.get_run(run_id)
     assert run_row is not None
     assert run_row["run_id"] == run_id
     assert run_row["symbol"] == "BTCUSDT"
+    assert run_row["strategy_name"] == "TREND_FOLLOWING"
     assert run_row["total_trades"] == 1
 
     trades_ret = temp_logger.get_trades(run_id)
@@ -168,16 +183,24 @@ def test_log_run_and_retrieve_roundtrip(temp_logger):
     assert trades_ret[0]["trade_id"] == "TRD_001"
     assert trades_ret[0]["net_pnl"] == 493.8
     assert trades_ret[0]["initial_risk_usd"] == 505.0
+    assert trades_ret[0]["estimated_liquidation_price"] == 15000.0
 
     orders_ret = temp_logger.get_orders(run_id)
     assert len(orders_ret) == 1
     assert orders_ret[0]["order_id"] == "ORD_001"
+    assert orders_ret[0]["rejection_reasons"] == ["INVARIANT_FAIL_INSUFFICIENT_MARGIN: test"]
 
     snaps_ret = temp_logger.get_account_snapshots(run_id)
     assert len(snaps_ret) == 1
+    assert snaps_ret[0]["reserved_collateral"] == 5000.0
+    assert snaps_ret[0]["available_margin"] == 5000.0
+    assert snaps_ret[0]["open_positions_count"] == 1
+    assert snaps_ret[0]["is_halted"] == 0
 
     fe_ret = temp_logger.get_funding_events(run_id)
     assert len(fe_ret) == 1
+    assert fe_ret[0]["event_id"] == "FE_001"
+    assert fe_ret[0]["position_id"] == "POS_001"
 
     metrics_ret = temp_logger.get_run_metrics(run_id)
     assert metrics_ret is not None
@@ -185,7 +208,7 @@ def test_log_run_and_retrieve_roundtrip(temp_logger):
 
 
 def test_idempotent_logging(temp_logger):
-    """Ghi cùng 1 run_id với cùng payload lần 2 không gây lỗi và không nhân đôi dữ liệu."""
+    """Ghi cùng 1 run_id với cùng canonical payload lần 2 không gây lỗi và không nhân đôi dữ liệu."""
     run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_idem_01")
 
     res1 = temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
@@ -195,36 +218,20 @@ def test_idempotent_logging(temp_logger):
     res2 = temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
     assert res2 is True
 
-    # Số bản ghi không bị duplicate
     trades_ret = temp_logger.get_trades(run_id)
     assert len(trades_ret) == 1
-
-
-def test_conflict_rejection_fail_closed(temp_logger):
-    """Ghi cùng 1 run_id nhưng payload khác nhau phải raise ValueError (fail-closed)."""
-    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_conflict_01")
-
-    temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
-
-    # Payload khác (thay đổi final_equity)
-    conflicting_metrics = dict(metrics)
-    conflicting_metrics["final_equity"] = 99999.0
-
-    with pytest.raises(ValueError, match="already exists with differing payload"):
-        temp_logger.log_backtest_run(run_id, config, conflicting_metrics, orders, trades, fundings, snapshots)
 
 
 def test_transactional_rollback_on_failure(temp_logger):
     """Nếu xảy ra lỗi giữa chừng trong transaction, toàn bộ dữ liệu phải rollback sạch sẽ."""
     run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_rollback_01")
 
-    # Tạo trade hỏng (vi phạm constraint non-null hoặc kiểu dữ liệu)
     bad_trades = [
         {
             "trade_id": "TRD_FAIL",
             "symbol": "BTCUSDT",
             "direction": "LONG",
-            "quantity": "NOT_A_FLOAT_WILL_FAIL_CONVERSION",  # Sẽ gây ValueError/TypeError khi float()
+            "quantity": "NOT_A_FLOAT",
             "entry_price": 20000.0,
             "exit_price": 21000.0,
             "entry_time": "2023-01-01",
@@ -235,14 +242,16 @@ def test_transactional_rollback_on_failure(temp_logger):
     with pytest.raises((ValueError, TypeError)):
         temp_logger.log_backtest_run(run_id, config, metrics, orders, bad_trades, fundings, snapshots)
 
-    # Kiểm tra database không có rác của run_id này
     assert temp_logger.get_run(run_id) is None
     assert len(temp_logger.get_orders(run_id)) == 0
 
 
-def test_export_trades_json_strict_schema(temp_logger, tmp_path):
-    """Kiểm tra export_trades_json tuân thủ nghiêm ngặt Master Spec Section 4.6."""
-    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_export_01")
+def test_export_trades_json_exact_master_spec_schema(temp_logger, tmp_path):
+    """
+    Kiểm tra xuất trades.json đúng nguyên văn schema Master Spec Section 4.6.
+    So sánh chính xác tập key gốc và tập key nested (market_context, outcome).
+    """
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_export_spec_01")
     temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
 
     json_file = tmp_path / "trades_exported.json"
@@ -254,27 +263,244 @@ def test_export_trades_json_strict_schema(temp_logger, tmp_path):
     assert len(data) == 1
 
     t0 = data[0]
-    # Schema check
-    required_keys = [
-        "trade_id", "symbol", "direction", "entry_time", "exit_time",
-        "entry_price", "exit_price", "quantity", "leverage", "initial_margin",
-        "pnl_gross", "pnl_net", "fee_total", "funding_total", "return_pct",
-        "exit_reason", "conviction_tier", "initial_stop_loss", "initial_risk_usd",
-        "realized_r_multiple", "market_context", "mae_usd", "mfe_usd"
-    ]
-    for k in required_keys:
-        assert k in t0, f"Missing required key '{k}' in exported trade JSON"
+
+    # Tập key gốc bắt buộc theo Section 4.6
+    expected_root_keys = {
+        "trade_id",
+        "timestamp",
+        "asset",
+        "direction",
+        "strategy_used",
+        "conviction_tier",
+        "entry_price",
+        "stop_loss_price",
+        "take_profit_levels",
+        "nominal_position_size_usd",
+        "leverage",
+        "margin_used_usd",
+        "risk_amount_usd",
+        "risk_ratio_percent",
+        "estimated_liquidation_price",
+        "market_context",
+        "outcome",
+    }
+    assert set(t0.keys()) == expected_root_keys, f"Root keys mismatch: {set(t0.keys()) ^ expected_root_keys}"
+
+    # Nested market_context
+    expected_market_context_keys = {
+        "oi_trend_4h",
+        "funding_rate_8h",
+        "cvd_divergence",
+        "fvg_consequent_encroachment",
+    }
+    assert isinstance(t0["market_context"], dict)
+    assert set(t0["market_context"].keys()) == expected_market_context_keys
+    for k, v in t0["market_context"].items():
+        assert v is None, f"Expected null for unmeasured field '{k}', got {v}"
+
+    # Nested outcome
+    expected_outcome_keys = {
+        "exit_price",
+        "pnl_usd",
+        "fees_paid_usd",
+        "net_return_percent",
+        "max_adverse_excursion_mae",
+        "max_favorable_excursion_mfe",
+        "rule_compliance",
+    }
+    assert isinstance(t0["outcome"], dict)
+    assert set(t0["outcome"].keys()) == expected_outcome_keys
+    assert t0["outcome"]["max_adverse_excursion_mae"] is None
+    assert t0["outcome"]["max_favorable_excursion_mfe"] is None
+    assert t0["outcome"]["rule_compliance"] is True
+
+    # Giá trị đo lường
+    assert t0["asset"] == "BTCUSDT"
+    assert t0["direction"] == "LONG"
+    assert t0["strategy_used"] == "TREND_FOLLOWING"
+    assert t0["conviction_tier"] == "NORMAL_2_PERCENT"
+    assert t0["entry_price"] == 20010.0
+    assert t0["stop_loss_price"] == 19000.0
+    assert t0["take_profit_levels"] == [21010.0]
+    assert t0["nominal_position_size_usd"] == 10005.0
+    assert t0["leverage"] == 1.0
+    assert t0["margin_used_usd"] == 10005.0
+    assert t0["risk_amount_usd"] == 505.0
+    assert t0["risk_ratio_percent"] == 2.0
+    assert t0["estimated_liquidation_price"] == 15000.0
+    assert t0["outcome"]["exit_price"] == 21010.0
+    assert t0["outcome"]["pnl_usd"] == 493.8
+    assert t0["outcome"]["fees_paid_usd"] == 8.2
 
     # Timestamp Unix epoch seconds UTC
-    assert isinstance(t0["entry_time"], int)
-    assert isinstance(t0["exit_time"], int)
-    assert t0["entry_time"] > 1600000000
+    assert isinstance(t0["timestamp"], int)
+    assert t0["timestamp"] > 1600000000
 
-    # Null cho unmeasured fields
-    assert t0["market_context"] is None
-    assert t0["mae_usd"] is None
-    assert t0["mfe_usd"] is None
-
-    # Không cho phép NaN/Inf
+    # Tuyệt đối không chứa NaN hoặc Infinity
     assert "NaN" not in json_str
     assert "Infinity" not in json_str
+
+
+def test_rejection_reason_persistence(temp_logger):
+    """Kiểm tra bảng orders lưu và truy xuất chính xác rejection_reasons_json."""
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_rej_01")
+    orders[0].rejection_reasons = ["INSUFFICIENT_MARGIN: required 6000 > available 5000", "RISK_LIMIT_EXCEEDED"]
+
+    temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
+
+    retrieved = temp_logger.get_orders(run_id)
+    assert len(retrieved) == 1
+    assert retrieved[0]["rejection_reasons"] == ["INSUFFICIENT_MARGIN: required 6000 > available 5000", "RISK_LIMIT_EXCEEDED"]
+
+
+def test_account_snapshot_field_mapping(temp_logger):
+    """Kiểm tra bảng account_snapshots map đúng các trường thực tế, không dùng trường ảo default về 0."""
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_snap_map_01")
+    snapshots[0] = AccountSnapshot(
+        timestamp=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+        wallet_balance=12345.67,
+        reserved_collateral=2345.67,
+        available_margin=10000.0,
+        unrealized_pnl=150.25,
+        equity=12495.92,
+        open_positions_count=2,
+        is_halted=True,
+    )
+
+    temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
+
+    ret = temp_logger.get_account_snapshots(run_id)
+    assert len(ret) == 1
+    s = ret[0]
+    assert s["wallet_balance"] == 12345.67
+    assert s["reserved_collateral"] == 2345.67
+    assert s["available_margin"] == 10000.0
+    assert s["unrealized_pnl"] == 150.25
+    assert s["equity"] == 12495.92
+    assert s["open_positions_count"] == 2
+    assert s["is_halted"] == 1
+
+
+def test_funding_event_identity(temp_logger):
+    """Kiểm tra bảng funding_events bảo toàn chính xác event_id và position_id."""
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_fnd_id_01")
+    fundings[0] = FundingEvent(
+        event_id="FND_BTCUSDT_20230101_0042",
+        timestamp=datetime(2023, 1, 1, 8, 0, tzinfo=timezone.utc),
+        symbol="BTCUSDT",
+        position_id="POS_BTCUSDT_20230101_0007",
+        funding_rate=0.00015,
+        settlement_mark_price=20100.0,
+        position_quantity=0.8,
+        cashflow_usd=-2.412,
+        direction=OrderDirection.LONG,
+    )
+
+    temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
+
+    ret = temp_logger.get_funding_events(run_id)
+    assert len(ret) == 1
+    f = ret[0]
+    assert f["event_id"] == "FND_BTCUSDT_20230101_0042"
+    assert f["position_id"] == "POS_BTCUSDT_20230101_0007"
+    assert f["funding_rate"] == 0.00015
+    assert f["payment"] == -2.412
+    assert f["direction"] == "LONG"
+
+
+def test_multi_run_deterministic_id_collision(temp_logger):
+    """
+    Kiểm tra hai run khác nhau có cùng deterministic order_id/trade_id/event_id
+    được ghi vào cùng 1 SQLite DB mà không bị IntegrityError nhờ composite primary keys.
+    """
+    run_1, cfg_1, m_1, o_1, t_1, f_1, s_1 = _make_dummy_run_data("run_collision_01")
+    run_2, cfg_2, m_2, o_2, t_2, f_2, s_2 = _make_dummy_run_data("run_collision_02")
+
+    # Đảm bảo cả hai run có cùng order_id, trade_id, event_id
+    assert o_1[0].order_id == o_2[0].order_id == "ORD_001"
+    assert t_1[0].trade_id == t_2[0].trade_id == "TRD_001"
+    assert f_1[0].event_id == f_2[0].event_id == "FE_001"
+
+    success_1 = temp_logger.log_backtest_run(run_1, cfg_1, m_1, o_1, t_1, f_1, s_1)
+    success_2 = temp_logger.log_backtest_run(run_2, cfg_2, m_2, o_2, t_2, f_2, s_2)
+
+    assert success_1 is True
+    assert success_2 is True
+
+    assert len(temp_logger.get_orders(run_1)) == 1
+    assert len(temp_logger.get_orders(run_2)) == 1
+    assert len(temp_logger.get_trades(run_1)) == 1
+    assert len(temp_logger.get_trades(run_2)) == 1
+
+
+def test_full_payload_idempotency_conflict(temp_logger):
+    """
+    Kiểm tra tính toàn vẹn Idempotency:
+    Cùng run_id nhưng thay đổi riêng rẽ từng phần trong khi final_equity và total_trades
+    giữ nguyên đều phải bị từ chối (fail-closed với ValueError):
+    1. Thay đổi config
+    2. Thay đổi rejection reason
+    3. Thay đổi một trade
+    4. Thay đổi funding event
+    5. Thay đổi snapshot
+    """
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_conflict_full")
+    temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, snapshots)
+
+    # 1. Thay đổi riêng config
+    cfg_alt = dict(config)
+    cfg_alt["slippage_pct"] = 0.0009
+    with pytest.raises(ValueError, match="differing payload"):
+        temp_logger.log_backtest_run(run_id, cfg_alt, metrics, orders, trades, fundings, snapshots)
+
+    # 2. Thay đổi riêng rejection reason
+    o_alt = [OrderExecutionRecord(**orders[0].__dict__)]
+    o_alt[0].rejection_reasons = ["DIFFERENT_REJECTION_REASON"]
+    with pytest.raises(ValueError, match="differing payload"):
+        temp_logger.log_backtest_run(run_id, config, metrics, o_alt, trades, fundings, snapshots)
+
+    # 3. Thay đổi riêng một trade (thay đổi exit_price, pnl giữ nguyên)
+    t_alt = [TradeRecord(**trades[0].__dict__)]
+    t_alt[0].exit_price = 21500.0
+    with pytest.raises(ValueError, match="differing payload"):
+        temp_logger.log_backtest_run(run_id, config, metrics, orders, t_alt, fundings, snapshots)
+
+    # 4. Thay đổi riêng funding event
+    f_alt = [FundingEvent(**fundings[0].__dict__)]
+    f_alt[0].funding_rate = 0.0005
+    with pytest.raises(ValueError, match="differing payload"):
+        temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, f_alt, snapshots)
+
+    # 5. Thay đổi riêng snapshot (available_margin thay đổi, equity giữ nguyên)
+    s_alt = [AccountSnapshot(**snapshots[0].__dict__)]
+    s_alt[0].available_margin = 9999.0
+    with pytest.raises(ValueError, match="differing payload"):
+        temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, s_alt)
+
+
+def test_nested_production_config_mapping():
+    """Kiểm tra parse_config_metadata đọc đúng cấu trúc nested production YAML không bị serialize dict."""
+    prod_config = {
+        "strategy": {
+            "name": "TREND_FOLLOWING",
+            "enabled": True,
+            "timeframe_signal": "4h",
+            "timeframe_execution": "15m",
+        },
+        "data": {
+            "symbol": "BTC/USDT",
+            "futures_symbol": "BTCUSDT",
+            "start_date": "2021-01-01",
+            "end_date": "2023-12-31",
+            "raw_data_dir": "data/raw",
+        },
+    }
+
+    meta = parse_config_metadata(prod_config)
+    assert meta["strategy_name"] == "TREND_FOLLOWING"
+    assert meta["symbol"] == "BTCUSDT"
+    assert meta["timeframe_signal"] == "4h"
+    assert meta["timeframe_execution"] == "15m"
+    assert meta["start_date"] == "2021-01-01"
+    assert meta["end_date"] == "2023-12-31"
+    assert "{" not in meta["strategy_name"]

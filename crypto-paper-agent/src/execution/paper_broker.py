@@ -267,7 +267,8 @@ class PaperBroker:
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
                 reference_price=request.signal_price,
-                rejection_reasons=["EXECUTION_REJECT_FINALIZED: Broker has finalized (end of data)."]
+                rejection_reasons=["EXECUTION_REJECT_FINALIZED: Broker has finalized (end of data)."],
+                metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
             )
             self.order_history.append(rec)
             return rec
@@ -280,7 +281,8 @@ class PaperBroker:
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
                 reference_price=request.signal_price,
-                rejection_reasons=["EXECUTION_REJECT_ACCOUNT_HALTED: Account is halted due to insolvency or circuit breaker."]
+                rejection_reasons=["EXECUTION_REJECT_ACCOUNT_HALTED: Account is halted due to insolvency or circuit breaker."],
+                metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
             )
             self.order_history.append(rec)
             return rec
@@ -294,7 +296,8 @@ class PaperBroker:
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
                 reference_price=request.signal_price,
-                rejection_reasons=[f"EXECUTION_REJECT_POSITION_EXISTS: Symbol {request.symbol} already has an open position."]
+                rejection_reasons=[f"EXECUTION_REJECT_POSITION_EXISTS: Symbol {request.symbol} already has an open position."],
+                metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
             )
             self.order_history.append(rec)
             return rec
@@ -309,7 +312,8 @@ class PaperBroker:
                     status=OrderStatus.REJECTED,
                     requested_at=request.signal_time,
                     reference_price=request.signal_price,
-                    rejection_reasons=[f"EXECUTION_REJECT_PENDING_ORDER_EXISTS: Pending order for {request.symbol} already queued."]
+                    rejection_reasons=[f"EXECUTION_REJECT_PENDING_ORDER_EXISTS: Pending order for {request.symbol} already queued."],
+                    metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
                 )
                 self.order_history.append(rec)
                 return rec
@@ -321,6 +325,7 @@ class PaperBroker:
             status=OrderStatus.PENDING,
             requested_at=request.signal_time,
             reference_price=request.signal_price,
+            metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
         )
         self.pending_orders.append(request)
         self.order_history.append(rec)
@@ -1112,6 +1117,7 @@ class PaperBroker:
             settlement_mark_price=mark_price,
             position_quantity=position.quantity,
             cashflow_usd=cashflow,
+            direction=position.direction,
         )
         self.funding_history.append(event)
 
@@ -1153,6 +1159,8 @@ class PaperBroker:
                 rec.filled_quantity = filled_quantity
                 rec.notional_usd = notional_usd
                 rec.fee_usd = fee_usd
+                if getattr(req, "metadata", None):
+                    rec.metadata.update(req.metadata)
                 if reasons:
                     rec.rejection_reasons = list(reasons)
                 break

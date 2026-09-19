@@ -274,6 +274,7 @@ class FundingEvent:
     settlement_mark_price: float
     position_quantity: float
     cashflow_usd: float  # Âm nếu trả phí, dương nếu nhận phí
+    direction: Optional[Union[OrderDirection, str]] = None
 
 
 @dataclass

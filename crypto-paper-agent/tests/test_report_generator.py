@@ -152,6 +152,12 @@ def test_generator_produces_all_six_artifacts(tmp_path):
     assert summary_data["symbol"] == "BTCUSDT"
     assert summary_data["final_equity"] == 10500.0
     assert summary_data["total_trades"] == 1
+    assert "data_provenance" in summary_data
+    assert "candle_counts" in summary_data
+    assert "candle_gaps" in summary_data
+    assert "accounting_reconciliation" in summary_data
+    assert summary_data["verification_status"] == "AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED"
+    assert "reproduction_command" in summary_data
 
     # 3. Kiểm tra summary.md có nhãn kiểm định bắt buộc
     with open(artifacts["summary.md"], "r", encoding="utf-8") as f:
@@ -159,13 +165,30 @@ def test_generator_produces_all_six_artifacts(tmp_path):
     assert "AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED" in md_text
     assert "Disclosures & Benchmark Caveats" in md_text
     assert "BTCUSDT" in md_text
+    assert "Accounting Reconciliation & Risk Audit" in md_text
 
-    # 4. Kiểm tra trades.json
+    # 4. Kiểm tra trades.json chuẩn xác schema Master Spec Mục 4.6
     with open(artifacts["trades.json"], "r", encoding="utf-8") as f:
         trades_data = json.load(f)
     assert len(trades_data) == 1
-    assert trades_data[0]["trade_id"] == "TRD_001"
-    assert trades_data[0]["market_context"] is None
+    t0_data = trades_data[0]
+    assert t0_data["trade_id"] == "TRD_001"
+    assert t0_data["asset"] == "BTCUSDT"
+    assert t0_data["direction"] == "LONG"
+    assert t0_data["strategy_used"] == "TREND_FOLLOWING"
+    assert t0_data["conviction_tier"] == "HIGH_5_PERCENT"
+    assert t0_data["entry_price"] == 20000.0
+    assert t0_data["stop_loss_price"] == 19500.0
+    assert t0_data["market_context"] == {
+        "oi_trend_4h": None,
+        "funding_rate_8h": None,
+        "cvd_divergence": None,
+        "fvg_consequent_encroachment": None,
+    }
+    assert t0_data["outcome"]["exit_price"] == 21000.0
+    assert t0_data["outcome"]["pnl_usd"] == 491.8
+    assert t0_data["outcome"]["fees_paid_usd"] == 8.2
+    assert t0_data["outcome"]["rule_compliance"] is True
 
     # 5. Kiểm tra equity_curve.csv
     with open(artifacts["equity_curve.csv"], "r", encoding="utf-8") as f:
@@ -208,3 +231,62 @@ def test_generator_custom_output_dir_and_db(tmp_path):
     assert custom_dir.is_dir()
     assert artifacts["summary.json"].parent == custom_dir / "run_custom_01"
     assert custom_db.is_file()
+
+
+def test_sanitize_for_json_fail_closed():
+    """Kiểm tra _sanitize_for_json từ chối fail-closed khi gặp NaN hoặc Inf."""
+    from src.report.generator import _sanitize_for_json
+
+    assert _sanitize_for_json(123) == 123
+    assert _sanitize_for_json(12.34) == 12.34
+    assert _sanitize_for_json(True) is True
+    assert _sanitize_for_json(None) is None
+    assert _sanitize_for_json({"a": 1, "b": "str"}) == {"a": 1, "b": "str"}
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        _sanitize_for_json(float("nan"))
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        _sanitize_for_json({"nested": {"val": float("inf")}})
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        _sanitize_for_json([1.0, 2.0, float("-inf")])
+
+
+def test_deterministic_json_output(tmp_path):
+    """Kiểm tra sinh JSON có tính tất định, byte-for-byte nhất quán qua các lần chạy."""
+    generator = ReportGenerator(base_reports_dir=tmp_path)
+    broker = MockFullBroker()
+    config = {
+        "strategy": "trend_following",
+        "symbol": "BTCUSDT",
+        "timeframe_signal": "4h",
+        "timeframe_execution": "15m",
+    }
+    metrics = {
+        "strategy": "trend_following",
+        "symbol": "BTCUSDT",
+        "initial_capital": 10000.0,
+        "final_equity": 10500.0,
+        "total_trades": 1,
+        "code_commit_sha": "test_sha_deterministic",
+        "reproduction_command": "python test.py",
+    }
+
+    art1 = generator.generate_all(run_id="run_det_1", config=config, metrics=metrics, broker=broker)
+    art2 = generator.generate_all(run_id="run_det_2", config=config, metrics=metrics, broker=broker)
+
+    # Đọc summary.json (bỏ qua generated_at vì generated_at thay đổi theo thời gian hiện tại)
+    with open(art1["summary.json"], "r", encoding="utf-8") as f1, open(art2["summary.json"], "r", encoding="utf-8") as f2:
+        d1 = json.load(f1)
+        d2 = json.load(f2)
+        d1.pop("generated_at", None)
+        d2.pop("generated_at", None)
+        d1.pop("run_id", None)
+        d2.pop("run_id", None)
+        assert d1 == d2
+
+    # trades.json phải giống nhau từng byte
+    with open(art1["trades.json"], "rb") as f1, open(art2["trades.json"], "rb") as f2:
+        assert f1.read() == f2.read()
+

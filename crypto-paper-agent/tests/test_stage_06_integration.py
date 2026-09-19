@@ -246,3 +246,179 @@ def test_zero_semantic_drift_between_reporting_modes(hermetic_env):
         line2 = _extract_metric_line(res2.stdout, metric_prefix)
         assert line1 == line2, f"Semantic drift detected for {metric_prefix}: '{line1}' vs '{line2}'"
 
+
+def test_deterministic_run_id_across_invocations(hermetic_env):
+    """Kiểm tra tính tất định của run_id khi không truyền cờ --run-id."""
+    cfg_file, tmp_dir = hermetic_env
+    output_dir = tmp_dir / "det_runs"
+
+    cmd_base = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-03",
+        "--no-fetch",
+        "--output-dir", str(output_dir),
+    ]
+
+    # Run 1
+    res1 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res1.returncode == 0
+    run_id_1 = None
+    for line in res1.stdout.splitlines():
+        if "Run ID" in line and ":" in line:
+            run_id_1 = line.split(":", 1)[1].strip()
+            break
+    assert run_id_1 is not None and len(run_id_1) > 0
+
+    # Run 2 (same parameters)
+    res2 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res2.returncode == 0
+    run_id_2 = None
+    for line in res2.stdout.splitlines():
+        if "Run ID" in line and ":" in line:
+            run_id_2 = line.split(":", 1)[1].strip()
+            break
+    assert run_id_2 == run_id_1, f"Run ID must be deterministic: {run_id_1} vs {run_id_2}"
+
+    # Run 3 (different end date -> must produce different Run ID)
+    cmd3 = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
+        "--no-fetch",
+        "--output-dir", str(output_dir),
+    ]
+    res3 = subprocess.run(cmd3, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res3.returncode == 0
+    run_id_3 = None
+    for line in res3.stdout.splitlines():
+        if "Run ID" in line and ":" in line:
+            run_id_3 = line.split(":", 1)[1].strip()
+            break
+    assert run_id_3 != run_id_1, "Different parameters must yield different Run ID"
+
+
+def test_cwd_independence_and_path_resolution(hermetic_env, tmp_path):
+    """
+    Kiểm tra độc lập CWD:
+    Khi truyền đường dẫn tuyệt đối hay tương đối, kết quả ghi chính xác không bị phụ thuộc CWD bên ngoài.
+    """
+    cfg_file, tmp_dir = hermetic_env
+    cwd_1 = tmp_path / "external_cwd_1"
+    cwd_2 = tmp_path / "external_cwd_2"
+    cwd_1.mkdir()
+    cwd_2.mkdir()
+
+    abs_out_dir = tmp_path / "absolute_reports"
+
+    # Chạy từ cwd_1 với absolute output-dir
+    cmd1 = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
+        "--no-fetch",
+        "--output-dir", str(abs_out_dir),
+        "--run-id", "run_abs_cwd_1",
+    ]
+    res1 = subprocess.run(cmd1, cwd=str(cwd_1), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res1.returncode == 0
+    assert (abs_out_dir / "run_abs_cwd_1" / "summary.json").is_file()
+
+    # Chạy từ cwd_2 với absolute output-dir tương tự
+    cmd2 = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
+        "--no-fetch",
+        "--output-dir", str(abs_out_dir),
+        "--run-id", "run_abs_cwd_2",
+    ]
+    res2 = subprocess.run(cmd2, cwd=str(cwd_2), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res2.returncode == 0
+    assert (abs_out_dir / "run_abs_cwd_2" / "summary.json").is_file()
+
+
+def test_future_perturbation_report_invariance(hermetic_env, tmp_path):
+    """
+    Kiểm tra tính bất biến trước nhiễu loạn tương lai (Future Perturbation Invariance):
+    Báo cáo và các trade phát sinh cho khoảng thời gian [T_start, T_split] không được phép
+    thay đổi khi dữ liệu trong tương lai (T > T_split) bị biến đổi hay sửa đổi.
+    """
+    cfg_file, tmp_dir = hermetic_env
+    cache_dir = tmp_dir / "mock_cache"
+    out_dir_1 = tmp_path / "rep_perturb_1"
+    out_dir_2 = tmp_path / "rep_perturb_2"
+
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
+        "--no-fetch",
+        "--output-dir", str(out_dir_1),
+        "--run-id", "run_perturb_pre",
+    ]
+    res1 = subprocess.run(cmd, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res1.returncode == 0
+
+    # Đọc trades.json lần 1
+    with open(out_dir_1 / "run_perturb_pre" / "trades.json", "r", encoding="utf-8") as f:
+        trades_pre = json.load(f)
+    with open(out_dir_1 / "run_perturb_pre" / "summary.json", "r", encoding="utf-8") as f:
+        summary_pre = json.load(f)
+
+    # Nhiễu loạn dữ liệu tương lai (ngày 2023-01-03, 2023-01-04) trong cache
+    df_4h_corrupt, df_15m_corrupt = _generate_synthetic_multitimeframe_data(
+        start_dt=datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc),
+        n_days=4,
+    )
+    # Tăng giá đột biến ở ngày 3 và 4 (sau T_split 2023-01-02)
+    mask_future_4h = df_4h_corrupt.index >= pd.Timestamp("2023-01-03", tz="UTC")
+    df_4h_corrupt.loc[mask_future_4h, ["open", "high", "low", "close"]] *= 10.0
+    mask_future_15m = df_15m_corrupt.index >= pd.Timestamp("2023-01-03", tz="UTC")
+    df_15m_corrupt.loc[mask_future_15m, ["open", "high", "low", "close"]] *= 10.0
+
+    df_4h_corrupt.index.name = "timestamp"
+    df_15m_corrupt.index.name = "timestamp"
+    save_to_cache(df_4h_corrupt[["open", "high", "low", "close", "volume"]], str(cache_dir), "binance", "BTCUSDT", "4h", "ohlcv")
+    save_to_cache(df_15m_corrupt[["open", "high", "low", "close", "volume"]], str(cache_dir), "binance", "BTCUSDT", "15m", "ohlcv")
+
+    # Chạy lại backtest từ 2023-01-01 đến 2023-01-02
+    cmd2 = [
+        sys.executable,
+        str(PROJECT_ROOT / "run_backtest.py"),
+        "--config", str(cfg_file),
+        "--strategy", "trend_following",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
+        "--no-fetch",
+        "--output-dir", str(out_dir_2),
+        "--run-id", "run_perturb_post",
+    ]
+    res2 = subprocess.run(cmd2, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert res2.returncode == 0
+
+    with open(out_dir_2 / "run_perturb_post" / "trades.json", "r", encoding="utf-8") as f:
+        trades_post = json.load(f)
+    with open(out_dir_2 / "run_perturb_post" / "summary.json", "r", encoding="utf-8") as f:
+        summary_post = json.load(f)
+
+    assert trades_pre == trades_post, "Trades for [T_start, T_split] must not be affected by future perturbation"
+    for k in ["initial_capital", "final_equity", "total_trades", "total_return_pct", "max_drawdown_usd"]:
+        assert summary_pre[k] == summary_post[k], f"Metric {k} changed under future perturbation: {summary_pre[k]} vs {summary_post[k]}"
+
+

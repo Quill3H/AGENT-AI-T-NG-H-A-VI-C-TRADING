@@ -220,3 +220,93 @@ def test_calculate_backtest_metrics_reconciliation():
     assert metrics["expectancy_usd"] == 125.0  # (300 - 50) / 2 = 125.0
     assert metrics["expectancy_r"] == 1.0  # (3.0 - 1.0) / 2 = 1.0 R
     assert metrics["accounting_invariants_verified"] is True
+
+
+def test_nan_inf_bool_fail_closed():
+    """Kiểm tra fail-closed nghiêm ngặt khi dữ liệu đầu vào chứa NaN, Inf hoặc bool."""
+    t0 = datetime(2023, 1, 1, tzinfo=timezone.utc)
+
+    # 1. calculate_daily_sharpe
+    with pytest.raises(TypeError, match="cannot be boolean"):
+        calculate_daily_sharpe([{"timestamp": t0, "equity": True}])
+
+    with pytest.raises(ValueError, match="must be finite"):
+        calculate_daily_sharpe([{"timestamp": t0, "equity": float("nan")}])
+
+    with pytest.raises(ValueError, match="must be finite"):
+        calculate_daily_sharpe([{"timestamp": t0, "equity": float("inf")}])
+
+    # 2. calculate_max_drawdown
+    with pytest.raises(TypeError, match="initial_capital cannot be boolean"):
+        calculate_max_drawdown([], initial_capital=True)
+
+    with pytest.raises(ValueError, match="initial_capital must be finite"):
+        calculate_max_drawdown([], initial_capital=float("nan"))
+
+    with pytest.raises(TypeError, match="cannot be boolean"):
+        calculate_max_drawdown([{"timestamp": t0, "equity": True}])
+
+    with pytest.raises(ValueError, match="must be finite"):
+        calculate_max_drawdown([{"timestamp": t0, "equity": float("-inf")}])
+
+    # 3. calculate_trade_metrics
+    with pytest.raises(TypeError, match="cannot be boolean"):
+        calculate_trade_metrics([_create_mock_trade(net_pnl=True)])
+
+    with pytest.raises(ValueError, match="must be finite"):
+        calculate_trade_metrics([_create_mock_trade(net_pnl=float("nan"))])
+
+    with pytest.raises(TypeError, match="realized_r_multiple cannot be boolean"):
+        calculate_trade_metrics([_create_mock_trade(net_pnl=100.0, realized_r=True)])
+
+    with pytest.raises(ValueError, match="realized_r_multiple must be finite"):
+        calculate_trade_metrics([_create_mock_trade(net_pnl=100.0, realized_r=float("inf"))])
+
+
+def test_circuit_breaker_metrics_separation():
+    """Kiểm tra phân tách rõ ràng giữa Circuit Breaker rejections và Isolated Margin rejections."""
+    class MockCB:
+        is_halted = False
+        is_locked = True
+        risk_multiplier = 0.5
+        lock_count = 2
+
+    class MockBrokerWithCB:
+        def __init__(self):
+            self.initial_balance = 10000.0
+            self.equity = 9500.0
+            self.wallet_balance = 9500.0
+            self.available_margin = 9500.0
+            self.circuit_breaker = MockCB()
+            self.trade_history = []
+            self.order_history = [
+                {"status": OrderStatus.REJECTED, "rejection_reasons": ["MARGIN_GATE: Insufficient margin"]},
+                {"status": OrderStatus.REJECTED, "rejection_reasons": ["MARGIN_GATE: Insufficient margin"]},
+                {"status": OrderStatus.REJECTED, "rejection_reasons": ["CIRCUIT_BREAKER: Risk locked"]},
+            ]
+            self.account_snapshots = []
+
+        def verify_accounting_invariants(self):
+            return True
+
+    broker = MockBrokerWithCB()
+    config = {
+        "strategy": {"name": "trend_following"},
+        "data": {"futures_symbol": "BTCUSDT", "timeframe_signal": "4h", "timeframe_execution": "15m"},
+    }
+    metrics = calculate_backtest_metrics(
+        broker=broker,
+        config=config,
+        start_time=datetime(2023, 1, 1, tzinfo=timezone.utc),
+        end_time=datetime(2023, 1, 3, tzinfo=timezone.utc),
+        bars_15m_count=192,
+        bars_4h_count=12,
+    )
+
+    assert metrics["circuit_breaker_status"] == "LOCKED"
+    assert metrics["circuit_breaker_risk_multiplier"] == 0.5
+    assert metrics["circuit_breaker_lock_count"] == 2
+    assert metrics["circuit_breaker_rejections_count"] == 1
+    assert metrics["margin_rejections_count"] == 2
+    assert metrics["orders_rejected_count"] == 3
+

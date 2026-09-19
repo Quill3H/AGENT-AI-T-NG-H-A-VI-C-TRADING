@@ -66,9 +66,15 @@ def calculate_daily_sharpe(
     for s in snapshots:
         item = s if isinstance(s, dict) else s.__dict__
         dt = _to_dt(item.get("timestamp"))
-        eq = item.get("equity")
-        if dt is not None and eq is not None and not math.isnan(eq):
-            parsed_rows.append({"timestamp": dt, "equity": float(eq)})
+        raw_eq = item.get("equity")
+        if raw_eq is not None:
+            if type(raw_eq) is bool:
+                raise TypeError(f"Snapshot equity cannot be boolean: {raw_eq!r}")
+            eq = float(raw_eq)
+            if math.isnan(eq) or math.isinf(eq):
+                raise ValueError(f"Snapshot equity must be finite numeric, got {eq}")
+            if dt is not None:
+                parsed_rows.append({"timestamp": dt, "equity": eq})
 
     if not parsed_rows:
         return None
@@ -126,16 +132,27 @@ def calculate_max_drawdown(
     DD_pct_t = (DD_usd_t / Peak_t) * 100.0
     Max_DD = max(DD_t)
     """
+    if type(initial_capital) is bool:
+        raise TypeError(f"initial_capital cannot be boolean: {initial_capital!r}")
+    init_cap = float(initial_capital)
+    if math.isnan(init_cap) or math.isinf(init_cap) or init_cap <= 0:
+        raise ValueError(f"initial_capital must be finite positive, got {init_cap}")
+
     if not snapshots:
         return 0.0, 0.0
 
     max_dd_usd = 0.0
     max_dd_pct = 0.0
-    peak_equity = float(initial_capital)
+    peak_equity = init_cap
 
     for s in snapshots:
         item = s if isinstance(s, dict) else s.__dict__
-        eq = float(item.get("equity", 0.0))
+        raw_eq = item.get("equity", 0.0)
+        if type(raw_eq) is bool:
+            raise TypeError(f"Snapshot equity cannot be boolean: {raw_eq!r}")
+        eq = float(raw_eq)
+        if math.isnan(eq) or math.isinf(eq):
+            raise ValueError(f"Snapshot equity must be finite numeric, got {eq}")
         if eq > peak_equity:
             peak_equity = eq
         dd_usd = peak_equity - eq
@@ -195,6 +212,14 @@ def calculate_trade_metrics(
 
     for tr in trades:
         t = tr if isinstance(tr, dict) else tr.__dict__
+        for fname in ("net_pnl", "gross_price_pnl", "entry_fee", "exit_fee", "funding_cashflow"):
+            val = t.get(fname, 0.0)
+            if type(val) is bool:
+                raise TypeError(f"Trade metric '{fname}' cannot be boolean: {val!r}")
+            f_val = float(val)
+            if math.isnan(f_val) or math.isinf(f_val):
+                raise ValueError(f"Trade metric '{fname}' must be finite numeric, got {f_val}")
+
         npnl = float(t.get("net_pnl", 0.0))
         net_pnls.append(npnl)
         gross_pnls.append(float(t.get("gross_price_pnl", 0.0)))
@@ -204,8 +229,13 @@ def calculate_trade_metrics(
 
         # R-multiple
         r_mult = t.get("realized_r_multiple")
-        if r_mult is not None and not math.isnan(float(r_mult)):
-            r_multiples.append(float(r_mult))
+        if r_mult is not None:
+            if type(r_mult) is bool:
+                raise TypeError(f"realized_r_multiple cannot be boolean: {r_mult!r}")
+            f_r = float(r_mult)
+            if math.isnan(f_r) or math.isinf(f_r):
+                raise ValueError(f"realized_r_multiple must be finite numeric, got {f_r}")
+            r_multiples.append(f_r)
 
         if npnl > 0:
             win_pnls.append(npnl)
@@ -295,6 +325,8 @@ def calculate_backtest_metrics(
     Đảm bảo 100% tương thích ngược với các key của Stage 5 đồng thời bổ sung
     đầy đủ các chỉ số của Stage 6.
     """
+    from src.logging.trade_logger import parse_config_metadata
+
     trades = broker.trade_history
     orders = broker.order_history
     snapshots = broker.account_snapshots
@@ -352,12 +384,22 @@ def calculate_backtest_metrics(
     # Kiểm tra accounting invariants
     broker.verify_accounting_invariants()
 
+    meta = parse_config_metadata(config)
+
+    # Circuit Breaker & Risk Gates phân tách rõ ràng
+    cb = getattr(broker, "circuit_breaker", None)
+    cb_status = "HALTED" if (cb and cb.is_halted) else ("LOCKED" if (cb and cb.is_locked) else "ACTIVE")
+    cb_multiplier = cb.risk_multiplier if cb else 1.0
+    cb_lock_count = getattr(cb, "lock_count", 0) if cb else 0
+    margin_rejections = sum(cnt for r, cnt in rejection_reasons_tally.items() if "MARGIN" in r.upper())
+    cb_rejections = sum(cnt for r, cnt in rejection_reasons_tally.items() if "CIRCUIT_BREAKER" in r.upper() or "HALTED" in r.upper())
+
     metrics = {
         # Metadata
-        "symbol": str(config.get("symbol", "BTCUSDT")).upper(),
-        "strategy": str(config.get("strategy", config.get("strategy_name", "trend_following"))),
-        "timeframe_signal": str(config.get("timeframe_signal", "4h")),
-        "timeframe_execution": str(config.get("timeframe_execution", "15m")),
+        "symbol": meta["symbol"],
+        "strategy": meta["strategy_name"],
+        "timeframe_signal": meta["timeframe_signal"],
+        "timeframe_execution": meta["timeframe_execution"],
         "start_time": start_time,
         "end_time": end_time,
         "bars_15m_count": bars_15m_count,
@@ -409,6 +451,12 @@ def calculate_backtest_metrics(
         "orders_cancelled_count": orders_cancelled,
         "rejection_reasons": rejection_reasons_tally,
         "exit_reasons": exit_reasons_tally,
+        # Circuit Breaker & Risk Gates
+        "circuit_breaker_status": cb_status,
+        "circuit_breaker_risk_multiplier": cb_multiplier,
+        "circuit_breaker_lock_count": cb_lock_count,
+        "circuit_breaker_rejections_count": cb_rejections,
+        "margin_rejections_count": margin_rejections,
         "force_close_on_finalize": force_close,
         "finalize_summary": finalize_summary or {},
         "accounting_invariants_verified": True,
