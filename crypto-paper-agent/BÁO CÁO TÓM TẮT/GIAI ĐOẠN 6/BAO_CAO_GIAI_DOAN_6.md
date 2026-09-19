@@ -1,10 +1,10 @@
 # BÁO CÁO NGHIỆM THU KỸ THUẬT GIAI ĐOẠN 6
-## TRADE LOGGER & PERFORMANCE REPORT
+## TRADE LOGGER & PERFORMANCE REPORT (CẬP NHẬT TOÀN DIỆN SAU GPT REVIEW 11)
 
 > **Dự án**: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`  
 > **Nhánh**: `main`  
-> **Code Commit A (Code & Tests)**: `1d486f76da1430e1c02fa1ac24be177262d53c67`  
-> **Trạng thái**: HOÀN THÀNH 100% — ĐANG CHỜ GPT REVIEW 11 NGHIỆM THU KỸ THUẬT  
+> **Code Commit A (Code & Tests)**: `0b63f2702024993575735157528d4738be181e75`  
+> **Trạng thái**: HOÀN THÀNH 100% 9 YÊU CẦU THEO GPT REVIEW 11 — ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU  
 > **Nhãn dữ liệu Benchmark**: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`  
 > **Ngày hoàn thành**: 2026-09-19  
 
@@ -12,99 +12,87 @@
 
 ## 1. Tóm tắt Tổng quan
 
-Tiếp nối sự nghiệm thu thành công của **Giai đoạn 5** (Trend Following & Backtest Engine) theo kết luận chính thức của **GPT Review 10** (tại Code commit `060f8a8d...` và Docs commit `dc0ab9be...`), Antigravity đã hoàn thành toàn diện việc phát triển **Giai đoạn 6 — Trade Logger & Performance Report** tuân thủ tuyệt đối các yêu cầu trong Master Spec Mục 4.6.
+Sau khi nhận kết luận từ **GPT Review 11** chỉ ra 9 điểm nghẽn kỹ thuật cần khắc phục trong Giai đoạn 6, Antigravity đã tiến hành tái cấu trúc sâu, hoàn thiện và xác minh toàn diện các thành phần của hệ thống ghi nhận sự kiện (Trade Logger), động cơ tính toán hiệu năng (Performance Metrics) và bộ sinh báo cáo đa định dạng (Report Generator).
 
 Toàn bộ quá trình triển khai tuân thủ nghiêm ngặt nguyên lý **Zero Semantic Drift** (không làm thay đổi dù chỉ một bit logic khớp lệnh, giá fill, trạng thái tài khoản hay kết quả kế toán) và quy trình **Hai bước Commit (Two-Commit Workflow)**:
-1. **Commit A (`1d486f76da1430e1c02fa1ac24be177262d53c67`)**: Toàn bộ mã nguồn sản xuất, module logging, metrics engine, report generator, CLI runner và bộ 4 test suites.
+1. **Commit A (`0b63f2702024993575735157528d4738be181e75`)**: Toàn bộ mã nguồn sản xuất, module logging, metrics engine, report generator, CLI runner và bộ 29 tests Stage 6 (tổng 309 tests toàn repo).
 2. **Commit B**: Toàn bộ tài liệu kiến trúc (ADR 0009), cập nhật `PROJECT_STATE.md`, `CHANGELOG.md`, `PLANNER_HANDOVER.md` và bản báo cáo nghiệm thu này.
 
 ---
 
-## 2. Chi tiết Triển khai Kỹ thuật
+## 2. Chi tiết Triển khai & Khắc phục Triệt để 9 Yêu cầu từ GPT Review 11
 
-### 2.1 Kho Lưu Trữ Sự Kiện SQLite Event Store (`src/logging/trade_logger.py`)
-- **Cấu trúc Cơ sở Dữ liệu 6 Bảng Quan hệ:**
-  1. `runs`: Lưu trữ metadata phiên chạy, tham số cấu hình dạng JSON và các chỉ số tóm tắt chính (`run_id` làm PRIMARY KEY).
-  2. `orders`: Lưu trữ toàn bộ các lệnh phát ra từ chiến lược, thời gian requested/processed, giá tham chiếu, giá khớp thực tế, trượt giá (slippage), số lượng, phí và metadata.
-  3. `trades`: Lưu trữ toàn bộ các giao dịch đã đóng, entry/exit price, entry/exit time, leverage, initial margin, gross/net PnL, fees, funding cashflow, return %, exit reason, initial stop loss, initial risk USD, realized R-multiple, conviction tier.
-  4. `funding_events`: Lưu trữ chi tiết các lần thanh toán funding (timestamp, funding rate, mark price, position quantity, payment, direction).
-  5. `account_snapshots`: Lưu trữ ảnh chụp tài khoản từng nến (timestamp, wallet balance, equity, unrealized PnL, margin used, available balance, active positions, realized PnL, drawdown %).
-  6. `run_metrics`: Lưu trữ toàn bộ dictionary metrics đầy đủ dưới dạng JSON chuẩn.
-- **Ràng buộc Toàn vẹn & Giao dịch Nguyên tử (ACID):**
-  - Mọi kết nối mở ra đều được thực thi `PRAGMA foreign_keys = ON;` bắt buộc. Bất kỳ lệnh chèn mồ côi nào không có `run_id` cha đều bị SQLite từ chối với `sqlite3.IntegrityError`.
-  - Toàn bộ việc ghi nhận một run được đóng gói trong một transaction duy nhất (`with conn:`). Nếu có lỗi phát sinh giữa chừng, toàn bộ transaction được rollback tự động, đảm bảo không lưu dữ liệu rác (zero partial records).
-- **Tính Luỹ thừa (Idempotency) & Từ chối Xung đột (Fail-Closed Conflict Rejection):**
-  - Khi gọi `log_backtest_run` với một `run_id` đã tồn tại:
-    - Nếu payload hoàn toàn trùng khớp: coi là thành công luỹ thừa, ghi log cảnh báo và không nhân đôi số dòng (idempotent no-op).
-    - Nếu payload xung đột (khác equity, khác số trade,...): ném ngoại lệ `ValueError` lập tức (fail-closed), kiên quyết bảo vệ tính toàn vẹn dữ liệu lịch sử.
+### 2.1 Xuất `trades.json` Đúng Nguyên Văn Schema Master Spec Mục 4.6 (Yêu cầu 1)
+- Cấu trúc export của mỗi trade tuân thủ tuyệt đối đúng 17 key gốc:
+  `trade_id`, `timestamp` (Unix epoch seconds UTC, `int`), `asset` (BTCUSDT), `direction` (LONG/SHORT), `strategy_used` (TREND_FOLLOWING), `conviction_tier` (NORMAL_2_PERCENT / HIGH_5_PERCENT), `entry_price`, `stop_loss_price`, `take_profit_levels` (`[]`), `nominal_position_size_usd`, `leverage`, `margin_used_usd`, `risk_amount_usd`, `risk_ratio_percent`, `estimated_liquidation_price`, `market_context`, `outcome`.
+- Khối lồng `market_context` bắt buộc gồm đúng 4 trường unmeasured dạng `null`:
+  `"oi_trend_4h": null`, `"funding_rate_8h": null`, `"cvd_divergence": null`, `"fvg_consequent_encroachment": null`. Tuyệt đối không bịa số liệu.
+- Khối lồng `outcome` gồm đúng 7 trường:
+  `exit_price`, `pnl_usd`, `fees_paid_usd`, `net_return_percent`, `max_adverse_excursion_mae` (`null`), `max_favorable_excursion_mfe` (`null`), `rule_compliance` (`true`).
+- Xuất JSON qua `json.dumps(..., allow_nan=False)` chuẩn RFC 8259, fail-closed nếu có NaN/Inf.
 
-### 2.2 Xuất Dữ Liệu Giao Dịch Chuẩn Hoá JSON (`export_trades_json`)
-- Xuất danh sách giao dịch tuân thủ tuyệt đối cấu trúc Master Spec Section 4.6:
-  - Thời gian (`entry_time`, `exit_time`) quy đổi chuẩn xác sang Unix epoch seconds UTC (kiểu `int`).
-  - Sử dụng `json.dumps(..., allow_nan=False)` ngăn chặn triệt để các giá trị không hợp lệ theo chuẩn RFC 8259 (`NaN`, `Infinity`, `-Infinity`).
-  - Các trường chưa đo lường trên nến 15m (`market_context`, `mae_usd`, `mfe_usd`) được gán `null` một cách minh bạch, tuyệt đối không bịa đặt dữ liệu giả.
+### 2.2 Tái Cấu Trúc SQLite Schema & Quan Hệ Khóa Chính Phức Hợp (Yêu cầu 2)
+- Khóa chính phức hợp bảo vệ toàn vẹn:
+  - `orders`: `PRIMARY KEY (run_id, order_id)`
+  - `trades`: `PRIMARY KEY (run_id, trade_id)`
+  - `funding_events`: `PRIMARY KEY (run_id, event_id)`
+  - `account_snapshots`: `PRIMARY KEY (run_id, timestamp)`
+- Bảng `orders` bổ sung lưu `rejection_reasons_json` để truy vết trọn vẹn lý do từ chối lệnh.
+- `PaperBroker` cập nhật để lan truyền đầy đủ `metadata` từ `OrderRequest` sang mọi `OrderExecutionRecord`.
+- Bảng `funding_events` bảo tồn `event_id`, `position_id` gốc và `direction` của vị thế.
+- Bảng `account_snapshots` ánh xạ trực tiếp các trường thật của `AccountSnapshot`: `reserved_collateral`, `available_margin`, `open_positions_count`, `is_halted`.
 
-### 2.3 Động Cơ Tính Toán Chỉ Số Hiệu Năng Chuẩn Hoá (`src/report/metrics.py`)
-- Thiết lập nguồn chân lý duy nhất (Single Source of Truth) cho các chỉ số tài chính phái sinh:
-  - **Expectancy USD**: Trung bình cộng Net PnL trên tất cả các trade đã đóng:
-    $$\text{Expectancy}_{\text{USD}} = \frac{1}{N} \sum_{i=1}^N \text{net\_pnl}_i$$
-  - **Initial Risk USD & Realized R-multiple**:
-    $$\text{Initial Risk}_{\text{USD}} = Q \times |\text{entry\_price} - \text{initial\_stop\_loss\_price}|$$
-    $$\text{Realized } R = \frac{\text{net\_pnl}}{\text{Initial Risk}_{\text{USD}}}$$
-  - **Expectancy R**: Trung bình cộng Realized R trên các trade có Initial Risk > 0 (trả về `None`/`null` nếu không có trade hợp lệ).
-  - **Profit Factor**: Tỷ số tổng lãi gộp trên tổng lỗ gộp:
-    $$\text{Profit Factor} = \frac{\sum_{\text{net\_pnl} > 0} \text{net\_pnl}}{\sum_{\text{net\_pnl} < 0} |\text{net\_pnl}|}$$
-    Xử lý trường hợp biên nghiêm ngặt: nếu tổng lỗ bằng 0, trả về `None` (JSON `null`), không để xảy ra chia cho 0 hay trả về `Infinity`.
-  - **Peak-to-Valley Maximum Drawdown (USD & %)**: Tính toán theo đỉnh lũy tiến (`running_peak` bắt đầu từ `initial_capital`).
-  - **Daily Sharpe Ratio (Resampled 1D UTC)**:
-    - Resample chuỗi snapshot theo ngày lịch UTC (lấy giá trị equity cuối ngày).
-    - Tính daily returns $r_d = \frac{E_d - E_{d-1}}{E_{d-1}}$.
-    - Annualization bằng $\sqrt{365}$ đặc thù cho thị trường Crypto.
-    - Xử lý chuỗi phẳng ($\sigma = 0$) hoặc số ngày quan sát < 2: trả về `None`/`null`.
-  - **Tương thích ngược 100%**: Giữ nguyên tất cả các key cũ của Giai đoạn 5 cho `engine.run()`.
+### 2.3 Kiểm Soát Luỹ Thừa Bằng Mã Băm Chuẩn Tắc Toàn Diện (Yêu cầu 3)
+- Cơ chế Idempotency dựa trên SHA-256 canonical payload hash (`canonical_payload_hash`): bao phủ toàn bộ canonical config, run metadata, orders, trades, funding events, account snapshots và metrics.
+- Cùng `run_id` + cùng hash: idempotent no-op an toàn (trả về `True`, không ghi đè).
+- Cùng `run_id` + bất kỳ sai lệch nào: ném ngoại lệ `ValueError` lập tức (fail-closed).
 
-### 2.4 Bộ Sinh Báo Cáo Đa Định Dạng (`src/report/generator.py`)
-- Với mỗi phiên chạy, tự động khởi tạo thư mục `reports/<run_id>/` chứa đầy đủ 6 artifacts:
-  1. `summary.json`: Dữ liệu JSON sạch của toàn bộ metrics, serialize với `allow_nan=False`.
-  2. `summary.md`: Báo cáo Markdown chi tiết cho con người, phân bảng rõ ràng, bắt buộc đính kèm nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED` và khối Disclosures bắt buộc.
-  3. `trades.json`: Danh sách trade chuẩn Section 4.6.
-  4. `equity_curve.csv`: Chuỗi thời gian equity, balance, unrealized PnL, margin, drawdown.
-  5. `equity_curve.png`: Biểu đồ đồ hoạ 2 khung (khung trên: Equity Curve vs High Watermark; khung dưới: Underwater Drawdown %).
-  6. `trades.sqlite`: File cơ sở dữ liệu SQLite lưu trữ độc lập toàn bộ dữ liệu phiên chạy.
+### 2.4 Hỗ Trợ Đa Dạng Cấu Hình Sản Xuất (Yêu cầu 4)
+- Hàm `parse_config_metadata` phân giải trong suốt cả cấu trúc phân cấp production (`config["data"]["futures_symbol"]`, `config["strategy"]["name"]`) và cấu trúc phẳng.
 
-### 2.5 Mở Rộng CLI Runner (`run_backtest.py`)
-- Bổ sung các cờ dòng lệnh:
-  - `--output-dir`: Thư mục lưu báo cáo (mặc định `reports`).
-  - `--run-id`: Định danh tuỳ chọn cho phiên chạy (mặc định tự sinh theo format `run_{strategy}_{symbol}_{timestamp}`).
-  - `--db-path`: Đường dẫn database SQLite ngoài nếu cần ghi tập trung.
-  - `--no-report`: Cờ bỏ qua việc sinh file artifacts, chỉ in báo cáo terminal.
-- Độc lập CWD (CWD-independent): Hoạt động trơn tru khi người dùng gọi lệnh từ bất kỳ thư mục nào bên ngoài repository.
+### 2.5 Run ID Tất Định & Phân Giải Đường Dẫn Chuẩn Tắc (Yêu cầu 5)
+- Run ID tự động sinh tất định từ SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` dạng `run_{strategy}_{symbol}_{hash12}` (loại bỏ hoàn toàn wall-clock).
+- Phân giải đường dẫn tương đối của `--output-dir` và `--db-path` bắt buộc từ `PROJECT_ROOT`, bảo đảm tính độc lập 100% với CWD của process ngoại vi; bảo toàn đường dẫn tuyệt đối.
+
+### 2.6 Hoàn Thiện Artifacts Báo Cáo & Fail-closed Số Học (Yêu cầu 6)
+- `summary.json` và `summary.md` chứa đầy đủ: `run_id`, `code_commit_sha`, `config_hash`, timeframes, khoảng thời gian UTC chính xác, data provenance, candle counts, candle gaps, accounting reconciliation (`PASSED`), verification status (`AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`), reproduction command.
+- Fail-closed nghiêm ngặt: ném `TypeError` khi gặp `bool`, ném `ValueError` khi gặp `NaN` hoặc `Inf` trong các trường tài chính số.
+
+### 2.7 Phân Tách Mạch Lạc Rủi Ro Circuit Breaker (Yêu cầu 7)
+- Phân tách tuyệt đối chỉ số Circuit Breaker (`circuit_breaker_status`, `circuit_breaker_risk_multiplier`, `circuit_breaker_lock_count`, `circuit_breaker_rejections_count`) khỏi từ chối do thiếu ký quỹ riêng lẻ (`margin_rejections_count`).
+
+### 2.8 Đối Soát & Thống Nhất Benchmark Chuẩn Tắc (Yêu cầu 8)
+- Khẳng định số liệu Benchmark Chuẩn Tắc 3 năm BTCUSDT (2021-2023): 22 orders, 16 trades, fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT (+21.01%), Max Drawdown -16.15%.
+- Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56).
+
+### 2.9 Mở Rộng Toàn Diện Test Suite (Yêu cầu 9)
+- Mở rộng bộ test Stage 6 từ 17 lên 29 tests; toàn bộ 309 tests trong repository đều vượt qua 100%.
 
 ---
 
-## 3. Kết Quả Kiểm Thử Thực Tế
-
-Toàn bộ 4 tầng kiểm thử đã được thực thi và vượt qua 100% trên Code Commit A (`1d486f76da1430e1c02fa1ac24be177262d53c67`):
+## 3. Kết Quả Kiểm Thử Thực Tế (Trên Commit A: `0b63f2702024993575735157528d4738be181e75`)
 
 | Bộ Kiểm Thử (Test Suite) | Lệnh Thực Thi | Kết Quả | Thời Gian | Ghi Chú |
 | :--- | :--- | :---: | :---: | :--- |
-| **1. Stage 6 Tests** | `pytest tests/test_trade_logger.py tests/test_report_metrics.py tests/test_report_generator.py tests/test_stage_06_integration.py -v` | **17/17 PASSED** | 7.86s | Schema, FK, Rollback, Idempotency, Metrics tính tay, Artifacts, PNG header, CWD CLI |
-| **2. Offline Tests** | `pytest tests/ -m "not network" -q` | **252/252 PASSED** | 15.34s | Toàn bộ unit tests từ Giai đoạn 1 đến Giai đoạn 6 (5 deselected network) |
-| **3. Network Tests** | `pytest tests/ -m network -q` | **5/5 PASSED** | 11.70s | Kiểm tra tích hợp Binance REST API và Binance Vision |
-| **4. Historical Probes** | `pytest docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q` | **40/40 PASSED** | 0.70s | R05: 26/26, R06: 11/11, R07: 3/3; bảo toàn 100% assertions lịch sử |
-| **TỔNG CỘNG** | **Tất cả các kiểm thử** | **297/297 PASSED** | — | **0 failed, 0 skipped, 0 warning lỗi** |
+| **1. Stage 6 Tests** | `pytest tests/test_trade_logger.py tests/test_report_metrics.py tests/test_report_generator.py tests/test_stage_06_integration.py -v` | **29/29 PASSED** | 21.30s | 12 logger, 7 metrics, 4 generator, 6 integration tests |
+| **2. Offline Tests** | `pytest tests/ -m "not network" -q` | **264/264 PASSED** | 31.69s | Toàn bộ unit tests từ Giai đoạn 1 đến Giai đoạn 6 (5 deselected network) |
+| **3. Network Tests** | `pytest tests/ -m network -q` | **5/5 PASSED** | 11.38s | Kiểm tra tích hợp Binance REST API và Binance Vision |
+| **4. Historical Probes** | `pytest docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q` | **40/40 PASSED** | 0.76s | R05: 26/26, R06: 11/11, R07: 3/3; bảo toàn 100% assertions lịch sử |
+| **TỔNG CỘNG** | **Tất cả các kiểm thử** | **309/309 PASSED** | — | **0 failed, 0 skipped, 0 warning lỗi** |
 
 ---
 
-## 4. Kết Quả Mô Phỏng Benchmark 3 Năm BTCUSDT
+## 4. Kết Quả Mô Phỏng Benchmark Chuẩn Tắc 3 Năm BTCUSDT
 
 > **BẢN QUYỀN VÀ TRẠNG THÁI DỮ LIỆU:**  
 > `STATUS: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`  
+> **Run ID:** `run_trend_following_btcusdt_b90c7301f28c`  
+> **Commit SHA:** `8e7a3cd735e5a55f78ba05a7e4dc5d67f1af3c77` (hoặc Commit A `0b63f2702024993575735157528d4738be181e75`)  
 > *Lưu ý: Mọi số liệu dưới đây được sinh ra từ mô phỏng lịch sử thuần túy trên nến 15m với trượt giá tuyến tính giả định. Kết quả này không đại diện cho lợi nhuận thực tế và chưa được bên đánh giá độc lập thẩm định.*
 
 ### Lệnh thực thi:
 ```bash
-python run_backtest.py --start 2021-01-01 --end 2023-12-31 --no-fetch
+python run_backtest.py --config config/default_config.yaml --strategy trend_following --start 2021-01-01 --end 2023-12-31 --no-fetch
 ```
 
 ### Bảng Chỉ Số Hiệu Năng Chi Tiết (2021-01-01 -> 2023-12-31):
@@ -114,6 +102,7 @@ python run_backtest.py --start 2021-01-01 --end 2023-12-31 --no-fetch
 - **Tổng Tỷ Suất Sinh Lời (Total Return)**: `+21.01%`
 - **Mức Sụt Giảm Lớn Nhất (Max Drawdown)**: `-$2,050.72 USDT` (`-16.15%`)
 - **Daily Sharpe Ratio (Annualized $\sqrt{365}$)**: `0.54`
+- **Calmar Ratio**: `1.30`
 - **Tỷ Số Lãi/Lỗ (Profit Factor)**: `3.05`
 - **Kỳ Vọng Toán Học (Expectancy USD)**: `+$131.31 USDT / trade`
 - **Kỳ Vọng Hệ Số R (Expectancy R)**: `+0.68 R / trade`
@@ -128,18 +117,21 @@ python run_backtest.py --start 2021-01-01 --end 2023-12-31 --no-fetch
 - **Lợi Nhuận Thực Nhận (Net Realized PnL)**: `+$2,100.96 USDT`
 - **Lý do thoát lệnh (Exit Reasons)**: `100% STOP_LOSS` (Trailing Stop bám EMA50 nến 4h đóng)
 - **Kiểm toán Sổ cái Kế toán (Accounting Audit)**: **PASSED (wallet_balance matches ledger)**
-- **Thư mục Artifacts đã tạo**: `reports/run_trend_following_btcusdt_20260919_094647/`
+- **Thư mục Artifacts đã tạo**: `reports/run_trend_following_btcusdt_b90c7301f28c/`
   - `trades.sqlite` (212 KB)
-  - `summary.json` (3.2 KB)
-  - `trades.json` (4.8 KB)
+  - `summary.json` (3.6 KB, đầy đủ provenance, candle counts, gaps, accounting reconciliation)
+  - `trades.json` (15.8 KB, schema Master Spec Mục 4.6 verbatim)
   - `equity_curve.csv` (105,121 dòng, 7.8 MB)
   - `equity_curve.png` (2-panel chart, 318 KB)
-  - `summary.md` (Markdown report, 3.1 KB)
+  - `summary.md` (Markdown report, 4.6 KB)
+
+### Bác Bỏ Số Liệu Dự Thảo Không Đồng Bộ:
+Chính thức tuyên bố vô hiệu và bác bỏ các số liệu dự thảo nháp (48 orders, 24 trades, fees 82.49 USDT, funding -22.56 USDT); benchmark chuẩn tắc duy nhất được công nhận là số liệu trên.
 
 ---
 
 ## 5. Cam Kết Tuân Thủ & Dừng Chờ Nghiệm Thu
 
-1. **Tuân thủ phân định thẩm quyền:** Antigravity đã hoàn tất Commit A và Commit B cho Giai đoạn 6.
+1. **Tuân thủ quy trình Hai bước Commit:** Antigravity đã hoàn tất Commit A (`0b63f2702024993575735157528d4738be181e75`) và Commit B (docs).
 2. **DỪNG LẠI HOÀN TOÀN (HARD STOP):** Tuyệt đối không tự ý bắt đầu Giai đoạn 7 (Breakout & Retest) hoặc bất kỳ phân hệ nào tiếp theo.
-3. **Chờ Review:** Hệ thống sẵn sàng ở trạng thái sạch để GPT Reviewer tiến hành đợt đánh giá **GPT Review 11**.
+3. **Chờ Review:** Hệ thống sẵn sàng ở trạng thái sạch để GPT Reviewer tiến hành đợt đánh giá tiếp theo.

@@ -34,15 +34,19 @@
   - Script mô phỏng Phần A và Phần B đạt đối soát 100%.
   - Báo cáo sửa đổi chi tiết tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_08.md`.
 - **Giai đoạn 5 — Trend Following & Backtest Engine:** ĐÃ ĐƯỢC NGHIỆM THU CHÍNH THỨC theo GPT Review 10 tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` và Documentation commit `dc0ab9bec51ec34351e9f21ec8ef31970ff8392e`. Người dùng đã cho phép chuyển sang Giai đoạn 6.
-- **Giai đoạn 6 — Trade Logger & Performance Report:** Tác giả (Antigravity) đã hoàn thiện 100% yêu cầu theo Master Spec Section 4.6:
-  - SQLite Event Store (`src/logging/trade_logger.py`) với 6 bảng, transaction atomic, `PRAGMA foreign_keys = ON;`, idempotency & fail-closed conflict rejection.
-  - Export `trades.json` chuẩn Section 4.6 (epoch seconds UTC, `allow_nan=False`, unmeasured null).
-  - Single source of truth cho performance metrics (`src/report/metrics.py`): Expectancy USD/R, Profit Factor (loss=0 -> None), Peak-to-valley Drawdown, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$.
-  - Multi-format Report Generator (`src/report/generator.py`) sinh đủ 6 artifacts trong `reports/<run_id>/`: `summary.json`, `summary.md` (kèm benchmark caveats và disclosures `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
-  - Mở rộng CLI `run_backtest.py` với `--output-dir`, `--run-id`, `--db-path`, `--no-report`, CWD-independent, Zero Semantic Drift.
-  - Toàn bộ test suites pass 100%: 17/17 Stage 6 tests, 252/252 offline tests, 5/5 network tests, 40/40 historical probes (tổng cộng 297/297 tests).
-  - Code-under-test Commit A: `1d486f76da1430e1c02fa1ac24be177262d53c67`.
-- **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW 11 NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
+- **Giai đoạn 6 — Trade Logger & Performance Report:**
+  - Bản đầu tại commit code `1d486f76da1430e1c02fa1ac24be177262d53c67` và docs `8e7a3cd735e5a55f78ba05a7e4dc5d67f1af3c77` bị GPT Review 11 phát hiện các điểm nghẽn (schema Section 4.6, composite keys, full idempotency, hermetic CWD paths, benchmark reconciliation).
+  - Tác giả (Antigravity) đã hoàn thiện khắc phục triệt để toàn bộ 9 yêu cầu của GPT Review 11 tại Code Commit A: `0b63f2702024993575735157528d4738be181e75`:
+    1. `trades.json` chuẩn xác 100% nguyên văn Master Spec Section 4.6 (17 key gốc, 4 key null unmeasured trong `market_context`, 7 key trong `outcome`, `rule_compliance: true`, RFC 8259).
+    2. SQLite composite keys `(run_id, order_id)`, `(run_id, trade_id)`, `(run_id, event_id)`, `(run_id, timestamp)`, lưu `rejection_reasons_json`, lan truyền metadata từ OrderRequest, ánh xạ trực tiếp AccountSnapshot.
+    3. Idempotency toàn diện qua SHA-256 canonical payload hash; fail-closed khi xung đột.
+    4. Xử lý trong suốt nested production config qua `parse_config_metadata`.
+    5. Run ID tất định (loại bỏ wall-clock), phân giải đường dẫn tương đối hermetic từ `PROJECT_ROOT`, bảo toàn đường dẫn tuyệt đối.
+    6. Bổ sung trọn vẹn provenance, candle counts, candle gaps, đối soát kế toán, và fail-closed type validation (chặn `bool`, `NaN`, `Inf`).
+    7. Phân tách rành mạch chỉ số Circuit Breaker khỏi từ chối do thiếu ký quỹ riêng lẻ.
+    8. Đối soát Benchmark Chuẩn Tắc 3 năm BTCUSDT: 22 orders, 16 trades, fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56).
+    9. Bộ test mở rộng lên 29 tests cho Stage 6; toàn bộ 309/309 tests trong repo đều PASS 100%.
+- **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -89,8 +93,10 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `b0af6b199973f17a7bd1b9690a450f015403ef68` | Review 07 | Chưa đạt: 3 probes Review 07 failed; còn J1–J3 (funding provenance fail-closed, transactional solver settlement, finalize force_close KeyError). Anti đã sửa |
 | `e92d48476c38c3196bfffe89120c9c8bfbc55baf` | Review 08 | Chưa đạt: phát hiện K1 (test-aware inspection qua `inspect`/`_is_legacy_probe_caller`). Anti đã khắc phục triệt để và vô điều kiện cho Review 09 |
 | `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2` | Review 09 | **Đạt — nghiệm thu Giai đoạn 4**; cho phép phát hành task riêng Giai đoạn 5 |
+| `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` | Review 10 | **Đạt — nghiệm thu Giai đoạn 5**; cho phép bắt đầu triển khai Giai đoạn 6 |
+| `1d486f76da1430e1c02fa1ac24be177262d53c67` | Review 11 | Chưa đạt: 9 điểm nghẽn (schema Mục 4.6, composite keys, full idempotency, CWD paths, benchmark reconciliation). Anti sửa tại Commit A: `0b63f2702024993575735157528d4738be181e75` |
 
-Review 02/03/07/08/09 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007 ghi quyết định risk và execution qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
+Review 02/03/07/08/09/10/11 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007/0008/0009 ghi quyết định risk, execution, strategy và reporting qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
 
 ## 6. Quy trình bắt đầu mỗi phiên GPT
 

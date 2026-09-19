@@ -18,7 +18,7 @@
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
 - [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ NGHIỆM THU THEO GPT REVIEW 10 — Code commit: `060f8a8d...`, Docs commit: `dc0ab9be...`)
-- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (ĐÃ TRIỂN KHAI BỞI TÁC GIẢ — Code Commit A: `1d486f76da1430e1c02fa1ac24be177262d53c67`; ĐANG CHỜ GPT REVIEW 11 NGHIỆM THU; chưa bắt đầu Giai đoạn 7)
+- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (ĐÃ HOÀN THIỆN TOÀN DIỆN THEO GPT REVIEW 11 — Code Commit A: `0b63f2702024993575735157528d4738be181e75`; ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU; TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
 - [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (`smc_features.py`, Order Block, FVG)
@@ -95,14 +95,20 @@
     - Đóng mắt xích funding provenance trong `fetcher.py`: bảo toàn `funding_time` và cờ boolean `funding_readiness`, fail-closed khi thiếu/future/stale dữ liệu tại settlement.
     - CLI `run_backtest.py` hoàn chỉnh: hỗ trợ `--config`, `--strategy`, `--start`, `--end`, `--no-fetch`; độc lập CWD và fail-closed rõ ràng khi strategy chưa triển khai.
     - Nghiệm thu benchmark 3 năm BTCUSDT (2021-2023): Win rate 50.00%, Total return +21.01%, Max Drawdown -16.15%, đối soát sổ cái kế toán khớp từng cent (Tham chiếu: ADR 0008).
-23. **Kiến trúc Trade Logger & Performance Reporting (ADR 0009):**
-    - Kho lưu trữ SQLite Event Store (`src/logging/trade_logger.py`) với 6 bảng: `runs`, `orders`, `trades`, `funding_events`, `account_snapshots`, `run_metrics`.
-    - Ràng buộc khoá ngoại nghiêm ngặt `PRAGMA foreign_keys = ON;`, giao dịch nguyên tử (transactional rollback on error).
-    - Tính luỹ thừa (idempotency) khi ghi trùng payload và fail-closed khi xung đột `run_id` khác payload (`ValueError`).
-    - Xuất JSON trade chuẩn Section 4.6 (Unix epoch seconds UTC, `allow_nan=False`, unmeasured fields gán `null`).
-    - Chuẩn hoá nguồn chân lý tính toán metrics (`src/report/metrics.py`): Expectancy USD & R-multiple, Profit Factor (loss=0 xử lý là `None`/`null`), Max Drawdown USD & %, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$ annualization (std=0 xử lý là `None`/`null`).
-    - Tự động sinh bộ 6 artifacts đa định dạng (`src/report/generator.py`) trong `reports/<run_id>/`: `summary.json`, `summary.md` (kèm benchmark caveats và disclosures `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
-    - CLI arguments mở rộng: `--output-dir`, `--run-id`, `--db-path`, `--no-report`; CWD-independent; Zero Semantic Drift (Tham chiếu: ADR 0009).
+23. **Kiến trúc Trade Logger & Performance Reporting (ADR 0009 - Hoàn thiện toàn diện sau GPT Review 11):**
+    - Kho lưu trữ SQLite Event Store (`src/logging/trade_logger.py`) với 6 bảng quan hệ có khóa ngoại (`PRAGMA foreign_keys = ON;`): `runs`, `orders`, `trades`, `funding_events`, `account_snapshots`, `run_metrics`.
+    - Khóa chính phức hợp bảo vệ toàn vẹn dữ liệu: `PRIMARY KEY (run_id, order_id)`, `PRIMARY KEY (run_id, trade_id)`, `PRIMARY KEY (run_id, event_id)`, `PRIMARY KEY (run_id, timestamp)`.
+    - Lưu trọn vẹn lý do từ chối lệnh (`rejection_reasons_json`) trong bảng `orders`; lan truyền metadata từ `OrderRequest` sang mọi `OrderExecutionRecord`.
+    - Ánh xạ trực tiếp các trường của `AccountSnapshot`: `reserved_collateral`, `available_margin`, `open_positions_count`, `is_halted`.
+    - Cơ chế kiểm soát luỹ thừa toàn diện bằng mã băm chuẩn tắc SHA-256 (`canonical_payload_hash`) bao phủ config, run metadata, orders, trades, funding events, snapshots, metrics. Cùng `run_id` + cùng hash là idempotent no-op; cùng `run_id` + sai lệch bất kỳ ném `ValueError` (fail-closed).
+    - Hỗ trợ cả production nested config (`config["data"]["futures_symbol"]`, `config["strategy"]["name"]`) và flat config.
+    - Xuất JSON trade chuẩn xác nguyên văn theo Master Spec Mục 4.6 (17 key gốc, nested `market_context` với 4 key null unmeasured, nested `outcome` với 7 key, `rule_compliance: true`, RFC 8259 `allow_nan=False`).
+    - Chuẩn hoá nguồn chân lý tính toán metrics (`src/report/metrics.py`): Expectancy USD & R-multiple, Profit Factor (loss=0 xử lý là `None`/`null`), Max Drawdown USD & %, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$ annualization (std=0 xử lý là `None`/`null`). Chặn đứng `bool`, `NaN`, `Inf` bằng fail-closed type validation.
+    - Phân tách độc lập chỉ số Circuit Breaker (`status`, `multiplier`, `lock_count`, `rejections_count`) khỏi từ chối do thiếu ký quỹ riêng lẻ (`margin_rejections_count`).
+    - Run ID tất định (Deterministic Run ID) sinh từ mã băm SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` (loại bỏ wall-clock).
+    - Phân giải đường dẫn chuẩn tắc (Hermetic Path Resolution): Mọi đường dẫn tương đối `--output-dir` và `--db-path` đều resolve từ `PROJECT_ROOT`, bảo đảm độc lập 100% với CWD ngoại vi; bảo toàn đường dẫn tuyệt đối.
+    - Tự động sinh bộ 6 artifacts đa định dạng (`src/report/generator.py`) trong `reports/<run_id>/`: `summary.json` (đầy đủ provenance, candle counts, gaps, đối soát kế toán), `summary.md` (nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`, bảng đối soát, disclosures & caveats), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
+    - Thống nhất Benchmark Chuẩn Tắc 3 năm BTCUSDT (2021-2023): 22 orders (16 filled, 6 margin rejected), 16 trades (8 win, 8 loss, win rate 50.00%), fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT, final equity 12,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56) (Tham chiếu: ADR 0009).
 
 ---
 
@@ -162,12 +168,12 @@
 | `src/report/metrics.py` | Động cơ tính toán chỉ số hiệu năng chuẩn hoá (Expectancy USD/R, Profit Factor, Max DD, Daily Sharpe sqrt(365)). |
 | `src/report/generator.py` | Bộ sinh báo cáo đa định dạng tự động tạo 6 artifacts trong `reports/<run_id>/`. |
 | `src/report/__init__.py` | Export `ReportGenerator` và các hàm tính toán metrics. |
-| `tests/test_trade_logger.py` | 7 unit tests kiểm tra schema, foreign keys, transaction rollback, idempotency, conflict rejection, JSON export. |
-| `tests/test_report_metrics.py` | 5 unit tests tính tay cho Expectancy USD/R, Profit Factor (loss=0), Max DD peak-to-valley, Sharpe 1D UTC. |
-| `tests/test_report_generator.py` | 2 unit tests kiểm tra tạo đủ 6 artifacts, tính toàn vẹn file ảnh PNG, custom out dir và db path. |
-| `tests/test_stage_06_integration.py` | 3 integration tests chạy CLI end-to-end hermetic, kiểm tra cờ --no-report và Zero Semantic Drift. |
+| `tests/test_trade_logger.py` | 12 unit tests: Master Spec 4.6 verbatim schema, composite PKs, foreign keys, transaction rollback, idempotency payload hash, conflict rejection, rejection reasons, snapshot mapping, funding event identity, multi-run deterministic ID collision, nested production config. |
+| `tests/test_report_metrics.py` | 7 unit tests: Expectancy USD/R, Profit Factor edge cases (loss=0 -> null), Max DD peak-to-valley, Sharpe 1D UTC, reconciliation, NaN/Inf/bool fail-closed, CB metrics separation. |
+| `tests/test_report_generator.py` | 4 unit tests: Sinh đủ 6 artifacts, custom output dir & db path, fail-closed sanitize NaN/Inf, deterministic JSON output. |
+| `tests/test_stage_06_integration.py` | 6 integration tests: CLI end-to-end hermetic, cờ --no-report, Zero Semantic Drift, deterministic run_id, CWD independence, future perturbation report invariance. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0009). |
-| `docs/decisions/0009-trade-logging-and-performance-reporting.md` | ADR 0009: Kiến trúc Trade Logger & Performance Reporting (Pending Review 11). |
+| `docs/decisions/0009-trade-logging-and-performance-reporting.md` | ADR 0009: Kiến trúc Trade Logger & Performance Reporting (Hoàn thiện theo GPT Review 11). |
 | `docs/reviews/GPT_STAGE_04_REVIEW_09.md` | Kết luận nghiệm thu chính thức Giai đoạn 4 tại commit `b16fa1e0...`. |
 | `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md` | Nhiệm vụ có thẩm quyền duy nhất cho triển khai Giai đoạn 5; cấm tự chạy sang Giai đoạn 6+. |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 6). |
