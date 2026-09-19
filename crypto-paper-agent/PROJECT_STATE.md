@@ -16,7 +16,8 @@
 - [x] **Giai đoạn 0 — Khởi tạo dự án & Cấu hình** (ĐÃ ĐÓNG & DUYỆT)
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ SỬA ĐỔI TOÀN DIỆN E1–E8 THEO GPT REVIEW 05. 26/26 probe tests độc lập và 175/175 tests hệ thống đã PASSED 100%. Đã cập nhật ADR 0007, báo cáo chi tiết và đối soát kế toán. DỪNG CHỜ GPT REVIEW 06, chưa bắt đầu Giai đoạn 5.)
+- [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (GPT REVIEW 06: CHƯA ĐẠT. Commit `60f6930`: probes Review 05 đạt 26/26, nhưng probes Review 06 còn 10 failed/1 passed; cần sửa H1–H6 rồi chờ Review 07. Bộ reviewer offline: 168 passed, 2 skipped, 5 deselected. Chưa bắt đầu Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
@@ -65,6 +66,9 @@
     - **E6:** Giao dịch nguyên khối (Transactional Preflight) trong `process_candle` (kiểm tra OHLC, timeframe regex, duration, thời gian mở/đóng đơn điệu và funding rate trước mọi đột biến tài chính).
     - **E7:** Áp dụng trượt giá thoát lệnh khi force close, chặn dời SL vượt qua Mark Price, ưu tiên Gap TP tại Pha 1 trước khi settlement funding ở Pha 2.
     - **E8:** Xác thực miền cấu hình ban đầu (`initial_equity_usd > 0`, `fees in [0, 1]`, `settlement_hours in [0, 23]`) và gia cố `math.isfinite` trên toàn bộ tài khoản trong `verify_accounting_invariants` (Tham chiếu: Phụ lục ADR 0007, Báo cáo sửa đổi Review 05).
+16. **Kết luận độc lập GPT Review 06 — Giai đoạn 4 chưa nghiệm thu:**
+    - 26/26 probes Review 05 đã đạt, nhưng kiểm tra sâu hơn còn H1–H6: cashflow ledger chưa exactly-once, solver collateral chọn sai tier/fallback, clock chưa hỗ trợ multi-symbol cùng timestamp, một số đường public/config chưa transactional fail-closed, thiếu finalize/end-of-data, funding provenance và hồ sơ tái hiện còn thiếu.
+    - Bằng chứng reviewer: 168 passed, 2 skipped, 5 deselected ở bộ offline; Review 06 probes 10 failed/1 passed. Chi tiết tại `docs/reviews/GPT_STAGE_04_REVIEW_06.md`. Không bắt đầu Giai đoạn 5 trước Review 07 và quyết định người dùng.
 
 ---
 
