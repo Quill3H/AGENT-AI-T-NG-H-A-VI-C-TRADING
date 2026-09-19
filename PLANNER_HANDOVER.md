@@ -33,8 +33,16 @@
   - 237/237 unit tests offline pass (5 deselected network tests).
   - Script mô phỏng Phần A và Phần B đạt đối soát 100%.
   - Báo cáo sửa đổi chi tiết tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_08.md`.
-- **Giai đoạn 5 — Trend Following:** Tác giả (Antigravity) đã hoàn thiện toàn bộ mã nguồn, cấu hình, kiểm thử đa khung thời gian và script benchmark tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` (240/240 tests pass + 40/40 historical probes pass); tuy nhiên **Giai đoạn 5 CHƯA ĐƯỢC NGHIỆM THU**, hiện đang chờ đợt đánh giá chính thức GPT Review 10 sau khi hoàn tất khắc phục toàn bộ các blocker (bao gồm test CWD hermetic, chạy probes lịch sử và luồng commit có truy vết).
-- **Quyền hiện tại:** Chỉ được phép sửa đổi, hoàn thiện và đối soát Giai đoạn 5. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 6** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
+- **Giai đoạn 5 — Trend Following & Backtest Engine:** ĐÃ ĐƯỢC NGHIỆM THU CHÍNH THỨC theo GPT Review 10 tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` và Documentation commit `dc0ab9bec51ec34351e9f21ec8ef31970ff8392e`. Người dùng đã cho phép chuyển sang Giai đoạn 6.
+- **Giai đoạn 6 — Trade Logger & Performance Report:** Tác giả (Antigravity) đã hoàn thiện 100% yêu cầu theo Master Spec Section 4.6:
+  - SQLite Event Store (`src/logging/trade_logger.py`) với 6 bảng, transaction atomic, `PRAGMA foreign_keys = ON;`, idempotency & fail-closed conflict rejection.
+  - Export `trades.json` chuẩn Section 4.6 (epoch seconds UTC, `allow_nan=False`, unmeasured null).
+  - Single source of truth cho performance metrics (`src/report/metrics.py`): Expectancy USD/R, Profit Factor (loss=0 -> None), Peak-to-valley Drawdown, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$.
+  - Multi-format Report Generator (`src/report/generator.py`) sinh đủ 6 artifacts trong `reports/<run_id>/`: `summary.json`, `summary.md` (kèm benchmark caveats và disclosures `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
+  - Mở rộng CLI `run_backtest.py` với `--output-dir`, `--run-id`, `--db-path`, `--no-report`, CWD-independent, Zero Semantic Drift.
+  - Toàn bộ test suites pass 100%: 17/17 Stage 6 tests, 252/252 offline tests, 5/5 network tests, 40/40 historical probes (tổng cộng 297/297 tests).
+  - Code-under-test Commit A: `1d486f76da1430e1c02fa1ac24be177262d53c67`.
+- **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW 11 NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
 
 ## 3. Tài liệu nguồn cần đọc
 

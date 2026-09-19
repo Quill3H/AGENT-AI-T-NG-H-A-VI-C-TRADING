@@ -2,6 +2,65 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 6] - Trade Logger & Performance Report (2026-09-19)
+
+### Đã triển khai (Hoàn thành 100% yêu cầu theo Master Spec Section 4.6 & Stage 6 Task)
+- **Kho Lưu Trữ Sự Kiện SQLite Event Store (`src/logging/trade_logger.py`):**
+  - Tạo cấu trúc 6 bảng chuẩn: `runs`, `orders`, `trades`, `funding_events`, `account_snapshots`, `run_metrics`.
+  - Thực thi `PRAGMA foreign_keys = ON;` bắt buộc cho mọi kết nối, bảo toàn tính toàn vẹn tham chiếu.
+  - Quá trình ghi nhận toàn bộ run được bao bọc trong một transaction duy nhất với cơ chế rollback sạch sẽ khi phát sinh lỗi.
+  - Tính luỹ thừa (idempotency): ghi trùng `run_id` với cùng payload trả về thành công an toàn và không nhân đôi dữ liệu.
+  - Từ chối xung đột (fail-closed conflict rejection): ném `ValueError` nếu `run_id` đã tồn tại với payload khác biệt.
+- **Xuất Dữ Liệu Giao Dịch Chuẩn Hoá JSON (`export_trades_json`):**
+  - Tuân thủ cấu trúc Master Spec Section 4.6.
+  - Chuyển đổi timestamp sang Unix epoch seconds UTC (`int`).
+  - Sử dụng `json.dumps(..., allow_nan=False)` ngăn chặn triệt để `NaN`, `Infinity`.
+  - Gán `null` cho các trường chưa được đo lường ở nến 15m (`market_context`, `mae_usd`, `mfe_usd`), không ngụy tạo dữ liệu giả lập.
+- **Động Cơ Tính Toán Chỉ Số Hiệu Năng Chuẩn Hoá (`src/report/metrics.py`):**
+  - Đóng vai trò là nguồn chân lý duy nhất (Single Source of Truth) cho toàn bộ metrics backtest:
+    - Expectancy (USD) = $\frac{\sum \text{net\_pnl}}{N}$ và Expectancy (R) = $\frac{\sum \text{realized\_r}}{M}$.
+    - Initial Risk USD = $Q \times |\text{entry\_price} - \text{initial\_stop\_loss\_price}|$.
+    - Realized R-multiple = $\frac{\text{net\_pnl}}{\text{initial\_risk\_usd}}$.
+    - Profit Factor: xử lý an toàn khi loss = 0 trả về `None` (JSON `null`).
+    - Maximum Drawdown USD & %: tính toán theo đỉnh lũy tiến (running peak-to-valley).
+    - Daily Sharpe Ratio: resample dữ liệu theo ngày lịch 1D UTC, tính tỷ suất lợi nhuận ngày, chuẩn hoá năm với $\sqrt{365}$, xử lý $\sigma=0$ trả về `None`.
+  - Đảm bảo 100% tương thích ngược với các key kết quả của Giai đoạn 5.
+- **Bộ Sinh Báo Cáo Đa Định Dạng (`src/report/generator.py`):**
+  - Tự động tạo thư mục `reports/<run_id>/` chứa đầy đủ 6 artifacts:
+    1. `summary.json`: Serialized JSON sạch toàn bộ metrics (`allow_nan=False`).
+    2. `summary.md`: Báo cáo Markdown chi tiết kèm benchmark caveats và disclosures `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+    3. `trades.json`: Danh sách trade chuẩn Section 4.6.
+    4. `equity_curve.csv`: Dữ liệu chuỗi thời gian equity, balance, unrealized PnL, margin, drawdown.
+    5. `equity_curve.png`: Biểu đồ 2 khung thời gian (Equity vs High Watermark & Underwater Drawdown %).
+    6. `trades.sqlite`: File cơ sở dữ liệu SQLite độc lập lưu trữ phiên chạy.
+- **Mở Rộng CLI Runner (`run_backtest.py`):**
+  - Bổ sung các cờ: `--output-dir`, `--run-id`, `--db-path`, `--no-report`.
+  - CWD-independent: thực thi an toàn từ thư mục ngoài.
+  - Zero Semantic Drift: không làm biến dạng logic khớp lệnh, giá hay trạng thái kế toán.
+- **Bộ Kiểm Thử Toàn Diện Giai Đoạn 6:**
+  - `tests/test_trade_logger.py`: 7 tests cho schema, foreign keys, transaction rollback, idempotency, conflict rejection, Section 4.6 JSON.
+  - `tests/test_report_metrics.py`: 5 tests tính tay cho Expectancy USD/R, Profit Factor, Max DD, Daily Sharpe, reconciliation.
+  - `tests/test_report_generator.py`: 2 tests cho 6 artifacts, tính toàn vẹn PNG, custom output dir & db path.
+  - `tests/test_stage_06_integration.py`: 3 tests tích hợp CLI hermetic, cờ --no-report, Zero Semantic Drift.
+
+### Kết quả kiểm thử thực tế (trên Commit A: `1d486f76da1430e1c02fa1ac24be177262d53c67`)
+- **Stage 6 Test Suite:** **17/17 tests PASSED** trong 7.86s.
+- **Offline Test Suite (`tests/`):** **252/252 tests PASSED** (5 deselected network tests) trong 15.34s.
+- **Network Test Suite (`pytest -m network`):** **5/5 tests PASSED** trong 11.70s.
+- **Historical Probes Suite:** **40/40 probes PASSED** (Review 05: 26/26, Review 06: 11/11, Review 07: 3/3) trong 0.70s.
+- **Tổng cộng:** **297/297 tests PASSED**, 0 failed, 0 skipped.
+
+### Kết quả Benchmark 3 năm BTCUSDT (2021-01-01 -> 2023-12-31)
+> **Trạng thái:** `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`
+- Bars đã xử lý: 105,120 nến 15m, 6,570 nến 4h
+- Vốn ban đầu: $10,000.00 USDT | Equity kết thúc: $12,100.96 USDT (+21.01%)
+- Max Drawdown: -$2,050.72 USDT (-16.15%)
+- Daily Sharpe Ratio: 0.54 | Profit Factor: 3.05
+- Expectancy (USD): +$131.31 USDT | Expectancy (R): +0.68 R
+- Tổng số trade đóng: 16 (8 Thắng / 8 Thua, Win Rate: 50.00%)
+- Accounting Audit: PASSED (wallet_balance matches ledger)
+- Thư mục artifacts: `reports/run_trend_following_btcusdt_20260919_094647/`
+
 ## [Giai đoạn 5] - Trend Following & Backtest Engine (2026-09-19)
 
 ### Đã triển khai (Hoàn thành 100% yêu cầu theo ANTIGRAVITY_STAGE_05_TASK.md)
