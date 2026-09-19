@@ -16,6 +16,7 @@ Tuân thủ:
 """
 from datetime import datetime, timedelta, timezone
 import math
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from loguru import logger
 
@@ -41,9 +42,64 @@ from src.risk.circuit_breakers import CircuitBreakerState
 from src.risk.invariant_checks import (
     check_all_invariants,
     calculate_estimated_liquidation_price,
+    get_mmr_tier,
     parse_simulation_timestamp,
 )
 from src.risk.position_sizing import calculate_position_size
+
+
+def _validate_config(config: dict) -> None:
+    """Xác thực định dạng và miền giá trị hữu hạn của cấu hình hệ thống (E8)."""
+    if not isinstance(config, dict):
+        raise TypeError(f"config must be dict, got {type(config).__name__}")
+
+    # 1. account
+    acc = config.get("account", {})
+    if not isinstance(acc, dict):
+        raise TypeError(f"account section must be dict, got {type(acc).__name__}")
+    if "initial_equity_usd" in acc:
+        val = acc["initial_equity_usd"]
+        if type(val) is bool or not isinstance(val, (int, float)):
+            raise TypeError(f"initial_equity_usd must be numeric, got {type(val).__name__}")
+        f_val = float(val)
+        if not math.isfinite(f_val) or f_val <= 0:
+            raise ValueError(f"initial_equity_usd must be finite positive number, got {f_val}")
+
+    # 2. fees
+    fees = config.get("fees", {})
+    if not isinstance(fees, dict):
+        raise TypeError(f"fees section must be dict, got {type(fees).__name__}")
+    if "slippage_pct" in fees:
+        val = fees["slippage_pct"]
+        if type(val) is bool or not isinstance(val, (int, float)):
+            raise TypeError(f"slippage_pct must be numeric, got {type(val).__name__}")
+        f_val = float(val)
+        if not math.isfinite(f_val) or f_val < 0 or f_val >= 1.0:
+            raise ValueError(f"slippage_pct must be finite in [0.0, 1.0), got {f_val}")
+    if "taker_pct" in fees:
+        val = fees["taker_pct"]
+        if type(val) is bool or not isinstance(val, (int, float)):
+            raise TypeError(f"taker_pct must be numeric, got {type(val).__name__}")
+        f_val = float(val)
+        if not math.isfinite(f_val) or f_val < 0 or f_val >= 1.0:
+            raise ValueError(f"taker_pct must be finite in [0.0, 1.0), got {f_val}")
+    if "maker_pct" in fees:
+        val = fees["maker_pct"]
+        if type(val) is bool or not isinstance(val, (int, float)):
+            raise TypeError(f"maker_pct must be numeric, got {type(val).__name__}")
+        f_val = float(val)
+        if not math.isfinite(f_val) or f_val < 0 or f_val >= 1.0:
+            raise ValueError(f"maker_pct must be finite in [0.0, 1.0), got {f_val}")
+
+    # 3. funding_rate
+    fnd = config.get("funding_rate", {})
+    if isinstance(fnd, dict) and "settlement_hours_utc" in fnd:
+        hours = fnd["settlement_hours_utc"]
+        if not isinstance(hours, (list, tuple, set)):
+            raise TypeError(f"settlement_hours_utc must be a list/set, got {type(hours).__name__}")
+        for h in hours:
+            if type(h) is bool or not isinstance(h, int) or not (0 <= h <= 23):
+                raise ValueError(f"settlement hour must be int in [0, 23], got {h}")
 
 
 class PaperBroker:
@@ -59,6 +115,8 @@ class PaperBroker:
         funding_hours: Optional[Set[int]] = None,
     ):
         self.config: dict = config or {}
+        _validate_config(self.config)
+
         acc_cfg = self.config.get("account", {})
         fees_cfg = self.config.get("fees", {})
 
@@ -74,7 +132,18 @@ class PaperBroker:
         self.slippage_pct: float = float(fees_cfg.get("slippage_pct", 0.0003))
         self.taker_fee_pct: float = float(fees_cfg.get("taker_pct", 0.0005))
         self.maker_fee_pct: float = float(fees_cfg.get("maker_pct", 0.0002))
-        self.funding_hours: Set[int] = funding_hours or {0, 8, 16}
+
+        # Đọc funding_hours theo thứ tự ưu tiên (E1)
+        if funding_hours is not None:
+            self.funding_hours: Set[int] = set()
+            for h in funding_hours:
+                if type(h) is bool or not isinstance(h, int) or not (0 <= h <= 23):
+                    raise ValueError(f"Invalid funding hour: {h}")
+                self.funding_hours.add(h)
+        elif "funding_rate" in self.config and "settlement_hours_utc" in self.config["funding_rate"]:
+            self.funding_hours = set(self.config["funding_rate"]["settlement_hours_utc"])
+        else:
+            self.funding_hours = {0, 8, 16}
 
         # 3. Quản lý rủi ro & Ngắt mạch
         if circuit_breaker is not None:
@@ -99,6 +168,9 @@ class PaperBroker:
         self.current_time: Optional[datetime] = None
         self.last_candle_open_time: Optional[datetime] = None
         self.is_halted: bool = False
+        self.last_mark_prices: Dict[str, float] = {}
+        self._settled_funding_keys: Set[Tuple[str, datetime]] = set()
+        self._is_handling_cb_lock: bool = False
 
         # 6. Bộ đếm định danh xác định (Deterministic ID generator)
         self._order_seq: int = 0
@@ -212,40 +284,96 @@ class PaperBroker:
         Pha 4: Intrabar Protection (High / Low: Liquidation > SL > TP)
         Pha 5: Close time & Mark to Market
         """
-        # 1. Trích xuất và xác thực nến
-        open_time = _ensure_utc(candle["open_time"] if "open_time" in candle else candle["timestamp"])
+        # =========================================================
+        # PREFLIGHT PHASE - TUYỆT ĐỐI KHÔNG MUTATE BẤT KỲ TRƯỜNG NÀO CỦA SELF NẾU NẾN LỖI (E6)
+        # =========================================================
+        if not isinstance(candle, dict):
+            raise TypeError(f"candle must be dict, got {type(candle).__name__}")
+
+        # 1. Xác thực OHLC
+        for k in ("open", "high", "low", "close"):
+            if k not in candle:
+                raise ValueError(f"Candle missing required key: {k}")
         open_p = _validate_finite_positive("open", candle["open"])
         high_p = _validate_finite_positive("high", candle["high"])
         low_p = _validate_finite_positive("low", candle["low"])
         close_p = _validate_finite_positive("close", candle["close"])
-        symbol = str(candle.get("symbol", self.config.get("data", {}).get("futures_symbol", "BTCUSDT"))).upper()
 
         if high_p < max(open_p, close_p) - 1e-6 or low_p > min(open_p, close_p) + 1e-6 or high_p < low_p:
             raise ValueError(f"Malformed candle OHLC values: O={open_p}, H={high_p}, L={low_p}, C={close_p}")
 
-        if self.last_candle_open_time is not None and open_time < self.last_candle_open_time:
-            raise ValueError(f"Time reversal in candle sequence: {open_time} < {self.last_candle_open_time}")
-        self.last_candle_open_time = open_time
+        # 2. Xác thực open_time
+        if "open_time" in candle:
+            open_time = _ensure_utc(candle["open_time"])
+        elif "timestamp" in candle:
+            open_time = _ensure_utc(candle["timestamp"])
+        else:
+            raise ValueError("Candle missing open_time or timestamp")
 
-        # Tính close_time dựa trên timeframe nếu có (mặc định 1m = 60s, 15m = 900s, 4h = 14400s)
-        timeframe_str = str(candle.get("timeframe", self.config.get("data", {}).get("timeframes", ["1m"])[0]))
+        # 3. Phân tích timeframe và close_time (E6)
+        timeframe_str = candle.get("timeframe", self.config.get("data", {}).get("timeframes", ["1m"])[0])
         duration = self._parse_timeframe_duration(timeframe_str)
-        close_time = candle.get("close_time")
-        if close_time is not None:
-            close_time = _ensure_utc(close_time)
+
+        if "close_time" in candle and candle["close_time"] is not None:
+            close_time = _ensure_utc(candle["close_time"])
+            if close_time <= open_time:
+                raise ValueError(f"Invalid candle close_time ({close_time}) <= open_time ({open_time})")
+            if close_time != open_time + duration:
+                raise ValueError(f"Candle close_time ({close_time}) != open_time + duration ({open_time + duration})")
         else:
             close_time = open_time + duration
 
+        # 4. Kiểm tra tính đơn điệu của thời gian (chống lùi thời gian hoặc lặp nến)
+        if self.last_candle_open_time is not None:
+            if open_time <= self.last_candle_open_time:
+                raise ValueError(f"Time reversal or duplicate in candle sequence: {open_time} <= {self.last_candle_open_time}")
+
+        # 5. Xác định symbol
+        symbol = str(candle.get("symbol", self.config.get("data", {}).get("futures_symbol", "BTCUSDT"))).upper()
+
+        # 6. Kiểm tra bỏ sót mốc Funding Settlement khi đang có vị thế mở (E1)
+        if self.last_candle_open_time is not None and len(self.positions) > 0:
+            t_cur = self.last_candle_open_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            while t_cur < open_time:
+                if t_cur > self.last_candle_open_time and t_cur.hour in self.funding_hours:
+                    raise ValueError(f"Data gap: candle skipped funding settlement at {t_cur.isoformat()} while positions are open.")
+                t_cur += timedelta(hours=1)
+
+        # 7. Kiểm tra Funding Rate đầu vào nếu rơi vào mốc settlement (E1)
+        if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
+            if symbol in self.positions:
+                pos = self.positions[symbol]
+                # Nếu vị thế sẽ gap exit (TP/SL/Liq) ngay tại Pha 1 thì không cần funding
+                will_gap_exit = False
+                if pos.direction == OrderDirection.LONG:
+                    if (pos.take_profit_price is not None and open_p >= pos.take_profit_price) or \
+                       open_p <= pos.stop_loss_price or open_p <= pos.liquidation_price:
+                        will_gap_exit = True
+                else:
+                    if (pos.take_profit_price is not None and open_p <= pos.take_profit_price) or \
+                       open_p >= pos.stop_loss_price or open_p >= pos.liquidation_price:
+                        will_gap_exit = True
+
+                if not will_gap_exit:
+                    raw_rate = candle.get("funding_rate")
+                    if raw_rate is None or type(raw_rate) is bool or not isinstance(raw_rate, (int, float)):
+                        raise ValueError(f"Missing or invalid funding rate at settlement boundary {open_time.isoformat()}: {raw_rate!r}")
+                    f_rate = float(raw_rate)
+                    if not math.isfinite(f_rate):
+                        raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
+
+        # =========================================================
+        # HẾT PREFLIGHT - TẤT CẢ DỮ LIỆU ĐÃ HỢP LỆ, BẮT ĐẦU CẬP NHẬT TRẠNG THÁI VÀ THỰC THI
+        # =========================================================
+        self.last_candle_open_time = open_time
+        self.current_time = open_time
+        self.last_mark_prices[symbol] = open_p
+
         candle_events = []
 
-        # =========================================================
-        # PHA 1: Open Time & Gap Exits
-        # =========================================================
-        self.current_time = open_time
-        # Tiến đồng hồ Circuit Breaker tới open_time
+        # PHA 1: Open Time & Gap Exits (Gap Liq > Gap SL > Gap TP)
         self.circuit_breaker.advance_time(open_time)
 
-        # Kiểm tra Gap Exit cho vị thế đang mở mang từ nến trước
         if symbol in self.positions:
             pos = self.positions[symbol]
             gap_exit_triggered = False
@@ -256,21 +384,27 @@ class PaperBroker:
                 if open_p <= pos.liquidation_price:
                     gap_exit_triggered = True
                     gap_reason = ExitReason.LIQUIDATION
-                    gap_exit_price = open_p
+                    gap_exit_price = open_p * (1.0 - self.slippage_pct)
                 elif open_p <= pos.stop_loss_price:
                     gap_exit_triggered = True
                     gap_reason = ExitReason.STOP_LOSS
-                    # Gap qua SL: khớp tại open với slippage bất lợi (SELL: open * (1 - s))
+                    gap_exit_price = open_p * (1.0 - self.slippage_pct)
+                elif pos.take_profit_price is not None and open_p >= pos.take_profit_price:
+                    gap_exit_triggered = True
+                    gap_reason = ExitReason.TAKE_PROFIT
                     gap_exit_price = open_p * (1.0 - self.slippage_pct)
             else:  # SHORT
                 if open_p >= pos.liquidation_price:
                     gap_exit_triggered = True
                     gap_reason = ExitReason.LIQUIDATION
-                    gap_exit_price = open_p
+                    gap_exit_price = open_p * (1.0 + self.slippage_pct)
                 elif open_p >= pos.stop_loss_price:
                     gap_exit_triggered = True
                     gap_reason = ExitReason.STOP_LOSS
-                    # Gap qua SL: khớp tại open với slippage bất lợi (BUY: open * (1 + s))
+                    gap_exit_price = open_p * (1.0 + self.slippage_pct)
+                elif pos.take_profit_price is not None and open_p <= pos.take_profit_price:
+                    gap_exit_triggered = True
+                    gap_reason = ExitReason.TAKE_PROFIT
                     gap_exit_price = open_p * (1.0 + self.slippage_pct)
 
             if gap_exit_triggered and gap_reason is not None:
@@ -283,73 +417,135 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "GAP_EXIT", "trade": trade_rec})
 
-        # =========================================================
-        # PHA 2: Funding Settlement
-        # =========================================================
-        # Chỉ những vị thế còn tồn tại sau Pha 1 mới chịu funding nếu trùng mốc
+        # PHA 2: Funding Settlement (chỉ cho vị thế còn sống qua Pha 1)
         if symbol in self.positions:
             pos = self.positions[symbol]
-            # Mốc funding: kiểm tra giờ UTC (00, 08, 16) tại phút 0
-            if open_time.hour in self.funding_hours and open_time.minute == 0:
-                raw_funding_rate = candle.get("funding_rate")
-                if raw_funding_rate is not None:
-                    f_rate = float(raw_funding_rate)
-                    if math.isfinite(f_rate):
-                        funding_evt = self._apply_funding_settlement(
-                            position=pos,
-                            timestamp=open_time,
-                            funding_rate=f_rate,
-                            mark_price=open_p,
-                        )
-                        candle_events.append({"type": "FUNDING", "event": funding_evt})
+            if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
+                f_key = (symbol, open_time)
+                if f_key not in self._settled_funding_keys:
+                    self._settled_funding_keys.add(f_key)
+                    raw_rate = candle.get("funding_rate", 0.0)
+                    f_rate = float(raw_rate)
+                    funding_evt = self._apply_funding_settlement(
+                        position=pos,
+                        timestamp=open_time,
+                        funding_rate=f_rate,
+                        mark_price=open_p,
+                    )
+                    candle_events.append({"type": "FUNDING", "event": funding_evt})
 
-        # =========================================================
-        # PHA 3: Pending Market Entry & Risk Gate Admission
-        # =========================================================
-        # Lọc các lệnh pending cho symbol hiện tại mà có signal_time <= open_time
+        # PHA 3: Pending Market Entry & Admission Gate
         pending_to_process = [req for req in self.pending_orders if req.symbol == symbol and req.signal_time <= open_time]
         self.pending_orders = [req for req in self.pending_orders if not (req.symbol == symbol and req.signal_time <= open_time)]
 
         for req in pending_to_process:
-            # Nếu đang có vị thế (vừa sống qua Pha 1 & 2), từ chối lệnh pending
+            # 1. Kiểm tra loại lệnh (E5)
+            if req.order_type not in (OrderType.MARKET_ENTRY, getattr(OrderType, "MARKET", OrderType.MARKET_ENTRY)):
+                self._update_order_record(
+                    req=req,
+                    status=OrderStatus.REJECTED,
+                    processed_at=open_time,
+                    reference_price=open_p,
+                    reasons=[f"EXECUTION_REJECT_UNSUPPORTED_ORDER_TYPE: Order type {req.order_type} not supported for entry."],
+                )
+                candle_events.append({"type": "ORDER_REJECTED", "reasons": ["EXECUTION_REJECT_UNSUPPORTED_ORDER_TYPE"]})
+                continue
+
+            # 2. Vị thế đang mở
             if symbol in self.positions:
                 self._update_order_record(
                     req=req,
                     status=OrderStatus.REJECTED,
                     processed_at=open_time,
+                    reference_price=open_p,
                     reasons=["EXECUTION_REJECT_POSITION_ALREADY_ACTIVE"],
                 )
+                candle_events.append({"type": "ORDER_REJECTED", "reasons": ["EXECUTION_REJECT_POSITION_ALREADY_ACTIVE"]})
                 continue
 
-            # Tính giá fill dự kiến kèm slippage
+            # 3. Tài khoản halted / circuit breaker locked
+            if self.is_halted or self.circuit_breaker.is_locked:
+                self._update_order_record(
+                    req=req,
+                    status=OrderStatus.REJECTED,
+                    processed_at=open_time,
+                    reference_price=open_p,
+                    reasons=["EXECUTION_REJECT_CIRCUIT_BREAKER_LOCKED"],
+                )
+                candle_events.append({"type": "ORDER_REJECTED", "reasons": ["EXECUTION_REJECT_CIRCUIT_BREAKER_LOCKED"]})
+                continue
+
+            # 4. Tính giá fill kèm slippage
             if req.direction == OrderDirection.LONG:
                 fill_price = open_p * (1.0 + self.slippage_pct)
             else:
                 fill_price = open_p * (1.0 - self.slippage_pct)
 
-            # Tính toán kích thước vị thế và ký quỹ
+            # 5. Xác thực lại SL và TP đối với actual fill price (E5)
+            invalid_bounds = False
+            bound_reasons = []
+            if req.direction == OrderDirection.LONG:
+                if req.stop_loss_price >= fill_price:
+                    invalid_bounds = True
+                    bound_reasons.append(f"EXECUTION_REJECT_INVALID_PRICE_BOUNDS: LONG stop_loss ({req.stop_loss_price}) >= fill_price ({fill_price})")
+                if req.take_profit_price is not None and req.take_profit_price <= fill_price:
+                    invalid_bounds = True
+                    bound_reasons.append(f"EXECUTION_REJECT_INVALID_PRICE_BOUNDS: LONG take_profit ({req.take_profit_price}) <= fill_price ({fill_price})")
+            else:  # SHORT
+                if req.stop_loss_price <= fill_price:
+                    invalid_bounds = True
+                    bound_reasons.append(f"EXECUTION_REJECT_INVALID_PRICE_BOUNDS: SHORT stop_loss ({req.stop_loss_price}) <= fill_price ({fill_price})")
+                if req.take_profit_price is not None and req.take_profit_price >= fill_price:
+                    invalid_bounds = True
+                    bound_reasons.append(f"EXECUTION_REJECT_INVALID_PRICE_BOUNDS: SHORT take_profit ({req.take_profit_price}) >= fill_price ({fill_price})")
+
+            if invalid_bounds:
+                self._update_order_record(
+                    req=req,
+                    status=OrderStatus.REJECTED,
+                    processed_at=open_time,
+                    reference_price=open_p,
+                    actual_fill_price=fill_price,
+                    reasons=bound_reasons,
+                )
+                candle_events.append({"type": "ORDER_REJECTED", "reasons": bound_reasons})
+                continue
+
+            # 6. Sizing và solver bọc try/except (E5)
             effective_risk_pct = req.base_risk_percent * self.circuit_breaker.risk_multiplier
-            sizing = calculate_position_size(
-                equity=self.equity,
-                risk_percent=effective_risk_pct,
-                entry_price=fill_price,
-                stop_price=req.stop_loss_price,
-                leverage=req.leverage,
-            )
-            calc_quantity = sizing["quantity"] if req.requested_quantity is None else req.requested_quantity
-            calc_notional = calc_quantity * fill_price
+            try:
+                sizing = calculate_position_size(
+                    equity=self.equity,
+                    risk_percent=effective_risk_pct,
+                    entry_price=fill_price,
+                    stop_price=req.stop_loss_price,
+                    leverage=req.leverage,
+                )
+                calc_quantity = sizing["quantity"] if req.requested_quantity is None else req.requested_quantity
+                calc_notional = calc_quantity * fill_price
 
-            # Ước tính giá thanh lý từ solver chuẩn
-            liq_price = calculate_estimated_liquidation_price(
-                direction=req.direction.value,
-                entry_price=fill_price,
-                position_size_usd=calc_notional,
-                leverage=req.leverage,
-                symbol=symbol,
-                leverage_brackets=self.config.get("leverage_brackets"),
-            )
+                liq_price = calculate_estimated_liquidation_price(
+                    direction=req.direction.value,
+                    entry_price=fill_price,
+                    position_size_usd=calc_notional,
+                    leverage=req.leverage,
+                    symbol=symbol,
+                    leverage_brackets=self.config.get("leverage_brackets"),
+                )
+            except ValueError as exc:
+                self._update_order_record(
+                    req=req,
+                    status=OrderStatus.REJECTED,
+                    processed_at=open_time,
+                    reference_price=open_p,
+                    actual_fill_price=fill_price,
+                    reasons=[f"EXECUTION_REJECT_SIZING_ERROR: {exc}"],
+                )
+                candle_events.append({"type": "ORDER_REJECTED", "reasons": [f"EXECUTION_REJECT_SIZING_ERROR: {exc}"]})
+                continue
 
-            # Đóng gói order để kiểm tra Invariants
+            # 7. Đóng gói order để kiểm tra Invariants (E5: risk_percent authority)
+            declared_risk = req.risk_percent if req.risk_percent is not None else effective_risk_pct
             order_dict = {
                 "symbol": symbol,
                 "direction": req.direction.value,
@@ -357,7 +553,7 @@ class PaperBroker:
                 "stop_loss_price": req.stop_loss_price,
                 "leverage": req.leverage,
                 "base_risk_percent": req.base_risk_percent,
-                "risk_percent": effective_risk_pct,
+                "risk_percent": declared_risk,
                 "conviction_tier": req.conviction_tier,
                 "position_size_usd": calc_notional,
                 "timestamp": req.signal_time,
@@ -374,7 +570,6 @@ class PaperBroker:
             is_valid, reasons = check_all_invariants(order_dict, account_state, self.config)
 
             if is_valid:
-                # Trừ phí vào lệnh Taker
                 entry_fee = calc_notional * self.taker_fee_pct
                 initial_margin = calc_notional / req.leverage
 
@@ -421,10 +616,7 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "ORDER_REJECTED", "reasons": reasons})
 
-        # =========================================================
-        # PHA 4: Intrabar Protection (High / Low Range)
-        # =========================================================
-        # Kiểm tra cho vị thế còn hoạt động (vừa sống qua Pha 1, hoặc mới mở ở Pha 3)
+        # PHA 4: Intrabar Protection (Liquidation > SL > TP trên [low_p, high_p])
         if symbol in self.positions:
             pos = self.positions[symbol]
             intrabar_exit_triggered = False
@@ -432,11 +624,10 @@ class PaperBroker:
             raw_exit_price = 0.0
 
             if pos.direction == OrderDirection.LONG:
-                # Ưu tiên bảo thủ: Liquidation > Stop Loss > Take Profit
                 if low_p <= pos.liquidation_price:
                     intrabar_exit_triggered = True
                     exit_reason = ExitReason.LIQUIDATION
-                    raw_exit_price = pos.liquidation_price
+                    raw_exit_price = pos.liquidation_price * (1.0 - self.slippage_pct)
                 elif low_p <= pos.stop_loss_price:
                     intrabar_exit_triggered = True
                     exit_reason = ExitReason.STOP_LOSS
@@ -449,7 +640,7 @@ class PaperBroker:
                 if high_p >= pos.liquidation_price:
                     intrabar_exit_triggered = True
                     exit_reason = ExitReason.LIQUIDATION
-                    raw_exit_price = pos.liquidation_price
+                    raw_exit_price = pos.liquidation_price * (1.0 + self.slippage_pct)
                 elif high_p >= pos.stop_loss_price:
                     intrabar_exit_triggered = True
                     exit_reason = ExitReason.STOP_LOSS
@@ -469,24 +660,19 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "INTRABAR_EXIT", "trade": trade_rec})
 
-        # =========================================================
         # PHA 5: Close Time & Mark-to-Market
-        # =========================================================
         self.current_time = close_time
-        # Tiến đồng hồ ngắt mạch tới close_time
+        self.last_mark_prices[symbol] = close_p
         self.circuit_breaker.advance_time(close_time)
 
-        # Cập nhật unrealized PnL theo giá close
         if symbol in self.positions:
             pos = self.positions[symbol]
             pos._last_unrealized_pnl = pos.calculate_unrealized_pnl(close_p)
-        
-        # Kiểm tra cạn vốn / deficit
+
         if self.equity <= 0:
             self.is_halted = True
             logger.error("[PaperBroker] Tài khoản cạn vốn (equity = {:.2f} <= 0). Halted toàn bộ.", self.equity)
 
-        # Chụp ảnh tài khoản tại close_time
         snapshot = AccountSnapshot(
             timestamp=close_time,
             wallet_balance=self.wallet_balance,
@@ -517,7 +703,7 @@ class PaperBroker:
         intrabar_estimated: bool = False,
     ) -> TradeRecord:
         """
-        Thực hiện đóng vị thế, hạch toán PnL, giải phóng ký quỹ và đồng bộ Circuit Breaker.
+        Thực hiện đóng vị thế, hạch toán PnL, giải phóng ký quỹ và đồng bộ Circuit Breaker (E4).
         """
         exit_notional = position.quantity * exit_price
         exit_fee = exit_notional * self.taker_fee_pct
@@ -530,12 +716,17 @@ class PaperBroker:
         # Net trade PnL = Gross Price PnL - Entry Fee - Exit Fee + Cumulative Funding
         net_trade_pnl = gross_pnl - position.entry_fee - exit_fee + position.cumulative_funding
 
-        # Giải phóng isolated collateral và cập nhật wallet:
-        # Wallet trước đó đã trừ entry_fee và cộng/trừ funding.
-        # Nay cộng thêm gross_pnl và trừ exit_fee.
+        # Giải phóng isolated collateral và cập nhật wallet
         self.wallet_balance += (gross_pnl - exit_fee)
 
         return_pct = (net_trade_pnl / position.initial_margin) * 100.0 if position.initial_margin > 0 else 0.0
+
+        # Cập nhật các trường đóng vị thế
+        position.status = PositionStatus.CLOSED
+        position.closed_at = exit_time
+        position.exit_price = exit_price
+        position.exit_reason = exit_reason
+        position.exit_fee = exit_fee
 
         trade_rec = TradeRecord(
             trade_id=self._next_trade_id(position.symbol, exit_time),
@@ -559,30 +750,97 @@ class PaperBroker:
         )
         self.trade_history.append(trade_rec)
 
-        # Ghi nhận kết quả giao dịch vào Circuit Breaker để theo dõi chuỗi và daily loss limit
-        # Lưu ý: CircuitBreaker yêu cầu current_equity sau lệnh
-        safe_equity = max(0.0, self.equity)
-        self.circuit_breaker.record_trade_result(
-            pnl=net_trade_pnl,
-            timestamp=exit_time,
-            equity=safe_equity,
-        )
+        # XÓA VỊ THẾ KHỎI self.positions TRƯỚC KHI TÍNH EQUITY (E4)
+        self.positions.pop(position.symbol, None)
 
-        # Xóa vị thế khỏi danh sách active
-        del self.positions[position.symbol]
+        # Tính post-close equity sạch (không bị dính stale unrealized pnl của vị thế vừa đóng)
+        post_close_equity = max(0.0, self.equity)
 
-        # Nếu Circuit Breaker vừa kích hoạt trạng thái khóa (locked), hủy toàn bộ pending orders
+        # Ghi nhận kết quả giao dịch vào Circuit Breaker (E4)
+        # Chỉ ghi nhận khi không phải forced close do chính CB lock
+        if exit_reason != ExitReason.CIRCUIT_BREAKER_LOCK:
+            self.circuit_breaker.record_trade_result(
+                pnl=net_trade_pnl,
+                timestamp=exit_time,
+                equity=post_close_equity,
+            )
+
+        # Nếu Circuit Breaker vừa kích hoạt trạng thái khóa (locked), hủy pending và đóng các vị thế khác (E3)
         if self.circuit_breaker.is_locked:
+            self._handle_circuit_breaker_lock(exit_time)
+
+        return trade_rec
+
+    def _handle_circuit_breaker_lock(self, timestamp: datetime) -> None:
+        """
+        Cưỡng chế đóng toàn bộ vị thế đang mở và hủy pending orders khi Circuit Breaker bị khóa (E3).
+        Không gọi đệ quy.
+        """
+        if self._is_handling_cb_lock:
+            return
+        self._is_handling_cb_lock = True
+        try:
+            # 1. Hủy pending orders
             for pending in self.pending_orders:
                 self._update_order_record(
                     req=pending,
                     status=OrderStatus.CANCELLED,
-                    processed_at=exit_time,
+                    processed_at=timestamp,
                     reasons=["ORDER_CANCELLED_CIRCUIT_BREAKER_LOCKED"],
                 )
             self.pending_orders.clear()
 
-        return trade_rec
+            # 2. Đóng toàn bộ positions đang mở theo giá mark từng symbol kèm slippage
+            symbols_to_close = list(self.positions.keys())
+            for sym in symbols_to_close:
+                if sym not in self.positions:
+                    continue
+                pos = self.positions[sym]
+                mark_p = self.last_mark_prices.get(sym, pos.entry_price)
+                if pos.direction == OrderDirection.LONG:
+                    exit_p = mark_p * (1.0 - self.slippage_pct)
+                else:
+                    exit_p = mark_p * (1.0 + self.slippage_pct)
+
+                self._execute_exit(
+                    position=pos,
+                    exit_price=exit_p,
+                    exit_time=timestamp,
+                    exit_reason=ExitReason.CIRCUIT_BREAKER_LOCK,
+                    intrabar_estimated=False,
+                )
+        finally:
+            self._is_handling_cb_lock = False
+
+    def _calculate_collateral_aware_liquidation_price(self, position: Position) -> float:
+        """
+        Tính toán lại giá thanh lý chính xác dựa trên isolated_collateral thực tế (E2).
+        LONG: P_liq = (Q * entry - collateral - cum) / (Q * (1 - mmr))
+        SHORT: P_liq = (Q * entry + collateral + cum) / (Q * (1 + mmr))
+        """
+        notional = position.quantity * position.entry_price
+        try:
+            mmr, cum = get_mmr_tier(
+                position_size_usd=notional,
+                symbol=position.symbol,
+                leverage_brackets=self.config.get("leverage_brackets"),
+            )
+        except Exception:
+            mmr = 0.004
+            cum = 0.0
+
+        q = position.quantity
+        entry = position.entry_price
+        c = position.isolated_collateral
+
+        if position.direction == OrderDirection.LONG:
+            denom = q * (1.0 - mmr)
+            if denom <= 0:
+                return 0.0
+            return (q * entry - c - cum) / denom
+        else:
+            denom = q * (1.0 + mmr)
+            return (q * entry + c + cum) / denom
 
     def _apply_funding_settlement(
         self,
@@ -614,6 +872,22 @@ class PaperBroker:
             cashflow_usd=cashflow,
         )
         self.funding_history.append(event)
+
+        # Cập nhật lại liquidation_price theo collateral thực tế mới (E2)
+        position.liquidation_price = self._calculate_collateral_aware_liquidation_price(position)
+
+        # Ghi nhận ngay cashflow vào Circuit Breaker (E3)
+        self.circuit_breaker.record_cashflow(
+            amount=cashflow,
+            timestamp=timestamp,
+            equity=max(0.0, self.equity),
+            param_name="amount",
+        )
+
+        # Nếu Circuit Breaker bị khóa do funding loss, đóng toàn bộ vị thế ngay (E3)
+        if self.circuit_breaker.is_locked:
+            self._handle_circuit_breaker_lock(timestamp)
+
         return event
 
     def _update_order_record(
@@ -646,10 +920,10 @@ class PaperBroker:
 
     def update_stop_loss(self, symbol: str, new_stop_loss: float) -> bool:
         """
-        Cập nhật Stop Loss cho vị thế đang mở.
-        Chỉ cho phép thắt chặt rủi ro:
-        - LONG: chỉ được nâng SL lên cao hơn.
-        - SHORT: chỉ được hạ SL xuống thấp hơn.
+        Cập nhật Stop Loss cho vị thế đang mở (E7).
+        Chỉ cho phép thắt chặt rủi ro và không được vượt qua giá thị trường hiện tại:
+        - LONG: chỉ được nâng SL lên cao hơn và phải nhỏ hơn mark price hiện tại.
+        - SHORT: chỉ được hạ SL xuống thấp hơn và phải lớn hơn mark price hiện tại.
         """
         symbol = str(symbol).upper()
         if symbol not in self.positions:
@@ -657,30 +931,40 @@ class PaperBroker:
 
         pos = self.positions[symbol]
         new_sl = _validate_finite_positive("new_stop_loss", new_stop_loss)
+        current_mark = self.last_mark_prices.get(symbol, pos.entry_price)
 
         if pos.direction == OrderDirection.LONG:
             if new_sl <= pos.stop_loss_price:
                 return False  # Không cho phép nới rộng SL
-            if new_sl >= pos.entry_price:
-                # Cho phép trailing stop dương hoặc bảo hòa vốn
-                pass
+            if new_sl >= current_mark:
+                return False  # Không cho phép SL vượt qua giá thị trường hiện tại (E7)
             pos.stop_loss_price = new_sl
             return True
         else:  # SHORT
             if new_sl >= pos.stop_loss_price:
                 return False  # Không cho phép nới rộng SL
+            if new_sl <= current_mark:
+                return False  # Không cho phép SL vượt qua giá thị trường hiện tại (E7)
             pos.stop_loss_price = new_sl
             return True
 
     def close_all_positions(self, current_price: float, timestamp: datetime, reason: ExitReason) -> List[TradeRecord]:
-        """Đóng khẩn cấp toàn bộ vị thế đang mở (dùng khi ngắt mạch hoặc kết thúc backtest)."""
+        """
+        Đóng khẩn cấp toàn bộ vị thế đang mở kèm exit slippage (E7).
+        """
         closed_trades = []
+        p = _validate_finite_positive("current_price", current_price)
+        t = _ensure_utc(timestamp)
         for symbol in list(self.positions.keys()):
             pos = self.positions[symbol]
+            if pos.direction == OrderDirection.LONG:
+                exit_price = p * (1.0 - self.slippage_pct)
+            else:
+                exit_price = p * (1.0 + self.slippage_pct)
             trade = self._execute_exit(
                 position=pos,
-                exit_price=current_price,
-                exit_time=timestamp,
+                exit_price=exit_price,
+                exit_time=t,
                 exit_reason=reason,
                 intrabar_estimated=False,
             )
@@ -690,11 +974,23 @@ class PaperBroker:
     def verify_accounting_invariants(self) -> None:
         """
         Kiểm tra tính nhất quán toán học của toàn bộ sổ cái kế toán (Accounting Invariants).
-        Bắt buộc thỏa mãn với sai số số học 1e-4:
+        Bắt buộc thỏa mãn với sai số số học 1e-4.
+        Kiểm tra math.isfinite trước khi so sánh tolerance (E8).
         1. wallet_balance == initial_balance + sum(gross_pnl) - sum(all_fees) + sum(funding)
         2. available_margin == wallet_balance - reserved_collateral
         3. equity == wallet_balance + unrealized_pnl
         """
+        # Kiểm tra finite trên tất cả các trường
+        for name, val in [
+            ("wallet_balance", self.wallet_balance),
+            ("reserved_collateral", self.reserved_collateral),
+            ("available_margin", self.available_margin),
+            ("unrealized_pnl", self.unrealized_pnl),
+            ("equity", self.equity),
+        ]:
+            if not math.isfinite(val):
+                raise AssertionError(f"Accounting invariant violated! {name} is not finite: {val}")
+
         total_gross_pnl = sum(t.gross_price_pnl for t in self.trade_history)
         total_fees = sum(t.entry_fee + t.exit_fee for t in self.trade_history) + sum(
             pos.entry_fee for pos in self.positions.values()
@@ -702,6 +998,8 @@ class PaperBroker:
         total_funding = sum(f.cashflow_usd for f in self.funding_history)
 
         expected_wallet = self.initial_balance + total_gross_pnl - total_fees + total_funding
+        if not math.isfinite(expected_wallet):
+            raise AssertionError(f"Accounting invariant violated! expected_wallet is not finite: {expected_wallet}")
 
         if abs(self.wallet_balance - expected_wallet) > 1e-4:
             raise AssertionError(
@@ -709,25 +1007,44 @@ class PaperBroker:
             )
 
         expected_available = self.wallet_balance - self.reserved_collateral
+        if not math.isfinite(expected_available):
+            raise AssertionError(f"Margin invariant violated! expected_available is not finite: {expected_available}")
+
         if abs(self.available_margin - expected_available) > 1e-4:
             raise AssertionError(
                 f"Margin invariant violated! available_margin ({self.available_margin:.4f}) != expected ({expected_available:.4f})"
             )
 
         expected_equity = self.wallet_balance + self.unrealized_pnl
+        if not math.isfinite(expected_equity):
+            raise AssertionError(f"Equity invariant violated! expected_equity is not finite: {expected_equity}")
+
         if abs(self.equity - expected_equity) > 1e-4:
             raise AssertionError(
                 f"Equity invariant violated! equity ({self.equity:.4f}) != expected ({expected_equity:.4f})"
             )
 
     @staticmethod
-    def _parse_timeframe_duration(tf: str) -> timedelta:
-        """Chuyển chuỗi timeframe ('1m', '15m', '4h', '1d') sang timedelta."""
-        tf = tf.strip().lower()
-        if tf.endswith("m"):
-            return timedelta(minutes=int(tf[:-1]))
-        elif tf.endswith("h"):
-            return timedelta(hours=int(tf[:-1]))
-        elif tf.endswith("d"):
-            return timedelta(days=int(tf[:-1]))
-        return timedelta(minutes=1)
+    def _parse_timeframe_duration(tf: Any) -> timedelta:
+        """
+        Chuyển chuỗi timeframe ('1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d')
+        sang timedelta.
+        Ném ValueError / TypeError nếu chuỗi không hợp lệ hoặc duration <= 0 (E6).
+        """
+        if type(tf) is bool or not isinstance(tf, str):
+            raise TypeError(f"timeframe must be string, got {type(tf).__name__}: {tf!r}")
+        tf_str = tf.strip().lower()
+        m = re.match(r"^([1-9]\d*)([mhd])$", tf_str)
+        if not m:
+            raise ValueError(f"Invalid or unsupported timeframe format: {tf!r}")
+        num = int(m.group(1))
+        unit = m.group(2)
+        if num <= 0:
+            raise ValueError(f"timeframe duration must be positive, got {num}")
+        if unit == "m":
+            return timedelta(minutes=num)
+        elif unit == "h":
+            return timedelta(hours=num)
+        elif unit == "d":
+            return timedelta(days=num)
+        raise ValueError(f"Unsupported timeframe unit: {unit}")

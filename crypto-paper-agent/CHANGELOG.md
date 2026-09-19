@@ -2,6 +2,48 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 05) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 8 nhóm phát hiện E1–E8)
+- **E1 - Cấu hình Settlement Hours, Tính Toàn Vẹn & Khóa Trùng Funding (`src/execution/paper_broker.py`):**
+  - Đọc `settlement_hours_utc` động từ config (mặc định `[0, 8, 16]`), validate trong $[0, 23]$.
+  - Khóa thanh toán funding đơn nhất theo `(symbol, candle.open_time)`.
+  - Validate `math.isfinite` trên funding rate tại settlement hours trước khi thực hiện bất kỳ biến động trạng thái nào.
+  - Phát hiện và từ chối gap nến nhảy qua mốc settlement khi đang mở vị thế.
+- **E2 - Cập nhật Giá Thanh lý Theo Ký quỹ Thực tế (`src/execution/paper_broker.py`):**
+  - Tự động cập nhật `position.liquidation_price` bằng cách gọi `calculate_estimated_liquidation_price` với `isolated_collateral` thực tế và `get_mmr_tier(position_size_usd, symbol, leverage_brackets)` sau khi thanh toán funding.
+- **E3 - Tích hợp Dòng tiền Circuit Breaker & Cưỡng Chế Đóng Khi Khóa (`src/risk/circuit_breakers.py`, `src/execution/paper_broker.py`):**
+  - Bổ sung `record_cashflow(amount, timestamp, equity)` vào `CircuitBreakerState` để theo dõi rolling 24h PnL từ funding và phí vào/ra mà không làm biến dạng win/loss streak hay `risk_multiplier`.
+  - Bổ sung `record_trade_outcome(net_pnl, timestamp)` để cập nhật chuỗi thắng/thua độc lập không double count cashflow.
+  - Tự động kích hoạt cơ chế thoát hiểm `_handle_circuit_breaker_lock` hủy lệnh chờ và đóng cưỡng chế toàn bộ vị thế còn lại kèm slippage khi Breaker bị khóa (kèm cờ chống đệ quy `_is_handling_cb_lock`).
+- **E4 - Hạch toán Vốn Sau Khi Đóng Vị Thế (`src/execution/paper_broker.py`):**
+  - Gỡ vị thế khỏi `self.positions` trước khi tính `post_close_equity`, loại bỏ hoàn toàn double counting unrealized PnL cũ.
+- **E5 - Tái Kiểm Soát Cổng Duyệt Lệnh & Xử Lý Lỗi Solver (`src/execution/paper_broker.py`):**
+  - Tái kiểm tra khoảng cách SL/TP so với `fill_price` thực tế có trượt giá (chặn fill gap chạm SL hoặc TP sai hướng với `OrderStatus.REJECTED`).
+  - Bắt toàn bộ ngoại lệ `ValueError` từ solver/sizing chuyển thành `OrderStatus.REJECTED` (không để unhandled exception làm crash engine).
+  - Kiểm tra tính nhất quán giữa `order_declared_budget_usd` và `risk_percent`.
+- **E6 - Giao Dịch Nguyên Khối (Transactional Preflight Validation) (`src/execution/paper_broker.py`):**
+  - Kiểm tra OHLC, timeframe regex, positive duration, thời gian mở/đóng đơn điệu và tính hữu hạn của funding rate trước bất kỳ đột biến tài chính nào.
+- **E7 - Nâng Cao Độ Trung Thực Khớp Lệnh (`src/execution/paper_broker.py`):**
+  - Áp dụng trượt giá thoát lệnh cho `close_all_positions`.
+  - Mark Price guard trong `update_stop_loss` chặn dời SL qua giá thị trường hiện tại.
+  - Gap TP tại Pha 1 chốt lời ngay tại giá Open trước khi settlement funding ở Pha 2.
+- **E8 - Xác Thực Miền Cấu Hình & Bất Biến Số Học (`src/execution/paper_broker.py`):**
+  - Xác thực cấu hình khởi tạo Engine (`initial_equity_usd > 0`, `fees in [0, 1]`, `settlement_hours in [0, 23]`).
+  - Kiểm tra `math.isfinite` trên toàn bộ tài khoản trong `verify_accounting_invariants`.
+- **Bộ kiểm thử & Báo cáo:**
+  - Chạy đạt **26/26 probe tests độc lập** trong `docs/reviews/test_stage_04_review_05.py` (100% pass).
+  - Hoàn thiện mở rộng Oracle test trong `tests/test_execution_accounting.py` chạy qua 300 nến.
+  - Cập nhật kịch bản `scripts/simulate_paper_execution.py` (cả Part A và Part B đều đạt 100% đối soát vốn).
+  - Tạo báo cáo `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_05.md`.
+  - Cập nhật Phụ lục 4 trong `docs/decisions/0007-paper-execution-engine-architecture.md`.
+### Kết quả kiểm thử
+- **Review 05 Probes:** **26/26 tests PASSED** trong 0.67s.
+- **Pytest Offline:** **170/170 tests PASSED** trong 4.52s.
+- **Pytest Network:** **5/5 tests PASSED** trong 13.29s.
+- **Tổng cộng hệ thống:** **175/175 tests PASSED (100% xanh)**.
+
+---
+
 ## [Giai đoạn 4] - Paper Execution Engine (2026-09-19)
 ### Đã triển khai
 - **Mô hình Dữ liệu Đơn lệnh & Vị thế (`src/execution/order_models.py`):**

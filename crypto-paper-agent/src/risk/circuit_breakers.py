@@ -162,39 +162,31 @@ class CircuitBreakerState:
 
         return dt
 
-    def record_trade_result(
+    def record_cashflow(
         self,
-        pnl: float,
+        amount: float,
         timestamp: Union[datetime, int, float, str],
         equity: float,
+        param_name: str = "amount",
     ) -> None:
         """
-        Ghi nhận kết quả PnL của 1 lệnh đã đóng và cập nhật trạng thái ngắt mạch.
-        Xác thực đầu vào trước khi mutate state; sử dụng advance_time đồng bộ.
-
-        Args:
-            pnl: Lợi nhuận/thua lỗ ròng bằng USD.
-            timestamp: Thời điểm đóng lệnh.
-            equity: Số dư vốn hiện tại của tài khoản (USD) tại thời điểm đóng lệnh.
+        Ghi nhận trực tiếp dòng tiền (ví dụ: funding, phí) vào cửa sổ rolling 24h PnL
+        mà KHÔNG tính vào chuỗi thắng/thua của các lệnh (consecutive_losses / consecutive_wins).
         """
-        # 1. Validate PnL
-        if type(pnl) is bool or not isinstance(pnl, (int, float)):
-            raise TypeError(f"pnl must be numeric float or int, got {type(pnl).__name__}: {pnl!r}")
-        f_pnl = float(pnl)
-        if not math.isfinite(f_pnl):
-            raise ValueError(f"pnl must be finite, got {f_pnl}")
+        if type(amount) is bool or not isinstance(amount, (int, float)):
+            raise TypeError(f"{param_name} must be numeric float or int, got {type(amount).__name__}: {amount!r}")
+        f_amt = float(amount)
+        if not math.isfinite(f_amt):
+            raise ValueError(f"{param_name} must be finite, got {f_amt}")
 
-        # 2. Validate Equity
         if type(equity) is bool or not isinstance(equity, (int, float)):
             raise TypeError(f"equity must be numeric float or int, got {type(equity).__name__}: {equity!r}")
         f_eq = float(equity)
         if not math.isfinite(f_eq) or f_eq < 0:
             raise ValueError(f"equity must be non-negative finite number, got {f_eq}")
 
-        # 3. Tiến thời gian đồng bộ và giải phóng khóa hết hạn (nếu có)
         dt = self.advance_time(timestamp)
 
-        # Xử lý tài khoản cạn vốn (cháy tài khoản)
         if f_eq == 0:
             self.is_halted = True
             self.is_locked = True
@@ -202,29 +194,42 @@ class CircuitBreakerState:
             logger.error("[CircuitBreaker] Tài khoản cạn vốn (equity = 0)! Kích hoạt HALTED hoàn toàn.")
             return
 
-        # 4. Ghi nhận giao dịch mới vào lịch sử 24h
-        self.trade_history_24h.append((dt, f_pnl))
+        self.trade_history_24h.append((dt, f_amt))
         self.rolling_24h_pnl = sum(p for _, p in self.trade_history_24h)
 
-        # 5. Kiểm tra Daily Loss Limit (ngưỡng % trên equity hiện tại sau lệnh)
         loss_limit_usd = f_eq * self.daily_loss_limit_pct
         if self.rolling_24h_pnl <= -1.0 * loss_limit_usd:
             if not self.is_locked:
                 self.is_locked = True
                 self.locked_until = dt + timedelta(hours=24)
                 logger.warning(
-                    "[CircuitBreaker] KÍCH HOẠT KHÓA 24H! Rolling 24h PnL: {:.2f}$ vượt ngưỡng lỗ tối đa: -{:.2f}$ ({:.1f}%). "
+                    "[CircuitBreaker] KÍCH HOẠT KHÓA 24H qua cashflow! Rolling 24h PnL: {:.2f}$ vượt ngưỡng lỗ tối đa: -{:.2f}$ ({:.1f}%). "
                     "Khóa giao dịch tới: {}",
                     self.rolling_24h_pnl, loss_limit_usd, self.daily_loss_limit_pct * 100, self.locked_until.isoformat()
                 )
             else:
-                # Đang bị khóa: Không gia hạn thêm locked_until
                 logger.info(
-                    "[CircuitBreaker] Đang trong thời gian khóa, ghi nhận thêm PnL: {:.2f}$. Giữ nguyên mốc khóa: {}",
-                    f_pnl, self.locked_until.isoformat()
+                    "[CircuitBreaker] Đang trong thời gian khóa, ghi nhận thêm cashflow: {:.2f}$. Giữ nguyên mốc khóa: {}",
+                    f_amt, self.locked_until.isoformat()
                 )
 
-        # 6. Quản lý chuỗi thắng / thua và điều chỉnh risk_multiplier
+    def record_trade_outcome(
+        self,
+        net_pnl: float,
+        timestamp: Union[datetime, int, float, str],
+    ) -> None:
+        """
+        Cập nhật chuỗi thắng/thua (consecutive_losses / consecutive_wins) và risk_multiplier
+        từ kết quả của lệnh vừa tất toán mà KHÔNG ghi nhận thêm vào rolling 24h cashflow ledger.
+        """
+        if type(net_pnl) is bool or not isinstance(net_pnl, (int, float)):
+            raise TypeError(f"net_pnl must be numeric float or int, got {type(net_pnl).__name__}: {net_pnl!r}")
+        f_pnl = float(net_pnl)
+        if not math.isfinite(f_pnl):
+            raise ValueError(f"net_pnl must be finite, got {f_pnl}")
+
+        dt = self.advance_time(timestamp)
+
         if f_pnl < 0:
             # Lệnh THUA
             self.consecutive_losses += 1
@@ -262,6 +267,19 @@ class CircuitBreakerState:
             self.consecutive_losses = 0
             self.consecutive_wins = 0
             logger.info("[CircuitBreaker] Lệnh hòa (pnl=0). Reset cả chuỗi thắng và thua về 0.")
+
+    def record_trade_result(
+        self,
+        pnl: float,
+        timestamp: Union[datetime, int, float, str],
+        equity: float,
+    ) -> None:
+        """
+        Ghi nhận kết quả PnL của 1 lệnh đã đóng và cập nhật trạng thái ngắt mạch.
+        Bao gồm ghi nhận vào rolling 24h cashflow và cập nhật chuỗi thắng/thua.
+        """
+        self.record_cashflow(amount=pnl, timestamp=timestamp, equity=equity, param_name="pnl")
+        self.record_trade_outcome(net_pnl=pnl, timestamp=timestamp)
 
     def get_effective_risk_percent(self, base_risk_percent: float) -> float:
         """

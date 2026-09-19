@@ -102,3 +102,52 @@ Mỗi cây nến OHLCV được xử lý tuần tự qua 5 pha bất biến theo
 - 100% tuân thủ các bất biến rủi ro đã được nghiệm thu ở Giai đoạn 3 mà không cần nới lỏng hay sửa đổi logic gốc.
 - Đảm bảo tính tất định (Determinism): hai lần chạy với cùng chuỗi nến và lệnh cho ra cùng một bảng lịch sử giao dịch và số dư ví chính xác từng bit.
 - Sẵn sàng cung cấp interface khớp lệnh chuẩn xác cho Giai đoạn 5 (Alpha Discovery & Strategy Development).
+
+---
+
+## 4. Phụ lục: Bổ sung & Chuẩn hóa Kiến trúc theo GPT Review 05 (E1–E8)
+
+Ngày cập nhật: 2026-09-19  
+Phạm vi giải quyết: 8 nhóm vấn đề kỹ thuật E1–E8 phát hiện bởi GPT Review 05.
+
+### 4.1 Cấu hình Settlement Hours, Tính Toàn Vẹn & Khóa Trùng Funding (E1)
+- **Settlement Hours động:** Đọc từ `config['execution']['settlement_hours_utc']` (mặc định `[0, 8, 16]`). Toàn bộ giờ phải thuộc $[0, 23]$, không trùng lặp và được sắp xếp tăng dần.
+- **Idempotency Key:** Mỗi sự kiện thanh toán funding được định danh duy nhất bằng cặp khóa `(symbol, candle.open_time)`, đảm bảo không bao giờ thanh toán trùng lặp tại cùng một nến.
+- **Xác thực Funding Rate:** Khi nến rơi vào giờ thanh toán, nếu `funding_rate` bị khuyết (`None`) hoặc không hữu hạn (`NaN`, `Inf`) thì động cơ lập tức từ chối xử lý nến trước khi bất kỳ trạng thái nào bị đột biến.
+- **Phát hiện Gap bỏ qua Settlement:** Khi vị thế đang mở, nếu bước nhảy thời gian giữa hai nến liên tiếp vượt qua một hoặc nhiều mốc settlement hours mà không có dữ liệu nến tương ứng, động cơ ném ngoại lệ từ chối để ngăn chặn việc lẩn tránh nghĩa vụ ký quỹ/phí funding.
+
+### 4.2 Cập nhật Giá Thanh lý Theo Ký quỹ Thực tế (Collateral-Aware Liquidation) (E2)
+- Khi dòng tiền funding được cộng/trừ vào `isolated_collateral`, tỷ lệ đòn bẩy thực tế và khoảng đệm an toàn thay đổi.
+- Động cơ tự động gọi lại bộ giải thanh lý chuẩn `calculate_estimated_liquidation_price` với `isolated_collateral` mới và `get_mmr_tier(position_size_usd, symbol, leverage_brackets)`, cập nhật lại `position.liquidation_price` theo thời gian thực.
+
+### 4.3 Dòng Tiền Độc Lập cho Circuit Breaker & Cưỡng Chế Đóng Khi Khóa (E3)
+- Bổ sung phương thức `record_cashflow(amount, timestamp, equity)` vào `CircuitBreakerState`: ghi nhận ngay lập tức phí giao dịch và funding cashflow vào cửa sổ trượt lỗ 24h mà không làm biến dạng chuỗi thắng/thua (trade streak) hay làm méo mó `risk_multiplier`.
+- Tự động kích hoạt cơ chế thoát hiểm khẩn cấp `_handle_circuit_breaker_lock`: khi tổng lỗ chạm trần khiến Breaker kích hoạt khóa (`is_locked = True`), Paper Broker tự động hủy toàn bộ lệnh chờ (`pending_orders`) và cưỡng chế đóng toàn bộ vị thế đang mở còn lại theo giá thị trường (có áp dụng exit slippage) với mã lý do `CIRCUIT_BREAKER_LOCK`.
+
+### 4.4 Hạch toán Vốn Sau Khi Đóng Vị Thế (Post-Close Equity) (E4)
+- Khi đóng một vị thế, vị thế đó được gỡ bỏ khỏi danh mục `self.positions` trước khi tính toán lại `post_close_equity` để gửi vào Circuit Breaker.
+- Loại bỏ hoàn toàn lỗi cộng hai lần (double counting) lãi/lỗ chưa thực hiện cũ của vị thế vừa đóng vào số dư equity mới.
+
+### 4.5 Tái Kiểm Soát Cổng Duyệt Lệnh & Xử Lý Lỗi Solver (E5)
+- Tái kiểm tra khoảng cách Stop Loss và Take Profit sau khi tính toán giá khớp có trượt giá (`fill_price`):
+  - Nếu thị trường nhảy Gap khiến `fill_price` chạm hoặc vượt qua `stop_loss_price`, lệnh bị từ chối sạch sẽ với trạng thái `ORDER_REJECTED` (`REASON: Fill price crossed stop loss`).
+  - Nếu khoảng cách TP không hợp lệ so với giá fill thực tế, lệnh bị từ chối với trạng thái `ORDER_REJECTED`.
+- Bắt toàn bộ ngoại lệ định cỡ/thanh lý (`ValueError` từ solver hoặc position sizing) và chuyển thành `ORDER_REJECTED` với mô tả lỗi cụ thể, tuyệt đối không để unhandled exception làm sập tiến trình nến.
+- Kiểm tra khớp đúng giữa ngân sách rủi ro khai báo (`order_declared_budget_usd`) và `risk_percent` cấu hình.
+
+### 4.6 Giao Dịch Nguyên Khối (Transactional Preflight Validation) (E6)
+- Trước khi thực hiện bất kỳ thay đổi trạng thái nào trong `process_candle`, Broker kiểm tra toàn diện:
+  - Quan hệ hình thái nến: $High \ge \max(Open, Close)$ và $Low \le \min(Open, Close)$, $High \ge Low > 0$.
+  - Định dạng khung thời gian (`timeframe`): regex hợp lệ (ví dụ `15m`, `1h`, `4h`) và có thời lượng dương $> 0$.
+  - Thời gian mở nến đơn điệu tăng nghiêm ngặt: $open\_time > last\_candle\_open\_time$.
+  - Thời gian đóng nến nhất quán: $close\_time > open\_time$ và đúng thời lượng nến.
+- Nếu bất kỳ điều kiện nào không thỏa mãn, ném ngoại lệ và bảo toàn 100% trạng thái của Broker và Circuit Breaker (Zero Financial Mutation).
+
+### 4.7 Nâng Cao Độ Trung Thực Khớp Lệnh (Execution Fidelity) (E7)
+- Cưỡng chế đóng lệnh khẩn cấp (`close_all_positions`) phải áp dụng trượt giá thoát lệnh (`slippage_pct`).
+- Thắt chặt Stop Loss (`update_stop_loss`) không được phép vượt qua giá thị trường hiện tại (Mark Price).
+- Tại Pha 1, nếu nến mở cửa nhảy Gap qua giá Take Profit, vị thế được ưu tiên chốt lời ngay tại giá mở cửa trước khi thực hiện thanh toán Funding ở Pha 2.
+
+### 4.8 Xác Thực Miền Cấu Hình & Bất Biến Số Học (E8)
+- Xác thực khởi tạo Engine: `initial_equity_usd` phải hữu hạn và $> 0$; các tham số phí (`taker_pct`, `slippage_pct`) phải là số thực hữu hạn trong $[0, 1.0]$.
+- Gia cố `verify_accounting_invariants`: kiểm tra `math.isfinite` trên toàn bộ số dư ví, ký quỹ khả dụng, ký quỹ cô lập và tổng unrealized PnL trước khi thực hiện các phép so sánh dung sai, chặn đứng hoàn toàn việc lọt lỗi do giá trị không hữu hạn.

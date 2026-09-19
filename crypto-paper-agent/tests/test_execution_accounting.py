@@ -207,6 +207,25 @@ def test_mandatory_oracle_long_trade():
     assert broker.reserved_collateral == 0.0
     assert abs(broker.available_margin - 10038.88) < 1e-4
 
+    # Chạy tiếp các nến còn lại cho đủ đúng 300 nến (238 nến flat không vị thế)
+    for _ in range(238):
+        curr_time += timedelta(minutes=1)
+        c = {
+            "open_time": curr_time,
+            "open": 103.0,
+            "high": 103.5,
+            "low": 102.5,
+            "close": 103.0,
+            "symbol": "BTCUSDT",
+            "timeframe": "1m",
+        }
+        broker.process_candle(c)
+
+    assert len(broker.account_snapshots) == 300
+    assert abs(broker.wallet_balance - 10038.88) < 1e-4
+    assert abs(broker.equity - 10038.88) < 1e-4
+    assert broker.reserved_collateral == 0.0
+
 
 def test_short_trade_with_negative_funding():
     """

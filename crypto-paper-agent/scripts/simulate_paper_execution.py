@@ -219,7 +219,8 @@ def run_real_data_simulation():
     funding_path = project_root / "data" / "raw" / "binance" / "BTCUSDT" / "8h" / "funding_rate.parquet"
 
     if not ohlcv_path.exists() or not funding_path.exists():
-        print(f"LỖI: Không tìm thấy tệp cache dữ liệu tại {ohlcv_path}")
+        print(f"[SKIPPED / NOT_VERIFIED] Không tìm thấy tệp cache dữ liệu tại {ohlcv_path} hoặc {funding_path}.")
+        print("Để tải cache dữ liệu Binance thật, chạy: python scripts/fetch_market_data.py")
         return
 
     df_ohlcv = pd.read_parquet(ohlcv_path)
@@ -250,10 +251,11 @@ def run_real_data_simulation():
     )
     print("-" * 145)
 
+    # Lập kế hoạch sinh tín hiệu tại close nến N-1 để thực thi tại open nến N (Chống nhìn trước)
     order_plan = [
-        # Nến 2: Gửi lệnh hợp lệ (LONG tại giá Open của nến 2, SL 56k (buffer an toàn), TP 63.6k)
+        # Sinh tín hiệu tại close nến 1 (00:30 UTC), khớp tại open nến 2 (00:30 UTC)
         {
-            "trigger_idx": 2,
+            "signal_at_idx": 1,
             "direction": OrderDirection.LONG,
             "stop_loss_price": 56000.0,
             "take_profit_price": 63600.0,
@@ -261,9 +263,9 @@ def run_real_data_simulation():
             "base_risk_percent": 0.02,
             "conviction_tier": "normal",
         },
-        # Nến 117: Thử gửi lệnh VI PHẠM RISK INVARIANT (leverage 10x > max 5x) để kiểm tra Risk Gate
+        # Sinh tín hiệu tại close nến 116 (05:15 UTC), vi phạm Risk Invariant (10x > max 5x) bị từ chối ở open nến 117
         {
-            "trigger_idx": 117,
+            "signal_at_idx": 116,
             "direction": OrderDirection.LONG,
             "stop_loss_price": 60000.0,
             "take_profit_price": 65000.0,
@@ -289,23 +291,7 @@ def run_real_data_simulation():
             "funding_rate": f_rate,
         }
 
-        # Kích hoạt signal ở nến này
-        for item in order_plan:
-            if item["trigger_idx"] == i:
-                req = OrderRequest(
-                    symbol="BTCUSDT",
-                    direction=item["direction"],
-                    signal_price=candle["open"],
-                    stop_loss_price=item["stop_loss_price"],
-                    take_profit_price=item.get("take_profit_price"),
-                    signal_time=c_open_time,
-                    leverage=item["leverage"],
-                    base_risk_percent=item["base_risk_percent"],
-                    conviction_tier=item.get("conviction_tier", "normal"),
-                )
-                broker.submit_order(req)
-
-        # Xử lý nến theo 5 pha
+        # Xử lý nến theo 5 pha chống nhìn trước
         res = broker.process_candle(candle)
 
         # In log nếu có giao dịch fill hoặc đóng hoặc funding
@@ -338,6 +324,24 @@ def run_real_data_simulation():
                     f"{'N/A':<9} | {'0.000':<8} | {'0.00':<9} | {'0.000':<8} | {'0.000':<8} | {'0.000':<10} | "
                     f"{broker.wallet_balance:<11.2f} | {broker.equity:<12.2f} | {ev['reasons'][0][:28]}"
                 )
+
+        # Sau khi nến i đóng hoàn tất tại close_time, sinh tín hiệu và xếp hàng pending cho nến i+1
+        c_close_time = c_open_time + timedelta(minutes=15)
+        for item in order_plan:
+            if item["signal_at_idx"] == i:
+                req = OrderRequest(
+                    symbol="BTCUSDT",
+                    direction=item["direction"],
+                    signal_price=candle["close"],
+                    stop_loss_price=item["stop_loss_price"],
+                    take_profit_price=item.get("take_profit_price"),
+                    signal_time=c_close_time,
+                    leverage=item["leverage"],
+                    base_risk_percent=item["base_risk_percent"],
+                    conviction_tier=item.get("conviction_tier", "normal"),
+                )
+                broker.submit_order(req)
+                print(f"      [SIGNAL GENERATED] Nến #{i} đóng lúc {c_close_time.strftime('%H:%M')} UTC (close={candle['close']:,.2f}) -> Xếp hàng lệnh cho Open nến #{i+1}")
 
     # Đối soát kế toán cuối phiên
     broker.verify_accounting_invariants()
