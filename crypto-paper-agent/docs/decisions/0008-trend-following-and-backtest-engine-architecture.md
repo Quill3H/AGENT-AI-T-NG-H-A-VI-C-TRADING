@@ -1,8 +1,8 @@
 # ADR 0008: Kiến Trúc Chiến Lược Trend Following & Cỗ Máy Backtest Đa Khung Thời Gian
 
-**Trạng thái:** ACCEPTED  
-**Ngày quyết định:** 2026-09-19  
-**Người quyết định:** Quill3H & Antigravity (theo đặc tả kỹ thuật Giai đoạn 5 — ANTIGRAVITY_STAGE_05_TASK.md)
+**Trạng thái:** PENDING REVIEW (Chờ nghiệm thu theo GPT Review 10)  
+**Ngày đề xuất:** 2026-09-19  
+**Người đề xuất:** Quill3H & Antigravity (theo đặc tả kỹ thuật Giai đoạn 5 — ANTIGRAVITY_STAGE_05_TASK.md)
 
 ---
 

@@ -90,10 +90,14 @@ class TrendFollowingStrategy(BaseStrategy):
         
         # State machine context per symbol
         self.setup = SetupContext()
+        self.setup_count: int = 0
+        self.candidate_count: int = 0
 
     def reset_state(self) -> None:
         """Reset state machine về trạng thái IDLE."""
         self.setup.reset()
+        self.setup_count = 0
+        self.candidate_count = 0
 
     def on_candle_close(
         self,
@@ -261,6 +265,7 @@ class TrendFollowingStrategy(BaseStrategy):
                                         )
 
                                         # One-shot: đã phát lệnh xong thì reset setup về IDLE
+                                        self.candidate_count += 1
                                         self.setup.reset()
                                         return order_req
 
@@ -280,6 +285,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 self.setup.direction = OrderDirection.LONG
                 self.setup.trigger_time = curr_time
                 self.setup.setup_age_bars = 0
+                self.setup_count += 1
                 logger.debug(
                     f"[{self.symbol}] LONG setup ARMED at {curr_time.isoformat()}: "
                     f"Crossover EMA20({curr_ema_fast:.2f}) > EMA50({curr_ema_slow:.2f}), Close > EMA200."
@@ -295,6 +301,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 self.setup.direction = OrderDirection.SHORT
                 self.setup.trigger_time = curr_time
                 self.setup.setup_age_bars = 0
+                self.setup_count += 1
                 logger.debug(
                     f"[{self.symbol}] SHORT setup ARMED at {curr_time.isoformat()}: "
                     f"Crossover EMA20({curr_ema_fast:.2f}) < EMA50({curr_ema_slow:.2f}), Close < EMA200."

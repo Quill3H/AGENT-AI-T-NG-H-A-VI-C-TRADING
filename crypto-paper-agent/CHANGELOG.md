@@ -41,27 +41,29 @@ Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRY
 - **Tải Dữ Liệu Benchmark 3 Năm (`scripts/download_benchmark_data.py`):**
   - Tải và lưu cache parquet toàn bộ dữ liệu BTCUSDT từ `2021-01-01` đến `2023-12-31` (6,570 nến 4h, 105,120 nến 15m, 3,285 bản ghi funding rate, 1095 ngày Open Interest từ Binance Vision).
 
+### Cập nhật bổ sung theo phản hồi sơ bộ GPT Review 10 (Blockers 1–8)
+- **Funding Provenance Fail-Closed (Blocker 1):** Loại bỏ ép kiểu `bool(row_15m["funding_readiness"])`, giữ nguyên kiểu thô để `PaperBroker` kiểm tra `type is bool` nghiêm ngặt; bổ sung 7 ca kiểm thử tích hợp (`missing`, `False`, `"False"`, `1`, `NaN`, `future`, `stale`) và ca `funding_rate = 0.0` hợp lệ; xác minh tính bất biến tuyệt đối (Zero Mutation) trên broker/account khi lỗi.
+- **Future-Perturbation Invariance Test Phi-Rỗng (Blocker 2):** Xây dựng kịch bản có ít nhất 1 setup, 1 lệnh và 1 giao dịch phát sinh trước $T$; sau khi nhiễu dữ liệu tương lai, tái tính toàn bộ chỉ báo 4h qua pipeline thật `add_all_features`; chứng minh toàn bộ orders, trades và account snapshots trước $T$ bất biến 100%.
+- **Test CWD Independence (Blocker 3):** Chạy chiến lược `trend_following` thật từ thư mục ngoài project root với đầy đủ cờ `--config`, `--strategy`, `--start`, `--end`, `--no-fetch`; xác minh resolve path độc lập CWD và đối soát kế toán đạt.
+- **Đính chính Báo cáo & Phân tích (Blockers 5 & 6):** Bổ sung đếm setups (70) và candidates (22); đính chính win rate 50.00% trên quy mô mẫu nhỏ $N=16$ không khái quát hóa được; phân định rõ lỗi ký quỹ Risk Gate với Circuit Breaker; không dùng Daily Loss Limit 5% để đánh giá Max Drawdown 16.15%; gắn nhãn minh bạch `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+- **Hồ sơ Dự án (Blocker 7):** Khôi phục dòng Giai đoạn 4 trong `PROJECT_STATE.md`; chuyển ADR 0008 sang `PENDING REVIEW`; cập nhật `PLANNER_HANDOVER.md` ghi nhận chờ GPT Review 10.
+
 ### Kết quả kiểm thử thực tế
-- **Toàn bộ Unit Tests Offline (`tests/`):** **228/228 tests PASSED** (5 deselected network tests) trong 5.92s.
-- **Network Tests (`tests/test_data_layer.py`):** **5/5 tests PASSED** trong 12.68s.
-- **Tổng cộng Test Suite:** **233/233 tests PASSED (100%)**, 0 failed, 0 skipped.
-- **Kết quả Benchmark 3 Năm BTCUSDT (`run_backtest.py --strategy trend_following --start 2021-01-01 --end 2023-12-31 --no-fetch`):**
-  - **Khoảng thời gian:** 2021-01-01 00:00:00 UTC -> 2023-12-31 23:45:00 UTC.
-  - **Số nến xử lý:** 15m = 105,120 nến; 4h = 6,570 nến.
-  - **Vốn ban đầu:** 10,000.00 USDT | **Vốn kết thúc:** 12,100.96 USDT.
-  - **Tỷ suất lợi nhuận (Total Return):** **+21.01%**.
-  - **Sụt giảm tối đa (Max Drawdown):** **-2,050.72 USDT (-16.15%)**.
-  - **Tổng lệnh phát đi:** 22 | Khớp: 16 | Từ chối: 6 (`INVARIANT_FAIL_INSUFFICIENT_MARGIN: 6`).
-  - **Tổng số giao dịch:** 16 (10 LONG, 6 SHORT).
-  - **Kết quả giao dịch:** 8 Thắng / 8 Thua / 0 Hòa.
-  - **Tỷ lệ thắng (Win Rate):** **50.00%** (Benchmark nghiên cứu: 35–45%; không overfit).
-  - **Win Rate LONG:** 50.00% | **Win Rate SHORT:** 50.00%.
-  - **Lãi thô (Gross PnL):** +2,489.66 USDT.
-  - **Phí giao dịch (Fees):** -162.82 USDT.
-  - **Phí tài trợ vốn (Funding):** -225.89 USDT.
-  - **Lãi ròng thực tế (Net PnL):** +2,100.96 USDT.
-  - **Lý do thoát lệnh:** 16 vị thế đóng theo Stop Loss / Trailing Stop (`{'STOP_LOSS': 16}`).
-  - **Đối soát kế toán sổ cái:** **PASSED** (Khớp từng cent với dung sai $10^{-4}$).
+- **Toàn bộ Unit Tests Offline (`tests/`):** **235/235 tests PASSED** (5 deselected network tests) trong 7.74s.
+- **Toàn bộ Network Tests (`tests/`):** **5/5 tests PASSED** (235 deselected offline tests) trong 12.39s.
+- **Tổng cộng:** **240/240 tests PASSED (100% Xanh)**.
+
+### Kết quả Backtest Benchmark 3 Năm (2021-2023 BTCUSDT - AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED)
+- Lệnh: `python run_backtest.py --config config/default_config.yaml --strategy trend_following --start 2021-01-01 --end 2023-12-31 --no-fetch`
+- Nến xử lý: 105,120 nến 15m, 6,570 nến 4h (0 missing gap).
+- Setups: 70 ARMED setups; Candidates: 22 lệnh tiềm năng.
+- Lệnh: 22 đã gửi, 16 khớp (FILLED), 6 bị từ chối (REJECTED do `INVARIANT_FAIL_INSUFFICIENT_MARGIN`).
+- Giao dịch: 16 đã đóng (10 LONG, 6 SHORT); 8 Thắng / 8 Thua / 0 Hòa; Tỷ lệ thắng 50.00% ($N=16$).
+- Vốn ban đầu: 10,000.00 USDT -> Vốn cuối kỳ: 12,100.96 USDT (+21.01%).
+- Mức sụt giảm tối đa (Max Drawdown): -2,050.72 USDT (-16.15%).
+- Chi phí thực tế: Phí Taker -162.82 USDT, Phí Funding thanh toán sàn -225.89 USDT, Net PnL +2,100.96 USDT.
+- Thoát vị thế: 100% qua STOP_LOSS (Trailing Stop EMA50 và Swing Stop).
+- Đối soát kế toán: PASSED (Wallet balance matches ledger). Ký quỹ cô lập bảo toàn hoàn hảo. Ký quỹ khả dụng = Vốn cuối kỳ = 12,100.96 USDT. Vị thế mở cuối kỳ = 0. Circuit Breaker = ACTIVE (Risk multiplier: 0.50).
 - **Trạng thái:** DỪNG CHỜ GPT REVIEW 10. Tuyệt đối chưa bắt đầu Giai đoạn 6.
 
 ---

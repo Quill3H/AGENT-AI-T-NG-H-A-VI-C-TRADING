@@ -209,7 +209,14 @@ class BacktestEngine:
             if "funding_time" in row_15m and pd.notna(row_15m["funding_time"]):
                 candle_15m["funding_time"] = row_15m["funding_time"]
             if "funding_readiness" in row_15m:
-                candle_15m["funding_readiness"] = bool(row_15m["funding_readiness"])
+                raw_readiness = row_15m["funding_readiness"]
+                if pd.isna(raw_readiness):
+                    candle_15m["funding_readiness"] = raw_readiness
+                elif isinstance(raw_readiness, (bool, np.bool_)):
+                    candle_15m["funding_readiness"] = bool(raw_readiness)
+                else:
+                    # Giữ nguyên giá trị thô (str, int, float, object) để PaperBroker kiểm tra kiểu nghiêm ngặt
+                    candle_15m["funding_readiness"] = raw_readiness
             if "open_interest" in row_15m and pd.notna(row_15m["open_interest"]):
                 candle_15m["open_interest"] = float(row_15m["open_interest"])
 
@@ -321,6 +328,10 @@ class BacktestEngine:
             rk = t.exit_reason.value if hasattr(t.exit_reason, "value") else str(t.exit_reason)
             exit_reasons_tally[rk] = exit_reasons_tally.get(rk, 0) + 1
 
+        # Thống kê tín hiệu từ chiến lược
+        setup_count = getattr(self.strategy, "setup_count", 0)
+        candidate_count = getattr(self.strategy, "candidate_count", 0)
+
         # Xác thực kiểm toán sổ cái kế toán
         self.broker.verify_accounting_invariants()
 
@@ -339,6 +350,8 @@ class BacktestEngine:
             "total_return_pct": total_return_pct,
             "max_drawdown_usd": max_dd_usd,
             "max_drawdown_pct": max_dd_pct,
+            "setup_count": setup_count,
+            "candidate_count": candidate_count,
             "total_trades": total_trades,
             "long_trades_count": len(long_trades),
             "short_trades_count": len(short_trades),

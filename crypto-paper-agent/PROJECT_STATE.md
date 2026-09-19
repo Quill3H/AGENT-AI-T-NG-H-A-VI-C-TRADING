@@ -17,7 +17,8 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ TRIỂN KHAI HOÀN TẤT theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`: BaseStrategy + TrendFollowingStrategy + BacktestEngine đa khung 4h/15m + Cầu nối funding provenance + 233/233 tests pass + Benchmark 3 năm BTCUSDT 2021-2023 đạt win rate 50.00%, đối soát kế toán khớp từng cent; DỪNG CHỜ GPT REVIEW 10; chưa bắt đầu Giai đoạn 6.)
+- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09; người dùng đã cho phép chuyển Giai đoạn 5)
+- [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ TRIỂN KHAI BỞI TÁC GIẢ — ĐANG CHỜ GPT REVIEW 10 NGHIỆM THU; CHƯA NGHIỆM THU; chưa bắt đầu Giai đoạn 6)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)

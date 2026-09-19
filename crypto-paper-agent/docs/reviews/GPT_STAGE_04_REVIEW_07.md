@@ -1,5 +1,9 @@
 # GPT Review 07 — Giai đoạn 4 chưa đạt nghiệm thu
 
+> [!NOTE]
+> **Tài liệu Lịch sử — Đã được thay thế (Superseded):**  
+> Các phát hiện J1–J3 tại Review 07 đã được khắc phục tại Review 08 và chính thức nghiệm thu tại [GPT_STAGE_04_REVIEW_09.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_09.md).
+
 ## 1. Kết luận
 
 **CHƯA NGHIỆM THU GIAI ĐOẠN 4. KHÔNG BẮT ĐẦU GIAI ĐOẠN 5.**
