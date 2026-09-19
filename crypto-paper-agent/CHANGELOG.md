@@ -2,6 +2,15 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Nghiệm thu GPT Review 09 và phát hành nhiệm vụ Giai đoạn 5 (2026-09-19)
+
+- Giai đoạn 4 được nghiệm thu chính thức tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`; kết luận lưu tại `docs/reviews/GPT_STAGE_04_REVIEW_09.md`.
+- Phạm vi Giai đoạn 5 được đối chiếu với Master Spec và Strategy Rulebook gốc; phát hiện config Trend Following hiện tại chỉ là placeholder và không được ưu tiên hơn task mới.
+- Phát hành `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`: Trend Following + BacktestEngine tối thiểu + funding provenance integration, backtest BTC 3 năm.
+- Quy tắc dừng: Antigravity chỉ được triển khai Giai đoạn 5, commit/push rồi chờ GPT review; không tự bắt đầu Giai đoạn 6+.
+
+---
+
 ## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 08 - Sửa Lỗi K1) (2026-09-19)
 ### Đã triển khai (Khắc phục dứt điểm phát hiện K1)
 - **K1 - Loại bỏ Triệt để Caller Frame Inspection (`src/execution/paper_broker.py`):**

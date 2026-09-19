@@ -17,8 +17,8 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA LỖI K1 THEO REVIEW 08. Xóa bỏ hoàn toàn inspect/caller inspection, funding provenance fail-closed vô điều kiện. Review 05 probes: 26/26 passed; Review 06 probes: 11/11 passed; Review 07 probes: 3/3 passed; Coverage Review 07: 16/16 passed (bao gồm 3 test K1 mới); Toàn bộ 237/237 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 09. Chưa bắt đầu Giai đoạn 5.)
-- [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
+- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09 tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`; K1 đã đóng, funding provenance fail-closed vô điều kiện; 40/40 probes Review 05–07, 16/16 coverage Review 07/K1, 237 offline tests pass và 5 network tests deselected theo hồ sơ nghiệm thu.)
+- [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ ĐƯỢC PHÉP TRIỂN KHAI theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`; bao gồm strategy + BacktestEngine tối thiểu + backtest BTC 3 năm; phải dừng chờ GPT review trước Giai đoạn 6.)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
@@ -86,6 +86,9 @@
     - **Bổ sung metadata hợp lệ vào test cũ:** Trong `docs/reviews/test_stage_04_review_05.py` và `docs/reviews/test_stage_04_review_06.py`, bổ sung `funding_time` và `funding_readiness=True` vào helper `candle()` khi có `funding_rate`, tuyệt đối không sửa hay làm yếu bất kỳ assertion nào.
     - **Bổ sung 3 regression tests K1:** Kiểm tra AST (chặn `inspect`/caller frame inspection), kiểm tra tính bất biến trước tên caller stack (`test_stage_04_review_05_probe_caller` vs `production_live_caller`), và kiểm tra cấu hình `strict_provenance=False` không thể nới lỏng fail-closed (Tham chiếu: Mục 5.7 ADR 0007, Báo cáo sửa đổi Review 08).
 
+20. **Nghiệm thu Giai đoạn 4 theo GPT Review 09:** Giai đoạn 4 được đóng tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`. Kết luận chi tiết tại `docs/reviews/GPT_STAGE_04_REVIEW_09.md`. Mọi thay đổi sau commit này phải tự chứng minh không hồi quy các bất biến E1–E8, H1–H6, J1–J3 và K1.
+21. **Phạm vi Giai đoạn 5 — Trend Following:** Triển khai rulebook EMA20/EMA50 crossover → pullback vùng EMA20/50, regime EMA200, RSI và OI confluence; stop swing causal và trailing EMA50; LONG cùng SHORT đối xứng; tín hiệu 4h, thực thi next-open 15m. Giai đoạn 5 bao gồm `BacktestEngine` tối thiểu và cầu nối funding provenance vì đây là dependency cần thiết để chạy backtest, nhưng không bao gồm Trade Logger/metrics/dashboard Giai đoạn 6 hoặc chiến lược/RL Giai đoạn 7–11. Benchmark win rate 35–45% chỉ để đối chiếu, không phải mục tiêu được phép overfit. Antigravity phải dừng sau Giai đoạn 5 theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
+
 ---
 
 ## 3. BẢN ĐỒ CÁC FILE QUAN TRỌNG VAI TRÒ
@@ -130,7 +133,9 @@
 | `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
 | `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
 | `tests/test_stage_04_review_07_coverage.py` | 16 unit tests độc lập bao phủ các trường hợp biên J1-J3 và K1 theo yêu cầu Review 07/08/09. |
-| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007). |
+| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007; ADR Giai đoạn 5 sẽ do Antigravity bổ sung khi triển khai). |
+| `docs/reviews/GPT_STAGE_04_REVIEW_09.md` | Kết luận nghiệm thu chính thức Giai đoạn 4 tại commit `b16fa1e0...`. |
+| `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md` | Nhiệm vụ có thẩm quyền duy nhất cho triển khai Giai đoạn 5; cấm tự chạy sang Giai đoạn 6+. |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
 
 ---

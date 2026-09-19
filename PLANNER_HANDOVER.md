@@ -33,7 +33,8 @@
   - 237/237 unit tests offline pass (5 deselected network tests).
   - Script mô phỏng Phần A và Phần B đạt đối soát 100%.
   - Báo cáo sửa đổi chi tiết tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_08.md`.
-- **Trạng thái hiện tại:** Đã hoàn tất sửa đổi K1. DỪNG CHỜ GPT REVIEW 09. **Chưa nghiệm thu và chưa cho phép bắt đầu Giai đoạn 5.**
+- **GPT Review 09:** **ĐẠT — Giai đoạn 4 đã được nghiệm thu chính thức** tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`. Kết luận lưu tại `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_09.md`.
+- **Quyền hiện tại:** người dùng đã cho phép Antigravity triển khai **riêng Giai đoạn 5 — Trend Following** theo `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`. Antigravity phải commit/push kết quả rồi dừng chờ GPT review; chưa được bắt đầu Giai đoạn 6+.
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -41,9 +42,9 @@ Các đường dẫn dưới đây tính từ gốc repository:
 
 1. `crypto-paper-agent/PROJECT_STATE.md`: quyết định, checklist, giới hạn đã ghi nhận.
 2. `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`: đặc tả; đọc phần tương ứng giai đoạn đang làm.
-3. `crypto-paper-agent/docs/decisions/`: ADR 0001–0006 và phụ lục.
-4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_06.md`: review mới nhất và prompt sửa H1–H6. Review 05 là vòng trước; Review 04 là kết luận Giai đoạn 3 đã được chấp thuận.
-   Task tiếp theo: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`.
+3. `crypto-paper-agent/docs/decisions/`: ADR 0001–0007 và các phụ lục đã chốt.
+4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_09.md`: kết luận nghiệm thu mới nhất của Giai đoạn 4. Các Review 05–08 là lịch sử phát hiện và khắc phục.
+   Task hiện hành: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
 5. `crypto-paper-agent/CHANGELOG.md` và code/tests tại commit thực tế.
 6. `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/`: báo cáo triển khai của Anti.
 7. `Initial idea/AGENT_SPEC.docx`: ý tưởng ban đầu; không ghi đè quyết định mới bằng ý tưởng cũ.
@@ -79,8 +80,9 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `60f693016160f6c44bd7e9ff3569540324708bfc` | Review 06 | Chưa đạt: 26/26 probes cũ pass nhưng probes mới 10 failed/1 passed; còn H1–H6, không sang 5 |
 | `b0af6b199973f17a7bd1b9690a450f015403ef68` | Review 07 | Chưa đạt: 3 probes Review 07 failed; còn J1–J3 (funding provenance fail-closed, transactional solver settlement, finalize force_close KeyError). Anti đã sửa |
 | `e92d48476c38c3196bfffe89120c9c8bfbc55baf` | Review 08 | Chưa đạt: phát hiện K1 (test-aware inspection qua `inspect`/`_is_legacy_probe_caller`). Anti đã khắc phục triệt để và vô điều kiện cho Review 09 |
+| `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2` | Review 09 | **Đạt — nghiệm thu Giai đoạn 4**; cho phép phát hành task riêng Giai đoạn 5 |
 
-Review 02/03/07/08 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007 ghi quyết định risk và execution qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
+Review 02/03/07/08/09 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007 ghi quyết định risk và execution qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
 
 ## 6. Quy trình bắt đầu mỗi phiên GPT
 
@@ -95,13 +97,15 @@ Review 02/03/07/08 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007 gh
 
 ## 7. Task hiện hành được phép triển khai
 
-Task gốc: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`; sửa tiếp theo kết luận Review 08 (K1). Tiêu chí nghiệm thu Review 09:
-- Xóa bỏ 100% `import inspect`, `_is_legacy_probe_caller()` và mọi logic nhận diện test/caller/stack; `PaperBroker` xử lý đồng nhất 100% giữa môi trường test và production.
-- Hợp đồng Funding Provenance & Readiness tại settlement là fail-closed vô điều kiện (`funding_readiness is True` kiểu bool, source timestamp hợp lệ không future/stale, `funding_rate` hữu hạn); không cho phép cờ nới lỏng.
-- Không sửa hoặc né assertion trong các probe Review 05–07; chỉ bổ sung metadata vào helper `candle()` của test cũ.
-- Review 05: 26/26 pass; Review 06: 11/11 pass; Review 07: 3/3 pass; Bộ offline tests (237/237 pass) và simulation không hồi quy.
-- Cập nhật tài liệu, commit/push lên main, báo cáo SHA thực tế rồi dừng chờ GPT Review 09.
-- Tuyệt đối không bắt đầu Giai đoạn 5 khi chưa có phê duyệt từ người dùng.
+Task duy nhất: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
+
+Phạm vi tóm tắt:
+- Trend Following theo rulebook gốc: EMA20/EMA50 crossover, chờ pullback vùng EMA20/50, regime EMA200, RSI, OI confluence; LONG/SHORT đối xứng.
+- Stop swing causal, trailing EMA50 tightening-only; signal 4h và khớp next-open 15m qua PaperBroker.
+- Xây `BacktestEngine` tối thiểu và đóng seam funding provenance của Data Layer để chạy backtest thật 3 năm.
+- Giữ nguyên toàn bộ bất biến Risk Manager/PaperBroker và regression Giai đoạn 0–4.
+- Không làm Trade Logger/metrics/dashboard Giai đoạn 6, không làm chiến lược/RL Giai đoạn 7–11.
+- Sau commit/push Giai đoạn 5 phải dừng chờ GPT review; tuyệt đối không tự bắt đầu Giai đoạn 6.
 
 ## 8. Câu mở cuộc trò chuyện mới cho người dùng
 
