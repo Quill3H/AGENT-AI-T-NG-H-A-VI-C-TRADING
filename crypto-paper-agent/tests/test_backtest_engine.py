@@ -18,8 +18,10 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 
 from src.backtest.engine import BacktestEngine
+from src.data_layer.cache_manager import save_to_cache
 from src.execution.order_models import OrderDirection, OrderRequest, OrderStatus, Position, PositionStatus
 from src.execution.paper_broker import PaperBroker
 from src.strategies.trend_following import TrendFollowingStrategy
@@ -75,6 +77,7 @@ def _generate_synthetic_multitimeframe_data(
         records_15m.append(rec)
 
     df_15m = pd.DataFrame(records_15m, index=idx_15m)
+    df_15m.index.name = "timestamp"
 
     # 2. Sinh dữ liệu 4h tổng hợp từ 15m
     idx_4h = pd.date_range(start=start_dt, periods=n_4h, freq="4h", tz="UTC")
@@ -107,6 +110,7 @@ def _generate_synthetic_multitimeframe_data(
         })
 
     df_4h = pd.DataFrame(records_4h, index=idx_4h)
+    df_4h.index.name = "timestamp"
     return df_4h, df_15m
 
 
@@ -552,27 +556,71 @@ def test_cli_no_fetch_missing_cache_fails_clearly():
         "--end", "1990-01-10",
         "--no-fetch",
     ]
-    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert res.returncode == 1
     assert "incomplete" in res.stderr.lower() or "error" in res.stderr.lower()
 
 
 def test_cli_cwd_independence(tmp_path):
     """
-    Kiểm tra CLI runner thực thi hoàn toàn độc lập với CWD (Blocker 3):
-    Chạy strategy trend_following thật từ 1 thư mục tạm bên ngoài project root.
-    Kiểm tra --config, --strategy, --start, --end và --no-fetch đều được resolve chính xác.
+    Kiểm tra CLI runner thực thi hoàn toàn độc lập với CWD và hermetic (Review 10 Blocker 1):
+    1. Không phụ thuộc cache data/raw bị gitignore.
+    2. Tự tạo cache parquet tổng hợp tối thiểu trong tmp_path/mock_cache.
+    3. Tạo config tạm trong tmp_path trỏ raw_data_dir về mock_cache.
+    4. Thực thi subprocess với cwd=str(tmp_path) bên ngoài project root.
+    5. Xác thực trend_following chạy thành công với --config, --strategy, --start, --end, --no-fetch.
+    6. Test pass hoàn toàn trên clean clone không có data/raw.
     """
+    cache_dir = tmp_path / "mock_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Sinh dữ liệu tổng hợp đa khung 4h và 15m đồng bộ cho 3 ngày
+    df_4h, df_15m = _generate_synthetic_multitimeframe_data(
+        start_dt=datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc),
+        n_days=3,
+    )
+    df_4h.index.name = "timestamp"
+    df_15m.index.name = "timestamp"
+
+    # Lưu vào mock cache
+    save_to_cache(df_4h, str(cache_dir), "binance", "BTCUSDT", "4h", "ohlcv")
+    save_to_cache(df_15m[["open", "high", "low", "close", "volume"]], str(cache_dir), "binance", "BTCUSDT", "15m", "ohlcv")
+    save_to_cache(pd.DataFrame({"open_interest": 50000.0}, index=df_4h.index), str(cache_dir), "binance", "BTCUSDT", "4h", "open_interest")
+    save_to_cache(df_15m[["open_interest"]], str(cache_dir), "binance", "BTCUSDT", "15m", "open_interest")
+
+    # Funding rate: 8h và 15m
+    df_funding = df_15m[df_15m["funding_rate"].notna()][["funding_rate"]]
+    save_to_cache(df_funding, str(cache_dir), "binance", "BTCUSDT", "8h", "funding_rate")
+    save_to_cache(df_funding, str(cache_dir), "binance", "BTCUSDT", "15m", "funding_rate")
+
+    # 2. Tạo config YAML tạm trong tmp_path trỏ raw_data_dir về mock_cache
+    with open(PROJECT_ROOT / "config" / "default_config.yaml", "r", encoding="utf-8") as f:
+        base_cfg = yaml.safe_load(f)
+
+    base_cfg["data"]["raw_data_dir"] = str(cache_dir)
+    cfg_file = tmp_path / "hermetic_test_config.yaml"
+    with open(cfg_file, "w", encoding="utf-8") as f:
+        yaml.safe_dump(base_cfg, f)
+
+    # 3. Chạy subprocess với cwd=str(tmp_path) bên ngoài project root
     cmd = [
         sys.executable,
         str(PROJECT_ROOT / "run_backtest.py"),
-        "--config", "config/default_config.yaml",
+        "--config", str(cfg_file),
         "--strategy", "trend_following",
-        "--start", "2021-01-01",
-        "--end", "2021-01-03",
+        "--start", "2023-01-01",
+        "--end", "2023-01-02",
         "--no-fetch",
     ]
-    res = subprocess.run(cmd, cwd=str(tmp_path), capture_output=True, text=True)
+    res = subprocess.run(
+        cmd,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     assert res.returncode == 0, f"CLI failed from external CWD:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
     assert "BACKTEST EXECUTION REPORT" in res.stdout
     assert "PASSED (wallet_balance matches ledger)" in res.stdout
+    assert "[STATUS: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED]" in res.stdout

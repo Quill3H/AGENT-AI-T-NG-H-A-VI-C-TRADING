@@ -158,10 +158,15 @@ def has_complete_cache(
 
     try:
         schema = pq.read_schema(path)
-        cols_to_read = ["timestamp"] if "timestamp" in schema.names else []
+        if "timestamp" in schema.names:
+            cols_to_read = ["timestamp"]
+        elif "__index_level_0__" in schema.names:
+            cols_to_read = ["__index_level_0__"]
+        else:
+            cols_to_read = []
         df_index = pq.read_table(path, columns=cols_to_read).to_pandas()
         df_index = ensure_utc_index(df_index)
-        if len(df_index) == 0:
+        if len(df_index) == 0 or not isinstance(df_index.index, pd.DatetimeIndex):
             return False
         cached_min = df_index.index.min()
         cached_max = df_index.index.max()

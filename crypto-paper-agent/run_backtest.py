@@ -125,7 +125,10 @@ def main():
     # 2. Xử lý đường dẫn độc lập CWD
     config_path = Path(args.config)
     if not config_path.is_absolute():
-        config_path = (PROJECT_ROOT / config_path).resolve()
+        if config_path.is_file():
+            config_path = config_path.resolve()
+        else:
+            config_path = (PROJECT_ROOT / config_path).resolve()
 
     if not config_path.is_file():
         sys.stderr.write(f"ERROR: Config file not found at: {config_path}\n")
@@ -143,8 +146,11 @@ def main():
         config = base_config
 
     # Điều chỉnh raw_data_dir thành đường dẫn tuyệt đối
-    raw_rel = config.get("data", {}).get("raw_data_dir", "data/raw")
-    raw_dir = (PROJECT_ROOT / raw_rel).resolve()
+    raw_val = Path(config.get("data", {}).get("raw_data_dir", "data/raw"))
+    if raw_val.is_absolute():
+        raw_dir = raw_val.resolve()
+    else:
+        raw_dir = (PROJECT_ROOT / raw_val).resolve()
     config["data"]["raw_data_dir"] = str(raw_dir)
 
     # 4. Xác định khoảng thời gian start và end
