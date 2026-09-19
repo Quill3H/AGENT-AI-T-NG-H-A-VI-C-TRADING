@@ -17,8 +17,7 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09 tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`; K1 đã đóng, funding provenance fail-closed vô điều kiện; 40/40 probes Review 05–07, 16/16 coverage Review 07/K1, 237 offline tests pass và 5 network tests deselected theo hồ sơ nghiệm thu.)
-- [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ ĐƯỢC PHÉP TRIỂN KHAI theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`; bao gồm strategy + BacktestEngine tối thiểu + backtest BTC 3 năm; phải dừng chờ GPT review trước Giai đoạn 6.)
+- [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ TRIỂN KHAI HOÀN TẤT theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`: BaseStrategy + TrendFollowingStrategy + BacktestEngine đa khung 4h/15m + Cầu nối funding provenance + 233/233 tests pass + Benchmark 3 năm BTCUSDT 2021-2023 đạt win rate 50.00%, đối soát kế toán khớp từng cent; DỪNG CHỜ GPT REVIEW 10; chưa bắt đầu Giai đoạn 6.)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
@@ -88,6 +87,14 @@
 
 20. **Nghiệm thu Giai đoạn 4 theo GPT Review 09:** Giai đoạn 4 được đóng tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`. Kết luận chi tiết tại `docs/reviews/GPT_STAGE_04_REVIEW_09.md`. Mọi thay đổi sau commit này phải tự chứng minh không hồi quy các bất biến E1–E8, H1–H6, J1–J3 và K1.
 21. **Phạm vi Giai đoạn 5 — Trend Following:** Triển khai rulebook EMA20/EMA50 crossover → pullback vùng EMA20/50, regime EMA200, RSI và OI confluence; stop swing causal và trailing EMA50; LONG cùng SHORT đối xứng; tín hiệu 4h, thực thi next-open 15m. Giai đoạn 5 bao gồm `BacktestEngine` tối thiểu và cầu nối funding provenance vì đây là dependency cần thiết để chạy backtest, nhưng không bao gồm Trade Logger/metrics/dashboard Giai đoạn 6 hoặc chiến lược/RL Giai đoạn 7–11. Benchmark win rate 35–45% chỉ để đối chiếu, không phải mục tiêu được phép overfit. Antigravity phải dừng sau Giai đoạn 5 theo `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
+22. **Kiến trúc Trend Following & Backtest Engine Đa Khung Thời Gian (ADR 0008):**
+    - Hợp đồng `BaseStrategy` với `on_candle_close` và `update_trailing_stop`.
+    - State machine bám xu hướng (IDLE -> ARMED -> Pullback/Retest -> Executed / Invalidation / Expiry), one-shot per crossover.
+    - Cắt lỗ ban đầu causal theo swing low/high 5 nến 4h đóng gần nhất; Trailing stop bám EMA50 nến 4h đóng siết chặt một chiều (tightening-only) qua `broker.update_stop_loss`.
+    - `BacktestEngine` đồng bộ nhân quả: nến 15m dẫn dắt event loop, chỉ đánh giá chiến lược khi nến 4h đóng hoàn toàn (`close_time_15m == close_time_4h`), lệnh khớp tại open nến 15m kế tiếp (+ slippage), chống lookahead bias tuyệt đối (`test_future_perturbation_invariance`).
+    - Đóng mắt xích funding provenance trong `fetcher.py`: bảo toàn `funding_time` và cờ boolean `funding_readiness`, fail-closed khi thiếu/future/stale dữ liệu tại settlement.
+    - CLI `run_backtest.py` hoàn chỉnh: hỗ trợ `--config`, `--strategy`, `--start`, `--end`, `--no-fetch`; độc lập CWD và fail-closed rõ ràng khi strategy chưa triển khai.
+    - Nghiệm thu benchmark 3 năm BTCUSDT (2021-2023): Win rate 50.00%, Total return +21.01%, Max Drawdown -16.15%, đối soát sổ cái kế toán khớp từng cent (Tham chiếu: ADR 0008).
 
 ---
 
@@ -114,6 +121,13 @@
 | `src/execution/order_models.py` | Enums và dataclasses cho Paper Execution (OrderRequest, Position, TradeRecord, Snapshot). |
 | `src/execution/paper_broker.py` | Paper Broker 5 pha chống nhìn trước, khớp lệnh isolated futures, funding, gap exit. |
 | `src/execution/__init__.py` | Export module và các lớp thực thi cốt lõi của Giai đoạn 4. |
+| `src/strategies/base_strategy.py` | Lớp cơ sở trừu tượng cho các chiến lược định lượng (`on_candle_close`, `update_trailing_stop`). |
+| `src/strategies/trend_following.py` | Chiến lược Trend Following 4h: EMA20/50 crossover, pullback retest, EMA200 regime, RSI, swing SL, trailing. |
+| `src/strategies/__init__.py` | Export `BaseStrategy`, `TrendFollowingStrategy`, `SetupState`. |
+| `src/backtest/engine.py` | Cỗ máy BacktestEngine tối thiểu, điều phối sự kiện đa khung 4h/15m, chống nhìn trước. |
+| `src/backtest/__init__.py` | Export `BacktestEngine`. |
+| `run_backtest.py` | CLI entrypoint thực thi backtest (--config, --strategy, --start, --end, --no-fetch). |
+| `scripts/download_benchmark_data.py` | Tải dữ liệu 3 năm BTCUSDT (4h, 15m, funding, OI) từ Binance lưu cache parquet. |
 | `scripts/fetch_market_data.py` | Tải nến OHLCV 15m và Funding Rate 8h từ Binance Futures REST API lưu vào cache parquet. |
 | `scripts/simulate_risk_manager_10_trades.py` | Kịch bản mô phỏng 10 lệnh minh bạch 100% (2 Phase độc lập, đối soát vốn tự động). |
 | `scripts/simulate_paper_execution.py` | Kịch bản mô phỏng khớp lệnh Paper Execution (Phần A Synthetic + Phần B Real Cached Data). |
@@ -133,10 +147,12 @@
 | `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
 | `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
 | `tests/test_stage_04_review_07_coverage.py` | 16 unit tests độc lập bao phủ các trường hợp biên J1-J3 và K1 theo yêu cầu Review 07/08/09. |
-| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007; ADR Giai đoạn 5 sẽ do Antigravity bổ sung khi triển khai). |
+| `tests/test_trend_following_strategy.py` | 23 unit tests bao phủ các quy tắc Trend Following (crossover, pullback, expiry, invalidation, RSI, OI, swing SL, trailing). |
+| `tests/test_backtest_engine.py` | 8 unit/integration tests bao phủ BacktestEngine (multi-timeframe sync, future perturbation, next-open fill, funding fail-closed, determinism, CLI). |
+| `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0008). |
 | `docs/reviews/GPT_STAGE_04_REVIEW_09.md` | Kết luận nghiệm thu chính thức Giai đoạn 4 tại commit `b16fa1e0...`. |
 | `docs/planning/ANTIGRAVITY_STAGE_05_TASK.md` | Nhiệm vụ có thẩm quyền duy nhất cho triển khai Giai đoạn 5; cấm tự chạy sang Giai đoạn 6+. |
-| `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
+| `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 5). |
 
 ---
 

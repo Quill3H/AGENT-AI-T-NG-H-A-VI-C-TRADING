@@ -157,15 +157,16 @@ def has_complete_cache(
         return False
 
     try:
-        meta = pq.read_metadata(path)
-        # Đọc chỉ cột timestamp để check range, tránh load toàn bộ
-        df_index = pq.read_table(path, columns=[]).to_pandas()
+        schema = pq.read_schema(path)
+        cols_to_read = ["timestamp"] if "timestamp" in schema.names else []
+        df_index = pq.read_table(path, columns=cols_to_read).to_pandas()
         df_index = ensure_utc_index(df_index)
-        if df_index.empty:
+        if len(df_index) == 0:
             return False
         cached_min = df_index.index.min()
         cached_max = df_index.index.max()
-        return cached_min <= since and cached_max >= until
+        coverage_end = cached_max + timeframe_to_timedelta(timeframe)
+        return bool(cached_min <= since and (cached_max >= until or coverage_end >= until))
     except Exception as e:
         logger.warning("[Cache] Không thể đọc metadata từ {}: {}", path, e)
         return False

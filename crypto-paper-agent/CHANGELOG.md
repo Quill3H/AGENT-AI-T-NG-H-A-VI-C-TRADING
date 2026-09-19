@@ -2,6 +2,70 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 5] - Trend Following & Backtest Engine (2026-09-19)
+
+### Đã triển khai (Hoàn thành 100% yêu cầu theo ANTIGRAVITY_STAGE_05_TASK.md)
+- **Hợp đồng Chiến lược & Máy trạng thái Trend Following (`src/strategies/`):**
+  - Tạo `BaseStrategy` với giao diện chuẩn `on_candle_close` và `update_trailing_stop`.
+  - Triển khai `TrendFollowingStrategy`:
+    - Đa khung thời gian: Tín hiệu & chế độ trên nến 4h đã đóng, thực thi tại giá Open (+ trượt giá) nến 15m kế tiếp.
+    - Crossover EMA20/EMA50 kích hoạt trạng thái `ARMED` (tuyệt đối không vào lệnh tại nến crossover).
+    - Retest/Pullback hợp lệ vào vùng EMA20/EMA50 trên các nến 4h kế tiếp: `close >= ema20` (LONG), `close <= ema20` (SHORT).
+    - Bộ lọc xung lượng: Nghiêm ngặt `rsi_14 > 50.0` (LONG), `rsi_14 < 50.0` (SHORT); tại biên 50.0 từ chối lệnh.
+    - Bộ lọc xu hướng lớn: Nghiêm ngặt `close > ema200` (LONG), `close < ema200` (SHORT).
+    - Hợp lưu Open Interest (ADR 0005): `oi_delta_pct > 0`, chế độ `optional` cho phép bypass khi NaN kèm ghi chú `OI_BYPASSED_HISTORICAL`; các kiểu dữ liệu bất thường (string, bool, Inf) đều fail-closed.
+    - Cắt lỗ ban đầu nhân quả (Causal Swing Stop Loss): Đáy thấp nhất (`min(low)`) cho LONG hoặc đỉnh cao nhất (`max(high)`) cho SHORT trong 5 nến 4h đóng gần nhất; kiểm tra đủ warm-up và stop đúng phía.
+    - Trailing stop bám EMA50 nến 4h đóng theo hướng thắt chặt rủi ro một chiều (tightening-only) qua `broker.update_stop_loss`.
+    - Không dùng take-profit cố định hay partial TP (`take_profit_price = None`).
+    - Cơ chế One-shot: Mỗi crossover chỉ phát tối đa 1 lệnh; hết hạn sau 12 nến 4h hoặc vô hiệu hóa khi regime/crossover đảo chiều.
+- **Cỗ máy Backtest Đa Khung Thời Gian (`src/backtest/engine.py`):**
+  - Dependency injection: `config`, `data_4h`, `data_15m`, `strategy`, `broker`.
+  - Đồng bộ nhân quả: Nến 15m dẫn dắt event clock qua `broker.process_candle()`, chỉ đánh giá nến 4h khi nến 4h vừa đóng hoàn toàn (`close_time_15m == close_time_4h`).
+  - Chống nhìn trước tuyệt đối: Lệnh phát sinh tại close 4h được đưa vào `pending_orders` và chỉ khớp tại open nến 15m tiếp theo.
+  - Thẩm định tiền khả thi (Preflight Validation) fail-closed: DatetimeIndex UTC đơn điệu, không trùng lặp, OHLC hữu hạn dương và hợp lệ hình học.
+  - Cố định random seed (`random.seed(42)`, `np.random.seed(42)`).
+  - Tích hợp vòng đời `finalize(force_close=True/False)` và kiểm toán sổ cái kế toán tự động sau phiên.
+- **Cầu nối Funding Provenance (`src/data_layer/fetcher.py`):**
+  - Bảo toàn timestamp gốc thành `funding_time` khi merge `funding_rate`.
+  - Thiết lập `funding_readiness` là kiểu boolean nghiêm ngặt: chỉ `True` khi rate hữu hạn, time hợp lệ, không future và không stale (>24h); fail-closed khi thiếu dữ liệu.
+- **Sửa lỗi đọc Parquet Cache (`src/data_layer/cache_manager.py`):**
+  - Khắc phục `has_complete_cache` đọc đúng cột `timestamp` từ parquet schema và kiểm tra `len(df_index) == 0` thay vì `df_index.empty`.
+- **CLI Runner Hoàn Chỉnh (`run_backtest.py`):**
+  - Hỗ trợ đầy đủ `--config`, `--strategy`, `--start`, `--end`, `--no-fetch`, `--force-close`.
+  - Đường dẫn độc lập CWD (resolve từ `PROJECT_ROOT`).
+  - Fail rõ ràng (exit code 1) nếu strategy chưa hỗ trợ hoặc cache thiếu khi dùng `--no-fetch`.
+  - Tự động cấu hình stdout/stderr UTF-8 trên Windows chống lỗi `cp1252 charmap`.
+- **Bộ Kiểm Thử Bắt Buộc (Mục 6 Task Spec):**
+  - `tests/test_trend_following_strategy.py`: 23 unit tests bao phủ các hạng mục 1–7 (Crossover, Pullback, Expiry, Invalidation, RSI, OI, Swing SL, Trailing, Warm-up EMA200).
+  - `tests/test_backtest_engine.py`: 8 unit/integration tests bao phủ các hạng mục 8–13 (Sync 4h/15m, Future perturbation invariance, Next-open fill, Funding metadata fail-closed, Determinism & Invariants, CLI behavior).
+- **Tải Dữ Liệu Benchmark 3 Năm (`scripts/download_benchmark_data.py`):**
+  - Tải và lưu cache parquet toàn bộ dữ liệu BTCUSDT từ `2021-01-01` đến `2023-12-31` (6,570 nến 4h, 105,120 nến 15m, 3,285 bản ghi funding rate, 1095 ngày Open Interest từ Binance Vision).
+
+### Kết quả kiểm thử thực tế
+- **Toàn bộ Unit Tests Offline (`tests/`):** **228/228 tests PASSED** (5 deselected network tests) trong 5.92s.
+- **Network Tests (`tests/test_data_layer.py`):** **5/5 tests PASSED** trong 12.68s.
+- **Tổng cộng Test Suite:** **233/233 tests PASSED (100%)**, 0 failed, 0 skipped.
+- **Kết quả Benchmark 3 Năm BTCUSDT (`run_backtest.py --strategy trend_following --start 2021-01-01 --end 2023-12-31 --no-fetch`):**
+  - **Khoảng thời gian:** 2021-01-01 00:00:00 UTC -> 2023-12-31 23:45:00 UTC.
+  - **Số nến xử lý:** 15m = 105,120 nến; 4h = 6,570 nến.
+  - **Vốn ban đầu:** 10,000.00 USDT | **Vốn kết thúc:** 12,100.96 USDT.
+  - **Tỷ suất lợi nhuận (Total Return):** **+21.01%**.
+  - **Sụt giảm tối đa (Max Drawdown):** **-2,050.72 USDT (-16.15%)**.
+  - **Tổng lệnh phát đi:** 22 | Khớp: 16 | Từ chối: 6 (`INVARIANT_FAIL_INSUFFICIENT_MARGIN: 6`).
+  - **Tổng số giao dịch:** 16 (10 LONG, 6 SHORT).
+  - **Kết quả giao dịch:** 8 Thắng / 8 Thua / 0 Hòa.
+  - **Tỷ lệ thắng (Win Rate):** **50.00%** (Benchmark nghiên cứu: 35–45%; không overfit).
+  - **Win Rate LONG:** 50.00% | **Win Rate SHORT:** 50.00%.
+  - **Lãi thô (Gross PnL):** +2,489.66 USDT.
+  - **Phí giao dịch (Fees):** -162.82 USDT.
+  - **Phí tài trợ vốn (Funding):** -225.89 USDT.
+  - **Lãi ròng thực tế (Net PnL):** +2,100.96 USDT.
+  - **Lý do thoát lệnh:** 16 vị thế đóng theo Stop Loss / Trailing Stop (`{'STOP_LOSS': 16}`).
+  - **Đối soát kế toán sổ cái:** **PASSED** (Khớp từng cent với dung sai $10^{-4}$).
+- **Trạng thái:** DỪNG CHỜ GPT REVIEW 10. Tuyệt đối chưa bắt đầu Giai đoạn 6.
+
+---
+
 ## [Giai đoạn 4] - Nghiệm thu GPT Review 09 và phát hành nhiệm vụ Giai đoạn 5 (2026-09-19)
 
 - Giai đoạn 4 được nghiệm thu chính thức tại commit `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2`; kết luận lưu tại `docs/reviews/GPT_STAGE_04_REVIEW_09.md`.

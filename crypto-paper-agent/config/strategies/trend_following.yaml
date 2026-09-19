@@ -1,51 +1,38 @@
-# trend_following.yaml - Strategy Config: Trend Following
-# Implement ở Giai đoạn 5
-# Expected win rate benchmark: 35-45%
+# trend_following.yaml - Strategy Config: Trend Following (Stage 5)
+# Expected win rate benchmark: 35-45% (Chỉ dùng đối chiếu nghiên cứu, không overfit)
 
 strategy:
   name: "TREND_FOLLOWING"
   enabled: true
-  timeframe_signal: "4h"    # khung tín hiệu chính
-  timeframe_entry: "15m"    # khung tinh chỉnh entry
+  timeframe_signal: "4h"        # Khung tín hiệu chính (closed 4h candles)
+  timeframe_execution: "15m"     # Khung thực thi (next-open 15m)
 
-# Conviction tier mặc định cho chiến lược này
-default_conviction: "normal"   # 2% risk per trade
+# Conviction tier & Sizing mặc định (Risk Manager / PaperBroker)
+default_conviction: "normal"     # 2% base risk per trade
+leverage: 2.0                    # Đòn bẩy (<= 5.0x max_leverage)
+base_risk_percent: 0.02          # 2% rủi ro tài khoản
 
-# Điều kiện entry LONG:
-# - EMA 20 > EMA 50 > EMA 200 (aligned trend)
-# - RSI 14 > 50 (momentum xác nhận)
-# - OI delta dương (tăng OI = tiền vào)
-# - Không có CVD divergence bearish
-entry_long:
-  ema_aligned: true         # ema_20 > ema_50 > ema_200
-  rsi_min: 50
-  oi_delta_positive: true
-  cvd_divergence_block: "bearish"   # chặn nếu có bearish divergence
+# Quy tắc Trend Following Causal Rulebook (Section 4.2 & 4.3)
+rules:
+  crossover_fast_ema: 20
+  crossover_slow_ema: 50
+  regime_ema: 200
+  rsi_period: 14
+  rsi_threshold: 50.0            # RSI > 50 for LONG, RSI < 50 for SHORT
+  max_setup_age_bars: 12         # Tối đa 12 nến 4h sau trigger để hoàn tất pullback
+  swing_lookback_bars: 5         # Số nến 4h đã đóng gần nhất để tìm Swing Low/High
 
-# Cấu hình OI Confluence (Phương án B: fallback khi thiếu dữ liệu lịch sử)
+# Cấu hình OI Confluence (ADR 0005)
 oi_confluence:
-  mode: "optional"          # "strict" | "optional" | "disabled"
+  mode: "optional"              # "strict" | "optional" | "disabled"
   fallback_when_nan: true
   nan_log_note: "OI_BYPASSED_HISTORICAL"
 
-# Điều kiện entry SHORT (ngược lại)
-entry_short:
-  ema_aligned_bear: true    # ema_20 < ema_50 < ema_200
-  rsi_max: 50
-  oi_delta_positive: true
-  cvd_divergence_block: "bullish"
-
-# Stop-loss: dựa trên ATR
+# Cắt lỗ & Trailing Stop (Section 4.3)
 stop_loss:
-  method: "atr_multiple"
-  atr_multiple: 2.0         # SL = entry ± 2x ATR_14
+  method: "swing_causal"         # Đáy swing gần nhất (LONG) hoặc đỉnh swing gần nhất (SHORT)
+  trailing_method: "ema50_tightening_only" # Bám EMA50 nến 4h đóng theo hướng thắt chặt một chiều
 
-# Take profit: dựa trên RRR cố định
+# Chốt lời: Giai đoạn 5 KHÔNG dùng take-profit cố định hoặc partial TP
 take_profit:
-  method: "rrr_fixed"
-  rrr: 2.0                  # TP = entry + 2x (entry - SL)
-  partial_tp:
-    - level: 1.5            # đóng 50% ở RR 1.5
-      close_pct: 0.50
-    - level: 2.0            # đóng 50% còn lại ở RR 2.0
-      close_pct: 0.50
+  enabled: false                 # take_profit_price = None

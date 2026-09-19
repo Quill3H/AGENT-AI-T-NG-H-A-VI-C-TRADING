@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional
 
 import ccxt
+import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -599,11 +600,13 @@ def merge_ohlcv_with_oi_and_funding(
     # Đảm bảo cột open_interest luôn có kiểu float
     df["open_interest"] = pd.to_numeric(df["open_interest"], errors="coerce")
 
-    # --- Merge Funding Rate ---
+    # --- Merge Funding Rate & Provenance Metadata (Stage 5 / Section 4.5) ---
     if not funding_df.empty:
-        funding_to_merge = funding_df[["funding_rate"]].sort_index()
+        funding_to_merge = funding_df[["funding_rate"]].copy().sort_index()
         if hasattr(funding_to_merge.index, "as_unit"):
             funding_to_merge.index = funding_to_merge.index.as_unit("ms")
+        funding_to_merge["funding_time"] = funding_to_merge.index
+
         max_ffill = config.get("funding_rate", {}).get("max_forward_fill_candles", 480)
         tf_delta = timeframe_to_timedelta(timeframe)
         tolerance = tf_delta * max_ffill
@@ -616,8 +619,17 @@ def merge_ohlcv_with_oi_and_funding(
             direction="backward",  # QUAN TRỌNG: không dùng funding tương lai
             tolerance=tolerance,   # QUAN TRỌNG: chỉ forward-fill tối đa max_ffill nến
         )
+
+        is_finite_rate = df["funding_rate"].notna() & np.isfinite(df["funding_rate"])
+        has_valid_time = df["funding_time"].notna()
+        not_future = df["funding_time"] <= df.index
+        not_stale = df["funding_time"] >= (df.index - pd.Timedelta(hours=24))
+
+        df["funding_readiness"] = (is_finite_rate & has_valid_time & not_future & not_stale).astype(bool)
     else:
         df["funding_rate"] = float("nan")
+        df["funding_time"] = pd.NaT
+        df["funding_readiness"] = False
         logger.warning("[Fetcher] Funding rate data rỗng, funding_rate sẽ là NaN.")
 
     return df
