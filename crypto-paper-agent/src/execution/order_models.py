@@ -51,7 +51,9 @@ class ExitReason(str, Enum):
     LIQUIDATION = "LIQUIDATION"
     CIRCUIT_BREAKER_LOCK = "CIRCUIT_BREAKER_LOCK"
     FORCE_CLOSE_END_OF_DATA = "FORCE_CLOSE_END_OF_DATA"
+    END_OF_DATA = "END_OF_DATA"
     MANUAL = "MANUAL"
+
 
 
 def _validate_finite_positive(name: str, val: Any) -> float:

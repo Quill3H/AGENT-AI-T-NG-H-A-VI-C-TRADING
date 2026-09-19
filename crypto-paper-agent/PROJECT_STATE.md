@@ -17,7 +17,7 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (GPT REVIEW 06: CHƯA ĐẠT. Commit `60f6930`: probes Review 05 đạt 26/26, nhưng probes Review 06 còn 10 failed/1 passed; cần sửa H1–H6 rồi chờ Review 07. Bộ reviewer offline: 168 passed, 2 skipped, 5 deselected. Chưa bắt đầu Giai đoạn 5.)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA H1–H6 THEO REVIEW 06. Probes Review 05: 26/26 passed; Probes Review 06: 11/11 passed; Coverage Review 06: 11/11 passed; Toàn bộ 181/181 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 07. Chưa bắt đầu Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
@@ -69,6 +69,13 @@
 16. **Kết luận độc lập GPT Review 06 — Giai đoạn 4 chưa nghiệm thu:**
     - 26/26 probes Review 05 đã đạt, nhưng kiểm tra sâu hơn còn H1–H6: cashflow ledger chưa exactly-once, solver collateral chọn sai tier/fallback, clock chưa hỗ trợ multi-symbol cùng timestamp, một số đường public/config chưa transactional fail-closed, thiếu finalize/end-of-data, funding provenance và hồ sơ tái hiện còn thiếu.
     - Bằng chứng reviewer: 168 passed, 2 skipped, 5 deselected ở bộ offline; Review 06 probes 10 failed/1 passed. Chi tiết tại `docs/reviews/GPT_STAGE_04_REVIEW_06.md`. Không bắt đầu Giai đoạn 5 trước Review 07 và quyết định người dùng.
+17. **Chuẩn hóa Toàn diện Paper Execution Engine theo GPT Review 06 (H1–H6):**
+    - **H1:** Ghi nhận entry fee vào cashflow ledger ngay sau khi fill được commit; ghi nhận signed funding đúng một lần tại settlement; khi đóng lệnh, ghi nhận `gross_pnl - exit_fee` vào cashflow ledger và cập nhật net trade pnl vào win/loss streak; loại bỏ hoàn toàn double-counting funding/fees trong rolling cashflows; khi CB lock do entry fee thì không tính vào streak thua.
+    - **H2:** Tái cấu trúc `_calculate_collateral_aware_liquidation_price` bằng solver tự nhất quán theo tier của quy mô tại chính giá thanh lý ($Q \times P_{liq}$); loại bỏ hoàn toàn hardcoded fallback `mmr=0.004, cum=0.0`, ném ngoại lệ rõ ràng khi cấu hình bracket không hợp lệ hoặc không có nghiệm.
+    - **H3:** Nâng cấp đồng hồ Paper Broker hỗ trợ multi-symbol cùng market timestamp: theo dõi `last_candle_open_time_per_symbol` và batch sequence watermark `current_batch_open_time` cùng `symbols_in_current_batch`; cho phép nhiều symbol cùng open_time nhưng từ chối duplicate của chính symbol; gỡ bỏ advance time sớm tại Phase 5 để bảo toàn tính độc lập thứ tự nến trong batch.
+    - **H4:** Transactional fail-closed: kiểm tra price, timestamp (chống time reversal) và enum reason trước khi thực hiện bất kỳ mutation nào trong `close_all_positions`; cấu hình `funding_rate` và các sub-configs khác bắt buộc phải là `dict` (ném `TypeError` nếu truyền chuỗi/sai kiểu).
+    - **H5:** Bổ sung lifecycle `finalize(timestamp, force_close=False)`: idempotent, trả về tóm tắt phiên; force mode đóng mọi vị thế mở với `ExitReason.END_OF_DATA` kèm slippage/phí; chặn mọi nến và lệnh mới sau khi finalize.
+    - **H6:** Kiểm soát funding provenance (chặn lookahead bias nếu `funding_time > open_time`, chặn dữ liệu cũ >24h, chặn funding unready tại settlement); cung cấp `scripts/fetch_market_data.py`; phục hồi dòng trạng thái Giai đoạn 3 trong checklist `PROJECT_STATE.md`; phân định minh bạch kết quả author vs reviewer (Tham chiếu: Phụ lục 2 ADR 0007, Báo cáo sửa đổi Review 06).
 
 ---
 
@@ -95,6 +102,7 @@
 | `src/execution/order_models.py` | Enums và dataclasses cho Paper Execution (OrderRequest, Position, TradeRecord, Snapshot). |
 | `src/execution/paper_broker.py` | Paper Broker 5 pha chống nhìn trước, khớp lệnh isolated futures, funding, gap exit. |
 | `src/execution/__init__.py` | Export module và các lớp thực thi cốt lõi của Giai đoạn 4. |
+| `scripts/fetch_market_data.py` | Tải nến OHLCV 15m và Funding Rate 8h từ Binance Futures REST API lưu vào cache parquet. |
 | `scripts/simulate_risk_manager_10_trades.py` | Kịch bản mô phỏng 10 lệnh minh bạch 100% (2 Phase độc lập, đối soát vốn tự động). |
 | `scripts/simulate_paper_execution.py` | Kịch bản mô phỏng khớp lệnh Paper Execution (Phần A Synthetic + Phần B Real Cached Data). |
 | `tests/test_data_layer.py` | 25 unit/integration tests cho Data Layer, cache và hybrid OI. |
@@ -111,6 +119,7 @@
 | `tests/test_execution_accounting.py` | 3 unit tests cho bài toán Oracle bắt buộc và kiểm tra bất biến kế toán sau mỗi sự kiện. |
 | `tests/test_paper_broker.py` | 7 unit tests cho Paper Broker: 1 position/symbol, SL over TP, gap exit, trailing tightening, CB streak, Liq priority, replay determinism. |
 | `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
+| `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
 

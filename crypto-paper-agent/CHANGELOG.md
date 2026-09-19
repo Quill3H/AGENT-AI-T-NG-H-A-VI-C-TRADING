@@ -2,6 +2,41 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 06) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 6 nhóm phát hiện H1–H6)
+- **H1 - Ghi nhận Dòng tiền Exactly-Once & Chống Cộng Trùng (`src/execution/paper_broker.py`, `src/risk/circuit_breakers.py`):**
+  - Ghi nhận `-entry_fee` vào rolling cashflow ledger ngay khi lệnh fill; đóng vị thế cưỡng chế nếu kích hoạt khóa 24h mà không tăng streak thua.
+  - Ghi nhận `cashflow` funding đúng 1 lần tại settlement.
+  - Ghi nhận `exit_cashflow = gross_pnl - exit_fee` khi đóng vị thế, truyền net PnL vào `record_trade_outcome` để cập nhật streak.
+  - Đồng bộ delta ví và tổng rolling cashflow ledger đạt độ chính xác số học tuyệt đối (0.00 lệch).
+- **H2 - Solver Thanh Lý Nhất Quán Theo Tier Tại Điểm Nghiệm (`src/execution/paper_broker.py`):**
+  - Tái cấu trúc `_calculate_collateral_aware_liquidation_price` bằng solver tự nhất quán theo quy mô tại giá thanh lý ($Q \times P_{liq}$).
+  - Loại bỏ hoàn toàn fallback hardcode `mmr=0.004, cum=0.0`; ném `(ValueError, TypeError)` khi hỏng cấu hình bracket hoặc không tìm thấy nghiệm.
+- **H3 - Event Clock Multi-Symbol Cùng Mốc Thời Gian (`src/execution/paper_broker.py`):**
+  - Bổ sung `last_candle_open_time_per_symbol`, batch sequence watermark `current_batch_open_time` và `symbols_in_current_batch`.
+  - Cho phép nạp nhiều symbol tại cùng `open_time`; chặn nến trùng lặp theo từng symbol và chặn lùi thời gian thực sự.
+  - Gỡ bỏ `advance_time(close_time)` sớm tại Phase 5 để đảm bảo tính độc lập thứ tự nến trong batch.
+- **H4 - Transactional Public Operations & Config Fail-Closed (`src/execution/paper_broker.py`):**
+  - Prevalidate giá, thời gian (chống đảo ngược thời gian) và kiểu enum `ExitReason` trong `close_all_positions` trước khi thực hiện đột biến.
+  - Kiểm tra ép kiểu `dict` cho toàn bộ các phân vùng cấu hình phụ trong `_validate_config`.
+- **H5 - Vòng Đời Kết Thúc Dữ Liệu (`src/execution/paper_broker.py`):**
+  - Bổ sung `finalize(timestamp=None, force_close=False)`: idempotent, trả về bản tóm tắt phiên giao dịch.
+  - Chuyển broker sang trạng thái terminal `is_finalized = True`, từ chối nến mới (`RuntimeError`) và lệnh mới (`OrderStatus.REJECTED`).
+  - Hỗ trợ chế độ mặc định (giữ vị thế mở) và force mode (đóng vị thế với `ExitReason.END_OF_DATA`).
+- **H6 - Funding Provenance, Script Tải Dữ Liệu & Minh Bạch Hồ Sơ:**
+  - Kiểm tra `funding_time` chống nhìn trước (`> open_time`) và chống quá cũ (`> 24h`).
+  - Kiểm tra `funding_readiness` tại mốc thanh toán funding.
+  - Cung cấp `scripts/fetch_market_data.py` để tải cache dữ liệu Binance Futures.
+  - Khôi phục dòng trạng thái Giai đoạn 3 trong checklist `PROJECT_STATE.md`.
+  - Bổ sung bộ test độc lập `tests/test_stage_04_review_06_coverage.py` (11 tests).
+### Kết quả kiểm thử thực tế
+- **Review 06 Probes (`docs/reviews/test_stage_04_review_06.py`):** **11/11 tests PASSED** trong 0.58s.
+- **Review 05 Probes (`docs/reviews/test_stage_04_review_05.py`):** **26/26 tests PASSED** trong 0.67s.
+- **Review 06 Coverage (`tests/test_stage_04_review_06_coverage.py`):** **11/11 tests PASSED** trong 0.60s.
+- **Toàn bộ Unit Tests Offline (`tests/`):** **181/181 tests PASSED** (5 deselected network tests) trong 1.66s.
+- **Mô phỏng Khớp lệnh (`scripts/simulate_paper_execution.py`):** Cả Phần A (Synthetic) và Phần B (Real Data Cached) đều đạt đối soát vốn 100%.
+- **Trạng thái:** DỪNG CHỜ GPT REVIEW 07. Tuyệt đối chưa bắt đầu Giai đoạn 5.
+
 ## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 05) (2026-09-19)
 ### Đã triển khai (Khắc phục toàn diện 8 nhóm phát hiện E1–E8)
 - **E1 - Cấu hình Settlement Hours, Tính Toàn Vẹn & Khóa Trùng Funding (`src/execution/paper_broker.py`):**

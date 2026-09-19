@@ -151,3 +151,44 @@ Phạm vi giải quyết: 8 nhóm vấn đề kỹ thuật E1–E8 phát hiện 
 ### 4.8 Xác Thực Miền Cấu Hình & Bất Biến Số Học (E8)
 - Xác thực khởi tạo Engine: `initial_equity_usd` phải hữu hạn và $> 0$; các tham số phí (`taker_pct`, `slippage_pct`) phải là số thực hữu hạn trong $[0, 1.0]$.
 - Gia cố `verify_accounting_invariants`: kiểm tra `math.isfinite` trên toàn bộ số dư ví, ký quỹ khả dụng, ký quỹ cô lập và tổng unrealized PnL trước khi thực hiện các phép so sánh dung sai, chặn đứng hoàn toàn việc lọt lỗi do giá trị không hữu hạn.
+
+---
+
+## 5. Phụ Lục 2: Hoàn Thiện Cơ Chế Thực Thi Theo GPT Review 06 (H1–H6)
+
+### 5.1 Ghi Nhận Dòng Tiền Chính Xác & Chống Cộng Trùng (H1)
+- **Entry Fee**: Ghi nhận `-entry_fee` vào rolling cashflow ledger của Circuit Breaker ngay tại thời điểm mở vị thế (Phase 3). Nếu khoản phí này kích hoạt khóa 24h, vị thế lập tức bị đóng cưỡng chế mà không làm tăng chuỗi lệnh thua (`consecutive_losses`).
+- **Funding Cashflow**: Ghi nhận đúng một lần tại thời điểm thanh toán (Phase 2).
+- **Exit Cashflow**: Khi đóng vị thế, chỉ ghi nhận `gross_price_pnl - exit_fee` vào rolling cashflow ledger; đồng thời gọi `record_trade_outcome(net_trade_pnl)` để cập nhật chuỗi thắng/thua.
+- **Tính nhất quán**: Toàn bộ dòng tiền cấu thành lợi nhuận của vị thế (Entry fee, Funding, Realized price PnL, Exit fee) được ghi nhận chính xác 1 lần tại đúng mốc thời gian phát sinh, loại bỏ hoàn toàn hiện tượng tính trùng (double-counting) trong cửa sổ 24h.
+
+### 5.2 Solver Thanh Lý Nhất Quán Theo Tier Tại Điểm Nghiệm (H2)
+- Thay thế việc tra cứu MMR tier dựa trên quy mô tại giá vào lệnh bằng solver giải nhất quán theo quy mô tại chính giá thanh lý ($Q \times P_{liq}$).
+- Phương trình nghiệm:
+  - LONG: $P = \frac{Q \cdot Entry - C - cum}{Q \cdot (1 - mmr)}$
+  - SHORT: $P = \frac{Q \cdot Entry + C + cum}{Q \cdot (1 + mmr)}$
+- Bắt buộc kiểm tra điều kiện tự nhất quán: $Q \times P \in (\text{lower\_bound}, \text{upper\_bound}]$.
+- Loại bỏ hoàn toàn fallback sang tier mặc định `mmr=0.004, cum=0.0`; ném ngoại lệ rõ ràng khi cấu hình bracket hỏng hoặc không tìm thấy nghiệm hợp lệ (Fail-Closed).
+
+### 5.3 Đồng Hồ Sự Kiện Hỗ Trợ Multi-Symbol Cùng Mốc Thời Gian (H3)
+- Quản lý đồng hồ nến riêng biệt theo từng cặp giao dịch thông qua `last_candle_open_time_per_symbol` kết hợp watermark mốc nến của batch `current_batch_open_time` và tập hợp `symbols_in_current_batch`.
+- Cho phép nhiều symbol cùng được nạp và xử lý tại cùng một `open_time`.
+- Ngăn chặn nến lặp của cùng một symbol trong cùng một batch cũng như hiện tượng đảo ngược thời gian thực sự.
+- Gỡ bỏ việc nâng sớm đồng hồ ngắt mạch lên `close_time` tại Phase 5 nhằm đảm bảo tính độc lập tuyệt đối với thứ tự nạp nến của các symbol trong cùng batch.
+
+### 5.4 Giao Dịch Nguyên Khối & Cấu Hình Fail-Closed (H4)
+- Hàm `close_all_positions` kiểm tra toàn bộ tính hợp lệ của tham số giá, kiểm tra đảo ngược thời gian so với `current_time`, `circuit_breaker.last_event_time` và `pos.opened_at`, cũng như xác thực kiểu enum `ExitReason` trước khi thực hiện bất kỳ thay đổi trạng thái nào.
+- Trình kiểm tra cấu hình `_validate_config` bắt buộc mọi phân vùng cấu hình phụ (`funding_rate`, `leverage_brackets`, `circuit_breakers`, `risk`, ...) phải có kiểu `dict`, từ chối ngay lập tức các cấu hình sai kiểu mà không âm thầm dùng giá trị mặc định.
+
+### 5.5 Quản Lý Vòng Đời Kết Thúc Dữ Liệu (Lifecycle Finalize) (H5)
+- Bổ sung phương thức `finalize(timestamp=None, force_close=False)`:
+  - Mang tính Idempotent: gọi lại nhiều lần trả về cùng một bản tóm tắt phiên giao dịch.
+  - Chuyển Broker sang trạng thái kết thúc (`is_finalized = True`): từ chối mọi nến tiếp theo (`RuntimeError`) và tự động từ chối mọi lệnh mở mới (`OrderStatus.REJECTED`).
+  - Chế độ mặc định (`force_close=False`): giữ nguyên vị thế mở, tính toán đầy đủ tài sản ròng và ký quỹ.
+  - Chế độ cưỡng chế (`force_close=True`): đóng toàn bộ vị thế đang mở theo giá mark gần nhất kèm phí và trượt giá, ghi nhận lý do thoát `ExitReason.END_OF_DATA`.
+
+### 5.6 Nguồn Gốc Dữ Liệu Funding & Tính Sẵn Sàng (H6)
+- Xác thực nguồn gốc thời gian của dữ liệu funding (`funding_time`): từ chối nếu thời gian funding nằm trong tương lai so với nến hiện tại (Lookahead bias) hoặc quá cũ (>24 giờ).
+- Kiểm tra cờ sẵn sàng của dữ liệu funding (`funding_readiness`): từ chối xử lý nến nếu dữ liệu funding chưa sẵn sàng tại mốc thanh toán khi đang có vị thế mở.
+- Bổ sung script tải dữ liệu thị trường thực tế `scripts/fetch_market_data.py`.
+

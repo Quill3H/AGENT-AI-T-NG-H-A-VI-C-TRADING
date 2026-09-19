@@ -20,8 +20,15 @@
 - **GPT Review 04:** đạt kiểm tra kỹ thuật G1–G3 và hồi quy offline đã thực thi; khuyến nghị nghiệm thu, người dùng đã yêu cầu tiếp tục Giai đoạn 4. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_03_REVIEW_04.md`.
 - **Phê duyệt người dùng:** sau kết luận Review 04, người dùng đã yêu cầu tạo prompt để tiếp tục giai đoạn tiếp theo. Giai đoạn 3 được chấp thuận theo phạm vi Review 04; cho phép Antigravity triển khai riêng Giai đoạn 4 theo task dưới đây.
 - **Giai đoạn 4 — Paper Execution Engine:** bản đầu được review tại `e4cb87b975d3404fbe73b31281d1d9697522cce0` (Review 05: E1–E8, probes 24 failed/2 passed). Anti sửa tại `60f693016160f6c44bd7e9ff3569540324708bfc`; 26/26 probes Review 05 đã pass trong môi trường reviewer.
-- **GPT Review 06:** chưa đạt nghiệm thu. Bộ offline mặc định: 168 passed, 2 skipped, 5 deselected; probes Review 05: 26 passed; probes Review 06: 10 failed, 1 passed. Còn H1–H6: cashflow double-count/timing, liquidation tier/fallback, clock multi-symbol, transactional/config fail-closed, finalize/end-of-data và funding provenance/tài liệu tái hiện. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_06.md`.
-- **Trạng thái hiện tại:** Được phép tiếp tục sửa riêng Giai đoạn 4 theo Review 06, sau đó dừng chờ GPT Review 07. **Chưa nghiệm thu và chưa cho phép bắt đầu Giai đoạn 5.** Số 175/175 và real-cache pass trong báo cáo Anti là kết quả tác giả báo cáo, không phải kết quả reviewer đã xác minh.
+- **GPT Review 06:** chưa đạt nghiệm thu tại commit `60f6930` (10 failed/1 passed probes Review 06; H1–H6).
+- **Sửa đổi hoàn tất theo Review 06:** Anti đã khắc phục toàn bộ H1–H6:
+  - 11/11 probes Review 06 pass (`docs/reviews/test_stage_04_review_06.py`).
+  - 26/26 probes Review 05 tiếp tục pass (`docs/reviews/test_stage_04_review_05.py`).
+  - 11/11 tests bổ sung biên pass (`tests/test_stage_04_review_06_coverage.py`).
+  - 181/181 unit tests offline pass (5 deselected network tests).
+  - Script mô phỏng Phần A (delta ví khớp đúng -687.09 USD rolling cashflow loss) và Phần B (120 nến 15m cached) đạt đối soát 100%.
+  - Bổ sung `scripts/fetch_market_data.py` và lưu walkthrough vào `crypto-paper-agent/docs/reviews/walkthrough_review_06.md`.
+- **Trạng thái hiện tại:** Đã hoàn tất sửa đổi H1–H6. DỪNG CHỜ GPT REVIEW 07. **Chưa nghiệm thu và chưa cho phép bắt đầu Giai đoạn 5.**
 
 ## 3. Tài liệu nguồn cần đọc
 

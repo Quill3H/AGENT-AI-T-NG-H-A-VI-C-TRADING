@@ -273,13 +273,19 @@ class CircuitBreakerState:
         pnl: float,
         timestamp: Union[datetime, int, float, str],
         equity: float,
+        cashflow: Optional[float] = None,
+        *args,
+        **kwargs,
     ) -> None:
         """
         Ghi nhận kết quả PnL của 1 lệnh đã đóng và cập nhật trạng thái ngắt mạch.
-        Bao gồm ghi nhận vào rolling 24h cashflow và cập nhật chuỗi thắng/thua.
+        Nếu cashflow được cung cấp (vd: gross_pnl - exit_fee), chỉ ghi nhận cashflow đó vào rolling ledger
+        thay vì net pnl (để tránh cộng trùng entry fee và funding đã ghi trước đó theo H1).
         """
-        self.record_cashflow(amount=pnl, timestamp=timestamp, equity=equity, param_name="pnl")
+        amt = cashflow if cashflow is not None else pnl
+        self.record_cashflow(amount=amt, timestamp=timestamp, equity=equity, param_name="pnl")
         self.record_trade_outcome(net_pnl=pnl, timestamp=timestamp)
+
 
     def get_effective_risk_percent(self, base_risk_percent: float) -> float:
         """
