@@ -19,8 +19,9 @@
 - **Giai đoạn 3:** Anti sửa qua ba vòng. Code cuối đã kiểm tra: `44014393a2ed6dba7188096a6d1de600daa972d0`.
 - **GPT Review 04:** đạt kiểm tra kỹ thuật G1–G3 và hồi quy offline đã thực thi; khuyến nghị nghiệm thu, người dùng đã yêu cầu tiếp tục Giai đoạn 4. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_03_REVIEW_04.md`.
 - **Phê duyệt người dùng:** sau kết luận Review 04, người dùng đã yêu cầu tạo prompt để tiếp tục giai đoạn tiếp theo. Giai đoạn 3 được chấp thuận theo phạm vi Review 04; cho phép Antigravity triển khai riêng Giai đoạn 4 theo task dưới đây.
-- **Giai đoạn 4 — Paper Execution Engine:** code được reviewer kiểm tra tại `e4cb87b975d3404fbe73b31281d1d9697522cce0` (Review 05: 8 nhóm E1–E8, probes 24 failed, 2 passed). Anti đã hoàn thành sửa đổi toàn diện 8 nhóm E1–E8 theo `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_05.md`. Kết quả kiểm thử thực tế: bộ probes độc lập `docs/reviews/test_stage_04_review_05.py` đạt **26/26 PASSED**; toàn bộ test suite hệ thống đạt **175/175 PASSED** (170 offline + 5 network); kịch bản mô phỏng Phần A & Phần B đạt 100% đối soát vốn.
-- **Trạng thái hiện tại:** Đã hoàn thành sửa chữa E1–E8, cập nhật tài liệu (ADR 0007, Báo cáo sửa đổi Review 05, PROJECT_STATE, CHANGELOG). Sẵn sàng bàn giao cho GPT Review 06. DỪNG CHỜ GPT REVIEW 06, chưa cho phép bắt đầu Giai đoạn 5.
+- **Giai đoạn 4 — Paper Execution Engine:** bản đầu được review tại `e4cb87b975d3404fbe73b31281d1d9697522cce0` (Review 05: E1–E8, probes 24 failed/2 passed). Anti sửa tại `60f693016160f6c44bd7e9ff3569540324708bfc`; 26/26 probes Review 05 đã pass trong môi trường reviewer.
+- **GPT Review 06:** chưa đạt nghiệm thu. Bộ offline mặc định: 168 passed, 2 skipped, 5 deselected; probes Review 05: 26 passed; probes Review 06: 10 failed, 1 passed. Còn H1–H6: cashflow double-count/timing, liquidation tier/fallback, clock multi-symbol, transactional/config fail-closed, finalize/end-of-data và funding provenance/tài liệu tái hiện. Chi tiết: `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_06.md`.
+- **Trạng thái hiện tại:** Được phép tiếp tục sửa riêng Giai đoạn 4 theo Review 06, sau đó dừng chờ GPT Review 07. **Chưa nghiệm thu và chưa cho phép bắt đầu Giai đoạn 5.** Số 175/175 và real-cache pass trong báo cáo Anti là kết quả tác giả báo cáo, không phải kết quả reviewer đã xác minh.
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -29,7 +30,7 @@ Các đường dẫn dưới đây tính từ gốc repository:
 1. `crypto-paper-agent/PROJECT_STATE.md`: quyết định, checklist, giới hạn đã ghi nhận.
 2. `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`: đặc tả; đọc phần tương ứng giai đoạn đang làm.
 3. `crypto-paper-agent/docs/decisions/`: ADR 0001–0006 và phụ lục.
-4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_05.md`: review mới nhất và prompt sửa E1–E8. Review 04 là kết luận Giai đoạn 3 đã được chấp thuận.
+4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_06.md`: review mới nhất và prompt sửa H1–H6. Review 05 là vòng trước; Review 04 là kết luận Giai đoạn 3 đã được chấp thuận.
    Task tiếp theo: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`.
 5. `crypto-paper-agent/CHANGELOG.md` và code/tests tại commit thực tế.
 6. `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/`: báo cáo triển khai của Anti.
@@ -63,6 +64,7 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `2f3bc30709fa3e24ccb0a0ebbc7823f0ef779522` | Review 03 | G1–G3: config/multiplier NaN, gate lùi thời gian crash, enabled news thiếu lịch vẫn pass. Anti sửa tại 4401439 |
 | `44014393a2ed6dba7188096a6d1de600daa972d0` | Review 04 | Các tái hiện G1–G3 và hồi quy độc lập đạt; người dùng đã yêu cầu tiếp tục Giai đoạn 4 |
 | `e4cb87b975d3404fbe73b31281d1d9697522cce0` | Review 05 | Chưa đạt: E1–E8, probes 24 failed/2 passed; cần sửa Giai đoạn 4, không sang 5 |
+| `60f693016160f6c44bd7e9ff3569540324708bfc` | Review 06 | Chưa đạt: 26/26 probes cũ pass nhưng probes mới 10 failed/1 passed; còn H1–H6, không sang 5 |
 
 Review 02/03 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006 ghi quyết định risk qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
 
@@ -79,7 +81,7 @@ Review 02/03 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006 ghi quyết �
 
 ## 7. Task hiện hành được phép triển khai
 
-Task đầy đủ đã giao: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`. Được phép Giai đoạn 4; các gợi ý dưới đây chỉ là tóm tắt, task đầy đủ là tiêu chí thi công/nghiệm thu:
+Task gốc: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_04_TASK.md`; sửa tiếp theo Review 06: `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_06.md`. Được phép sửa riêng Giai đoạn 4; các gợi ý dưới đây chỉ là tóm tắt:
 - Đọc spec Paper Execution Engine trước khi chốt thiết kế; dự kiến `paper_broker.py`, `order_models.py`.
 - Lập rõ model lệnh/vị thế, cash/equity/margin, thời điểm signal/admission/fill, thứ tự xử lý OHLCV và SL/TP cùng nến, phí/funding/slippage, trạng thái từ chối và đóng lệnh.
 - Risk gate kiểm tra ngay trước mở lệnh bằng snapshot tài khoản thực tế và đồng hồ dùng chung; chống bypass/double reduction.
