@@ -21,7 +21,11 @@ def cfg():
     return c
 
 def candle(t, symbol='BTCUSDT', p=100., **kw):
-    d=dict(open_time=t,symbol=symbol,open=p,high=p,low=p,close=p,timeframe='1m');d.update(kw);return d
+    d=dict(open_time=t,symbol=symbol,open=p,high=p,low=p,close=p,timeframe='1m')
+    if 'funding_rate' in kw:
+        d['funding_time'] = t
+        d['funding_readiness'] = True
+    d.update(kw);return d
 
 def req(t=T, symbol='BTCUSDT', qty=10., **kw):
     d=dict(symbol=symbol,direction=OrderDirection.LONG,signal_price=100.,stop_loss_price=98.,

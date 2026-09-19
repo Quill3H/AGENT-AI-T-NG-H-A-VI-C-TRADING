@@ -23,6 +23,9 @@ def config():
 def candle(t, symbol='BTCUSDT', o=100., h=None, l=None, c=None, **extra):
     d = dict(open_time=t, symbol=symbol, open=o, high=o if h is None else h,
              low=o if l is None else l, close=o if c is None else c, timeframe='1m')
+    if 'funding_rate' in extra:
+        d['funding_time'] = t
+        d['funding_readiness'] = True
     d.update(extra)
     return d
 

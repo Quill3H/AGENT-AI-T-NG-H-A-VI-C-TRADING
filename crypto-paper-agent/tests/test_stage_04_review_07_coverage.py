@@ -319,3 +319,140 @@ def test_j3_finalize_force_close_three_symbols_nested_breaker_at_second():
     again = b.finalize(timestamp=t2 + timedelta(minutes=2), force_close=True)
     assert again == summary
     assert len(b.trade_history) == 3
+
+
+# =====================================================================
+# K1: NO CALLER / STACK INSPECTION & UNCONDITIONAL FUNDING PROVENANCE
+# =====================================================================
+
+def test_k1_no_caller_stack_inspection_or_inspect_import_in_broker_code():
+    """
+    K1: Kiểm tra AST và mã nguồn của paper_broker.py:
+    - Tuyệt đối không import inspect hoặc inspect submodules.
+    - Không gọi sys._getframe, currentframe hoặc bất kỳ hàm kiểm tra call stack nào.
+    - Không có phương thức _is_legacy_probe_caller hoặc bất kỳ logic nhận diện tên test/caller.
+    """
+    import ast
+    broker_path = ROOT / "src" / "execution" / "paper_broker.py"
+    source_code = broker_path.read_text(encoding="utf-8")
+    tree = ast.parse(source_code, filename=str(broker_path))
+
+    for node in ast.walk(tree):
+        # 1. Chặn import inspect
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert alias.name != "inspect", "paper_broker.py must not import inspect"
+        elif isinstance(node, ast.ImportFrom):
+            assert node.module != "inspect", "paper_broker.py must not import from inspect"
+
+        # 2. Chặn _getframe hoặc currentframe
+        elif isinstance(node, ast.Attribute):
+            assert node.attr not in ("_getframe", "currentframe"), (
+                f"paper_broker.py must not inspect call frames ({node.attr})"
+            )
+
+        # 3. Chặn hàm _is_legacy_probe_caller
+        elif isinstance(node, ast.FunctionDef):
+            assert node.name != "_is_legacy_probe_caller", (
+                "paper_broker.py must not contain _is_legacy_probe_caller"
+            )
+
+    # Kiểm tra chuỗi thô để tránh dynamic tricks
+    assert "inspect.currentframe" not in source_code
+    assert "_is_legacy_probe_caller" not in source_code
+    assert "test_stage_04_review_05" not in source_code
+    assert "test_stage_04_review_06" not in source_code
+
+
+def test_k1_funding_provenance_identical_across_caller_and_stack_names():
+    """
+    K1: Kiểm tra tính bất biến của broker trước tên hàm, caller stack hoặc module:
+    - Cùng một candle thiếu provenance gọi từ test_stage_04_review_05_* hay production_*
+      đều phải bị ném ValueError với cùng thông điệp lỗi.
+    - Cùng một candle hợp lệ gọi từ test hay production đều phải thành công như nhau.
+    """
+    t_open = T_BASE
+    t_settle = t_open + timedelta(minutes=2)  # 08:00 UTC
+
+    def _setup_open_position():
+        b = PaperBroker(config=get_config())
+        b.process_candle(make_candle(t_open))
+        b.submit_order(make_req(t_open))
+        b.process_candle(make_candle(t_open + timedelta(minutes=1)))
+        assert "BTCUSDT" in b.positions
+        return b
+
+    # 1. Invalid candle: thiếu funding_readiness và funding_time
+    invalid_candle = make_candle(t_settle, funding_rate=0.001)
+
+    def test_stage_04_review_05_probe_caller(broker, candle_data):
+        return broker.process_candle(candle_data)
+
+    def production_live_caller(broker, candle_data):
+        return broker.process_candle(candle_data)
+
+    b1 = _setup_open_position()
+    b2 = _setup_open_position()
+
+    err1 = None
+    try:
+        test_stage_04_review_05_probe_caller(b1, invalid_candle)
+    except ValueError as e:
+        err1 = str(e)
+
+    err2 = None
+    try:
+        production_live_caller(b2, invalid_candle)
+    except ValueError as e:
+        err2 = str(e)
+
+    assert err1 is not None, "Legacy probe caller name must not bypass missing funding_readiness"
+    assert err2 is not None, "Production caller must fail-closed on missing funding_readiness"
+    assert err1 == err2, f"Exceptions must be identical regardless of caller name: {err1!r} vs {err2!r}"
+
+    # 2. Valid candle: có đầy đủ funding_readiness và funding_time
+    valid_candle = make_candle(
+        t_settle,
+        funding_rate=0.001,
+        funding_readiness=True,
+        funding_time=t_settle,
+    )
+
+    b3 = _setup_open_position()
+    b4 = _setup_open_position()
+
+    evs1 = test_stage_04_review_05_probe_caller(b3, valid_candle)
+    evs2 = production_live_caller(b4, valid_candle)
+
+    assert b3.wallet_balance == b4.wallet_balance
+    assert b3.positions["BTCUSDT"].isolated_collateral == b4.positions["BTCUSDT"].isolated_collateral
+    assert len(b3.funding_history) == len(b4.funding_history) == 1
+    assert len(evs1) == len(evs2)
+
+
+def test_k1_config_flag_cannot_relax_funding_provenance():
+    """
+    K1: Không cấu hình nào (kể cả strict_provenance=False) được phép nới lỏng
+    quy tắc fail-closed của funding provenance & readiness tại settlement.
+    """
+    cfg = get_config()
+    cfg["funding_rate"]["strict_provenance"] = False  # Cố gắng nới lỏng bằng config
+
+    b = PaperBroker(config=cfg)
+    t0 = T_BASE
+    b.process_candle(make_candle(t0))
+    b.submit_order(make_req(t0))
+    b.process_candle(make_candle(t0 + timedelta(minutes=1)))
+    assert "BTCUSDT" in b.positions
+
+    t_settle = t0 + timedelta(minutes=2)
+    # Candle thiếu funding_readiness vẫn phải bị từ chối
+    candle_missing_readiness = make_candle(t_settle, funding_rate=0.001, funding_time=t_settle)
+    with pytest.raises(ValueError, match="Missing funding_readiness"):
+        b.process_candle(candle_missing_readiness)
+
+    # Candle thiếu funding_time vẫn phải bị từ chối
+    candle_missing_time = make_candle(t_settle, funding_rate=0.001, funding_readiness=True)
+    with pytest.raises(ValueError, match="Missing funding source timestamp"):
+        b.process_candle(candle_missing_time)
+

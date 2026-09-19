@@ -40,6 +40,9 @@ def make_candle(t, symbol="BTCUSDT", p=100.0, **kwargs):
         "close": p,
         "timeframe": "1m",
     }
+    if "funding_rate" in kwargs:
+        d["funding_time"] = t
+        d["funding_readiness"] = True
     d.update(kwargs)
     return d
 

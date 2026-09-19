@@ -2,6 +2,29 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 08 - Sửa Lỗi K1) (2026-09-19)
+### Đã triển khai (Khắc phục dứt điểm phát hiện K1)
+- **K1 - Loại bỏ Triệt để Caller Frame Inspection (`src/execution/paper_broker.py`):**
+  - Xóa hoàn toàn `import inspect` và phương thức `_is_legacy_probe_caller()`. Không có bất kỳ dòng code nào kiểm tra call stack hay tên caller trong toàn bộ codebase.
+  - Loại bỏ hoàn toàn phân nhánh `strict_provenance`. `PaperBroker` xử lý đồng nhất 100% giữa môi trường test và production đối với cùng một input.
+- **Fail-Closed Vô Điều Kiện cho Funding Provenance & Readiness (`src/execution/paper_broker.py`):**
+  - Mọi lệnh gọi vào mốc thanh toán funding (00, 08, 16 UTC) cho vị thế mở bắt buộc phải có `funding_readiness` là kiểu `bool` và mang giá trị `True`; timestamp nguồn phải hợp lệ, không future và không stale (>24h); `funding_rate` hữu hạn (`0.0` được phép).
+  - Không cho phép bất kỳ cấu hình hay tên caller nào nới lỏng hợp đồng này.
+- **Bổ sung Metadata Hợp Lệ vào Helper của Test Cũ (`docs/reviews/`):**
+  - Bổ sung `funding_time` và `funding_readiness=True` vào helper `candle()` trong `test_stage_04_review_05.py` và `test_stage_04_review_06.py` khi có `funding_rate`.
+  - Giữ nguyên 100% tất cả các assertions; không làm yếu hay sửa đổi bất kỳ assertion nào.
+- **Bổ sung Bộ Kiểm Thử Hồi Quy K1 (`tests/test_stage_04_review_07_coverage.py`):**
+  - 3 unit tests mới (`test_k1_no_caller_stack_inspection_or_inspect_import_in_broker_code`, `test_k1_funding_provenance_identical_across_caller_and_stack_names`, `test_k1_config_flag_cannot_relax_funding_provenance`).
+  - Nâng tổng số tests trong file lên 16 tests.
+### Kết quả kiểm thử thực tế
+- **Review 05 Probes (`docs/reviews/test_stage_04_review_05.py`):** **26/26 tests PASSED** trong 0.58s.
+- **Review 06 Probes (`docs/reviews/test_stage_04_review_06.py`):** **11/11 tests PASSED** trong 0.56s.
+- **Review 07 Probes (`docs/reviews/test_stage_04_review_07.py`):** **3/3 tests PASSED** trong 0.62s.
+- **Review 07 Coverage (`tests/test_stage_04_review_07_coverage.py`):** **16/16 tests PASSED** trong 0.64s.
+- **Toàn bộ Unit Tests Offline (`tests/` + `docs/reviews/`):** **237/237 tests PASSED** (5 deselected network tests) trong 2.09s.
+- **Mô phỏng Khớp lệnh (`scripts/simulate_paper_execution.py`):** Phần A & B đạt đối soát vốn 100%.
+- **Trạng thái:** DỪNG CHỜ GPT REVIEW 09. Tuyệt đối chưa bắt đầu Giai đoạn 5.
+
 ## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 07) (2026-09-19)
 ### Đã triển khai (Khắc phục toàn diện 3 nhóm phát hiện J1–J3)
 - **J1 - Hợp đồng Bắt buộc Funding Provenance & Readiness (`src/execution/paper_broker.py`):**

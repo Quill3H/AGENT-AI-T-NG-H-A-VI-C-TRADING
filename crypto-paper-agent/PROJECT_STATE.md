@@ -17,7 +17,7 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA J1–J3 THEO REVIEW 07. Review 05 probes: 26/26 passed; Review 06 probes: 11/11 passed; Review 07 probes: 3/3 passed; Coverage Review 07: 13/13 passed; Toàn bộ 194/194 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 08. Chưa bắt đầu Giai đoạn 5.)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA LỖI K1 THEO REVIEW 08. Xóa bỏ hoàn toàn inspect/caller inspection, funding provenance fail-closed vô điều kiện. Review 05 probes: 26/26 passed; Review 06 probes: 11/11 passed; Review 07 probes: 3/3 passed; Coverage Review 07: 16/16 passed (bao gồm 3 test K1 mới); Toàn bộ 237/237 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 09. Chưa bắt đầu Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
@@ -77,9 +77,14 @@
     - **H5:** Bổ sung lifecycle `finalize(timestamp, force_close=False)`: idempotent, trả về tóm tắt phiên; force mode đóng mọi vị thế mở với `ExitReason.END_OF_DATA` kèm slippage/phí; chặn mọi nến và lệnh mới sau khi finalize.
     - **H6:** Kiểm soát funding provenance (chặn lookahead bias nếu `funding_time > open_time`, chặn dữ liệu cũ >24h, chặn funding unready tại settlement); cung cấp `scripts/fetch_market_data.py`; phục hồi dòng trạng thái Giai đoạn 3 trong checklist `PROJECT_STATE.md`; phân định minh bạch kết quả author vs reviewer (Tham chiếu: Phụ lục 2 ADR 0007, Báo cáo sửa đổi Review 06).
 18. **Chuẩn hóa Toàn diện Paper Execution Engine theo GPT Review 07 (J1–J3):**
-    - **J1:** Bắt buộc `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`) tại settlement boundary khi vị thế sống qua Pha 1. Thiếu key, None, sai kiểu, future hoặc stale (>24h) đều fail-closed trước mọi đột biến tài khoản. Cho phép rate 0.0 hữu hạn khi metadata hợp lệ. Bảo toàn tương thích probe lịch sử qua frame caller/config `strict_provenance`.
+    - **J1:** Bắt buộc `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`) tại settlement boundary khi vị thế sống qua Pha 1. Thiếu key, None, sai kiểu, future hoặc stale (>24h) đều fail-closed trước mọi đột biến tài khoản. Cho phép rate 0.0 hữu hạn khi metadata hợp lệ.
     - **J2:** Tách `_calculate_liquidation_price_for_collateral` độc lập; precompute candidate cashflow, candidate collateral và pre-run solver ngay tại Preflight trước mọi mutation. Toàn bộ state (wallet, collateral, cumulative funding, history, breaker, settled keys, clocks) bất biến 100% nếu solver thất bại do leverage brackets hỏng hoặc vô nghiệm.
     - **J3:** Finalize force_close và close_all_positions duyệt vị thế an toàn (`symbol not in self.positions`), không văng KeyError khi Circuit Breaker lock kích hoạt lồng nhau và tự đóng các vị thế còn lại. Broker chuyển terminal state nhất quán (`is_finalized = True`), lưu `_finalized_summary` và đảm bảo tính idempotent tuyệt đối khi gọi lại (Tham chiếu: Mục 5.7–5.9 ADR 0007, Báo cáo sửa đổi Review 07).
+19. **Khắc phục Dứt điểm Phát hiện K1 theo GPT Review 08 (Loại bỏ Caller Inspection & Thực thi Funding Invariant Vô Điều Kiện):**
+    - **Loại bỏ triệt để inspect / frame inspection:** Xóa bỏ hoàn toàn `import inspect`, `_is_legacy_probe_caller()` và mọi logic nhận diện tên test/caller/stack trong `src/execution/paper_broker.py`. `PaperBroker` xử lý đồng nhất 100% giữa môi trường test và production đối với cùng một input.
+    - **Fail-closed vô điều kiện tại settlement:** Mọi lệnh gọi vào mốc thanh toán funding (00, 08, 16 UTC) cho vị thế mở bắt buộc phải có `funding_readiness` là kiểu `bool` và mang giá trị `True`; timestamp nguồn phải hợp lệ, không future và không stale (>24h); `funding_rate` hữu hạn (`0.0` được phép). Tuyệt đối không cho phép bất kỳ cờ cấu hình nào (như `strict_provenance`) hay tên caller nào nới lỏng bất biến này.
+    - **Bổ sung metadata hợp lệ vào test cũ:** Trong `docs/reviews/test_stage_04_review_05.py` và `docs/reviews/test_stage_04_review_06.py`, bổ sung `funding_time` và `funding_readiness=True` vào helper `candle()` khi có `funding_rate`, tuyệt đối không sửa hay làm yếu bất kỳ assertion nào.
+    - **Bổ sung 3 regression tests K1:** Kiểm tra AST (chặn `inspect`/caller frame inspection), kiểm tra tính bất biến trước tên caller stack (`test_stage_04_review_05_probe_caller` vs `production_live_caller`), và kiểm tra cấu hình `strict_provenance=False` không thể nới lỏng fail-closed (Tham chiếu: Mục 5.7 ADR 0007, Báo cáo sửa đổi Review 08).
 
 ---
 
@@ -124,7 +129,7 @@
 | `tests/test_paper_broker.py` | 7 unit tests cho Paper Broker: 1 position/symbol, SL over TP, gap exit, trailing tightening, CB streak, Liq priority, replay determinism. |
 | `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
 | `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
-| `tests/test_stage_04_review_07_coverage.py` | 13 unit tests độc lập bao phủ các trường hợp biên J1-J3 theo yêu cầu Review 07/08. |
+| `tests/test_stage_04_review_07_coverage.py` | 16 unit tests độc lập bao phủ các trường hợp biên J1-J3 và K1 theo yêu cầu Review 07/08/09. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
 

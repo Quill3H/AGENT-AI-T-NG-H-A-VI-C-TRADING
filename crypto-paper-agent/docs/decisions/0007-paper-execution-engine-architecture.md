@@ -192,11 +192,11 @@ Phạm vi giải quyết: 8 nhóm vấn đề kỹ thuật E1–E8 phát hiện 
 - Kiểm tra cờ sẵn sàng của dữ liệu funding (`funding_readiness`): từ chối xử lý nến nếu dữ liệu funding chưa sẵn sàng tại mốc thanh toán khi đang có vị thế mở.
 - Bổ sung script tải dữ liệu thị trường thực tế `scripts/fetch_market_data.py`.
 
-### 5.7 Hợp Đồng Bắt Buộc Nguồn Gốc & Sẵn Sàng Dữ Liệu Funding (J1 - Review 07/08)
+### 5.7 Hợp Đồng Bắt Buộc Nguồn Gốc & Sẵn Sàng Dữ Liệu Funding (J1 & K1 - Review 07/08/09)
 - Khi một vị thế sống qua Pha 1 tại mốc settlement (00, 08, 16 UTC), broker bắt buộc kiểm tra cờ `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`).
 - Thiếu trường, mang giá trị `None`, sai kiểu dữ liệu, source time ở tương lai (lookahead bias) hoặc quá cũ (>24h) đều bị từ chối fail-closed bằng `ValueError`/`TypeError` ngay tại Preflight trước bất kỳ sự biến đổi trạng thái (state mutation) nào.
 - Cho phép `funding_rate = 0.0` hữu hạn khi metadata hợp lệ.
-- Cung cấp cơ chế tương thích cho các probe lịch sử (Review 05/06) thông qua kiểm tra caller frame hoặc cờ cấu hình `strict_provenance`.
+- **K1 - Loại Bỏ Hoàn Toàn Nhận Diện Caller/Stack**: Tuyệt đối không sử dụng `inspect`, frame inspection, tên hàm, tên module hay bất kỳ cờ cấu hình nào (như `strict_provenance`) để nới lỏng hợp đồng dữ liệu. `PaperBroker` xử lý đồng nhất 100% giữa môi trường test và production. Mọi caller (kể cả bộ test cũ) đều phải cung cấp đúng input hợp lệ để thanh toán funding.
 
 ### 5.8 Tính Transactional của Funding Settlement đối với Liquidation Solver (J2 - Review 07/08)
 - Hàm `_calculate_liquidation_price_for_collateral` được tách thành phương thức độc lập, hỗ trợ giải giá thanh lý trước trên mức ký quỹ dự phóng (candidate collateral).

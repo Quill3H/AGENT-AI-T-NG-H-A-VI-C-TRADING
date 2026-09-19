@@ -15,7 +15,6 @@ Tuân thủ:
 3. Tích hợp chặt chẽ với Risk Manager (sizing, liquidation solver, circuit breaker).
 """
 from datetime import datetime, timedelta, timezone
-import inspect
 import math
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -237,22 +236,6 @@ class PaperBroker:
     def settled_funding_keys(self, val: Set[Tuple[str, datetime]]) -> None:
         self._settled_funding_keys = set(val)
 
-    def _is_legacy_probe_caller(self) -> bool:
-        """
-        Xác định xem lệnh gọi có xuất phát từ các probe kiểm thử lịch sử (Review 05, Review 06) hay không.
-        Các probe này được viết ở vòng trước và không truyền funding_time/funding_readiness.
-        """
-        try:
-            frame = inspect.currentframe()
-            while frame:
-                filename = frame.f_code.co_filename.replace("\\", "/")
-                if any(k in filename for k in ["test_stage_04_review_05", "test_stage_04_review_06"]):
-                    return True
-                frame = frame.f_back
-        except Exception:
-            pass
-        return False
-
     def _next_order_id(self, symbol: str, dt: datetime) -> str:
         self._order_seq += 1
         date_str = dt.strftime("%Y%m%d")
@@ -446,48 +429,30 @@ class PaperBroker:
                     if not math.isfinite(f_rate):
                         raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
 
-                    strict_cfg = self.config.get("funding_rate", {}).get("strict_provenance")
-                    if strict_cfg is not None:
-                        strict_provenance = bool(strict_cfg)
-                    else:
-                        strict_provenance = not self._is_legacy_probe_caller()
+                    # J1 & K1: Bắt buộc funding_readiness is True (kiểu bool) vô điều kiện
+                    if "funding_readiness" not in candle:
+                        raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
+                    raw_readiness = candle.get("funding_readiness")
+                    if type(raw_readiness) is not bool:
+                        raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
+                    if raw_readiness is False:
+                        raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
+                    if raw_readiness is not True:
+                        raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
 
-                    if strict_provenance:
-                        # J1: Bắt buộc funding_readiness is True (kiểu bool)
-                        if "funding_readiness" not in candle:
-                            raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
-                        raw_readiness = candle.get("funding_readiness")
-                        if type(raw_readiness) is not bool:
-                            raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
-                        if raw_readiness is False:
-                            raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
-                        if raw_readiness is not True:
-                            raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
-
-                        # J1: Bắt buộc source timestamp hợp lệ
-                        f_time = candle.get("funding_time")
-                        if f_time is None:
-                            f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
-                        if f_time is None:
-                            raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
-                        if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
-                            raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
-                        f_dt = _ensure_utc(f_time)
-                        if f_dt > open_time:
-                            raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
-                        if f_dt < open_time - timedelta(hours=24):
-                            raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
-                    else:
-                        # Legacy fallback
-                        if candle.get("funding_readiness") is False or candle.get("funding_ready") is False:
-                            raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
-                        f_time = candle.get("funding_time") or candle.get("funding_timestamp") or candle.get("funding_source_time")
-                        if f_time is not None:
-                            f_dt = _ensure_utc(f_time)
-                            if f_dt > open_time:
-                                raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
-                            if f_dt < open_time - timedelta(hours=24):
-                                raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+                    # J1 & K1: Bắt buộc source timestamp hợp lệ vô điều kiện
+                    f_time = candle.get("funding_time")
+                    if f_time is None:
+                        f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
+                    if f_time is None:
+                        raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
+                    if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
+                        raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
+                    f_dt = _ensure_utc(f_time)
+                    if f_dt > open_time:
+                        raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
+                    if f_dt < open_time - timedelta(hours=24):
+                        raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
 
                     # J2: Pre-check liquidation solver với candidate collateral (zero mutation if solver fails)
                     direction_sign = 1.0 if pos.direction == OrderDirection.LONG else -1.0
