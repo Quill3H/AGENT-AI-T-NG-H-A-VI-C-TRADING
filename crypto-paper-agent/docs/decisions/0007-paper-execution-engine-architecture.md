@@ -192,3 +192,19 @@ Phạm vi giải quyết: 8 nhóm vấn đề kỹ thuật E1–E8 phát hiện 
 - Kiểm tra cờ sẵn sàng của dữ liệu funding (`funding_readiness`): từ chối xử lý nến nếu dữ liệu funding chưa sẵn sàng tại mốc thanh toán khi đang có vị thế mở.
 - Bổ sung script tải dữ liệu thị trường thực tế `scripts/fetch_market_data.py`.
 
+### 5.7 Hợp Đồng Bắt Buộc Nguồn Gốc & Sẵn Sàng Dữ Liệu Funding (J1 - Review 07/08)
+- Khi một vị thế sống qua Pha 1 tại mốc settlement (00, 08, 16 UTC), broker bắt buộc kiểm tra cờ `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`).
+- Thiếu trường, mang giá trị `None`, sai kiểu dữ liệu, source time ở tương lai (lookahead bias) hoặc quá cũ (>24h) đều bị từ chối fail-closed bằng `ValueError`/`TypeError` ngay tại Preflight trước bất kỳ sự biến đổi trạng thái (state mutation) nào.
+- Cho phép `funding_rate = 0.0` hữu hạn khi metadata hợp lệ.
+- Cung cấp cơ chế tương thích cho các probe lịch sử (Review 05/06) thông qua kiểm tra caller frame hoặc cờ cấu hình `strict_provenance`.
+
+### 5.8 Tính Transactional của Funding Settlement đối với Liquidation Solver (J2 - Review 07/08)
+- Hàm `_calculate_liquidation_price_for_collateral` được tách thành phương thức độc lập, hỗ trợ giải giá thanh lý trước trên mức ký quỹ dự phóng (candidate collateral).
+- Trong Preflight của `process_candle` và trước khi commit trong `_apply_funding_settlement`, hệ thống precompute `cand_cashflow`, `cand_collateral` và chạy solver.
+- Nếu leverage brackets bị hỏng hoặc solver không tìm được nghiệm nhất quán theo tier, ngoại lệ được ném ra trước khi có bất kỳ thay đổi nào lên `wallet_balance`, `isolated_collateral`, `cumulative_funding`, `funding_history`, `circuit_breaker` hay các đồng hồ batch/symbol. Toàn bộ sổ cái và trạng thái tài khoản được bảo toàn bất biến 100%.
+
+### 5.9 Độ Bền của Vòng Đời Finalize trước Khóa Circuit Breaker Lồng Nhau (J3 - Review 07/08)
+- Trong `finalize(force_close=True)` và `close_all_positions`, việc duyệt danh sách vị thế được bảo vệ bằng kiểm tra `if symbol not in self.positions: continue`.
+- Khi việc đóng vị thế thứ nhất ghi nhận lỗ vượt ngưỡng ngày và kích hoạt Circuit Breaker lock (dẫn tới việc `_handle_circuit_breaker_lock` tự động đóng các vị thế còn lại), vòng lặp ngoài bỏ qua các vị thế đã đóng mà không phát sinh `KeyError`.
+- Broker chuyển sang trạng thái terminal nhất quán (`is_finalized = True`, `open_positions_count = 0`), lưu trữ bản tóm tắt cuối cùng và duy trì tính idempotent tuyệt đối khi được gọi lại nhiều lần.
+

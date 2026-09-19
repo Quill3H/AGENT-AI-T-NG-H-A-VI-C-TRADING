@@ -2,6 +2,33 @@
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
 
+## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 07) (2026-09-19)
+### Đã triển khai (Khắc phục toàn diện 3 nhóm phát hiện J1–J3)
+- **J1 - Hợp đồng Bắt buộc Funding Provenance & Readiness (`src/execution/paper_broker.py`):**
+  - Tại mốc settlement khi vị thế sống qua Pha 1, bắt buộc kiểm tra `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`).
+  - Thiếu key, mang giá trị `None`, sai kiểu dữ liệu, future timestamp (`> open_time`) hoặc quá cũ (`< open_time - 24h`) đều fail-closed trước mọi đột biến trạng thái.
+  - Cho phép `funding_rate = 0.0` hữu hạn khi metadata đầy đủ.
+  - Hỗ trợ tương thích ngược probe lịch sử qua frame caller/config `strict_provenance`.
+- **J2 - Tính Transactional Tuyệt Đối của Funding Settlement khi Solver Lỗi (`src/execution/paper_broker.py`):**
+  - Tách phương thức `_calculate_liquidation_price_for_collateral(symbol, direction, quantity, entry_price, collateral, position_id)`.
+  - Precompute candidate cashflow, candidate collateral và pre-run solver ngay tại Preflight trước mọi mutation.
+  - Toàn bộ trạng thái sổ cái tài khoản và engine (`wallet`, `collateral`, `cumulative_funding`, `funding_history`, `trade_history_24h`, `settled_funding_keys`, batch clocks) bất biến 100% nếu leverage brackets bị hỏng hoặc solver vô nghiệm.
+- **J3 - Vòng đời Finalize Bền vững khi Circuit Breaker Khóa Lồng nhau (`src/execution/paper_broker.py`):**
+  - Thêm kiểm tra an toàn `if symbol not in self.positions: continue` trong vòng lặp `finalize(force_close=True)` và `close_all_positions`.
+  - Khắc phục hoàn toàn lỗi `KeyError` khi việc đóng vị thế thứ nhất kích hoạt khóa 24h và tự đóng các vị thế còn lại.
+  - Đảm bảo broker luôn chuyển sang trạng thái terminal nhất quán (`is_finalized = True`, `open_positions_count = 0`), lưu trữ bản tóm tắt và duy trì tính idempotent tuyệt đối khi được gọi lại nhiều lần.
+  - Bổ sung property `settled_funding_keys`.
+- **Kiểm thử bổ sung (`tests/test_stage_04_review_07_coverage.py`):**
+  - 13 unit tests độc lập bao phủ toàn diện các trường hợp biên của J1, J2, J3.
+### Kết quả kiểm thử thực tế
+- **Review 07 Probes (`docs/reviews/test_stage_04_review_07.py`):** **3/3 tests PASSED** trong 0.62s.
+- **Review 06 Probes (`docs/reviews/test_stage_04_review_06.py`):** **11/11 tests PASSED** trong 0.56s.
+- **Review 05 Probes (`docs/reviews/test_stage_04_review_05.py`):** **26/26 tests PASSED** trong 0.63s.
+- **Review 07 Coverage (`tests/test_stage_04_review_07_coverage.py`):** **13/13 tests PASSED** trong 0.60s.
+- **Toàn bộ Unit Tests Offline (`tests/`):** **194/194 tests PASSED** (5 deselected network tests) trong 1.79s.
+- **Mô phỏng Khớp lệnh (`scripts/simulate_paper_execution.py`):** Phần A đạt đối soát vốn 100% (Vốn cuối: 9,440.94 USD). Phần B đạt đối soát trên dữ liệu cache tác giả; phân định rõ với môi trường reviewer (`SKIPPED / NOT_VERIFIED` nếu không có cache).
+- **Trạng thái:** DỪNG CHỜ GPT REVIEW 08. Tuyệt đối chưa bắt đầu Giai đoạn 5.
+
 ## [Giai đoạn 4] - Paper Execution Engine Refinements (Theo GPT Review 06) (2026-09-19)
 ### Đã triển khai (Khắc phục toàn diện 6 nhóm phát hiện H1–H6)
 - **H1 - Ghi nhận Dòng tiền Exactly-Once & Chống Cộng Trùng (`src/execution/paper_broker.py`, `src/risk/circuit_breakers.py`):**

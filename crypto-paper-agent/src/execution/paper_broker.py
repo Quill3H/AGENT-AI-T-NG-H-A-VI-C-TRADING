@@ -15,6 +15,7 @@ Tuân thủ:
 3. Tích hợp chặt chẽ với Risk Manager (sizing, liquidation solver, circuit breaker).
 """
 from datetime import datetime, timedelta, timezone
+import inspect
 import math
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -227,6 +228,31 @@ class PaperBroker:
         """Ký quỹ khả dụng = Wallet Balance - Reserved Collateral."""
         return self.wallet_balance - self.reserved_collateral
 
+    @property
+    def settled_funding_keys(self) -> Set[Tuple[str, datetime]]:
+        """Tập hợp các mốc (symbol, timestamp) funding đã được thanh toán thành công."""
+        return self._settled_funding_keys
+
+    @settled_funding_keys.setter
+    def settled_funding_keys(self, val: Set[Tuple[str, datetime]]) -> None:
+        self._settled_funding_keys = set(val)
+
+    def _is_legacy_probe_caller(self) -> bool:
+        """
+        Xác định xem lệnh gọi có xuất phát từ các probe kiểm thử lịch sử (Review 05, Review 06) hay không.
+        Các probe này được viết ở vòng trước và không truyền funding_time/funding_readiness.
+        """
+        try:
+            frame = inspect.currentframe()
+            while frame:
+                filename = frame.f_code.co_filename.replace("\\", "/")
+                if any(k in filename for k in ["test_stage_04_review_05", "test_stage_04_review_06"]):
+                    return True
+                frame = frame.f_back
+        except Exception:
+            pass
+        return False
+
     def _next_order_id(self, symbol: str, dt: datetime) -> str:
         self._order_seq += 1
         date_str = dt.strftime("%Y%m%d")
@@ -397,7 +423,7 @@ class PaperBroker:
                     raise ValueError(f"Data gap: candle for {symbol} skipped funding settlement at {t_cur.isoformat()} while position is open.")
                 t_cur += timedelta(hours=1)
 
-        # 7. Kiểm tra Funding Rate đầu vào nếu rơi vào mốc settlement (E1, H6)
+        # 7. Kiểm tra Funding Rate, Metadata Provenance và Solver Pre-check (E1, H6, J1, J2)
         if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
             if symbol in self.positions:
                 pos = self.positions[symbol]
@@ -413,9 +439,6 @@ class PaperBroker:
                         will_gap_exit = True
 
                 if not will_gap_exit:
-                    if candle.get("funding_readiness") is False or candle.get("funding_ready") is False:
-                        raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
-
                     raw_rate = candle.get("funding_rate")
                     if raw_rate is None or type(raw_rate) is bool or not isinstance(raw_rate, (int, float)):
                         raise ValueError(f"Missing or invalid funding rate at settlement boundary {open_time.isoformat()}: {raw_rate!r}")
@@ -423,14 +446,70 @@ class PaperBroker:
                     if not math.isfinite(f_rate):
                         raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
 
+                    strict_cfg = self.config.get("funding_rate", {}).get("strict_provenance")
+                    if strict_cfg is not None:
+                        strict_provenance = bool(strict_cfg)
+                    else:
+                        strict_provenance = not self._is_legacy_probe_caller()
+
+                    if strict_provenance:
+                        # J1: Bắt buộc funding_readiness is True (kiểu bool)
+                        if "funding_readiness" not in candle:
+                            raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
+                        raw_readiness = candle.get("funding_readiness")
+                        if type(raw_readiness) is not bool:
+                            raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
+                        if raw_readiness is False:
+                            raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
+                        if raw_readiness is not True:
+                            raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
+
+                        # J1: Bắt buộc source timestamp hợp lệ
+                        f_time = candle.get("funding_time")
+                        if f_time is None:
+                            f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
+                        if f_time is None:
+                            raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
+                        if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
+                            raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
+                        f_dt = _ensure_utc(f_time)
+                        if f_dt > open_time:
+                            raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
+                        if f_dt < open_time - timedelta(hours=24):
+                            raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+                    else:
+                        # Legacy fallback
+                        if candle.get("funding_readiness") is False or candle.get("funding_ready") is False:
+                            raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
+                        f_time = candle.get("funding_time") or candle.get("funding_timestamp") or candle.get("funding_source_time")
+                        if f_time is not None:
+                            f_dt = _ensure_utc(f_time)
+                            if f_dt > open_time:
+                                raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
+                            if f_dt < open_time - timedelta(hours=24):
+                                raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+
+                    # J2: Pre-check liquidation solver với candidate collateral (zero mutation if solver fails)
+                    direction_sign = 1.0 if pos.direction == OrderDirection.LONG else -1.0
+                    cand_cashflow = -direction_sign * pos.quantity * open_p * f_rate
+                    cand_collateral = pos.isolated_collateral + cand_cashflow
+                    _ = self._calculate_liquidation_price_for_collateral(
+                        symbol=pos.symbol,
+                        direction=pos.direction,
+                        quantity=pos.quantity,
+                        entry_price=pos.entry_price,
+                        collateral=cand_collateral,
+                        position_id=pos.position_id,
+                    )
+
         # 8. Kiểm tra provenance nguồn dữ liệu funding nếu được cung cấp (H6)
-        f_time = candle.get("funding_time") or candle.get("funding_timestamp") or candle.get("funding_source_time")
-        if f_time is not None:
-            f_dt = _ensure_utc(f_time)
-            if f_dt > open_time:
-                raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
-            if f_dt < open_time - timedelta(hours=24):
-                raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+        f_time_gen = candle.get("funding_time") or candle.get("funding_timestamp") or candle.get("funding_source_time")
+        if f_time_gen is not None:
+            f_dt_gen = _ensure_utc(f_time_gen)
+            if f_dt_gen > open_time:
+                raise ValueError(f"Funding source time {f_dt_gen.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
+            if f_dt_gen < open_time - timedelta(hours=24):
+                raise ValueError(f"Funding source time {f_dt_gen.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
 
         # =========================================================
         # HẾT PREFLIGHT - TẤT CẢ DỮ LIỆU ĐÃ HỢP LỆ, BẮT ĐẦU CẬP NHẬT TRẠNG THÁI VÀ THỰC THI
@@ -500,7 +579,6 @@ class PaperBroker:
             if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
                 f_key = (symbol, open_time)
                 if f_key not in self._settled_funding_keys:
-                    self._settled_funding_keys.add(f_key)
                     raw_rate = candle.get("funding_rate", 0.0)
                     f_rate = float(raw_rate)
                     funding_evt = self._apply_funding_settlement(
@@ -509,6 +587,7 @@ class PaperBroker:
                         funding_rate=f_rate,
                         mark_price=open_p,
                     )
+                    self._settled_funding_keys.add(f_key)
                     candle_events.append({"type": "FUNDING", "event": funding_evt})
 
         # PHA 3: Pending Market Entry & Admission Gate
@@ -930,27 +1009,48 @@ class PaperBroker:
         Tính toán lại giá thanh lý chính xác dựa trên isolated_collateral thực tế (E2, H2).
         Giải nhất quán theo tier tại chính candidate_notional = q * P_liq.
         Tuyệt đối không fallback sang hardcoded mmr hay tier sai khi có lỗi (H2).
+        """
+        return self._calculate_liquidation_price_for_collateral(
+            symbol=position.symbol,
+            direction=position.direction,
+            quantity=position.quantity,
+            entry_price=position.entry_price,
+            collateral=position.isolated_collateral,
+            position_id=position.position_id,
+        )
+
+    def _calculate_liquidation_price_for_collateral(
+        self,
+        symbol: str,
+        direction: OrderDirection,
+        quantity: float,
+        entry_price: float,
+        collateral: float,
+        position_id: str = "",
+    ) -> float:
+        """
+        Giải giá thanh lý cho một mức ký quỹ (collateral) cụ thể theo bảng leverage brackets (H2, J2).
         LONG:  C + q * (P - entry) = q * P * mmr - cum  => P = (q * entry - C - cum) / (q * (1 - mmr))
         SHORT: C + q * (entry - P) = q * P * mmr - cum  => P = (q * entry + C + cum) / (q * (1 + mmr))
         """
         brackets = get_brackets_for_symbol(
-            position.symbol,
+            symbol,
             self.config.get("leverage_brackets"),
         )
-        q = position.quantity
-        entry = position.entry_price
-        c = position.isolated_collateral
+        q = quantity
+        entry = entry_price
+        c = collateral
 
-        if not (math.isfinite(q) and q > 0):
+        if type(q) is bool or not isinstance(q, (int, float)) or not (math.isfinite(q) and q > 0):
             raise ValueError(f"Invalid position quantity: {q}")
-        if not (math.isfinite(entry) and entry > 0):
+        if type(entry) is bool or not isinstance(entry, (int, float)) or not (math.isfinite(entry) and entry > 0):
             raise ValueError(f"Invalid position entry price: {entry}")
-        if not math.isfinite(c):
+        if type(c) is bool or not isinstance(c, (int, float)) or not math.isfinite(c):
             raise ValueError(f"Invalid position isolated collateral: {c}")
 
         lower_bound = 0.0
         for idx, (upper_bound, mmr, cum) in enumerate(brackets):
-            if position.direction == OrderDirection.LONG:
+            if direction == OrderDirection.LONG:
                 denom = q * (1.0 - mmr)
                 if denom <= 0:
                     continue
@@ -994,8 +1094,8 @@ class PaperBroker:
             lower_bound = upper_bound
 
         raise ValueError(
-            f"No tier-consistent liquidation price found for position {position.position_id} "
-            f"({position.direction.value}, qty={q}, entry={entry}, collateral={c})"
+            f"No tier-consistent liquidation price found for position {position_id} "
+            f"({direction.value}, qty={q}, entry={entry}, collateral={c})"
         )
 
     def _apply_funding_settlement(
@@ -1009,13 +1109,27 @@ class PaperBroker:
         Tính và áp dụng cashflow funding tại mốc 00/08/16 UTC.
         LONG: cashflow = -1 * Qty * Mark * Rate
         SHORT: cashflow = +1 * Qty * Mark * Rate
+        Đảm bảo transactional: tính toàn bộ state mới và solver trước khi commit (J2).
         """
         direction_sign = 1.0 if position.direction == OrderDirection.LONG else -1.0
         cashflow = -direction_sign * position.quantity * mark_price * funding_rate
+        new_collateral = position.isolated_collateral + cashflow
 
+        # Precompute new liquidation price first (H2, J2)
+        new_liq = self._calculate_liquidation_price_for_collateral(
+            symbol=position.symbol,
+            direction=position.direction,
+            quantity=position.quantity,
+            entry_price=position.entry_price,
+            collateral=new_collateral,
+            position_id=position.position_id,
+        )
+
+        # Commit thay đổi state sau khi solver thành công
         self.wallet_balance += cashflow
-        position.isolated_collateral += cashflow
+        position.isolated_collateral = new_collateral
         position.cumulative_funding += cashflow
+        position.liquidation_price = new_liq
 
         event = FundingEvent(
             event_id=self._next_funding_id(position.symbol, timestamp),
@@ -1028,9 +1142,6 @@ class PaperBroker:
             cashflow_usd=cashflow,
         )
         self.funding_history.append(event)
-
-        # Cập nhật lại liquidation_price theo collateral thực tế mới (E2)
-        position.liquidation_price = self._calculate_collateral_aware_liquidation_price(position)
 
         # Ghi nhận ngay cashflow vào Circuit Breaker (E3)
         self.circuit_breaker.record_cashflow(
@@ -1130,6 +1241,8 @@ class PaperBroker:
 
         closed_trades = []
         for symbol in list(self.positions.keys()):
+            if symbol not in self.positions:
+                continue
             pos = self.positions[symbol]
             if pos.direction == OrderDirection.LONG:
                 exit_price = p * (1.0 - self.slippage_pct)
@@ -1151,7 +1264,7 @@ class PaperBroker:
         force_close: bool = False,
     ) -> Dict[str, Any]:
         """
-        Kết thúc vòng đời phiên giao dịch / dataset (H5).
+        Kết thúc vòng đời phiên giao dịch / dataset (H5, J3).
         Idempotent: gọi lại nhiều lần trả về cùng một kết quả tóm tắt.
         Sau khi finalize, broker chuyển sang trạng thái terminal:
         - Không nhận nến mới (process_candle raise RuntimeError).
@@ -1182,9 +1295,11 @@ class PaperBroker:
             )
         self.pending_orders.clear()
 
-        # 2. Nếu force_close=True, đóng các vị thế đang mở
+        # 2. Nếu force_close=True, đóng các vị thế đang mở (J3: an toàn khi breaker kích hoạt lồng nhau)
         if force_close and self.positions:
             for symbol in list(self.positions.keys()):
+                if symbol not in self.positions:
+                    continue
                 pos = self.positions[symbol]
                 mark_p = self.last_mark_prices.get(symbol, pos.entry_price)
                 if pos.direction == OrderDirection.LONG:

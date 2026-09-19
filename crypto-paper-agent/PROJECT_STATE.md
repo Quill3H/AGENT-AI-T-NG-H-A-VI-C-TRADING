@@ -17,7 +17,7 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
-- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA H1–H6 THEO REVIEW 06. Probes Review 05: 26/26 passed; Probes Review 06: 11/11 passed; Coverage Review 06: 11/11 passed; Toàn bộ 181/181 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 07. Chưa bắt đầu Giai đoạn 5.)
+- [ ] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ HOÀN TẤT SỬA J1–J3 THEO REVIEW 07. Review 05 probes: 26/26 passed; Review 06 probes: 11/11 passed; Review 07 probes: 3/3 passed; Coverage Review 07: 13/13 passed; Toàn bộ 194/194 unit tests offline passed, 5 deselected network tests; Simulation A & B đạt đối soát 100%. DỪNG CHỜ GPT REVIEW 08. Chưa bắt đầu Giai đoạn 5.)
 - [ ] **Giai đoạn 5 — Phân hệ 1: Trend Following** (Backtest 2-3 năm BTC)
 - [ ] **Giai đoạn 6 — Trade Logger & Report Metrics** (`trade_logger.py`, `metrics.py`)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
@@ -76,6 +76,10 @@
     - **H4:** Transactional fail-closed: kiểm tra price, timestamp (chống time reversal) và enum reason trước khi thực hiện bất kỳ mutation nào trong `close_all_positions`; cấu hình `funding_rate` và các sub-configs khác bắt buộc phải là `dict` (ném `TypeError` nếu truyền chuỗi/sai kiểu).
     - **H5:** Bổ sung lifecycle `finalize(timestamp, force_close=False)`: idempotent, trả về tóm tắt phiên; force mode đóng mọi vị thế mở với `ExitReason.END_OF_DATA` kèm slippage/phí; chặn mọi nến và lệnh mới sau khi finalize.
     - **H6:** Kiểm soát funding provenance (chặn lookahead bias nếu `funding_time > open_time`, chặn dữ liệu cũ >24h, chặn funding unready tại settlement); cung cấp `scripts/fetch_market_data.py`; phục hồi dòng trạng thái Giai đoạn 3 trong checklist `PROJECT_STATE.md`; phân định minh bạch kết quả author vs reviewer (Tham chiếu: Phụ lục 2 ADR 0007, Báo cáo sửa đổi Review 06).
+18. **Chuẩn hóa Toàn diện Paper Execution Engine theo GPT Review 07 (J1–J3):**
+    - **J1:** Bắt buộc `funding_readiness is True` (kiểu boolean) và source timestamp hợp lệ (`funding_time`) tại settlement boundary khi vị thế sống qua Pha 1. Thiếu key, None, sai kiểu, future hoặc stale (>24h) đều fail-closed trước mọi đột biến tài khoản. Cho phép rate 0.0 hữu hạn khi metadata hợp lệ. Bảo toàn tương thích probe lịch sử qua frame caller/config `strict_provenance`.
+    - **J2:** Tách `_calculate_liquidation_price_for_collateral` độc lập; precompute candidate cashflow, candidate collateral và pre-run solver ngay tại Preflight trước mọi mutation. Toàn bộ state (wallet, collateral, cumulative funding, history, breaker, settled keys, clocks) bất biến 100% nếu solver thất bại do leverage brackets hỏng hoặc vô nghiệm.
+    - **J3:** Finalize force_close và close_all_positions duyệt vị thế an toàn (`symbol not in self.positions`), không văng KeyError khi Circuit Breaker lock kích hoạt lồng nhau và tự đóng các vị thế còn lại. Broker chuyển terminal state nhất quán (`is_finalized = True`), lưu `_finalized_summary` và đảm bảo tính idempotent tuyệt đối khi gọi lại (Tham chiếu: Mục 5.7–5.9 ADR 0007, Báo cáo sửa đổi Review 07).
 
 ---
 
@@ -120,6 +124,7 @@
 | `tests/test_paper_broker.py` | 7 unit tests cho Paper Broker: 1 position/symbol, SL over TP, gap exit, trailing tightening, CB streak, Liq priority, replay determinism. |
 | `tests/test_execution_no_lookahead.py` | 3 unit tests chứng minh chống nhìn trước: next-open entry, sizing độc lập High/Low/Close, future perturbation bất biến. |
 | `tests/test_stage_04_review_06_coverage.py` | 11 unit tests độc lập bao phủ các trường hợp biên H1-H6 theo yêu cầu Review 06. |
+| `tests/test_stage_04_review_07_coverage.py` | 13 unit tests độc lập bao phủ các trường hợp biên J1-J3 theo yêu cầu Review 07/08. |
 | `docs/decisions/` | Thư mục lưu trữ các Architecture Decision Records (ADR 0001 → 0007). |
 | `BÁO CÁO TÓM TẮT/` | Thư mục chứa báo cáo tổng hợp và code backup theo từng giai đoạn (Giai đoạn 0 → 4). |
 

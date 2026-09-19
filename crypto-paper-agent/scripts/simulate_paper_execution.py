@@ -97,7 +97,9 @@ def run_synthetic_simulation():
     # Nến 08:00: MỐC SETTLEMENT FUNDING
     broker.process_candle({
         "open_time": t, "open": 50200.0, "high": 50300.0, "low": 50100.0, "close": 50250.0,
-        "symbol": "BTCUSDT", "timeframe": "1m", "funding_rate": 0.0001
+        "symbol": "BTCUSDT", "timeframe": "1m", "funding_rate": 0.0001,
+        "funding_readiness": True,
+        "funding_time": t,
     })
     f_evt = broker.funding_history[-1]
     print(
@@ -290,6 +292,9 @@ def run_real_data_simulation():
             "timeframe": "15m",
             "funding_rate": f_rate,
         }
+        if f_rate is not None:
+            candle["funding_readiness"] = True
+            candle["funding_time"] = norm_hour
 
         # Xử lý nến theo 5 pha chống nhìn trước
         res = broker.process_candle(candle)

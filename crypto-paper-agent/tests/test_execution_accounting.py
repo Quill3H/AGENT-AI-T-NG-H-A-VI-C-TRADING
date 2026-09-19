@@ -140,6 +140,8 @@ def test_mandatory_oracle_long_trade():
         "symbol": "BTCUSDT",
         "timeframe": "1m",
         "funding_rate": 0.0001,
+        "funding_readiness": True,
+        "funding_time": curr_time,
     }
     broker.process_candle(candle_funding)
 
@@ -291,7 +293,9 @@ def test_short_trade_with_negative_funding():
     t2 = t1 + timedelta(minutes=1)
     broker.process_candle({
         "open_time": t2, "open": 200.0, "high": 200.5, "low": 199.5, "close": 200.0,
-        "timeframe": "1m", "funding_rate": -0.0002
+        "timeframe": "1m", "funding_rate": -0.0002,
+        "funding_readiness": True,
+        "funding_time": t2,
     })
     assert len(broker.funding_history) == 1
     assert abs(broker.funding_history[0].cashflow_usd - (-0.20)) < 1e-4
