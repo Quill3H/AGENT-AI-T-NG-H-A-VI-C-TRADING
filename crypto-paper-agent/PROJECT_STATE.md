@@ -17,8 +17,9 @@
 - [x] **Giai đoạn 1 — Data Layer** (ĐÃ ĐÓNG & DUYỆT — 28/28 tests passed)
 - [x] **Giai đoạn 2 — Feature Engine** (ĐÃ ĐÓNG & DUYỆT — 53/53 tests passed)
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
+- [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09 — Code commit: `b16fa1e0...`)
 - [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ NGHIỆM THU THEO GPT REVIEW 10 — Code commit: `060f8a8d...`, Docs commit: `dc0ab9be...`)
-- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (ĐÃ HOÀN THIỆN TOÀN DIỆN THEO GPT REVIEW 11 — Code Commit A: `0b63f2702024993575735157528d4738be181e75`; ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU; TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7)
+- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (CODE HOÀN THIỆN THEO NHIỆM VỤ NGƯỜI DÙNG — Baseline: `e970337d...`; Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786`; ĐANG CHỜ GPT REVIEW ĐỘC LẬP NGHIỆM THU; TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
 - [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (`smc_features.py`, Order Block, FVG)
@@ -103,12 +104,20 @@
     - Cơ chế kiểm soát luỹ thừa toàn diện bằng mã băm chuẩn tắc SHA-256 (`canonical_payload_hash`) bao phủ config, run metadata, orders, trades, funding events, snapshots, metrics. Cùng `run_id` + cùng hash là idempotent no-op; cùng `run_id` + sai lệch bất kỳ ném `ValueError` (fail-closed).
     - Hỗ trợ cả production nested config (`config["data"]["futures_symbol"]`, `config["strategy"]["name"]`) và flat config.
     - Xuất JSON trade chuẩn xác nguyên văn theo Master Spec Mục 4.6 (17 key gốc, nested `market_context` với 4 key null unmeasured, nested `outcome` với 7 key, `rule_compliance: true`, RFC 8259 `allow_nan=False`).
-    - Chuẩn hoá nguồn chân lý tính toán metrics (`src/report/metrics.py`): Expectancy USD & R-multiple, Profit Factor (loss=0 xử lý là `None`/`null`), Max Drawdown USD & %, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$ annualization (std=0 xử lý là `None`/`null`). Chặn đứng `bool`, `NaN`, `Inf` bằng fail-closed type validation.
+    - Chuẩn hoá nguồn chân lý tính toán metrics (`src/report/metrics.py`): Expectancy USD & R-multiple, Profit Factor (loss=0 xử lý là `None`/`null`), Max Drawdown USD & %, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$ annualization (std=0 trả `0.0` hữu hạn và deterministic). Chặn đứng `bool`, `NaN`, `Inf` bằng fail-closed type validation.
     - Phân tách độc lập chỉ số Circuit Breaker (`status`, `multiplier`, `lock_count`, `rejections_count`) khỏi từ chối do thiếu ký quỹ riêng lẻ (`margin_rejections_count`).
     - Run ID tất định (Deterministic Run ID) sinh từ mã băm SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` (loại bỏ wall-clock).
     - Phân giải đường dẫn chuẩn tắc (Hermetic Path Resolution): Mọi đường dẫn tương đối `--output-dir` và `--db-path` đều resolve từ `PROJECT_ROOT`, bảo đảm độc lập 100% với CWD ngoại vi; bảo toàn đường dẫn tuyệt đối.
     - Tự động sinh bộ 6 artifacts đa định dạng (`src/report/generator.py`) trong `reports/<run_id>/`: `summary.json` (đầy đủ provenance, candle counts, gaps, đối soát kế toán), `summary.md` (nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`, bảng đối soát, disclosures & caveats), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
     - Thống nhất Benchmark Chuẩn Tắc 3 năm BTCUSDT (2021-2023): 22 orders (16 filled, 6 margin rejected), 16 trades (8 win, 8 loss, win rate 50.00%), fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT, final equity 12,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56) (Tham chiếu: ADR 0009).
+24. **Hoàn thiện Giai đoạn 6 bởi Codex tại Commit A `321477fb5a3658d51475dd35a6a01205c2df8786`:**
+    - `risk_ratio_percent` phản ánh stop risk thực tế trên entry equity; lưu order type và liquidation estimate tại thời điểm vào lệnh.
+    - Canonical payload hash giữ nguyên độ chính xác float; truy vấn trade/order/funding có tie-breaker ID deterministic; SQLite connection được đóng rõ ràng để hỗ trợ atomic replace trên Windows.
+    - Snapshot finalize chứa đúng phí/slippage force-close và không nhân đôi khi gọi finalize lại. Circuit Breaker đếm transition khóa thật.
+    - Metrics bổ sung loss rate, average realized RRR, benchmark classification 35–45%, candle-gap measurement và accounting reconciliation fail-closed ở tolerance `1e-4`.
+    - Sáu artifact được ghi atomically; config/reproduction command trong artifact không chứa absolute machine path.
+    - Funding adapter từ chối payload thiếu rate thay vì tự tổng hợp `0.0`.
+    - Xác minh trên Commit A: offline `274 passed, 2 skipped, 5 deselected`; network `5 passed, 276 deselected`; historical probes `40 passed`. CLI smoke tạo đủ 6 artifacts từ CWD ngoài project. Benchmark 3 năm chưa chạy lại: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 
 ---
 

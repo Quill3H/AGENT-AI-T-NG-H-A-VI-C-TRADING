@@ -1,18 +1,59 @@
-# BÁO CÁO NGHIỆM THU KỸ THUẬT GIAI ĐOẠN 6
-## TRADE LOGGER & PERFORMANCE REPORT (CẬP NHẬT TOÀN DIỆN SAU GPT REVIEW 11)
+# BÁO CÁO BÀN GIAO KỸ THUẬT GIAI ĐOẠN 6
+## TRADE LOGGER & PERFORMANCE REPORT — CODEX COMPLETION PASS
 
-> **Dự án**: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`  
-> **Nhánh**: `main`  
-> **Code Commit A (Code & Tests)**: `0b63f2702024993575735157528d4738be181e75`  
-> **Trạng thái**: HOÀN THÀNH 100% 9 YÊU CẦU THEO GPT REVIEW 11 — ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU  
-> **Nhãn dữ liệu Benchmark**: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`  
-> **Ngày hoàn thành**: 2026-09-19  
+> **Dự án**: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`
+> **Nhánh**: `codex/stage-06-completion`
+> **Baseline commit**: `e970337d504563e5987a4db6b5c06c635bf7244b`
+> **Code-under-test Commit A (Code & Tests)**: `321477fb5a3658d51475dd35a6a01205c2df8786`
+> **Documentation Commit B**: commit chứa bản báo cáo này; full SHA được ghi trong Git history và báo cáo bàn giao sau khi commit được tạo (SHA không thể tự nhúng vào chính nội dung commit mà không làm thay đổi SHA).
+> **Trạng thái**: HOÀN THÀNH NHIỆM VỤ TRIỂN KHAI — ĐANG CHỜ GPT REVIEW ĐỘC LẬP NGHIỆM THU
+> **Nhãn dữ liệu Benchmark**: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`
+> **Ngày hoàn thành**: 2026-09-21
+
+---
+
+## 0. Codex Completion Pass — Phạm vi và bằng chứng mới
+
+Codex tiếp quản vai trò Implementation Engineer chính theo yêu cầu trực tiếp của người dùng. Antigravity không còn là implementer đang hoạt động; attribution của toàn bộ commit lịch sử vẫn được giữ nguyên. Không triển khai dashboard, Giai đoạn 7, Breakout & Retest, testnet hoặc live trading.
+
+### Blocker đã đóng tại Commit A
+
+| Blocker | Thay đổi | Bằng chứng test |
+| :--- | :--- | :--- |
+| Risk ratio sai semantics | Xuất stop risk thực tế trên entry equity, không ánh xạ cứng theo tier | `test_json_export_exact_master_spec_section_4_6_schema` |
+| Hash có thể bỏ qua sai lệch float nhỏ | Không làm tròn float trước canonical SHA-256 | `test_payload_hash_preserves_sub_eight_decimal_float_changes` |
+| Thứ tự và metadata chưa đủ | Tie-break bằng ID; persist `order_type`; giữ liquidation estimate lúc entry | logger tests và full offline suite |
+| Equity curve bỏ phí force-close cuối | Replace/append terminal snapshot sau finalize; finalize lặp lại không nhân đôi | `test_finalize_replaces_last_snapshot_with_post_close_equity` |
+| Circuit Breaker count luôn 0 | Đếm transition kích hoạt khóa thật, không đếm lặp khi đang locked | `test_lock_count_tracks_transitions_only` |
+| Metrics/report thiếu và có thể báo PASS sai | Thêm loss rate, average realized RRR, benchmark classification; ledger reconciliation fail-closed tolerance `1e-4` | `test_report_accounting_mismatch_fails_closed`, benchmark parametrized tests |
+| Candle gaps/provenance được mặc định 0 | Tính gap từ index 15m/4h thực tế; loại absolute machine paths khỏi artifact | integration/full suite + CLI smoke reader |
+| Artifact có thể bị ghi dở | Atomic replace cho JSON/MD/CSV/PNG và SQLite mới | generator tests + Windows execution |
+| Funding source có thể tự bịa rate 0 | Payload thiếu `fundingRate`/`funding` ném lỗi | `test_funding_adapter_does_not_synthesize_missing_rate_as_zero` |
+| Test CWD để lại report trong checkout | Chuyển output test vào `tmp_path` | offline full suite, working tree sạch sau test |
+
+### Test thực sự chạy trên Commit A
+
+| Lệnh | Kết quả |
+| :--- | :--- |
+| `python -m pytest -p no:cacheprovider -m "not network" -q` | `274 passed, 2 skipped, 5 deselected` — 62.87s |
+| `python -m pytest -p no:cacheprovider docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q` | `40 passed` — 2.08s |
+| `python -m pytest -p no:cacheprovider -m network -q` | `5 passed, 276 deselected` — 15.23s |
+
+Môi trường: Python 3.12.14, pytest 9.1.1, pandas 3.0.1, numpy 2.3.5. `pandas_ta` không có; fallback pure pandas đã được dùng. Hai test đối chiếu tùy chọn với thư viện TA bị skip và được báo riêng, không tính là pass.
+
+### CLI smoke và artifacts
+
+- Chạy `run_backtest.py` từ CWD bên ngoài repository bằng cache tổng hợp trong `G:\CODEX\stage6-smoke-20260921-022836`.
+- Tạo đủ: `trades.sqlite`, `summary.json`, `trades.json`, `equity_curve.csv`, `equity_curve.png`, `summary.md`.
+- Đọc lại bằng standard JSON/CSV/SQLite; PNG magic hợp lệ; code SHA trong artifact khớp Commit A; final equity trong CSV khớp summary; JSON không có NaN/Infinity; config persisted không có absolute machine path.
+- Smoke dataset: 288 nến 15m, 18 nến 4h, 0 candle gaps, 0 trades, final equity 10,000 USDT. Do chưa đủ EMA200 warm-up, đây chỉ là smoke pipeline và empty-trade semantics.
+- Benchmark 3 năm ở phần lịch sử bên dưới không được chạy lại vì repository không có cache/artifact chuẩn tắc. Toàn bộ số liệu đó tiếp tục mang nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 
 ---
 
 ## 1. Tóm tắt Tổng quan
 
-Sau khi nhận kết luận từ **GPT Review 11** chỉ ra 9 điểm nghẽn kỹ thuật cần khắc phục trong Giai đoạn 6, Antigravity đã tiến hành tái cấu trúc sâu, hoàn thiện và xác minh toàn diện các thành phần của hệ thống ghi nhận sự kiện (Trade Logger), động cơ tính toán hiệu năng (Performance Metrics) và bộ sinh báo cáo đa định dạng (Report Generator).
+Phần từ đây trở xuống ghi lại báo cáo lịch sử của Antigravity tại commit `0b63f270...`. Các số test/benchmark lịch sử không thay thế kết quả Codex đã chạy trên Commit A mới ở Mục 0.
 
 Toàn bộ quá trình triển khai tuân thủ nghiêm ngặt nguyên lý **Zero Semantic Drift** (không làm thay đổi dù chỉ một bit logic khớp lệnh, giá fill, trạng thái tài khoản hay kết quả kế toán) và quy trình **Hai bước Commit (Two-Commit Workflow)**:
 1. **Commit A (`0b63f2702024993575735157528d4738be181e75`)**: Toàn bộ mã nguồn sản xuất, module logging, metrics engine, report generator, CLI runner và bộ 29 tests Stage 6 (tổng 309 tests toàn repo).
@@ -132,6 +173,6 @@ Chính thức tuyên bố vô hiệu và bác bỏ các số liệu dự thảo 
 
 ## 5. Cam Kết Tuân Thủ & Dừng Chờ Nghiệm Thu
 
-1. **Tuân thủ quy trình Hai bước Commit:** Antigravity đã hoàn tất Commit A (`0b63f2702024993575735157528d4738be181e75`) và Commit B (docs).
+1. **Tuân thủ quy trình Hai bước Commit:** Codex đã hoàn tất Code-under-test Commit A (`321477fb5a3658d51475dd35a6a01205c2df8786`) và commit tài liệu chứa báo cáo này.
 2. **DỪNG LẠI HOÀN TOÀN (HARD STOP):** Tuyệt đối không tự ý bắt đầu Giai đoạn 7 (Breakout & Retest) hoặc bất kỳ phân hệ nào tiếp theo.
 3. **Chờ Review:** Hệ thống sẵn sàng ở trạng thái sạch để GPT Reviewer tiến hành đợt đánh giá tiếp theo.

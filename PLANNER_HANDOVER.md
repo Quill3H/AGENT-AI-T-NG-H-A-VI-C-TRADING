@@ -1,4 +1,4 @@
-# PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT và Antigravity
+# PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
 > Đọc file này đầu mỗi phiên mới, rồi đối chiếu GitHub hiện tại. File này thay cho việc phụ thuộc trí nhớ hội thoại; không bảo đảm AI tự nhớ hoặc tự theo dõi GitHub.
 > Chỉ cập nhật thông tin đã xác minh hoặc đánh dấu rõ “tác giả báo cáo”, “chưa kiểm tra”, “chờ người dùng”.
@@ -8,7 +8,7 @@
 - Repo: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`, nhánh `main`.
 - Gốc chương trình trong repo: `crypto-paper-agent/`.
 - Mục tiêu: crypto paper trading agent; làm tuần tự từng giai đoạn, risk-first, chống lookahead.
-- Người dùng không rành code. GPT làm planner/reviewer, Antigravity triển khai. Giải thích ngắn bằng tiếng Việt, tránh bắt người dùng truyền đi nhiều tài liệu kỹ thuật.
+- Người dùng là người quyết định cuối cùng. Codex là Implementation Engineer chính từ 2026-09-21; GPT Planner/Reviewer ở phiên độc lập thực hiện review và nghiệm thu. Antigravity không còn là implementer đang hoạt động; attribution của các commit lịch sử được giữ nguyên.
 - GitHub là nơi bàn giao. GPT có thể tạo/cập nhật tài liệu review và task theo workflow đã thống nhất; không tự thay code triển khai trong một yêu cầu chỉ review.
 - Người dùng quyết định nghiệm thu và cho phép chuyển giai đoạn. GPT không coi câu “Anti làm xong” là quyền tự bắt đầu giai đoạn tiếp.
 - Không có kênh điều khiển trực tiếp Antigravity được thiết lập; GitHub không tự cập nhật nếu Anti chưa commit/push. Chỉ kiểm tra khi có phiên làm việc/yêu cầu; không hứa giám sát nền.
@@ -47,6 +47,14 @@
     8. Đối soát Benchmark Chuẩn Tắc 3 năm BTCUSDT: 22 orders, 16 trades, fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56).
     9. Bộ test mở rộng lên 29 tests cho Stage 6; toàn bộ 309/309 tests trong repo đều PASS 100%.
 - **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
+- **Hoàn thiện Giai đoạn 6 theo nhiệm vụ người dùng phê duyệt ngày 2026-09-21:**
+  - Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`.
+  - Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786` trên branch `codex/stage-06-completion`.
+  - Codex sửa các blocker còn lại: risk ratio theo risk thực tế, hash không làm tròn float, deterministic ordering, order type persistence, initial liquidation estimate, final snapshot sau force-close, Circuit Breaker activation count, loss rate/average realized RRR/benchmark classification, candle-gap measurement, đối soát report fail-closed, atomic artifact writes, portable artifact config, funding adapter không tự bịa rate 0, và test CWD không ghi vào checkout.
+  - Xác minh trên chính Commit A: offline `274 passed, 2 skipped, 5 deselected`; historical probes `40 passed`; network `5 passed, 276 deselected`.
+  - CLI smoke từ CWD ngoài project tạo đủ 6 artifacts, code SHA khớp Commit A, SQLite/JSON/CSV/PNG đọc lại được, final equity khớp dòng equity cuối, không chứa absolute machine path. Dataset smoke chỉ có 18 nến 4h nên `0 trades`; đây là kiểm tra pipeline/artifact, không phải benchmark hiệu năng.
+  - Benchmark 2021–2023 cũ không được chạy lại vì checkout không có dataset/cache chuẩn tắc: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+  - Trạng thái: **DỪNG CHỜ GPT REVIEW GIAI ĐOẠN 6; không bắt đầu Giai đoạn 7.**
 
 ## 3. Tài liệu nguồn cần đọc
 
@@ -55,8 +63,8 @@ Các đường dẫn dưới đây tính từ gốc repository:
 1. `crypto-paper-agent/PROJECT_STATE.md`: quyết định, checklist, giới hạn đã ghi nhận.
 2. `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`: đặc tả; đọc phần tương ứng giai đoạn đang làm.
 3. `crypto-paper-agent/docs/decisions/`: ADR 0001–0007 và các phụ lục đã chốt.
-4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_09.md`: kết luận nghiệm thu mới nhất của Giai đoạn 4. Các Review 05–08 là lịch sử phát hiện và khắc phục.
-   Task hiện hành: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
+4. `crypto-paper-agent/docs/reviews/GPT_STAGE_04_REVIEW_09.md`: file review độc lập mới nhất thực sự có trong repository. Review 10/11 được tài liệu sống thuật lại nhưng file nguồn không có trong cây Git hiện tại; phải coi là `NOT_VERIFIED` nếu cần nội dung nguyên văn.
+   Nhiệm vụ Stage 6 có thẩm quyền được người dùng cung cấp trực tiếp ngày 2026-09-21; đã hoàn thành tại Commit A nêu trên.
 5. `crypto-paper-agent/CHANGELOG.md` và code/tests tại commit thực tế.
 6. `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 3/`: báo cáo triển khai của Anti.
 7. `Initial idea/AGENT_SPEC.docx`: ý tưởng ban đầu; không ghi đè quyết định mới bằng ý tưởng cũ.
@@ -95,8 +103,9 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2` | Review 09 | **Đạt — nghiệm thu Giai đoạn 4**; cho phép phát hành task riêng Giai đoạn 5 |
 | `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` | Review 10 | **Đạt — nghiệm thu Giai đoạn 5**; cho phép bắt đầu triển khai Giai đoạn 6 |
 | `1d486f76da1430e1c02fa1ac24be177262d53c67` | Review 11 | Chưa đạt: 9 điểm nghẽn (schema Mục 4.6, composite keys, full idempotency, CWD paths, benchmark reconciliation). Anti sửa tại Commit A: `0b63f2702024993575735157528d4738be181e75` |
+| `321477fb5a3658d51475dd35a6a01205c2df8786` | Review tiếp theo | Codex hoàn thiện các blocker Stage 6 còn phát hiện được; toàn bộ test bắt buộc đã chạy, đang chờ review độc lập và quyết định nghiệm thu của người dùng |
 
-Review 02/03/07/08/09/10/11 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 0006/0007/0008/0009 ghi quyết định risk, execution, strategy và reporting qua các vòng. Không tiếp tục yêu cầu sửa lỗi đã đạt nếu không có bằng chứng hồi quy mới.
+Review 02/03/04/05/06/07/09 có file trong `crypto-paper-agent/docs/reviews/`; walkthrough 08 có file riêng. Không tìm thấy file Review 10/11 trong cây Git hiện tại. ADR 0006/0007/0008/0009 ghi quyết định risk, execution, strategy và reporting qua các vòng.
 
 ## 6. Quy trình bắt đầu mỗi phiên GPT
 
@@ -106,20 +115,14 @@ Review 02/03/07/08/09/10/11 lưu ở `crypto-paper-agent/docs/reviews/`; ADR 000
 4. Chỉ review khi được yêu cầu review; chỉ giao triển khai khi người dùng cho phép. Không push thay đổi code trong vai trò reviewer.
 5. Khi kiểm thử, báo riêng pass/skip/deselected/network chưa chạy, môi trường và SHA; không sao chép số tác giả thành kết quả của mình.
 6. Sau mỗi mốc quan trọng, cập nhật file này với latest review, blocker, quyền cho phép hiện tại và next action; lưu task triển khai riêng có tiêu chí nghiệm thu.
-7. Handoff cho Anti: đọc hồ sơ + task mới trên main sau pull; code đúng phạm vi, tests, cập nhật PROJECT_STATE/CHANGELOG/ADR/báo cáo, commit/push rồi dừng chờ review.
+7. Handoff cho Codex Implementation Engineer: đọc hồ sơ + task được người dùng phê duyệt; code đúng phạm vi, tests, cập nhật PROJECT_STATE/CHANGELOG/báo cáo, commit/push branch riêng rồi dừng chờ review.
 8. Nếu tài liệu sống quá dài: giữ hồ sơ này ngắn, chuyển lịch sử chi tiết sang review/ADR; không xóa bằng chứng cũ.
 
 ## 7. Task hiện hành được phép triển khai
 
-Task duy nhất: `crypto-paper-agent/docs/planning/ANTIGRAVITY_STAGE_05_TASK.md`.
+Nhiệm vụ hoàn thiện Giai đoạn 6 do người dùng phê duyệt ngày 2026-09-21 đã hoàn tất tại Code-under-test Commit A `321477fb5a3658d51475dd35a6a01205c2df8786`.
 
-Phạm vi tóm tắt:
-- Trend Following theo rulebook gốc: EMA20/EMA50 crossover, chờ pullback vùng EMA20/50, regime EMA200, RSI, OI confluence; LONG/SHORT đối xứng.
-- Stop swing causal, trailing EMA50 tightening-only; signal 4h và khớp next-open 15m qua PaperBroker.
-- Xây `BacktestEngine` tối thiểu và đóng seam funding provenance của Data Layer để chạy backtest thật 3 năm.
-- Giữ nguyên toàn bộ bất biến Risk Manager/PaperBroker và regression Giai đoạn 0–4.
-- Không làm Trade Logger/metrics/dashboard Giai đoạn 6, không làm chiến lược/RL Giai đoạn 7–11.
-- Sau commit/push Giai đoạn 5 phải dừng chờ GPT review; tuyệt đối không tự bắt đầu Giai đoạn 6.
+Task hiện hành: **không có task sửa mới**. Chỉ review/nghiệm thu Commit A nêu trên. Không merge vào `main` và không bắt đầu Giai đoạn 7 nếu chưa có xác nhận mới của người dùng.
 
 ## 8. Câu mở cuộc trò chuyện mới cho người dùng
 
