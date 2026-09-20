@@ -157,6 +157,7 @@ class OrderExecutionRecord:
     direction: OrderDirection
     status: OrderStatus
     requested_at: datetime
+    order_type: OrderType = OrderType.MARKET_ENTRY
     processed_at: Optional[datetime] = None
     reference_price: float = 0.0
     actual_fill_price: float = 0.0
@@ -197,11 +198,14 @@ class Position:
     entry_fee: float = 0.0
     exit_fee: float = 0.0
     initial_stop_loss_price: Optional[float] = None
+    initial_liquidation_price: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.initial_stop_loss_price is None:
             self.initial_stop_loss_price = self.stop_loss_price
+        if self.initial_liquidation_price is None:
+            self.initial_liquidation_price = self.liquidation_price
 
     def notional_value(self, current_price: float) -> float:
         """Giá trị danh nghĩa theo giá hiện tại."""

@@ -16,6 +16,7 @@ CHỐNG LOOKAHEAD BIAS:
 """
 from __future__ import annotations
 
+import math
 import time
 from datetime import datetime, timezone
 from typing import Dict, Optional
@@ -526,13 +527,27 @@ def _fetch_funding_chunk(
                 limit=MAX_FUNDING_PER_REQUEST,
                 params={"endTime": until_ms},
             )
-            return [
-                {
-                    "timestamp": r["timestamp"],
-                    "funding_rate": r.get("fundingRate", r.get("funding", 0.0)),
-                }
-                for r in records
-            ]
+            normalized = []
+            for idx, record in enumerate(records):
+                if not isinstance(record, dict):
+                    raise TypeError(f"Funding record {idx} must be a mapping")
+                if "timestamp" not in record:
+                    raise ValueError(f"Funding record {idx} is missing timestamp")
+                raw_rate = record.get("fundingRate")
+                if raw_rate is None:
+                    raw_rate = record.get("funding")
+                if raw_rate is None:
+                    raise ValueError(
+                        f"Funding record {idx} is missing both fundingRate and funding; "
+                        "refusing to synthesize a zero rate"
+                    )
+                if type(raw_rate) is bool:
+                    raise TypeError(f"Funding record {idx} rate cannot be boolean")
+                rate = float(raw_rate)
+                if not math.isfinite(rate):
+                    raise ValueError(f"Funding record {idx} rate must be finite, got {rate}")
+                normalized.append({"timestamp": record["timestamp"], "funding_rate": rate})
+            return normalized
         except ccxt.RateLimitExceeded:
             wait = INITIAL_BACKOFF_SECONDS * (2 ** attempt)
             logger.warning("[Fetcher] Funding rate limit. Chờ {}s", wait)
@@ -541,6 +556,11 @@ def _fetch_funding_chunk(
             wait = INITIAL_BACKOFF_SECONDS * (2 ** attempt)
             logger.warning("[Fetcher] Funding network error: {}. Chờ {}s", str(e)[:100], wait)
             time.sleep(wait)
+        except (TypeError, ValueError, KeyError):
+            # Malformed exchange payload is an integrity failure, not a
+            # recoverable empty response.  Propagate it to keep funding
+            # accounting fail-closed.
+            raise
         except Exception as e:
             logger.error("[Fetcher] Funding fetch error: {}", str(e)[:200])
             return []

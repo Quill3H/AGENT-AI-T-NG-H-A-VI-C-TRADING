@@ -268,6 +268,24 @@ class BacktestEngine:
     def _calculate_metrics(self, finalize_summary: Dict[str, Any], force_close: bool) -> Dict[str, Any]:
         """Tổng hợp số liệu thống kê chi tiết của phiên backtest theo chuẩn Stage 6."""
         from src.report.metrics import calculate_backtest_metrics
+        gap_details: Dict[str, Dict[str, Any]] = {}
+        for label, frame, timeframe in (
+            ("15m", self.data_15m, self.timeframe_execution),
+            ("4h", self.data_4h, self.timeframe_signal),
+        ):
+            expected = pd.Timedelta(timeframe_to_timedelta(timeframe))
+            deltas = frame.index.to_series().diff().dropna()
+            gaps = deltas[deltas > expected]
+            gap_details[label] = {
+                "gaps_detected_count": int(len(gaps)),
+                "max_gap_duration_seconds": int(gaps.max().total_seconds()) if len(gaps) else 0,
+            }
+
+        combined_gap_stats = {
+            "candle_gaps_count": sum(v["gaps_detected_count"] for v in gap_details.values()),
+            "max_gap_duration_seconds": max(v["max_gap_duration_seconds"] for v in gap_details.values()),
+            "candle_gaps_by_timeframe": gap_details,
+        }
         return calculate_backtest_metrics(
             broker=self.broker,
             config=self.config,
@@ -280,5 +298,6 @@ class BacktestEngine:
             submitted_orders_count=self.submitted_orders_count,
             force_close=force_close,
             finalize_summary=finalize_summary,
+            candle_gap_stats=combined_gap_stats,
         )
 

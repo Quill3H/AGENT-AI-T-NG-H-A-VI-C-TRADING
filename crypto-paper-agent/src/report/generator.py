@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 from typing import Any, Dict, List, Optional, Union
 from loguru import logger
 import pandas as pd
@@ -36,6 +37,125 @@ from src.execution.order_models import (
 )
 from src.logging.trade_logger import TradeLogger, _clean_float, _to_epoch, _to_iso, parse_config_metadata
 from src.report.metrics import _to_dt
+
+
+ACCOUNTING_TOLERANCE = 1e-4
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Write one artifact atomically in its destination directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_name: Optional[str] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_name = temp_file.name
+        os.replace(temp_name, path)
+    except Exception:
+        if temp_name:
+            Path(temp_name).unlink(missing_ok=True)
+        raise
+
+
+def _atomic_copy(source: Path, destination: Path) -> None:
+    """Copy a completed artifact without exposing a partially copied target."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
+    try:
+        shutil.copy2(source, temp_path)
+        os.replace(temp_path, destination)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
+def _validate_accounting(metrics: Dict[str, Any], broker: Any) -> Dict[str, Any]:
+    """Reconcile report values against broker ledger truth and fail on mismatch."""
+    broker.verify_accounting_invariants()
+    trades = list(getattr(broker, "trade_history", []))
+    positions = getattr(broker, "positions", {})
+    open_positions = positions.values() if isinstance(positions, dict) else positions
+
+    def field(item: Any, name: str, default: float = 0.0) -> float:
+        value = item.get(name, default) if isinstance(item, dict) else getattr(item, name, default)
+        if type(value) is bool:
+            raise TypeError(f"Accounting field '{name}' cannot be boolean")
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError(f"Accounting field '{name}' must be finite, got {result}")
+        return result
+
+    gross = sum(field(t, "gross_price_pnl") for t in trades)
+    fees = sum(field(t, "entry_fee") + field(t, "exit_fee") for t in trades)
+    fees += sum(field(p, "entry_fee") for p in open_positions)
+    funding_events = list(getattr(broker, "funding_history", []))
+    if funding_events:
+        funding = sum(field(event, "cashflow_usd", field(event, "payment")) for event in funding_events)
+    else:
+        funding = sum(field(t, "funding_cashflow") for t in trades)
+
+    initial = field(broker, "initial_balance")
+    wallet = field(broker, "wallet_balance")
+    equity = field(broker, "equity")
+    unrealized = field(broker, "unrealized_pnl", equity - wallet)
+    net = gross - fees + funding
+    expected_wallet = initial + net
+    expected_equity = expected_wallet + unrealized
+
+    comparisons = {
+        "initial_capital": initial,
+        "total_gross_pnl": gross,
+        "total_fees": fees,
+        "total_funding_trades": funding,
+        "total_net_pnl": net,
+        "final_equity": equity,
+    }
+    for key, actual in comparisons.items():
+        if key in metrics and metrics[key] is not None:
+            supplied = field(metrics, key)
+            if abs(supplied - actual) > ACCOUNTING_TOLERANCE:
+                raise AssertionError(
+                    f"Report accounting mismatch for {key}: supplied {supplied:.8f}, ledger {actual:.8f}"
+                )
+
+    if abs(wallet - expected_wallet) > ACCOUNTING_TOLERANCE:
+        raise AssertionError(
+            f"Report accounting mismatch: wallet {wallet:.8f} != expected {expected_wallet:.8f}"
+        )
+    if abs(equity - expected_equity) > ACCOUNTING_TOLERANCE:
+        raise AssertionError(
+            f"Report accounting mismatch: equity {equity:.8f} != expected {expected_equity:.8f}"
+        )
+
+    return {
+        "accounting_invariants_verified": True,
+        "formula": "final_equity = initial_equity + gross_price_pnl - fees + funding_cashflow + unrealized_pnl",
+        "tolerance": ACCOUNTING_TOLERANCE,
+        "initial_capital": initial,
+        "final_equity": equity,
+        "wallet_balance": wallet,
+        "reserved_collateral": field(broker, "reserved_collateral"),
+        "available_margin": field(broker, "available_margin"),
+        "unrealized_pnl": unrealized,
+        "gross_price_pnl": gross,
+        "fees_paid": fees,
+        "funding_cashflow": funding,
+        "net_realized_pnl": net,
+        "expected_wallet_balance": expected_wallet,
+        "wallet_difference": wallet - expected_wallet,
+        "expected_final_equity": expected_equity,
+        "equity_difference": equity - expected_equity,
+        "adjustments": 0.0,
+    }
 
 
 def _get_git_commit_sha() -> str:
@@ -78,6 +198,21 @@ def _sanitize_for_json(obj: Any) -> Any:
     return str(obj)
 
 
+def _portable_config(obj: Any, key: str = "") -> Any:
+    """Remove machine-specific absolute paths from persisted report config."""
+    if isinstance(obj, dict):
+        return {str(k): _portable_config(v, str(k)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_portable_config(v, key) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_portable_config(v, key) for v in obj)
+    if isinstance(obj, str) and any(token in key.lower() for token in ("path", "dir", "file")):
+        candidate = Path(obj)
+        if candidate.is_absolute():
+            return candidate.name
+    return obj
+
+
 class ReportGenerator:
     """
     Sinh báo cáo đa định dạng cho mỗi phiên chạy backtest.
@@ -113,59 +248,70 @@ class ReportGenerator:
         out_dir.mkdir(parents=True, exist_ok=True)
         artifacts: Dict[str, Path] = {}
 
-        meta = parse_config_metadata(config)
-        config_canonical_str = json.dumps(config, sort_keys=True, ensure_ascii=False, default=str)
+        artifact_config = _portable_config(config)
+        meta = parse_config_metadata(artifact_config)
+        config_canonical_str = json.dumps(artifact_config, sort_keys=True, ensure_ascii=False, default=str)
         config_hash = hashlib.sha256(config_canonical_str.encode("utf-8")).hexdigest()
+        accounting_rec = _validate_accounting(metrics, broker)
+        metrics = dict(metrics)
+        metrics.update({
+            "initial_capital": accounting_rec["initial_capital"],
+            "final_equity": accounting_rec["final_equity"],
+            "wallet_balance": accounting_rec["wallet_balance"],
+            "reserved_collateral": accounting_rec["reserved_collateral"],
+            "available_margin": accounting_rec["available_margin"],
+            "unrealized_pnl": accounting_rec["unrealized_pnl"],
+            "total_gross_pnl": accounting_rec["gross_price_pnl"],
+            "total_fees": accounting_rec["fees_paid"],
+            "total_funding_trades": accounting_rec["funding_cashflow"],
+            "total_net_pnl": accounting_rec["net_realized_pnl"],
+            "accounting_invariants_verified": True,
+        })
         code_commit_sha = metrics.get("code_commit_sha") or _get_git_commit_sha()
 
         # 1. SQLite Database: Ghi nhận sự kiện vào SQLite
         sqlite_file = out_dir / "trades.sqlite"
         target_db = Path(db_path).resolve() if db_path else sqlite_file
 
-        logger_instance = TradeLogger(target_db)
-        logger_instance.log_backtest_run(
-            run_id=run_id,
-            config=config,
-            metrics=metrics,
-            orders=broker.order_history,
-            trades=broker.trade_history,
-            funding_events=broker.funding_history,
-            account_snapshots=broker.account_snapshots,
+        target_db.parent.mkdir(parents=True, exist_ok=True)
+        database_was_new = not target_db.exists()
+        working_db = (
+            target_db.with_name(f".{target_db.name}.{os.getpid()}.tmp")
+            if database_was_new else target_db
         )
+        try:
+            logger_instance = TradeLogger(working_db)
+            logger_instance.log_backtest_run(
+                run_id=run_id,
+                config=artifact_config,
+                metrics=metrics,
+                orders=broker.order_history,
+                trades=broker.trade_history,
+                funding_events=broker.funding_history,
+                account_snapshots=broker.account_snapshots,
+            )
+            if database_was_new:
+                os.replace(working_db, target_db)
+                logger_instance = TradeLogger(target_db)
+        except Exception:
+            if database_was_new:
+                working_db.unlink(missing_ok=True)
+            raise
 
         if target_db != sqlite_file:
-            shutil.copy2(target_db, sqlite_file)
+            _atomic_copy(target_db, sqlite_file)
         artifacts["trades.sqlite"] = sqlite_file
 
         # 2. summary.json
         summary_json_path = out_dir / "summary.json"
 
-        initial_cap = float(metrics.get("initial_capital", 10000.0))
-        final_eq = float(metrics.get("final_equity", broker.equity))
-        gross_pnl = float(metrics.get("total_gross_pnl", 0.0))
-        total_fees = float(metrics.get("total_fees", 0.0))
-        funding_cf = float(metrics.get("total_funding_trades", 0.0))
-        net_pnl = float(metrics.get("total_net_pnl", 0.0))
-
-        accounting_rec = {
-            "accounting_invariants_verified": bool(metrics.get("accounting_invariants_verified", True)),
-            "initial_capital": initial_cap,
-            "final_equity": final_eq,
-            "wallet_balance": float(getattr(broker, "wallet_balance", 0.0)),
-            "reserved_collateral": float(getattr(broker, "reserved_collateral", 0.0)),
-            "available_margin": float(getattr(broker, "available_margin", 0.0)),
-            "unrealized_pnl": float(getattr(broker, "unrealized_pnl", 0.0)),
-            "gross_price_pnl": gross_pnl,
-            "fees_paid": total_fees,
-            "funding_cashflow": funding_cf,
-            "net_realized_pnl": net_pnl,
-        }
-
-        data_cfg = config.get("data", {})
+        data_cfg = artifact_config.get("data", {})
+        raw_data_dir = Path(str(data_cfg.get("raw_data_dir", "data/raw")))
+        safe_raw_data_dir = raw_data_dir.name if raw_data_dir.is_absolute() else raw_data_dir.as_posix()
         data_prov = {
             "exchange": data_cfg.get("exchange", "binance"),
             "futures_symbol": meta["symbol"],
-            "raw_data_dir": str(data_cfg.get("raw_data_dir", "data/raw")),
+            "raw_data_dir": safe_raw_data_dir,
             "fetch_mode": "no_fetch" if metrics.get("no_fetch") else "auto",
         }
 
@@ -205,8 +351,14 @@ class ReportGenerator:
             "reproduction_command": reproduction_cmd,
         })
 
-        with open(summary_json_path, "w", encoding="utf-8") as f:
-            json.dump(summary_payload, f, indent=2, ensure_ascii=False, allow_nan=False, sort_keys=True)
+        summary_json = json.dumps(
+            summary_payload,
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+        )
+        _atomic_write_text(summary_json_path, summary_json)
         artifacts["summary.json"] = summary_json_path
 
         # 3. trades.json
@@ -226,7 +378,7 @@ class ReportGenerator:
 
         # 6. summary.md
         summary_md_path = out_dir / "summary.md"
-        self._export_summary_md(run_id, config, metrics, summary_md_path)
+        self._export_summary_md(run_id, artifact_config, metrics, summary_md_path)
         artifacts["summary.md"] = summary_md_path
 
         logger.info(f"Generated all Stage 6 artifacts in: {out_dir}")
@@ -257,8 +409,12 @@ class ReportGenerator:
                 "drawdown_pct": round(dd_pct, 4),
             })
 
-        df = pd.DataFrame(rows)
-        df.to_csv(output_path, index=False)
+        columns = [
+            "timestamp", "equity", "wallet_balance", "unrealized_pnl",
+            "margin_used", "available_balance", "drawdown_usd", "drawdown_pct",
+        ]
+        df = pd.DataFrame(rows, columns=columns)
+        _atomic_write_text(output_path, df.to_csv(index=False))
 
     def _render_chart(
         self,
@@ -273,8 +429,7 @@ class ReportGenerator:
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.text(0.5, 0.5, "No snapshot data available", ha="center", va="center")
             plt.tight_layout()
-            plt.savefig(output_path, dpi=150)
-            plt.close(fig)
+            self._save_figure_atomic(fig, output_path)
             return
 
         times = []
@@ -332,8 +487,21 @@ class ReportGenerator:
         fig.autofmt_xdate()
 
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150)
-        plt.close(fig)
+        self._save_figure_atomic(fig, output_path)
+
+    @staticmethod
+    def _save_figure_atomic(fig: Any, output_path: Path) -> None:
+        """Save a PNG fully before replacing the visible artifact."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = output_path.with_name(f".{output_path.stem}.{os.getpid()}.tmp.png")
+        try:
+            fig.savefig(temp_path, dpi=150)
+            os.replace(temp_path, output_path)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+        finally:
+            plt.close(fig)
 
     def _export_summary_md(
         self,
@@ -392,6 +560,9 @@ class ReportGenerator:
         cb_multiplier = metrics.get("circuit_breaker_risk_multiplier", 1.0)
         cb_rej = metrics.get("circuit_breaker_rejections_count", 0)
         margin_rej = metrics.get("margin_rejections_count", metrics.get("orders_rejected_count", 0))
+        audit_status = "PASSED" if metrics.get("accounting_invariants_verified") is True else "FAILED"
+        benchmark = metrics.get("benchmark_comparison", {})
+        benchmark_status = benchmark.get("status", "NOT_AVAILABLE") if isinstance(benchmark, dict) else "NOT_AVAILABLE"
 
         bars_15m = metrics.get("bars_15m_count", 0)
         bars_4h = metrics.get("bars_4h_count", 0)
@@ -442,7 +613,7 @@ class ReportGenerator:
 | **Tổng phí giao dịch (Fees Paid)** | `-${tot_fees:,.2f}` | Phí taker |
 | **Dòng tiền Funding (Funding Cashflow)** | `${tot_funding:+,.2f}` | Thanh toán định kỳ sàn |
 | **Net Realized PnL** | `${tot_net_pnl:+,.2f}` | Gross - Fees + Funding |
-| **Kiểm toán Bất biến Kế toán** | `PASSED` | `wallet_balance` khớp 100% ledger |
+| **Kiểm toán Bất biến Kế toán** | `{audit_status}` | Sai lệch vượt tolerance sẽ làm report thất bại |
 | **Trạng thái Circuit Breaker** | `{cb_status}` | Multiplier: `{cb_multiplier}` |
 | **Từ chối Lệnh do Ký quỹ (Margin Gate)** | `{margin_rej}` lần | Độc lập với Circuit Breaker |
 | **Từ chối Lệnh do Circuit Breaker** | `{cb_rej}` lần | Khóa khi chạm ngưỡng rủi ro |
@@ -462,6 +633,7 @@ class ReportGenerator:
 | **Max Consecutive Wins / Losses** | `{metrics.get("max_consecutive_wins", 0)}` / `{metrics.get("max_consecutive_losses", 0)}` |
 | **Total Trading Fees** | `${tot_fees:,.2f} USDT` |
 | **Total Funding Cashflow** | `${tot_funding:+,.2f} USDT` |
+| **Benchmark Win-rate 35-45%** | `{benchmark_status}` (comparison only; not a future-performance guarantee) |
 
 ### Phân bổ lý do đóng vị thế (Exit Reasons)
 """
@@ -490,5 +662,4 @@ class ReportGenerator:
 > 3. **Phí & Funding**: Chi phí giao dịch tính theo biểu phí taker cố định và funding rate lịch sử. Không tính đến chi phí trượt giá thanh lý quy mô lớn hoặc độ trễ mạng (network latency).
 > 4. **Quá khứ không đại diện tương lai**: Hiệu suất trong quá khứ của chiến lược trend following không đảm bảo kết quả tương tự trong tương lai.
 """
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(md_content)
+        _atomic_write_text(output_path, md_content)

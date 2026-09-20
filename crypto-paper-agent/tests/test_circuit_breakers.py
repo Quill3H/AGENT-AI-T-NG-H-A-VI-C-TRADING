@@ -349,3 +349,21 @@ class TestCircuitBreakers:
         assert cb.is_trading_allowed(t_future) is False
 
 
+def test_lock_count_tracks_transitions_only():
+    cb = CircuitBreakerState()
+    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    cb.record_cashflow(-600.0, t0, equity=10000.0)
+    assert cb.is_locked is True
+    assert cb.lock_count == 1
+
+    cb.record_cashflow(-10.0, t0 + timedelta(hours=1), equity=9400.0)
+    assert cb.lock_count == 1
+
+    cb.advance_time(t0 + timedelta(hours=25))
+    assert cb.is_locked is False
+    cb.record_cashflow(-600.0, t0 + timedelta(hours=26), equity=10000.0)
+    assert cb.is_locked is True
+    assert cb.lock_count == 2
+
+

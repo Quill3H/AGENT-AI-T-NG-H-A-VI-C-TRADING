@@ -25,6 +25,7 @@ from src.report.metrics import (
     calculate_daily_sharpe,
     calculate_max_drawdown,
     calculate_trade_metrics,
+    classify_benchmark_win_rate,
 )
 
 
@@ -138,14 +139,14 @@ def test_daily_sharpe_ratio_calculation():
     ]
     assert calculate_daily_sharpe(snap_1day) is None
 
-    # 2. Chuỗi phẳng (equity không đổi -> std = 0) -> None
+    # 2. Chuỗi phẳng (equity không đổi -> std = 0) -> hữu hạn, deterministic
     snap_flat = [
         {"timestamp": t0, "equity": 10000.0},
         {"timestamp": t0 + timedelta(days=1), "equity": 10000.0},
         {"timestamp": t0 + timedelta(days=2), "equity": 10000.0},
         {"timestamp": t0 + timedelta(days=3), "equity": 10000.0},
     ]
-    assert calculate_daily_sharpe(snap_flat) is None
+    assert calculate_daily_sharpe(snap_flat) == 0.0
 
     # 3. Chuỗi biến động đa ngày với giá trị xác định
     # 5 ngày với equity kết ngày: 10000, 10100, 10200, 10150, 10300
@@ -213,12 +214,14 @@ def test_calculate_backtest_metrics_reconciliation():
 
     assert metrics["total_trades"] == 2
     assert metrics["win_rate"] == 50.0
+    assert metrics["loss_rate"] == 50.0
     assert metrics["initial_capital"] == 10000.0
     assert metrics["final_equity"] == 10250.0
     assert metrics["total_return_pct"] == 2.5
     assert metrics["profit_factor"] == 6.0  # 300 / 50 = 6.0
     assert metrics["expectancy_usd"] == 125.0  # (300 - 50) / 2 = 125.0
     assert metrics["expectancy_r"] == 1.0  # (3.0 - 1.0) / 2 = 1.0 R
+    assert metrics["average_realized_rrr"] == 1.0
     assert metrics["accounting_invariants_verified"] is True
 
 
@@ -274,9 +277,9 @@ def test_circuit_breaker_metrics_separation():
     class MockBrokerWithCB:
         def __init__(self):
             self.initial_balance = 10000.0
-            self.equity = 9500.0
-            self.wallet_balance = 9500.0
-            self.available_margin = 9500.0
+            self.equity = 10000.0
+            self.wallet_balance = 10000.0
+            self.available_margin = 10000.0
             self.circuit_breaker = MockCB()
             self.trade_history = []
             self.order_history = [
@@ -309,4 +312,50 @@ def test_circuit_breaker_metrics_separation():
     assert metrics["circuit_breaker_rejections_count"] == 1
     assert metrics["margin_rejections_count"] == 2
     assert metrics["orders_rejected_count"] == 3
+
+
+@pytest.mark.parametrize(
+    ("actual", "expected"),
+    [
+        (34.99, "BELOW_EXPECTED_RANGE"),
+        (35.0, "WITHIN_EXPECTED_RANGE"),
+        (45.0, "WITHIN_EXPECTED_RANGE"),
+        (45.01, "ABOVE_EXPECTED_RANGE"),
+    ],
+)
+def test_benchmark_comparison_below_within_above(actual, expected):
+    result = classify_benchmark_win_rate(actual, total_trades=20)
+    assert result["status"] == expected
+    assert result["comparison_only"] is True
+    assert result["future_performance_guarantee"] is False
+
+
+def test_benchmark_comparison_no_trades_is_not_misleading():
+    assert classify_benchmark_win_rate(0.0, total_trades=0)["status"] == "INSUFFICIENT_DATA"
+
+
+def test_report_accounting_mismatch_fails_closed():
+    class MismatchedBroker:
+        initial_balance = 10000.0
+        wallet_balance = 10001.0
+        equity = 10001.0
+        available_margin = 10001.0
+        trade_history = []
+        order_history = []
+        account_snapshots = []
+        funding_history = []
+        positions = {}
+
+        def verify_accounting_invariants(self):
+            return True
+
+    with pytest.raises(AssertionError, match="Report accounting mismatch"):
+        calculate_backtest_metrics(
+            broker=MismatchedBroker(),
+            config={"symbol": "BTCUSDT", "strategy": "trend_following"},
+            start_time=datetime(2023, 1, 1, tzinfo=timezone.utc),
+            end_time=datetime(2023, 1, 2, tzinfo=timezone.utc),
+            bars_15m_count=0,
+            bars_4h_count=0,
+        )
 

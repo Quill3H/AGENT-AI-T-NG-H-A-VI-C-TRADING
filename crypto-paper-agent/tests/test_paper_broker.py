@@ -318,3 +318,40 @@ def test_replay_determinism_identical_results(config):
         assert o1.order_id == o2.order_id
         assert o1.status == o2.status
 
+
+def test_finalize_replaces_last_snapshot_with_post_close_equity(default_broker):
+    """Force-close costs must be present in the final equity curve exactly once."""
+    t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+    default_broker.process_candle({
+        "open_time": t0, "open": 100.0, "high": 100.2, "low": 99.8,
+        "close": 100.0, "timeframe": "1m",
+    })
+    default_broker.submit_order(OrderRequest(
+        symbol="BTCUSDT",
+        direction=OrderDirection.LONG,
+        signal_price=100.0,
+        stop_loss_price=95.0,
+        signal_time=t0 + timedelta(minutes=1),
+        leverage=2.0,
+        base_risk_percent=0.02,
+        requested_quantity=1.0,
+    ))
+    default_broker.process_candle({
+        "open_time": t0 + timedelta(minutes=1), "open": 100.0,
+        "high": 100.2, "low": 99.8, "close": 100.0, "timeframe": "1m",
+    })
+
+    snapshot_count = len(default_broker.account_snapshots)
+    finalize_time = default_broker.current_time
+    default_broker.finalize(timestamp=finalize_time, force_close=True)
+
+    assert len(default_broker.trade_history) == 1
+    assert len(default_broker.account_snapshots) == snapshot_count
+    assert default_broker.account_snapshots[-1].timestamp == finalize_time
+    assert default_broker.account_snapshots[-1].equity == pytest.approx(default_broker.equity)
+    assert default_broker.account_snapshots[-1].open_positions_count == 0
+
+    default_broker.finalize(timestamp=finalize_time, force_close=True)
+    assert len(default_broker.trade_history) == 1
+    assert len(default_broker.account_snapshots) == snapshot_count
+

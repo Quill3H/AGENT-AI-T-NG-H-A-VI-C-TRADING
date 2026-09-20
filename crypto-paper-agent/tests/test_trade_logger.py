@@ -326,7 +326,8 @@ def test_export_trades_json_exact_master_spec_schema(temp_logger, tmp_path):
     assert t0["leverage"] == 1.0
     assert t0["margin_used_usd"] == 10005.0
     assert t0["risk_amount_usd"] == 505.0
-    assert t0["risk_ratio_percent"] == 2.0
+    # Actual risk is 505 / 10,000 = 5.05%; the tier label must not overwrite it.
+    assert t0["risk_ratio_percent"] == 5.05
     assert t0["estimated_liquidation_price"] == 15000.0
     assert t0["outcome"]["exit_price"] == 21010.0
     assert t0["outcome"]["pnl_usd"] == 493.8
@@ -350,6 +351,7 @@ def test_rejection_reason_persistence(temp_logger):
 
     retrieved = temp_logger.get_orders(run_id)
     assert len(retrieved) == 1
+    assert retrieved[0]["order_type"] == "MARKET_ENTRY"
     assert retrieved[0]["rejection_reasons"] == ["INSUFFICIENT_MARGIN: required 6000 > available 5000", "RISK_LIMIT_EXCEEDED"]
 
 
@@ -476,6 +478,34 @@ def test_full_payload_idempotency_conflict(temp_logger):
     s_alt[0].available_margin = 9999.0
     with pytest.raises(ValueError, match="differing payload"):
         temp_logger.log_backtest_run(run_id, config, metrics, orders, trades, fundings, s_alt)
+
+
+def test_payload_hash_preserves_sub_eight_decimal_float_changes():
+    """Distinct ledger floats must never collapse to one idempotency hash."""
+    from src.logging.trade_logger import compute_canonical_payload_hash
+
+    base = dict(
+        config={},
+        run_metadata={},
+        orders=[],
+        funding_events=[],
+        account_snapshots=[],
+        metrics={},
+    )
+    hash_a = compute_canonical_payload_hash(trades=[{"net_pnl": 1.000000001}], **base)
+    hash_b = compute_canonical_payload_hash(trades=[{"net_pnl": 1.000000002}], **base)
+    assert hash_a != hash_b
+
+
+def test_query_order_is_deterministic_for_equal_timestamps(temp_logger):
+    run_id, config, metrics, orders, trades, fundings, snapshots = _make_dummy_run_data("run_ordering")
+    first = TradeRecord(**trades[0].__dict__)
+    second = TradeRecord(**trades[0].__dict__)
+    first.trade_id = "TRD_Z"
+    second.trade_id = "TRD_A"
+    metrics["total_trades"] = 2
+    temp_logger.log_backtest_run(run_id, config, metrics, orders, [first, second], fundings, snapshots)
+    assert [row["trade_id"] for row in temp_logger.get_trades(run_id)] == ["TRD_A", "TRD_Z"]
 
 
 def test_nested_production_config_mapping():

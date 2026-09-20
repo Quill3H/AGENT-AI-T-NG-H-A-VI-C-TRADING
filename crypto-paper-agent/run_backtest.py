@@ -385,6 +385,7 @@ def main():
     print(f"  - SHORT Trades     : {metrics['short_trades_count']} (Win: {metrics['win_rate_short']:.1f}%)")
     print(f"Trade Outcomes       : {metrics['win_trades_count']} Win / {metrics['loss_trades_count']} Loss / {metrics['breakeven_trades_count']} Breakeven")
     print(f"Win Rate (Overall)   : {metrics['win_rate']:.2f}% (Reference: 35-45%; note: 50.00% on N=16 not statistically generalizable)")
+    print(f"Loss Rate (Overall)  : {metrics['loss_rate']:.2f}%")
     print(f"Win Rate (LONG)      : {metrics['win_rate_long']:.2f}%")
     print(f"Win Rate (SHORT)     : {metrics['win_rate_short']:.2f}%")
     print("-" * 70)
@@ -396,7 +397,9 @@ def main():
     print("-" * 70)
     cb_status = "HALTED" if engine.broker.circuit_breaker.is_halted else ("LOCKED" if engine.broker.circuit_breaker.is_locked else "ACTIVE")
     print(f"Circuit Breaker      : {cb_status} (Risk multiplier: {engine.broker.circuit_breaker.risk_multiplier:.2f})")
-    print(f"Risk Gate Rejections : {metrics['orders_rejected_count']} (Isolated margin gate check; distinct from circuit breaker)")
+    print(f"CB Activations       : {metrics['circuit_breaker_lock_count']}")
+    print(f"Risk Gate Rejections : {metrics['margin_rejections_count']} (Isolated margin gate check; distinct from circuit breaker)")
+    print(f"Benchmark Comparison : {metrics['benchmark_comparison']['status']} (descriptive only)")
     print(f"Accounting Audit     : {'PASSED (wallet_balance matches ledger)' if metrics['accounting_invariants_verified'] else 'FAILED'}")
     print(f"Finalize Mode        : force_close={metrics['force_close_on_finalize']}")
     print("=" * 70)
@@ -406,8 +409,19 @@ def main():
         print("\n[Report] Generating Stage 6 artifacts (SQLite, JSON, CSV, PNG, MD)...")
         metrics["code_commit_sha"] = code_sha
         metrics["no_fetch"] = args.no_fetch
-        cmd_args = sys.argv[1:]
-        metrics["reproduction_command"] = f"python run_backtest.py {' '.join(cmd_args)}"
+        # Keep artifacts portable: never embed author-machine absolute paths from
+        # argv.  Exact data/config identity is carried separately by config_hash
+        # and provenance fields.
+        reproduction_parts = [
+            "python", "run_backtest.py",
+            "--config", "config/default_config.yaml",
+            "--strategy", args.strategy,
+            "--start", str(args.start or config.get("data", {}).get("start_date", "2021-01-01")),
+            "--end", str(args.end or config.get("data", {}).get("end_date", "2023-12-31")),
+        ]
+        if args.no_fetch:
+            reproduction_parts.append("--no-fetch")
+        metrics["reproduction_command"] = " ".join(reproduction_parts)
 
         generator = ReportGenerator(base_reports_dir=output_dir)
         artifacts = generator.generate_all(

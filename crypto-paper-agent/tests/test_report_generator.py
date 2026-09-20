@@ -32,9 +32,10 @@ from src.report.generator import ReportGenerator
 class MockFullBroker:
     def __init__(self):
         self.initial_balance = 10000.0
-        self.equity = 10500.0
-        self.wallet_balance = 10500.0
-        self.available_margin = 10500.0
+        self.equity = 10491.8
+        self.wallet_balance = 10491.8
+        self.available_margin = 10491.8
+        self.positions = {}
         self.funding_history = []
         t0 = datetime(2023, 1, 1, tzinfo=timezone.utc)
         self.trade_history = [
@@ -76,11 +77,11 @@ class MockFullBroker:
             ),
             AccountSnapshot(
                 timestamp=t0 + timedelta(days=1),
-                wallet_balance=10500.0,
+                wallet_balance=10491.8,
                 reserved_collateral=0.0,
-                available_margin=10500.0,
+                available_margin=10491.8,
                 unrealized_pnl=0.0,
-                equity=10500.0,
+                equity=10491.8,
                 open_positions_count=0,
             ),
         ]
@@ -102,13 +103,14 @@ def test_generator_produces_all_six_artifacts(tmp_path):
         "timeframe_execution": "15m",
         "start_date": "2023-01-01",
         "end_date": "2023-01-02",
+        "data": {"raw_data_dir": str(tmp_path / "author_machine_cache")},
     }
     metrics = {
         "strategy": "trend_following",
         "symbol": "BTCUSDT",
         "initial_capital": 10000.0,
-        "final_equity": 10500.0,
-        "total_return_pct": 5.0,
+        "final_equity": 10491.8,
+        "total_return_pct": 4.918,
         "max_drawdown_usd": 0.0,
         "max_drawdown_pct": 0.0,
         "daily_sharpe": 2.1,
@@ -122,6 +124,7 @@ def test_generator_produces_all_six_artifacts(tmp_path):
         "breakeven_trades_count": 0,
         "win_rate": 100.0,
         "total_fees": 8.2,
+        "total_gross_pnl": 500.0,
         "total_funding_trades": 0.0,
         "total_net_pnl": 491.8,
     }
@@ -150,7 +153,7 @@ def test_generator_produces_all_six_artifacts(tmp_path):
     with open(artifacts["summary.json"], "r", encoding="utf-8") as f:
         summary_data = json.load(f)
     assert summary_data["symbol"] == "BTCUSDT"
-    assert summary_data["final_equity"] == 10500.0
+    assert summary_data["final_equity"] == 10491.8
     assert summary_data["total_trades"] == 1
     assert "data_provenance" in summary_data
     assert "candle_counts" in summary_data
@@ -205,8 +208,10 @@ def test_generator_produces_all_six_artifacts(tmp_path):
     # 7. Kiểm tra trades.sqlite
     with sqlite3.connect(str(artifacts["trades.sqlite"])) as conn:
         cur = conn.cursor()
-        cur.execute("SELECT count(*) FROM runs WHERE run_id = ?", (run_id,))
-        assert cur.fetchone()[0] == 1
+        cur.execute("SELECT config_json FROM runs WHERE run_id = ?", (run_id,))
+        config_json = cur.fetchone()[0]
+        assert config_json is not None
+        assert str(tmp_path) not in config_json
 
 
 def test_generator_custom_output_dir_and_db(tmp_path):
@@ -217,7 +222,7 @@ def test_generator_custom_output_dir_and_db(tmp_path):
     generator = ReportGenerator(base_reports_dir=tmp_path)
     broker = MockFullBroker()
     config = {"symbol": "BTCUSDT", "strategy": "trend_following"}
-    metrics = {"initial_capital": 10000.0, "final_equity": 10500.0, "total_trades": 1}
+    metrics = {"initial_capital": 10000.0, "final_equity": 10491.8, "total_trades": 1}
 
     artifacts = generator.generate_all(
         run_id="run_custom_01",
@@ -267,7 +272,7 @@ def test_deterministic_json_output(tmp_path):
         "strategy": "trend_following",
         "symbol": "BTCUSDT",
         "initial_capital": 10000.0,
-        "final_equity": 10500.0,
+        "final_equity": 10491.8,
         "total_trades": 1,
         "code_commit_sha": "test_sha_deterministic",
         "reproduction_command": "python test.py",
@@ -289,4 +294,28 @@ def test_deterministic_json_output(tmp_path):
     # trades.json phải giống nhau từng byte
     with open(art1["trades.json"], "rb") as f1, open(art2["trades.json"], "rb") as f2:
         assert f1.read() == f2.read()
+
+
+def test_generator_rejects_supplied_accounting_mismatch_before_artifacts(tmp_path):
+    generator = ReportGenerator(base_reports_dir=tmp_path)
+    broker = MockFullBroker()
+    bad_metrics = {
+        "initial_capital": 10000.0,
+        "final_equity": 10500.0,
+        "total_gross_pnl": 500.0,
+        "total_fees": 8.2,
+        "total_funding_trades": 0.0,
+        "total_net_pnl": 500.0,
+    }
+
+    with pytest.raises(AssertionError, match="Report accounting mismatch"):
+        generator.generate_all(
+            run_id="run_bad_accounting",
+            config={"symbol": "BTCUSDT", "strategy": "trend_following"},
+            metrics=bad_metrics,
+            broker=broker,
+        )
+
+    out_dir = tmp_path / "run_bad_accounting"
+    assert not out_dir.exists() or not any(out_dir.iterdir())
 

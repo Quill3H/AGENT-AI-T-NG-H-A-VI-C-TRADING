@@ -106,6 +106,7 @@ class CircuitBreakerState:
         self.is_halted: bool = False
         self.locked_until: Optional[datetime] = None
         self.last_event_time: Optional[datetime] = None
+        self.lock_count: int = 0
 
     @property
     def current_timestamp(self) -> Optional[datetime]:
@@ -188,6 +189,8 @@ class CircuitBreakerState:
         dt = self.advance_time(timestamp)
 
         if f_eq == 0:
+            if not self.is_halted:
+                self.lock_count += 1
             self.is_halted = True
             self.is_locked = True
             self.locked_until = None
@@ -201,6 +204,7 @@ class CircuitBreakerState:
         if self.rolling_24h_pnl <= -1.0 * loss_limit_usd:
             if not self.is_locked:
                 self.is_locked = True
+                self.lock_count += 1
                 self.locked_until = dt + timedelta(hours=24)
                 logger.warning(
                     "[CircuitBreaker] KÍCH HOẠT KHÓA 24H qua cashflow! Rolling 24h PnL: {:.2f}$ vượt ngưỡng lỗ tối đa: -{:.2f}$ ({:.1f}%). "

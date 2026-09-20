@@ -56,8 +56,9 @@ def calculate_daily_sharpe(
     1. Trích xuất (timestamp, equity) từ danh sách snapshots.
     2. Resample theo ngày lịch UTC (lấy giá trị equity cuối cùng của mỗi ngày UTC).
     3. Tính daily returns: r_t = (E_t - E_{t-1}) / E_{t-1}.
-    4. Nếu số ngày quan sát < 2 hoặc độ lệch chuẩn = 0: trả về None (null).
-    5. Sharpe = sqrt(365) * (mean(r_t) - rf / 365) / std(r_t, ddof=1).
+    4. Nếu số ngày quan sát < 2: trả về None (không đủ mẫu).
+    5. Nếu độ lệch chuẩn bằng 0: trả về 0.0 để kết quả hữu hạn và deterministic.
+    6. Sharpe = sqrt(365) * (mean(r_t) - rf / 365) / std(r_t, ddof=1).
     """
     if not snapshots:
         return None
@@ -107,7 +108,7 @@ def calculate_daily_sharpe(
 
     std_dev = float(daily_returns.std(ddof=1))
     if std_dev <= 1e-12 or math.isnan(std_dev):
-        return None
+        return 0.0
 
     mean_ret = float(daily_returns.mean())
     daily_rf = risk_free_rate / 365.0
@@ -180,9 +181,11 @@ def calculate_trade_metrics(
             "loss_trades_count": 0,
             "breakeven_trades_count": 0,
             "win_rate": 0.0,
+            "loss_rate": 0.0,
             "profit_factor": None,
             "expectancy_usd": 0.0,
             "expectancy_r": None,
+            "average_realized_rrr": None,
             "avg_trade_pnl": 0.0,
             "avg_win_usd": 0.0,
             "avg_loss_usd": 0.0,
@@ -257,6 +260,7 @@ def calculate_trade_metrics(
     loss_count = len(loss_pnls)
     be_count = total_trades - win_count - loss_count
     win_rate = (win_count / total_trades) * 100.0
+    loss_rate = (loss_count / total_trades) * 100.0
 
     total_win_usd = sum(win_pnls)
     total_loss_usd = abs(sum(loss_pnls))
@@ -290,9 +294,13 @@ def calculate_trade_metrics(
         "loss_trades_count": loss_count,
         "breakeven_trades_count": be_count,
         "win_rate": round(win_rate, 2),
+        "loss_rate": round(loss_rate, 2),
         "profit_factor": profit_factor,
         "expectancy_usd": round(expectancy_usd, 4),
         "expectancy_r": expectancy_r,
+        # Average of per-trade realized R-multiples.  This is kept separate
+        # from expectancy_usd so units are never mixed in one formula.
+        "average_realized_rrr": expectancy_r,
         "avg_trade_pnl": round(expectancy_usd, 4),
         "avg_win_usd": round(avg_win_usd, 4),
         "avg_loss_usd": round(avg_loss_usd, 4),
@@ -304,6 +312,46 @@ def calculate_trade_metrics(
         "max_consecutive_wins": max_win_streak,
         "max_consecutive_losses": max_loss_streak,
         "sqn": sqn,
+    }
+
+
+def classify_benchmark_win_rate(
+    win_rate: float,
+    total_trades: int,
+    expected_min: float = 35.0,
+    expected_max: float = 45.0,
+) -> Dict[str, Any]:
+    """Classify observed win rate against the descriptive Trend Following range.
+
+    The 35-45% interval is a research comparison from the Master Spec.  It is
+    not an optimization target and is not evidence of future profitability.
+    """
+    if type(win_rate) is bool or type(total_trades) is bool:
+        raise TypeError("win_rate and total_trades cannot be boolean")
+    actual = float(win_rate)
+    count = int(total_trades)
+    low = float(expected_min)
+    high = float(expected_max)
+    if not all(math.isfinite(v) for v in (actual, low, high)):
+        raise ValueError("benchmark values must be finite")
+    if count < 0 or low < 0 or high > 100 or low > high:
+        raise ValueError("invalid benchmark range or trade count")
+    if count == 0:
+        status = "INSUFFICIENT_DATA"
+    elif actual < low:
+        status = "BELOW_EXPECTED_RANGE"
+    elif actual > high:
+        status = "ABOVE_EXPECTED_RANGE"
+    else:
+        status = "WITHIN_EXPECTED_RANGE"
+    return {
+        "metric": "win_rate_percent",
+        "actual": round(actual, 4),
+        "expected_min": low,
+        "expected_max": high,
+        "status": status,
+        "comparison_only": True,
+        "future_performance_guarantee": False,
     }
 
 
@@ -319,6 +367,7 @@ def calculate_backtest_metrics(
     submitted_orders_count: int = 0,
     force_close: bool = True,
     finalize_summary: Optional[Dict[str, Any]] = None,
+    candle_gap_stats: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Hàm tính toán và tổng hợp toàn bộ số liệu hiệu năng của phiên backtest.
@@ -381,8 +430,43 @@ def calculate_backtest_metrics(
         rk = reason_val.value if hasattr(reason_val, "value") else str(reason_val)
         exit_reasons_tally[rk] = exit_reasons_tally.get(rk, 0) + 1
 
-    # Kiểm tra accounting invariants
+    # Kiểm tra accounting invariants tại nguồn sự thật của broker.
     broker.verify_accounting_invariants()
+
+    open_positions = getattr(broker, "positions", {})
+    open_position_values = open_positions.values() if isinstance(open_positions, dict) else open_positions
+    open_entry_fees = sum(float(getattr(p, "entry_fee", 0.0)) for p in open_position_values)
+    ledger_gross_pnl = float(trade_stats["total_gross_pnl"])
+    ledger_fees = float(trade_stats["total_fees"]) + open_entry_fees
+    funding_history = getattr(broker, "funding_history", None)
+    if funding_history:
+        ledger_funding = sum(
+            float(f.get("cashflow_usd", f.get("payment", 0.0))) if isinstance(f, dict)
+                  else float(getattr(f, "cashflow_usd", 0.0))
+            for f in funding_history
+        )
+    else:
+        ledger_funding = float(trade_stats["total_funding_trades"])
+
+    ledger_net_pnl = ledger_gross_pnl - ledger_fees + ledger_funding
+    actual_wallet = float(broker.wallet_balance)
+    actual_equity = float(broker.equity)
+    unrealized_pnl = float(getattr(broker, "unrealized_pnl", actual_equity - actual_wallet))
+    expected_wallet = start_equity + ledger_net_pnl
+    expected_equity = expected_wallet + unrealized_pnl
+    accounting_tolerance = 1e-4
+    wallet_difference = actual_wallet - expected_wallet
+    equity_difference = actual_equity - expected_equity
+    if abs(wallet_difference) > accounting_tolerance:
+        raise AssertionError(
+            "Report accounting mismatch: wallet_balance "
+            f"{actual_wallet:.8f} != initial + gross - fees + funding {expected_wallet:.8f}"
+        )
+    if abs(equity_difference) > accounting_tolerance:
+        raise AssertionError(
+            f"Report accounting mismatch: final_equity {actual_equity:.8f} "
+            f"!= wallet + unrealized {expected_equity:.8f}"
+        )
 
     meta = parse_config_metadata(config)
 
@@ -404,12 +488,17 @@ def calculate_backtest_metrics(
         "end_time": end_time,
         "bars_15m_count": bars_15m_count,
         "bars_4h_count": bars_4h_count,
+        "candle_gaps_count": int((candle_gap_stats or {}).get("candle_gaps_count", 0)),
+        "max_gap_duration_seconds": int((candle_gap_stats or {}).get("max_gap_duration_seconds", 0)),
+        "candle_gaps_by_timeframe": (candle_gap_stats or {}).get("candle_gaps_by_timeframe", {}),
         # Vốn & Equity
         "initial_capital": start_equity,
         "start_equity": start_equity,
         "final_equity": final_equity,
         "wallet_balance": broker.wallet_balance,
+        "reserved_collateral": float(getattr(broker, "reserved_collateral", 0.0)),
         "available_margin": broker.available_margin,
+        "unrealized_pnl": unrealized_pnl,
         "total_return_pct": round(total_return_pct, 4),
         # Rủi ro & Drawdown
         "max_drawdown_usd": max_dd_usd,
@@ -427,11 +516,13 @@ def calculate_backtest_metrics(
         "loss_trades_count": trade_stats["loss_trades_count"],
         "breakeven_trades_count": trade_stats["breakeven_trades_count"],
         "win_rate": trade_stats["win_rate"],
+        "loss_rate": trade_stats["loss_rate"],
         "win_rate_long": round(win_rate_long, 2),
         "win_rate_short": round(win_rate_short, 2),
         "profit_factor": trade_stats["profit_factor"],
         "expectancy_usd": trade_stats["expectancy_usd"],
         "expectancy_r": trade_stats["expectancy_r"],
+        "average_realized_rrr": trade_stats["average_realized_rrr"],
         "avg_trade_pnl": trade_stats["avg_trade_pnl"],
         "avg_win_usd": trade_stats["avg_win_usd"],
         "avg_loss_usd": trade_stats["avg_loss_usd"],
@@ -440,10 +531,10 @@ def calculate_backtest_metrics(
         "max_consecutive_losses": trade_stats["max_consecutive_losses"],
         "sqn": trade_stats["sqn"],
         # PnL & Chi phí
-        "total_gross_pnl": trade_stats["total_gross_pnl"],
-        "total_fees": trade_stats["total_fees"],
-        "total_funding_trades": trade_stats["total_funding_trades"],
-        "total_net_pnl": trade_stats["total_net_pnl"],
+        "total_gross_pnl": round(ledger_gross_pnl, 4),
+        "total_fees": round(ledger_fees, 4),
+        "total_funding_trades": round(ledger_funding, 4),
+        "total_net_pnl": round(ledger_net_pnl, 4),
         # Lệnh
         "submitted_orders_count": submitted_orders_count,
         "orders_filled_count": orders_filled,
@@ -460,6 +551,23 @@ def calculate_backtest_metrics(
         "force_close_on_finalize": force_close,
         "finalize_summary": finalize_summary or {},
         "accounting_invariants_verified": True,
+        "accounting_reconciliation": {
+            "formula": "final_equity = initial_equity + gross_price_pnl - fees + funding_cashflow + unrealized_pnl",
+            "tolerance": accounting_tolerance,
+            "expected_wallet_balance": round(expected_wallet, 8),
+            "actual_wallet_balance": round(actual_wallet, 8),
+            "wallet_difference": round(wallet_difference, 8),
+            "unrealized_pnl": round(unrealized_pnl, 8),
+            "expected_final_equity": round(expected_equity, 8),
+            "actual_final_equity": round(actual_equity, 8),
+            "equity_difference": round(equity_difference, 8),
+            "adjustments": 0.0,
+            "verified": True,
+        },
+        "benchmark_comparison": classify_benchmark_win_rate(
+            trade_stats["win_rate"],
+            trade_stats["total_trades"],
+        ),
     }
 
     return metrics

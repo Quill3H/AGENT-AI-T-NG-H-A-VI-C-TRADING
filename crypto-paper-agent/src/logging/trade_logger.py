@@ -15,6 +15,7 @@ import math
 import os
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple, Union
 from loguru import logger
 
@@ -129,18 +130,23 @@ def _format_conviction_tier(tier: Any) -> str:
 
 
 def _get_risk_ratio_percent(tier_str: str, risk_amount_usd: float, initial_capital: float) -> float:
-    """Tính tỷ lệ rủi ro % tương ứng với conviction tier."""
-    if "ULTRA" in tier_str or "10_PERCENT" in tier_str:
-        return 10.0
-    if "HIGH" in tier_str or "5_PERCENT" in tier_str:
-        return 5.0
-    if "LOW" in tier_str or "1_PERCENT" in tier_str:
-        return 1.0
-    if "NORMAL" in tier_str or "2_PERCENT" in tier_str:
-        return 2.0
-    if risk_amount_usd > 0 and initial_capital > 0:
-        return round((risk_amount_usd / initial_capital) * 100.0, 2)
-    return 2.0
+    """
+    Return the realized admission risk as a percentage of entry equity.
+
+    ``tier_str`` is intentionally retained for API compatibility and display
+    only.  A tier is a policy label; it must not overwrite the amount actually
+    admitted after circuit-breaker reduction, sizing and rounding.
+    """
+    del tier_str
+    if type(risk_amount_usd) is bool or type(initial_capital) is bool:
+        raise TypeError("risk amount and entry equity must be numeric, not bool")
+    risk = float(risk_amount_usd)
+    equity = float(initial_capital)
+    if not math.isfinite(risk) or risk < 0:
+        raise ValueError(f"risk_amount_usd must be finite and non-negative, got {risk}")
+    if not math.isfinite(equity) or equity <= 0:
+        raise ValueError(f"entry equity must be finite and positive, got {equity}")
+    return (risk / equity) * 100.0
 
 
 def _normalize_for_canonical_hash(obj: Any) -> Any:
@@ -152,12 +158,17 @@ def _normalize_for_canonical_hash(obj: Any) -> Any:
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             raise ValueError(f"Cannot compute canonical payload hash with NaN or Inf: {obj}")
-        return round(obj, 8)
+        # Preserve the exact Python float representation stored in the payload.
+        # Rounding here can make materially different ledgers hash identically.
+        return obj
     if isinstance(obj, datetime):
         return _ensure_utc(obj).isoformat()
     if isinstance(obj, dict):
         return {str(k): _normalize_for_canonical_hash(v) for k, v in sorted(obj.items())}
-    if isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, set):
+        normalized = [_normalize_for_canonical_hash(v) for v in obj]
+        return sorted(normalized, key=lambda v: json.dumps(v, sort_keys=True, ensure_ascii=False))
+    if isinstance(obj, (list, tuple)):
         return [_normalize_for_canonical_hash(v) for v in obj]
     if hasattr(obj, "__dict__"):
         return {str(k): _normalize_for_canonical_hash(v) for k, v in sorted(obj.__dict__.items())}
@@ -335,9 +346,10 @@ class TradeLogger:
 
     def _init_db(self) -> None:
         """Khởi tạo cấu trúc bảng nếu chưa tồn tại."""
-        with self.get_connection() as conn:
-            for stmt in self.DDL_STATEMENTS:
-                conn.execute(stmt)
+        with closing(self.get_connection()) as conn:
+            with conn:
+                for stmt in self.DDL_STATEMENTS:
+                    conn.execute(stmt)
 
     def log_backtest_run(
         self,
@@ -650,7 +662,7 @@ class TradeLogger:
 
     def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Lấy thông tin run theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,))
             row = cursor.fetchone()
@@ -658,16 +670,22 @@ class TradeLogger:
 
     def get_trades(self, run_id: str) -> List[Dict[str, Any]]:
         """Lấy danh sách các trade theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM trades WHERE run_id = ? ORDER BY entry_time ASC", (run_id,))
+            cursor.execute(
+                "SELECT * FROM trades WHERE run_id = ? ORDER BY entry_time ASC, trade_id ASC",
+                (run_id,),
+            )
             return [dict(row) for row in cursor.fetchall()]
 
     def get_orders(self, run_id: str) -> List[Dict[str, Any]]:
         """Lấy danh sách order theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM orders WHERE run_id = ? ORDER BY requested_at ASC", (run_id,))
+            cursor.execute(
+                "SELECT * FROM orders WHERE run_id = ? ORDER BY requested_at ASC, order_id ASC",
+                (run_id,),
+            )
             orders = []
             for row in cursor.fetchall():
                 d = dict(row)
@@ -683,21 +701,24 @@ class TradeLogger:
 
     def get_account_snapshots(self, run_id: str) -> List[Dict[str, Any]]:
         """Lấy danh sách account snapshots theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM account_snapshots WHERE run_id = ? ORDER BY timestamp ASC", (run_id,))
             return [dict(row) for row in cursor.fetchall()]
 
     def get_funding_events(self, run_id: str) -> List[Dict[str, Any]]:
         """Lấy danh sách funding events theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM funding_events WHERE run_id = ? ORDER BY timestamp ASC", (run_id,))
+            cursor.execute(
+                "SELECT * FROM funding_events WHERE run_id = ? ORDER BY timestamp ASC, event_id ASC",
+                (run_id,),
+            )
             return [dict(row) for row in cursor.fetchall()]
 
     def get_run_metrics(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Lấy metrics chi tiết theo run_id."""
-        with self.get_connection() as conn:
+        with closing(self.get_connection()) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT metrics_json FROM run_metrics WHERE run_id = ?", (run_id,))
             row = cursor.fetchone()
@@ -731,7 +752,24 @@ class TradeLogger:
             conviction_tier = _format_conviction_tier(tier_raw)
 
             risk_amount = _clean_float(row.get("initial_risk_usd")) or 0.0
-            risk_ratio = _get_risk_ratio_percent(conviction_tier, risk_amount, initial_capital)
+            metadata = {}
+            if row.get("metadata_json"):
+                metadata = json.loads(row["metadata_json"])
+                if not isinstance(metadata, dict):
+                    raise ValueError(f"Trade {row['trade_id']} metadata must decode to an object")
+
+            explicit_ratio = _clean_float(metadata.get("risk_ratio_percent"))
+            if explicit_ratio is not None:
+                if explicit_ratio < 0:
+                    raise ValueError(f"Trade {row['trade_id']} risk_ratio_percent cannot be negative")
+                risk_ratio = explicit_ratio
+            else:
+                entry_equity = _clean_float(metadata.get("entry_equity"))
+                risk_ratio = _get_risk_ratio_percent(
+                    conviction_tier,
+                    risk_amount,
+                    entry_equity if entry_equity is not None else initial_capital,
+                )
 
             tp_json = row.get("take_profit_levels_json")
             take_profit_levels = json.loads(tp_json) if tp_json else []

@@ -266,6 +266,7 @@ class PaperBroker:
                 direction=request.direction,
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
+                order_type=request.order_type,
                 reference_price=request.signal_price,
                 rejection_reasons=["EXECUTION_REJECT_FINALIZED: Broker has finalized (end of data)."],
                 metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
@@ -280,6 +281,7 @@ class PaperBroker:
                 direction=request.direction,
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
+                order_type=request.order_type,
                 reference_price=request.signal_price,
                 rejection_reasons=["EXECUTION_REJECT_ACCOUNT_HALTED: Account is halted due to insolvency or circuit breaker."],
                 metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
@@ -295,6 +297,7 @@ class PaperBroker:
                 direction=request.direction,
                 status=OrderStatus.REJECTED,
                 requested_at=request.signal_time,
+                order_type=request.order_type,
                 reference_price=request.signal_price,
                 rejection_reasons=[f"EXECUTION_REJECT_POSITION_EXISTS: Symbol {request.symbol} already has an open position."],
                 metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
@@ -311,6 +314,7 @@ class PaperBroker:
                     direction=request.direction,
                     status=OrderStatus.REJECTED,
                     requested_at=request.signal_time,
+                    order_type=request.order_type,
                     reference_price=request.signal_price,
                     rejection_reasons=[f"EXECUTION_REJECT_PENDING_ORDER_EXISTS: Pending order for {request.symbol} already queued."],
                     metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
@@ -324,6 +328,7 @@ class PaperBroker:
             direction=request.direction,
             status=OrderStatus.PENDING,
             requested_at=request.signal_time,
+            order_type=request.order_type,
             reference_price=request.signal_price,
             metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
         )
@@ -708,8 +713,17 @@ class PaperBroker:
             if is_valid:
                 entry_fee = calc_notional * self.taker_fee_pct
                 initial_margin = calc_notional / req.leverage
+                entry_equity = self.equity
 
                 self.wallet_balance -= entry_fee
+
+                actual_risk_usd = calc_quantity * abs(fill_price - req.stop_loss_price)
+                actual_risk_ratio_percent = (actual_risk_usd / entry_equity) * 100.0
+                position_metadata = dict(req.metadata) if hasattr(req, "metadata") and req.metadata else {}
+                position_metadata.update({
+                    "entry_equity": entry_equity,
+                    "risk_ratio_percent": actual_risk_ratio_percent,
+                })
 
                 new_pos = Position(
                     position_id=f"POS_{symbol}_{open_time.strftime('%Y%m%d%H%M')}_{self._trade_seq+1:04d}",
@@ -727,7 +741,8 @@ class PaperBroker:
                     conviction_tier=req.conviction_tier,
                     entry_fee=entry_fee,
                     initial_stop_loss_price=req.stop_loss_price,
-                    metadata=dict(req.metadata) if hasattr(req, "metadata") and req.metadata else {},
+                    initial_liquidation_price=liq_price,
+                    metadata=position_metadata,
                 )
                 self.positions[symbol] = new_pos
 
@@ -898,7 +913,11 @@ class PaperBroker:
             metadata=dict(position.metadata) if hasattr(position, "metadata") and position.metadata else {},
             initial_stop_loss_price=getattr(position, "initial_stop_loss_price", position.stop_loss_price),
             conviction_tier=getattr(position, "conviction_tier", "normal"),
-            estimated_liquidation_price=getattr(position, "liquidation_price", None),
+            estimated_liquidation_price=getattr(
+                position,
+                "initial_liquidation_price",
+                getattr(position, "liquidation_price", None),
+            ),
             take_profit_levels=[position.take_profit_price] if getattr(position, "take_profit_price", None) is not None else [],
         )
         self.trade_history.append(trade_rec)
@@ -1293,6 +1312,24 @@ class PaperBroker:
                     exit_reason=ExitReason.END_OF_DATA,
                     intrabar_estimated=False,
                 )
+
+        # Finalization can close positions after the last candle snapshot.  Replace
+        # the same-timestamp snapshot (or append a new one) so drawdown, Sharpe and
+        # exported equity curves include the final exit fee/slippage exactly once.
+        final_snapshot = AccountSnapshot(
+            timestamp=t,
+            wallet_balance=self.wallet_balance,
+            reserved_collateral=self.reserved_collateral,
+            available_margin=self.available_margin,
+            unrealized_pnl=self.unrealized_pnl,
+            equity=self.equity,
+            open_positions_count=len(self.positions),
+            is_halted=self.is_halted,
+        )
+        if self.account_snapshots and self.account_snapshots[-1].timestamp == t:
+            self.account_snapshots[-1] = final_snapshot
+        else:
+            self.account_snapshots.append(final_snapshot)
 
         # 3. Đánh dấu trạng thái finalized
         self.is_finalized = True

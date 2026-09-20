@@ -39,6 +39,17 @@ from src.data_layer.fetcher import (
 )
 
 
+def test_funding_adapter_does_not_synthesize_missing_rate_as_zero():
+    from src.data_layer.fetcher import _fetch_funding_chunk
+
+    class MissingRateExchange:
+        def fetch_funding_rate_history(self, **kwargs):
+            return [{"timestamp": 1672531200000}]
+
+    with pytest.raises(ValueError, match="refusing to synthesize a zero rate"):
+        _fetch_funding_chunk(MissingRateExchange(), "BTC/USDT:USDT", 0, 1)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

@@ -611,6 +611,8 @@ def test_cli_cwd_independence(tmp_path):
         "--start", "2023-01-01",
         "--end", "2023-01-02",
         "--no-fetch",
+        "--output-dir", str(tmp_path / "reports"),
+        "--run-id", "cwd_independence_stage6",
     ]
     res = subprocess.run(
         cmd,
