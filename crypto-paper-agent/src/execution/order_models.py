@@ -28,6 +28,7 @@ class OrderDirection(str, Enum):
 
 class OrderType(str, Enum):
     MARKET_ENTRY = "MARKET_ENTRY"
+    LIMIT_ENTRY = "LIMIT_ENTRY"
     STOP_MARKET = "STOP_MARKET"
     TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
     LIQUIDATION = "LIQUIDATION"
@@ -104,6 +105,8 @@ class OrderRequest:
     requested_quantity: Optional[float] = None
     order_type: OrderType = OrderType.MARKET_ENTRY
     metadata: Dict[str, Any] = field(default_factory=dict)
+    expires_at: Optional[datetime] = None
+    partial_exits: List[Any] = field(default_factory=list)
 
     def __post_init__(self):
         self.symbol = str(self.symbol).strip().upper()
@@ -126,6 +129,22 @@ class OrderRequest:
         if self.requested_quantity is not None:
             self.requested_quantity = _validate_finite_positive("requested_quantity", self.requested_quantity)
         self.signal_time = _ensure_utc(self.signal_time)
+
+        if self.expires_at is not None:
+            self.expires_at = _ensure_utc(self.expires_at)
+            if self.expires_at <= self.signal_time:
+                raise ValueError("expires_at must be after signal_time")
+        last_r = 0.0
+        total_fraction = 0.0
+        for rr, fraction in self.partial_exits:
+            rr = _validate_finite_positive("partial R", rr)
+            fraction = _validate_finite_positive("partial fraction", fraction)
+            if rr <= last_r:
+                raise ValueError("partial R levels must increase")
+            last_r = rr
+            total_fraction += fraction
+        if total_fraction >= 1.0:
+            raise ValueError("partial exits must leave a trailing remainder")
 
         # Kiểm tra tính đúng chiều của Stop Loss ngay tại lúc tạo request
         if self.direction == OrderDirection.LONG and self.stop_loss_price >= self.signal_price:

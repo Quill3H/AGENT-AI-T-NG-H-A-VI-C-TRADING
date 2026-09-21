@@ -1,69 +1,70 @@
-"""Causal Smart Money Concepts feature extraction."""
-from typing import Any
-
+"""SMC events become available at confirmation time, never at pivot time."""
+from dataclasses import dataclass
+import math
 import numpy as np
 import pandas as pd
+from src.research.validation import number, positive_int, time_index
 
 
-def compute_smc_features(frame: pd.DataFrame, swing_n: int = 3, min_bos_pct: float = 0.001) -> pd.DataFrame:
-    """Compute confirmed swings, sweeps, structure breaks and FVGs without backdating."""
-    if swing_n < 1:
-        raise ValueError("swing_n must be positive")
-    required = {"high", "low", "close", "open"}
-    missing = required.difference(frame.columns)
-    if missing:
-        raise ValueError(f"SMC features require columns: {sorted(missing)}")
-    out = frame.copy()
-    for name in ("swing_high_confirmed", "swing_low_confirmed", "liquidity_sweep_bullish", "liquidity_sweep_bearish", "bos_bullish", "bos_bearish", "choch_bullish", "choch_bearish"):
-        out[name] = False
-    for name in ("swing_high_price", "swing_low_price", "fvg_low", "fvg_high", "fvg_mid"):
-        out[name] = np.nan
-    out["fvg_direction"] = None
-    confirmed_high = []
-    confirmed_low = []
-    prior_trend = None
-    for i in range(len(out)):
-        pivot = i - swing_n
-        if pivot >= swing_n:
-            left = out.iloc[pivot - swing_n:pivot]
-            right = out.iloc[pivot + 1:i + 1]
-            if float(out.iloc[pivot]["high"]) > float(left["high"].max()) and float(out.iloc[pivot]["high"]) > float(right["high"].max()):
-                price = float(out.iloc[pivot]["high"])
-                out.iat[i, out.columns.get_loc("swing_high_confirmed")] = True
-                out.iat[i, out.columns.get_loc("swing_high_price")] = price
-                confirmed_high.append(price)
-            if float(out.iloc[pivot]["low"]) < float(left["low"].min()) and float(out.iloc[pivot]["low"]) < float(right["low"].min()):
-                price = float(out.iloc[pivot]["low"])
-                out.iat[i, out.columns.get_loc("swing_low_confirmed")] = True
-                out.iat[i, out.columns.get_loc("swing_low_price")] = price
-                confirmed_low.append(price)
-        if i >= 2:
-            a, c = out.iloc[i - 2], out.iloc[i]
-            if float(a["high"]) < float(c["low"]):
-                lo, hi = float(a["high"]), float(c["low"])
-                out.iat[i, out.columns.get_loc("fvg_low")] = lo
-                out.iat[i, out.columns.get_loc("fvg_high")] = hi
-                out.iat[i, out.columns.get_loc("fvg_mid")] = (lo + hi) / 2.0
-                out.iat[i, out.columns.get_loc("fvg_direction")] = "BULLISH"
-            elif float(a["low"]) > float(c["high"]):
-                lo, hi = float(c["high"]), float(a["low"])
-                out.iat[i, out.columns.get_loc("fvg_low")] = lo
-                out.iat[i, out.columns.get_loc("fvg_high")] = hi
-                out.iat[i, out.columns.get_loc("fvg_mid")] = (lo + hi) / 2.0
-                out.iat[i, out.columns.get_loc("fvg_direction")] = "BEARISH"
-        latest_high = confirmed_high[-1] if confirmed_high else None
-        latest_low = confirmed_low[-1] if confirmed_low else None
-        close = float(out.iloc[i]["close"])
-        if latest_high is not None and close > latest_high * (1.0 + min_bos_pct):
-            out.iat[i, out.columns.get_loc("bos_bullish")] = True
-            out.iat[i, out.columns.get_loc("choch_bullish")] = prior_trend == "BEARISH"
-            prior_trend = "BULLISH"
-        if latest_low is not None and close < latest_low * (1.0 - min_bos_pct):
-            out.iat[i, out.columns.get_loc("bos_bearish")] = True
-            out.iat[i, out.columns.get_loc("choch_bearish")] = prior_trend == "BULLISH"
-            prior_trend = "BEARISH"
-        if latest_low is not None and float(out.iloc[i]["low"]) < latest_low and close >= latest_low:
-            out.iat[i, out.columns.get_loc("liquidity_sweep_bullish")] = True
-        if latest_high is not None and float(out.iloc[i]["high"]) > latest_high and close <= latest_high:
-            out.iat[i, out.columns.get_loc("liquidity_sweep_bearish")] = True
-    return out
+@dataclass
+class SMCFeatureTracker:
+    swing_n: int = 3
+    min_bos_pct: float = .001
+    high: object = None
+    low: object = None
+    broken_high: object = None
+    broken_low: object = None
+    trend: object = None
+    last_bear_body: object = None
+    last_bull_body: object = None
+
+    def __post_init__(self):
+        positive_int(self.swing_n, 'swing_n')
+        number(self.min_bos_pct, 'min_bos_pct', maximum=1)
+
+    def step(self, history):
+        row=history.iloc[-1]
+        o,h,l,c=(float(row[k]) for k in ('open','high','low','close'))
+        out={k:False for k in ('swing_high_confirmed','swing_low_confirmed','liquidity_sweep_bullish',
+            'liquidity_sweep_bearish','bos_bullish','bos_bearish','choch_bullish','choch_bearish')}
+        out.update(swing_high_price=np.nan,swing_low_price=np.nan,fvg_low=np.nan,fvg_high=np.nan,
+                   fvg_mid=np.nan,fvg_direction=None,order_block_low=np.nan,order_block_high=np.nan,
+                   order_block_direction=None)
+        # Only levels available before this candle can be swept or broken.
+        out['liquidity_sweep_bullish']=self.low is not None and l<self.low<=c
+        out['liquidity_sweep_bearish']=self.high is not None and h>self.high>=c
+        bullish=self.high is not None and c>self.high*(1+self.min_bos_pct) and self.broken_high!=self.high
+        bearish=self.low is not None and c<self.low*(1-self.min_bos_pct) and self.broken_low!=self.low
+        for flag,direction,body in ((bullish,'BULLISH',self.last_bear_body),(bearish,'BEARISH',self.last_bull_body)):
+            if flag:
+                suffix='bullish' if direction=='BULLISH' else 'bearish'
+                out['bos_'+suffix]=True
+                out['choch_'+suffix]=self.trend is not None and self.trend!=direction
+                self.trend=direction
+                if body:
+                    out.update(order_block_low=body[0],order_block_high=body[1],order_block_direction=direction)
+        if bullish: self.broken_high=self.high
+        if bearish: self.broken_low=self.low
+        n=self.swing_n
+        if len(history)>=2*n+1:
+            window=history.iloc[-(2*n+1):]; pivot=window.iloc[n]
+            if pivot.high>window.iloc[:n].high.max() and pivot.high>window.iloc[n+1:].high.max():
+                self.high=float(pivot.high); out['swing_high_confirmed']=True; out['swing_high_price']=self.high
+            if pivot.low<window.iloc[:n].low.min() and pivot.low<window.iloc[n+1:].low.min():
+                self.low=float(pivot.low); out['swing_low_confirmed']=True; out['swing_low_price']=self.low
+        if len(history)>=3:
+            a=history.iloc[-3]
+            if a.high<l: out.update(fvg_low=float(a.high),fvg_high=l,fvg_mid=(a.high+l)/2,fvg_direction='BULLISH')
+            elif a.low>h: out.update(fvg_low=h,fvg_high=float(a.low),fvg_mid=(h+a.low)/2,fvg_direction='BEARISH')
+        if c<o: self.last_bear_body=(c,o)
+        if c>o: self.last_bull_body=(o,c)
+        return out
+
+
+def compute_smc_features(frame, swing_n=3, min_bos_pct=.001):
+    time_index(frame)
+    missing={'open','high','low','close'}.difference(frame.columns)
+    if missing: raise ValueError(f'SMC features require columns: {sorted(missing)}')
+    tracker=SMCFeatureTracker(swing_n,min_bos_pct)
+    events=[tracker.step(frame.iloc[:i+1]) for i in range(len(frame))]
+    return pd.concat([frame.copy(),pd.DataFrame(events,index=frame.index)],axis=1)

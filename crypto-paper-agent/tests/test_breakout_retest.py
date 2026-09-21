@@ -104,3 +104,60 @@ def test_future_perturbation_preserves_orders():
         return result
     assert len(orders(f)) == 1
     assert orders(f) == orders(changed)
+
+@pytest.mark.parametrize('short',[False,True])
+def test_breakout_broker_logger_report_nonempty_and_fill_risk(tmp_path,short):
+    from src.execution.paper_broker import PaperBroker
+    from src.execution.order_models import OrderStatus,ExitReason
+    from src.report.generator import ReportGenerator
+    from src.report.metrics import calculate_backtest_metrics
+    f=_history([100,100,100,100,104,102],[10,10,10,10,20,5]).astype(float)
+    f.iloc[-1,f.columns.get_loc('low')]=98
+    if short:
+        high=f.high.copy();low=f.low.copy()
+        for col in ('open','close'): f[col]=200-f[col]
+        f['high']=200-low;f['low']=200-high
+    cfg=_cfg();cfg['fees']={'taker_pct':.0005,'slippage_pct':.0003}
+    cfg['strategy']['name']='BREAKOUT_RETEST'
+    strategy=BreakoutRetestStrategy(cfg)
+    _call(strategy,f.iloc[:-1]);req=_call(strategy,f)
+    assert req is not None
+    broker=PaperBroker(cfg);broker.submit_order(req)
+    t=req.signal_time
+    p=req.signal_price
+    def candle(ts,o,h,l,c):return {'symbol':'BTCUSDT','open_time':ts,'close_time':ts+timedelta(minutes=1),'timeframe':'1m','open':o,'high':h,'low':l,'close':c,'volume':1.0}
+    broker.process_candle(candle(t,p,p+.1,p-.1,p))
+    assert broker.order_history[-1].status==OrderStatus.FILLED
+    pos=broker.positions['BTCUSDT']
+    assert pos.quantity*abs(pos.entry_price-pos.stop_loss_price)<=200+1e-5
+    assert pos.take_profit_price==req.take_profit_price  # broker contract preserves absolute TP, validates after fill
+    target=req.take_profit_price
+    broker.process_candle(candle(t+timedelta(minutes=1),p,max(p,target)+.1,min(p,target)-.1,target))
+    broker.finalize(t+timedelta(minutes=2),force_close=True)
+    assert len(broker.trade_history)==1
+    assert broker.trade_history[0].exit_reason==ExitReason.TAKE_PROFIT
+    metrics=calculate_backtest_metrics(broker,cfg,t,t+timedelta(minutes=2),2,6,submitted_orders_count=1)
+    artifacts=ReportGenerator(tmp_path).generate_all('breakout',cfg,metrics,broker)
+    assert len(artifacts)==6 and artifacts['trades.sqlite'].is_file()
+
+
+@pytest.mark.parametrize('failure',['risk','margin','conflict'])
+def test_breakout_request_rejected_by_shared_gate(failure):
+    from src.execution.paper_broker import PaperBroker
+    from src.execution.order_models import OrderStatus
+    f=_history([100,100,100,100,103,101.8],[10,10,10,10,20,5])
+    strategy=BreakoutRetestStrategy(_cfg());_call(strategy,f.iloc[:-1]);req=_call(strategy,f)
+    assert req
+    if failure=='risk':req.base_risk_percent=.1
+    if failure=='margin':req.leverage=1.0
+    if failure=='conflict':req.requested_quantity=1
+    broker=PaperBroker(_cfg());broker.submit_order(req)
+    t=req.signal_time;p=req.signal_price
+    broker.process_candle({'symbol':'BTCUSDT','open_time':t,'close_time':t+timedelta(minutes=1),'timeframe':'1m','open':p,'high':p+.1,'low':p-.1,'close':p,'volume':1.})
+    if failure=='conflict':
+        assert broker.positions
+        record=broker.submit_order(req)
+        assert record.status==OrderStatus.REJECTED
+    else:
+        assert broker.order_history[-1].status==OrderStatus.REJECTED
+        assert not broker.positions

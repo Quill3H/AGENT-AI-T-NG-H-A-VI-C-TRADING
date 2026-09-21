@@ -15,6 +15,7 @@ Tuân thủ:
 3. Tích hợp chặt chẽ với Risk Manager (sizing, liquidation solver, circuit breaker).
 """
 from datetime import datetime, timedelta, timezone
+from copy import deepcopy
 import math
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -184,6 +185,7 @@ class PaperBroker:
         # 4. Trạng thái vị thế và đơn hàng
         self.positions: Dict[str, Position] = {}  # symbol -> Position (tối đa 1 position/symbol)
         self.pending_orders: List[OrderRequest] = []
+        self.pending_closes: Dict[str, datetime] = {}
         self.order_history: List[OrderExecutionRecord] = []
         self.trade_history: List[TradeRecord] = []
         self.funding_history: List[FundingEvent] = []
@@ -565,13 +567,34 @@ class PaperBroker:
                     self._settled_funding_keys.add(f_key)
                     candle_events.append({"type": "FUNDING", "event": funding_evt})
 
+        # A close decision made after the prior bar closes executes at this open,
+        # after gap protection and funding. It cannot evade a due settlement.
+        close_signal = self.pending_closes.get(symbol)
+        if close_signal is not None and close_signal <= open_time:
+            self.pending_closes.pop(symbol)
+            if symbol in self.positions:
+                pos = self.positions[symbol]
+                price = open_p * (1 - self.slippage_pct if pos.direction == OrderDirection.LONG else 1 + self.slippage_pct)
+                self._execute_exit(pos, price, open_time, ExitReason.MANUAL)
+
         # PHA 3: Pending Market Entry & Admission Gate
         pending_to_process = [req for req in self.pending_orders if req.symbol == symbol and req.signal_time <= open_time]
         self.pending_orders = [req for req in self.pending_orders if not (req.symbol == symbol and req.signal_time <= open_time)]
 
         for req in pending_to_process:
-            # 1. Kiểm tra loại lệnh (E5)
-            if req.order_type not in (OrderType.MARKET_ENTRY, getattr(OrderType, "MARKET", OrderType.MARKET_ENTRY)):
+            if req.expires_at is not None and open_time >= req.expires_at:
+                self._update_order_record(req, OrderStatus.CANCELLED, open_time, reasons=["LIMIT_EXPIRED"])
+                continue
+            # 1. Limit orders remain pending until the bar trades through their price.
+            if req.order_type == OrderType.LIMIT_ENTRY:
+                touched = low_p <= req.signal_price if req.direction == OrderDirection.LONG else high_p >= req.signal_price
+                if not touched:
+                    self.pending_orders.append(req)
+                    continue
+                fill_price = (min(open_p * (1 + self.slippage_pct), req.signal_price)
+                              if req.direction == OrderDirection.LONG
+                              else max(open_p * (1 - self.slippage_pct), req.signal_price))
+            elif req.order_type not in (OrderType.MARKET_ENTRY, getattr(OrderType, "MARKET", OrderType.MARKET_ENTRY)):
                 self._update_order_record(
                     req=req,
                     status=OrderStatus.REJECTED,
@@ -607,7 +630,9 @@ class PaperBroker:
                 continue
 
             # 4. Tính giá fill kèm slippage
-            if req.direction == OrderDirection.LONG:
+            if req.order_type == OrderType.LIMIT_ENTRY:
+                pass
+            elif req.direction == OrderDirection.LONG:
                 fill_price = open_p * (1.0 + self.slippage_pct)
             elif req.direction == OrderDirection.SHORT:
                 fill_price = open_p * (1.0 - self.slippage_pct)
@@ -724,6 +749,18 @@ class PaperBroker:
                     "entry_equity": entry_equity,
                     "risk_ratio_percent": actual_risk_ratio_percent,
                 })
+                if req.partial_exits:
+                    sign = 1 if req.direction == OrderDirection.LONG else -1
+                    distance = abs(fill_price - req.stop_loss_price)
+                    position_metadata["partial_targets"] = [
+                        [fill_price + sign * rr * distance, fraction] for rr, fraction in req.partial_exits
+                    ]
+                    position_metadata["original_quantity"] = calc_quantity
+                    position_metadata["partials_done"] = 0
+                if req.order_type == OrderType.LIMIT_ENTRY:
+                    position_metadata["intrabar_limit_entry"] = (
+                        open_p > req.signal_price if req.direction == OrderDirection.LONG else open_p < req.signal_price
+                    )
 
                 new_pos = Position(
                     position_id=f"POS_{symbol}_{open_time.strftime('%Y%m%d%H%M')}_{self._trade_seq+1:04d}",
@@ -814,6 +851,10 @@ class PaperBroker:
                     exit_reason = ExitReason.TAKE_PROFIT
                     raw_exit_price = pos.take_profit_price * (1.0 + self.slippage_pct)
 
+            # Unknown pre-fill path cannot award a same-bar limit-entry profit.
+            if (pos.metadata.get("intrabar_limit_entry") and pos.opened_at == open_time
+                    and exit_reason == ExitReason.TAKE_PROFIT):
+                intrabar_exit_triggered = False
             if intrabar_exit_triggered and exit_reason is not None:
                 trade_rec = self._execute_exit(
                     position=pos,
@@ -824,6 +865,26 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "INTRABAR_EXIT", "trade": trade_rec})
 
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            if not (pos.metadata.get("intrabar_limit_entry") and pos.opened_at == open_time):
+                targets = pos.metadata.get("partial_targets", [])
+                for idx in range(pos.metadata.get("partials_done", 0), len(targets)):
+                    if symbol not in self.positions:
+                        break
+                    target, fraction = targets[idx]
+                    touched = high_p >= target if pos.direction == OrderDirection.LONG else low_p <= target
+                    if not touched:
+                        break
+                    price = target * (1 - self.slippage_pct if pos.direction == OrderDirection.LONG else 1 + self.slippage_pct)
+                    quantity = pos.metadata["original_quantity"] * fraction
+                    self._execute_exit(pos, price, close_time, ExitReason.TAKE_PROFIT,
+                                       intrabar_estimated=True, quantity=quantity)
+                    if symbol in self.positions:
+                        pos = self.positions[symbol]
+                        pos.metadata["partials_done"] = idx + 1
+                        pos.metadata["breakeven_pending"] = True
+
         # PHA 5: Close Time & Mark-to-Market
         self.current_time = close_time
         self.last_mark_prices[symbol] = close_p
@@ -831,6 +892,10 @@ class PaperBroker:
         if symbol in self.positions:
             pos = self.positions[symbol]
             pos._last_unrealized_pnl = pos.calculate_unrealized_pnl(close_p)
+            # Effective only after this bar; never move a stop retroactively.
+            if pos.metadata.get("breakeven_pending"):
+                if self.update_stop_loss(symbol, pos.entry_price):
+                    pos.metadata["breakeven_pending"] = False
 
         if self.equity <= 0:
             self.is_halted = True
@@ -864,10 +929,28 @@ class PaperBroker:
         exit_time: datetime,
         exit_reason: ExitReason,
         intrabar_estimated: bool = False,
+        quantity: Optional[float] = None,
     ) -> TradeRecord:
         """
         Thực hiện đóng vị thế, hạch toán PnL, giải phóng ký quỹ và đồng bộ Circuit Breaker (E4).
         """
+        remaining = None
+        previous_slices = position.metadata.get("realized_slices_net", 0.0)
+        if quantity is not None:
+            quantity = _validate_finite_positive("exit quantity", quantity)
+            if quantity >= position.quantity:
+                raise ValueError("partial exit quantity must be less than remaining position")
+            ratio = quantity / position.quantity
+            remaining = deepcopy(position)
+            position = deepcopy(position)
+            for name in ("quantity", "initial_margin", "isolated_collateral", "entry_fee", "cumulative_funding"):
+                original = getattr(position, name)
+                setattr(position, name, original * ratio)
+                setattr(remaining, name, original * (1 - ratio))
+            remaining.liquidation_price = self._calculate_collateral_aware_liquidation_price(remaining)
+            remaining._last_unrealized_pnl = remaining.calculate_unrealized_pnl(
+                self.last_mark_prices.get(remaining.symbol, remaining.entry_price))
+            position.metadata["partial_exit"] = True
         exit_notional = position.quantity * exit_price
         exit_fee = exit_notional * self.taker_fee_pct
 
@@ -924,6 +1007,9 @@ class PaperBroker:
 
         # XÓA VỊ THẾ KHỎI self.positions TRƯỚC KHI TÍNH EQUITY (E4)
         self.positions.pop(position.symbol, None)
+        if remaining is not None:
+            remaining.metadata["realized_slices_net"] = previous_slices + net_trade_pnl
+            self.positions[position.symbol] = remaining
 
         # Tính post-close equity sạch (không bị dính stale unrealized pnl của vị thế vừa đóng)
         post_close_equity = max(0.0, self.equity)
@@ -931,10 +1017,12 @@ class PaperBroker:
         # Ghi nhận kết quả giao dịch vào Circuit Breaker (E4, H1)
         # Chỉ ghi nhận khi không phải forced close do chính CB lock
         exit_cashflow = gross_pnl - exit_fee
-        if exit_reason != ExitReason.CIRCUIT_BREAKER_LOCK:
+        if remaining is not None:
+            self.circuit_breaker.record_cashflow(exit_cashflow, exit_time, post_close_equity)
+        elif exit_reason != ExitReason.CIRCUIT_BREAKER_LOCK:
             try:
                 self.circuit_breaker.record_trade_result(
-                    pnl=net_trade_pnl,
+                    pnl=net_trade_pnl + previous_slices,
                     timestamp=exit_time,
                     equity=post_close_equity,
                     cashflow=exit_cashflow,
@@ -1183,6 +1271,15 @@ class PaperBroker:
                 if reasons:
                     rec.rejection_reasons = list(reasons)
                 break
+
+    def request_close(self, symbol: str, signal_time: datetime) -> None:
+        """Queue a causal market exit; execution and funding stay in the broker."""
+        timestamp = _ensure_utc(signal_time)
+        if self.is_finalized:
+            raise RuntimeError("broker finalized")
+        if self.current_time is not None and timestamp < self.current_time:
+            raise ValueError("close signal time reversal")
+        self.pending_closes[str(symbol).upper()] = timestamp
 
     def update_stop_loss(self, symbol: str, new_stop_loss: float) -> bool:
         """

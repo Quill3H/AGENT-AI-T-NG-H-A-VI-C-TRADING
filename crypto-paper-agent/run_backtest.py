@@ -232,7 +232,8 @@ def main():
 
     symbol = config.get("data", {}).get("futures_symbol", "BTCUSDT")
     exchange = config.get("data", {}).get("exchange", "binance")
-    timeframes = ["4h", "15m"]
+    timeframes = [config.get("strategy", {}).get("timeframe_signal", "4h"),
+                  config.get("strategy", {}).get("timeframe_execution", "15m")]
 
     # Xử lý output_dir, run_id và db_path (Stage 6)
     # Nguyên tắc: relative path phải resolve từ PROJECT_ROOT; absolute path giữ nguyên
@@ -357,7 +358,7 @@ def main():
             sys.exit(1)
 
     # 6. Khởi tạo Strategy và BacktestEngine
-    print("\n[Engine] Initializing TrendFollowingStrategy and BacktestEngine...")
+    print(f"\n[Engine] Initializing {args.strategy} and BacktestEngine...")
     strategy_cls = {
         "trend_following": TrendFollowingStrategy,
         "breakout_retest": BreakoutRetestStrategy,
@@ -366,8 +367,8 @@ def main():
     strategy = strategy_cls(config=config, symbol=symbol)
     engine = BacktestEngine(
         config=config,
-        data_4h=data["4h"],
-        data_15m=data["15m"],
+        data_4h=data[timeframes[0]],
+        data_15m=data[timeframes[1]],
         strategy=strategy,
         symbol=symbol,
         broker=PaperBroker(config=config, news_filter=news_filter),

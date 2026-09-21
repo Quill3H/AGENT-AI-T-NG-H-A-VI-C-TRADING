@@ -5,9 +5,8 @@
 strategy:
   name: "SMC_LIQUIDITY_SWEEP"
   enabled: true
-  timeframe_structure: "4h"   # xác định cấu trúc thị trường (BOS/CHoCH)
-  timeframe_entry: "15m"      # tìm FVG và Order Block entry
-  timeframe_scalp: "1m"       # tùy chọn: tinh chỉnh entry 1m
+  timeframe_signal: "5m"
+  timeframe_execution: "1m"
 
 default_conviction: "high"    # 5% risk per trade (SMC setup thường có RRR cao)
 
@@ -16,6 +15,9 @@ smc:
   swing_n: 3                  # N nến hai bên để xác định Swing High/Low
   min_bos_pct: 0.001          # BOS tối thiểu 0.1%
   fvg_min_size_atr: 0.3       # FVG tối thiểu 0.3x ATR (lọc FVG quá nhỏ)
+  displacement_min_atr: 0.5
+  max_setup_age_bars: 12
+  ob_max_distance_atr: 1.0
 
 # Entry: tại 50% của FVG
 entry:
@@ -35,3 +37,7 @@ stop_loss:
 take_profit:
   method: "previous_high_low"   # TP tại đỉnh/đáy cấu trúc trước
   rrr_min: 2.0
+  partial_exits: [[1.5, 0.4], [3.0, 0.3]]
+
+leverage: 2.0
+base_risk_percent: 0.02
