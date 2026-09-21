@@ -42,28 +42,28 @@
 
 Files: `src/execution/paper_broker.py`, `src/strategies/funding_arbitrage.py`, `src/data_layer/fetcher.py`, `tests/test_g0_settlement_lifecycle.py`.
 
-- [ ] Add fail-first regressions for source08→row16 replay/revision in both execution consumers, exact-source zero funding and ingestion readiness at a missing boundary.
-- [ ] Run the regression file against baseline and preserve failing output.
-- [ ] Require source time equal to the settlement boundary for a surviving position. Do not reuse an observation as settlement. Keep existing no-future/no-stale validations for non-settlement observations.
-- [ ] Keep preflight validation before mutation; preserve gap exits, partial-before-funding and pending-close ordering.
-- [ ] Run focused broker/funding/data regressions and historical probes.
+- [x] Add fail-first regressions for source08→row16 replay/revision in both execution consumers, exact-source zero funding and ingestion readiness at a missing boundary.
+- [x] Run the regression file against baseline and preserve failing output.
+- [x] Require source time equal to the settlement boundary for a surviving position. Do not reuse an observation as settlement. Keep existing no-future/no-stale validations for non-settlement observations.
+- [x] Keep preflight validation before mutation; preserve gap exits, partial-before-funding and pending-close ordering.
+- [x] Run focused broker/funding/data regressions and historical probes.
 
 ## G0b: lifecycle statistics
 
 Files: `src/execution/paper_broker.py`, `src/execution/order_models.py`, new `src/report/lifecycles.py`, `src/report/metrics.py`, `src/report/generator.py`, `tests/test_g0_settlement_lifecycle.py`.
 
-- [ ] Add fail-first 3-slice/1-position, mixed-win-loss, unfinished lifecycle, repeated symbol, malformed identity/quantity and persistence/report tests.
-- [ ] Tag every new realization with immutable lifecycle identity/original quantity and terminal marker in metadata, preserving raw TradeRecord/JSON schema.
-- [ ] Add `completed_lifecycles(trades)` returning aggregated completed records; fail closed on ambiguous partials, duplicate/late terminals and inconsistent original quantity. Recompute lifecycle R from aggregate risk, never average slice R.
-- [ ] Primary counts/win rates/expectancy/SQN consume completed lifecycles; separate `realization_slices` statistics preserve all raw cash amounts. Long/short and benchmark comparisons use the same lifecycle unit.
-- [ ] Ledger reconciliation continues to consume all slices including unfinished positions. SQLite stores raw rows plus primary run metrics; report labels distinguish rows and trades.
-- [ ] Run focused then full offline suite; separate network suite; preserve all failures and legitimate fixture-contract changes.
+- [x] Add fail-first 3-slice/1-position, mixed-win-loss, unfinished lifecycle, repeated symbol, malformed identity/quantity and persistence/report tests.
+- [x] Tag every new realization with immutable lifecycle identity/original quantity and terminal marker in metadata, preserving raw TradeRecord/JSON schema.
+- [x] Add `completed_lifecycles(trades)` returning aggregated completed records; fail closed on ambiguous partials, duplicate/late terminals and inconsistent original quantity. Recompute lifecycle R from aggregate risk, never average slice R.
+- [x] Primary counts/win rates/expectancy/SQN consume completed lifecycles; separate `realization_slices` statistics preserve all raw cash amounts. Long/short and benchmark comparisons use the same lifecycle unit.
+- [x] Ledger reconciliation continues to consume all slices including unfinished positions. SQLite stores raw rows plus primary run metrics; report labels distinguish rows and trades.
+- [x] Run focused then full offline suite; preserve all failures. Network suite explicitly NOT_RUN per G0/G1 PM constraint.
 
 ## G1: execution gate
 
-- [ ] Run full offline and historical Review05/06/07 probes on exact code A.
-- [ ] Exercise deterministic LONG/SHORT and partial replay with nonempty fills, zero/repeated/distinct funding, partial and final ledger reconciliation.
-- [ ] Create evidence SHA256 manifest; document synthetic provenance and no market raw data in G0/G1. Route A/B to PM and Tester. Only their own replay can be called independent verification.
+- [x] Run full offline and historical Review05/06/07 probes on exact code A.
+- [x] Exercise deterministic LONG/SHORT and partial replay with nonempty fills, zero/repeated/distinct funding, partial and final ledger reconciliation.
+- [x] Create evidence SHA256 manifest; document synthetic provenance and no market raw data in G0/G1. Route A/B to PM and Tester. Only their own replay can be called independent verification.
 
 ## G2: data-integrity gate (subsequent implementation checkpoint)
 
@@ -85,3 +85,7 @@ Files: `src/execution/paper_broker.py`, `src/execution/order_models.py`, new `sr
 ## Handoff and stopping rules
 
 G0/G1 is independently reviewable and will be handed off before larger experiments. G2–G4 remain planned until their own implementation/verification and budget checkpoint. A is code/tests/scripts; B is a documentation-only child with results and manifest. No claim that merely planning a gate completes it. PM receives the exact branch and A/B SHAs; user decides acceptance/merge.
+
+Latest product steering via PM: an explicit initial futures rulebook precedes learning; evaluate on historical years not used for learning before prospective public realtime data with simulated paper orders. Product Owner/Business Analyst must define primary strategy, learning boundary, measurable effectiveness and live-paper workflow. Do not implement a realtime connector or change scope before that product contract and G0/G1 acceptance. No private/live/testnet orders are authorized; no holdout tuning or profitability claim. The three-horizon benchmark and resource ceilings above remain unchanged.
+
+Author execution checkpoint: code A2c9a4d0985fc9eafd29386482793425c26d47835 passed382 offline (2 skips/5 network deselected), historical26/11/3, and nonempty LONG/SHORT synthetic replay. Checked boxes denote author execution/deliverables only; independent acceptance remains pending. Evidence: docs/reviews/G0_SETTLEMENT_LIFECYCLE_HANDOFF.md.

@@ -1,0 +1,111 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______ test_public_preparation_marks_missing_boundary_unready_offline ________
+
+tmp_path = WindowsPath('C:/Users/Lenovo/AppData/Local/Temp/pytest-of-Lenovo/pytest-54/test_public_preparation_marks_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000026B178B9340>
+
+    def test_public_preparation_marks_missing_boundary_unready_offline(tmp_path, monkeypatch):
+        import importlib.util
+        from io import BytesIO
+        from zipfile import ZipFile
+    
+        path = Path(__file__).resolve().parents[1] / "scripts" / "prepare_public_research_sample.py"
+        spec = importlib.util.spec_from_file_location("g0_sample_preparation", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        idx = pd.date_range("2024-01-02", periods=1440, freq="min", tz="UTC")
+        candles = "\n".join(f"{ts.value // 1000000},100,101,99,100,1" for ts in idx)
+        funding = "calc_time,last_funding_rate\n" + "\n".join(
+            f"{ts.value // 1000000},0.001" for ts in idx[[0, 480]])
+    
+        def archive_response(url, timeout):
+            buf = BytesIO()
+            with ZipFile(buf, "w") as z:
+                z.writestr("recorded.csv", funding if "fundingRate" in url else candles)
+            buf.seek(0)
+            return buf
+    
+        monkeypatch.setattr(module, "urlopen", archive_response)
+        monkeypatch.setattr(sys, "argv", [str(path), "--output", str(tmp_path),
+                                         "--start", "2024-01-02", "--days", "1"])
+        assert module.main() == 0
+        for name in ("1m", "5m", "15m", "4h", "basket"):
+            data = pd.read_parquet(tmp_path / f"{name}.parquet")
+>           assert not bool(data.loc[idx[960], "funding_readiness"])
+E           assert not True
+E            +  where True = bool(np.True_)
+
+tests\test_g0_settlement_lifecycle.py:266: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{
+  "1m": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "perpetual",
+    "timeframe": "1m",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T23:59:00+00:00",
+    "rows": 1440,
+    "gaps": 0,
+    "sha256": "e7ac2b63fcd4a494830a9386c303847f3e0a921db839b26f6c4982427966b549"
+  },
+  "basket": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "spot_and_perpetual",
+    "timeframe": "1m",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T23:59:00+00:00",
+    "rows": 1440,
+    "gaps": 0,
+    "sha256": "f50267e69e0af540e8121bb600c6dedc50547aca3c636d252c7fd187ee2b8615"
+  },
+  "5m": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "perpetual",
+    "timeframe": "5m",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T23:55:00+00:00",
+    "rows": 288,
+    "gaps": 0,
+    "sha256": "7fc0bacab2d45f4ac5c216bcda03389506a2224344b0553fb1d8781b6c423871"
+  },
+  "15m": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "perpetual",
+    "timeframe": "15m",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T23:45:00+00:00",
+    "rows": 96,
+    "gaps": 0,
+    "sha256": "a92cbaf934fd18e6ccc959c7e139583ff876d736b640fa9544efeddabd2f88c5"
+  },
+  "4h": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "perpetual",
+    "timeframe": "4h",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T20:00:00+00:00",
+    "rows": 6,
+    "gaps": 0,
+    "sha256": "153a78862f8d36361dfa429f663c68d86aed92d67f75bcd43454954fe253427b"
+  },
+  "spot_1m": {
+    "source": "Binance Vision public archives",
+    "symbol": "BTCUSDT",
+    "market_type": "spot",
+    "timeframe": "1m",
+    "start": "2024-01-02T00:00:00+00:00",
+    "end": "2024-01-02T23:59:00+00:00",
+    "rows": 1440,
+    "gaps": 0,
+    "sha256": "afb786370e62d313fad2fa36fb43f0628d3c2a7abaf02d5b25b6fb421d350f9c"
+  }
+}
+=========================== short test summary info ===========================
+FAILED tests/test_g0_settlement_lifecycle.py::test_public_preparation_marks_missing_boundary_unready_offline
+1 failed, 21 deselected in 3.40s

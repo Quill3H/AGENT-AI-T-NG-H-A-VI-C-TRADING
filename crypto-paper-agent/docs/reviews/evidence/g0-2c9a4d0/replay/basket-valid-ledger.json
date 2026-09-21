@@ -1,0 +1,27 @@
+[
+  {
+    "time": "2024-01-01T01:00:00+00:00",
+    "kind": "ENTRY",
+    "cash_delta": -8000.0,
+    "fee": 0.0,
+    "spot_purchase": 4000.0,
+    "perp_collateral": 4000.0,
+    "signal_time": "2024-01-01T00:00:00+00:00"
+  },
+  {
+    "time": "2024-01-01T08:00:00+00:00",
+    "kind": "FUNDING",
+    "cash_delta": 0.0,
+    "funding": 0.8,
+    "source_time": "2024-01-01T08:00:00+00:00",
+    "rate": 0.0002
+  },
+  {
+    "time": "2024-01-01T16:00:00+00:00",
+    "kind": "FUNDING",
+    "cash_delta": 0.0,
+    "funding": 0.8,
+    "source_time": "2024-01-01T16:00:00+00:00",
+    "rate": 0.0002
+  }
+]

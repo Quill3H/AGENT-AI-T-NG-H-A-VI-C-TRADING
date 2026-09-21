@@ -1,0 +1,17 @@
+........................................................................ [ 18%]
+........................................................................ [ 37%]
+.......s.s.............................................................. [ 56%]
+........................................................................ [ 75%]
+........................................................................ [ 93%]
+........................                                                 [100%]
+============================== warnings summary ===============================
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  G:\CODEX\.venv-repair\Lib\site-packages\gymnasium\utils\env_checker.py:373: UserWarning: [33mWARN: `check_env(warn=...)` parameter is now ignored.[0m
+    logger.warn("`check_env(warn=...)` parameter is now ignored.")
+
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  G:\CODEX\.venv-repair\Lib\site-packages\gymnasium\utils\env_checker.py:440: UserWarning: [33mWARN: Not able to test alternative render modes due to the environment not having a spec. Try instantiating the environment through `gymnasium.make`[0m
+    logger.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+382 passed, 2 skipped, 5 deselected, 2 warnings in 428.12s (0:07:08)

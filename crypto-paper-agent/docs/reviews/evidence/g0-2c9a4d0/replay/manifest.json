@@ -1,0 +1,21 @@
+{
+  "code_commit_sha": "2c9a4d0985fc9eafd29386482793425c26d47835",
+  "data_kind": "SYNTHETIC",
+  "network_requests": 0,
+  "market_raw_files": [],
+  "market_performance": "NOT_EVALUATED",
+  "source_file": "crypto-paper-agent/src/research/synthetic.py",
+  "source_sha256": "f1218b63dad9066a4ee0488ac4a6f05160f61bf33c50b56bc96d6b92604c150c",
+  "input_files": [
+    "inputs/basket-config.json",
+    "inputs/basket-reused-source.parquet",
+    "inputs/basket-valid.parquet",
+    "inputs/LONG-config.json",
+    "inputs/LONG-execution.parquet",
+    "inputs/LONG-signal.parquet",
+    "inputs/SHORT-config.json",
+    "inputs/SHORT-execution.parquet",
+    "inputs/SHORT-signal.parquet"
+  ],
+  "normalization": "No fetch/forward-fill; exact generated UTC frames saved before replay"
+}

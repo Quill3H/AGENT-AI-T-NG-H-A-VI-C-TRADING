@@ -1,0 +1,23 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+____ test_external_cwd_replay_cli_emits_nonempty_both_sides_and_checksums _____
+
+tmp_path = WindowsPath('C:/Users/Lenovo/AppData/Local/Temp/pytest-of-Lenovo/pytest-51/test_external_cwd_replay_cli_e0')
+
+    def test_external_cwd_replay_cli_emits_nonempty_both_sides_and_checksums(tmp_path):
+        import hashlib
+    
+        script = Path(__file__).resolve().parents[1] / "scripts" / "verify_g0_replay.py"
+        output = tmp_path / "artifacts"
+        run = subprocess.run([sys.executable, str(script), "--output-dir", str(output)],
+                             cwd=tmp_path, capture_output=True, text=True, timeout=120)
+>       assert run.returncode == 0, run.stdout + run.stderr
+E       AssertionError: C:\Users\Lenovo\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe: can't open file 'G:\\GITHUB\\AGENT-AI-T-NG-H-A-VI-C-TRADING\\crypto-paper-agent\\scripts\\verify_g0_replay.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['G:\\CODEX\\.venv-repair\\Scripts\\python.exe', 'G:\\GITHUB\\AGENT-AI-T-NG-H-A-VI-C-TRADING\\cr...T-NG-H-A-VI-C-TRADING\\\\crypto-paper-agent\\\\scripts\\\\verify_g0_replay.py': [Errno 2] No such file or directory\n").returncode
+
+tests\test_g0_settlement_lifecycle.py:220: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_g0_settlement_lifecycle.py::test_external_cwd_replay_cli_emits_nonempty_both_sides_and_checksums
+1 failed, 20 deselected in 3.00s

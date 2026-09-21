@@ -1,0 +1,24 @@
+{
+  "account": {
+    "initial_equity_usd": 10000
+  },
+  "fees": {
+    "taker_pct": 0.0005,
+    "slippage_pct": 0
+  },
+  "strategy": {
+    "name": "SMC_LIQUIDITY_SWEEP",
+    "timeframe_signal": "5m",
+    "timeframe_execution": "1m"
+  },
+  "smc": {
+    "swing_n": 1,
+    "displacement_min_atr": 0.5,
+    "fvg_min_size_atr": 0.3
+  },
+  "entry": {
+    "require_order_block_confluence": true
+  },
+  "base_risk_percent": 0.02,
+  "leverage": 2.0
+}

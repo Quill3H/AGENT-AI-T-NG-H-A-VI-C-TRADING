@@ -1,0 +1,115 @@
+FFFFFF                                                                   [100%]
+================================== FAILURES ===================================
+_______ test_broker_reused_or_revised_source_rejected_atomically[0.001] _______
+
+rate = 0.001
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'Funding source time must match settlement boundary 2024-01-01T16:00:00+00:00; received 2024-01-01T08:00:00+00:00 (observation is not a settlement event)'
+
+tests\test_g0_settlement_lifecycle.py:45: AssertionError
+_______ test_broker_reused_or_revised_source_rejected_atomically[0.002] _______
+
+rate = 0.002
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'Funding source time must match settlement boundary 2024-01-01T16:00:00+00:00; received 2024-01-01T08:00:00+00:00 (observation is not a settlement event)'
+
+tests\test_g0_settlement_lifecycle.py:45: AssertionError
+________ test_broker_reused_or_revised_source_rejected_atomically[0.0] ________
+
+rate = 0.0
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'Funding source time must match settlement boundary 2024-01-01T16:00:00+00:00; received 2024-01-01T08:00:00+00:00 (observation is not a settlement event)'
+
+tests\test_g0_settlement_lifecycle.py:45: AssertionError
+___ test_basket_reused_or_revised_source_rejected_before_simulation[0.0002] ___
+
+rate = 0.0002
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'funding source time must match settlement boundary'
+
+tests\test_g0_settlement_lifecycle.py:74: AssertionError
+___ test_basket_reused_or_revised_source_rejected_before_simulation[0.0003] ___
+
+rate = 0.0003
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'funding source time must match settlement boundary'
+
+tests\test_g0_settlement_lifecycle.py:74: AssertionError
+____ test_basket_reused_or_revised_source_rejected_before_simulation[0.0] _____
+
+rate = 0.0
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="FUNDING_SOURCE_EVENT_MISMATCH"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'FUNDING_SOURCE_EVENT_MISMATCH'
+E         Actual message: 'funding source time must match settlement boundary'
+
+tests\test_g0_settlement_lifecycle.py:74: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.001]
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.002]
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.0]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0002]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0003]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0]
+6 failed, 15 deselected in 5.41s

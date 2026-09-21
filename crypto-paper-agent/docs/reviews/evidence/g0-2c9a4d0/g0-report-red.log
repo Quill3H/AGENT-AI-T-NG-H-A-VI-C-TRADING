@@ -1,0 +1,66 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+___ test_report_persists_raw_slices_and_labels_completed_positions[True-1] ____
+
+tmp_path = WindowsPath('C:/Users/Lenovo/AppData/Local/Temp/pytest-of-Lenovo/pytest-48/test_report_persists_raw_slice0')
+finish = True, completed = 1
+
+    @pytest.mark.parametrize("finish,completed", [(True, 1), (False, 0)])
+    def test_report_persists_raw_slices_and_labels_completed_positions(tmp_path, finish, completed):
+        from src.report.generator import ReportGenerator
+    
+        b = partial_broker(finish)
+        metrics = report_metrics(b)
+        ReportGenerator(base_reports_dir=tmp_path).generate_all(
+            run_id="g0", broker=b, metrics=metrics, config={},
+        )
+        folder = tmp_path / "g0"
+        summary = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
+        assert summary["total_trades"] == completed
+        with sqlite3.connect(folder / "trades.sqlite") as db:
+            assert db.execute("SELECT total_trades FROM runs").fetchone()[0] == completed
+            rows = db.execute("SELECT metadata_json FROM trades").fetchall()
+            assert len(rows) == len(b.trade_history)
+            assert sum(json.loads(r[0])["lifecycle_complete"] for r in rows) == completed
+        text = (folder / "summary.md").read_text(encoding="utf-8")
+>       assert "Completed Position Lifecycles" in text
+E       AssertionError: assert 'Completed Position Lifecycles' in '# Performance Report: TREND_FOLLOWING (BTCUSDT)\\n> **Report Status**: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED  \\n> **... t\u01b0\u01a1ng lai**: Hi\u1ec7u su\u1ea5t trong qu\xe1 kh\u1ee9 c\u1ee7a chi\u1ebfn l\u01b0\u1ee3c trend following kh\xf4ng \u0111\u1ea3m b\u1ea3o k\u1ebft qu\u1ea3 t\u01b0\u01a1ng t\u1ef1 trong t\u01b0\u01a1ng lai.\\n'
+
+tests\test_g0_settlement_lifecycle.py:186: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-09-22 01:12:58.809 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'g0' with 3 trades and 1 orders.
+2026-09-22 01:12:59.531 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: C:\Users\Lenovo\AppData\Local\Temp\pytest-of-Lenovo\pytest-48\test_report_persists_raw_slice0\g0
+___ test_report_persists_raw_slices_and_labels_completed_positions[False-0] ___
+
+tmp_path = WindowsPath('C:/Users/Lenovo/AppData/Local/Temp/pytest-of-Lenovo/pytest-48/test_report_persists_raw_slice1')
+finish = False, completed = 0
+
+    @pytest.mark.parametrize("finish,completed", [(True, 1), (False, 0)])
+    def test_report_persists_raw_slices_and_labels_completed_positions(tmp_path, finish, completed):
+        from src.report.generator import ReportGenerator
+    
+        b = partial_broker(finish)
+        metrics = report_metrics(b)
+        ReportGenerator(base_reports_dir=tmp_path).generate_all(
+            run_id="g0", broker=b, metrics=metrics, config={},
+        )
+        folder = tmp_path / "g0"
+        summary = json.loads((folder / "summary.json").read_text(encoding="utf-8"))
+        assert summary["total_trades"] == completed
+        with sqlite3.connect(folder / "trades.sqlite") as db:
+            assert db.execute("SELECT total_trades FROM runs").fetchone()[0] == completed
+            rows = db.execute("SELECT metadata_json FROM trades").fetchall()
+            assert len(rows) == len(b.trade_history)
+            assert sum(json.loads(r[0])["lifecycle_complete"] for r in rows) == completed
+        text = (folder / "summary.md").read_text(encoding="utf-8")
+>       assert "Completed Position Lifecycles" in text
+E       AssertionError: assert 'Completed Position Lifecycles' in '# Performance Report: TREND_FOLLOWING (BTCUSDT)\\n> **Report Status**: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED  \\n> **... t\u01b0\u01a1ng lai**: Hi\u1ec7u su\u1ea5t trong qu\xe1 kh\u1ee9 c\u1ee7a chi\u1ebfn l\u01b0\u1ee3c trend following kh\xf4ng \u0111\u1ea3m b\u1ea3o k\u1ebft qu\u1ea3 t\u01b0\u01a1ng t\u1ef1 trong t\u01b0\u01a1ng lai.\\n'
+
+tests\test_g0_settlement_lifecycle.py:186: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-09-22 01:13:00.040 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'g0' with 2 trades and 1 orders.
+2026-09-22 01:13:00.616 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: C:\Users\Lenovo\AppData\Local\Temp\pytest-of-Lenovo\pytest-48\test_report_persists_raw_slice1\g0
+=========================== short test summary info ===========================
+FAILED tests/test_g0_settlement_lifecycle.py::test_report_persists_raw_slices_and_labels_completed_positions[True-1]
+FAILED tests/test_g0_settlement_lifecycle.py::test_report_persists_raw_slices_and_labels_completed_positions[False-0]
+2 failed, 18 deselected in 5.16s

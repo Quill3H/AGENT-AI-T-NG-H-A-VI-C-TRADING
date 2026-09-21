@@ -1,0 +1,98 @@
+[
+  {
+    "trade_id": "TRD_BTCUSDT_20240101_0001",
+    "timestamp": 1704073200,
+    "asset": "BTCUSDT",
+    "direction": "LONG",
+    "strategy_used": "SMC_LIQUIDITY_SWEEP",
+    "conviction_tier": "NORMAL_2_PERCENT",
+    "entry_price": 104.0,
+    "stop_loss_price": 95.80799999999999,
+    "take_profit_levels": [],
+    "nominal_position_size_usd": 1015.625,
+    "leverage": 2.0,
+    "margin_used_usd": 507.8125,
+    "risk_amount_usd": 80.0,
+    "risk_ratio_percent": 2.0,
+    "estimated_liquidation_price": 52.2088,
+    "market_context": {
+      "oi_trend_4h": null,
+      "funding_rate_8h": null,
+      "cvd_divergence": null,
+      "fvg_consequent_encroachment": null
+    },
+    "outcome": {
+      "exit_price": 116.28800000000001,
+      "pnl_usd": 118.9244,
+      "fees_paid_usd": 1.0756,
+      "net_return_percent": 23.419,
+      "max_adverse_excursion_mae": null,
+      "max_favorable_excursion_mfe": null,
+      "rule_compliance": true
+    }
+  },
+  {
+    "trade_id": "TRD_BTCUSDT_20240101_0002",
+    "timestamp": 1704073200,
+    "asset": "BTCUSDT",
+    "direction": "LONG",
+    "strategy_used": "SMC_LIQUIDITY_SWEEP",
+    "conviction_tier": "NORMAL_2_PERCENT",
+    "entry_price": 104.0,
+    "stop_loss_price": 95.80799999999999,
+    "take_profit_levels": [],
+    "nominal_position_size_usd": 761.7187,
+    "leverage": 2.0,
+    "margin_used_usd": 380.8594,
+    "risk_amount_usd": 60.0,
+    "risk_ratio_percent": 2.0,
+    "estimated_liquidation_price": 52.2088,
+    "market_context": {
+      "oi_trend_4h": null,
+      "funding_rate_8h": null,
+      "cvd_divergence": null,
+      "fvg_consequent_encroachment": null
+    },
+    "outcome": {
+      "exit_price": 128.57600000000002,
+      "pnl_usd": 179.1483,
+      "fees_paid_usd": 0.8517,
+      "net_return_percent": 47.0379,
+      "max_adverse_excursion_mae": null,
+      "max_favorable_excursion_mfe": null,
+      "rule_compliance": true
+    }
+  },
+  {
+    "trade_id": "TRD_BTCUSDT_20240101_0003",
+    "timestamp": 1704073200,
+    "asset": "BTCUSDT",
+    "direction": "LONG",
+    "strategy_used": "SMC_LIQUIDITY_SWEEP",
+    "conviction_tier": "NORMAL_2_PERCENT",
+    "entry_price": 104.0,
+    "stop_loss_price": 95.80799999999999,
+    "take_profit_levels": [],
+    "nominal_position_size_usd": 761.7187,
+    "leverage": 2.0,
+    "margin_used_usd": 380.8594,
+    "risk_amount_usd": 60.0,
+    "risk_ratio_percent": 2.0,
+    "estimated_liquidation_price": 52.2088,
+    "market_context": {
+      "oi_trend_4h": null,
+      "funding_rate_8h": null,
+      "cvd_divergence": null,
+      "fvg_consequent_encroachment": null
+    },
+    "outcome": {
+      "exit_price": 124.75,
+      "pnl_usd": 151.1398,
+      "fees_paid_usd": 0.8377,
+      "net_return_percent": 39.6839,
+      "max_adverse_excursion_mae": null,
+      "max_favorable_excursion_mfe": null,
+      "rule_compliance": true
+    }
+  }
+]

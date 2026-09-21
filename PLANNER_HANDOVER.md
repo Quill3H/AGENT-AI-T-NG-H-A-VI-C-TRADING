@@ -1,6 +1,18 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
-## Current repair checkpoint — 2026-09-21
+## Current G0 checkpoint — 2026-09-22
+
+**PENDING INDEPENDENT REVIEW — NO SELF-ACCEPTANCE.** PM coordinates separate Tester and Independent Reviewer tasks; the former reviewer task is now PM and does not issue the independent verdict.
+
+- Branch `codex/g0-market-validation`; code A `2c9a4d0985fc9eafd29386482793425c26d47835`; docs B is its documentation/evidence-only child supplied by full SHA in final handoff.
+- Exact-source funding at settlement is mandatory in broker and basket. Reused08→16 raises `FUNDING_SOURCE_EVENT_MISMATCH` before mutation. Public preparation and fetcher share readiness rules.
+- Primary count/win/expectancy/SQN use completed position lifecycles; raw realization slices remain auditable. Incomplete lifecycles are excluded from primary metrics while their realized cash remains in ledger totals. Direct Position/full/partial-final/force/breaker close paths have regressions.
+- Plan/resource checkpoint was delivered to PM before implementation: `crypto-paper-agent/docs/superpowers/plans/2026-09-22-market-validation.md`. No market download/network experiment at G0/G1. Historical/current/holdout G2–G4 remain planned, not verified.
+- Exact commands/results/runtime/raw synthetic hashes: `crypto-paper-agent/docs/reviews/G0_SETTLEMENT_LIFECYCLE_HANDOFF.md` and its evidence directory. Author execution does not substitute for QA/reviewer reruns. Old public/PPO numbers below are historical and have not been revalidated by G0.
+- Exact-A author results:382 offline passed,2 skipped,5 network deselected; historical probes26/11/3 passed; LONG/SHORT replay each1 completed position/3 raw slices with reconciliation. Further scope waits for product contract and G0/G1 acceptance; public realtime data means paper simulation only.
+- Main stays `e970337d504563e5987a4db6b5c06c635bf7244b`; preserve `.serena/` and unrelated user files. No main merge or force push.
+
+## Previous Stage 6–11 repair checkpoint — 2026-09-21 (historical)
 
 **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW.** No acceptance is claimed.
 

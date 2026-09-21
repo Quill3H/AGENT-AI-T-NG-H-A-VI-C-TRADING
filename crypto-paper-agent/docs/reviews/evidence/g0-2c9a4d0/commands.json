@@ -1,0 +1,83 @@
+[
+  {
+    "name": "offline",
+    "command": [
+      "G:\\CODEX\\.venv-repair\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-m",
+      "not network",
+      "-q",
+      "-o",
+      "addopts="
+    ],
+    "exit_code": 0,
+    "seconds": 438.734,
+    "log": "offline.log"
+  },
+  {
+    "name": "review-05",
+    "command": [
+      "G:\\CODEX\\.venv-repair\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "-o",
+      "addopts=",
+      "docs/reviews/test_stage_04_review_05.py"
+    ],
+    "exit_code": 0,
+    "seconds": 20.562,
+    "log": "review-05.log"
+  },
+  {
+    "name": "review-06",
+    "command": [
+      "G:\\CODEX\\.venv-repair\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "-o",
+      "addopts=",
+      "docs/reviews/test_stage_04_review_06.py"
+    ],
+    "exit_code": 0,
+    "seconds": 2.407,
+    "log": "review-06.log"
+  },
+  {
+    "name": "review-07",
+    "command": [
+      "G:\\CODEX\\.venv-repair\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "-o",
+      "addopts=",
+      "docs/reviews/test_stage_04_review_07.py"
+    ],
+    "exit_code": 0,
+    "seconds": 2.109,
+    "log": "review-07.log"
+  },
+  {
+    "name": "replay",
+    "command": [
+      "G:\\CODEX\\.venv-repair\\Scripts\\python.exe",
+      "G:\\GITHUB\\AGENT-AI-T-NG-H-A-VI-C-TRADING\\crypto-paper-agent\\scripts\\verify_g0_replay.py",
+      "--output-dir",
+      "G:\\CODEX\\g0-validation-2c9a4d0\\replay"
+    ],
+    "exit_code": 0,
+    "seconds": 15.281,
+    "log": "replay.log"
+  }
+]

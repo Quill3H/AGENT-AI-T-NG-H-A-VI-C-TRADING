@@ -26,3 +26,6 @@ Force-close pays exit fees; an open final basket retains unrealized PnL explicit
 This adapter has a separate basket ledger/report schema because spot inventory is
 not an isolated futures TradeRecord. No shared-capital portfolio is implemented;
 Stage 10 compares independent accounts on common time coverage.
+# G0 settlement provenance addendum — 2026-09-22
+
+Code A `2c9a4d0985fc9eafd29386482793425c26d47835`, pending independent review: settlement cashflow requires source funding_time equal to the row settlement boundary. Reused or revised source08 at row16 raises FUNDING_SOURCE_EVENT_MISMATCH; the basket prevalidates the entire input before advancing breaker/account state. Deduplication uses source event time. Observed funding can remain a past feature but cannot authorize a new settlement. Shared data-layer/public-sample readiness marks missing exact events unready. This supersedes any age-only interpretation of settlement readiness in prior text.

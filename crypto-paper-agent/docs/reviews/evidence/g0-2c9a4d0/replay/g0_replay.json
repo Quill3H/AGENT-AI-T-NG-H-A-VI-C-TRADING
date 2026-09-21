@@ -1,0 +1,24 @@
+{
+  "code_commit_sha": "2c9a4d0985fc9eafd29386482793425c26d47835",
+  "verification_status": "AUTHOR_TESTED / INDEPENDENT_REVIEW_PENDING",
+  "source": "synthetic fixtures; no downloaded market data",
+  "cases": {
+    "LONG": {
+      "completed_trades": 1,
+      "realization_slices": 3,
+      "net_pnl": 449.2124,
+      "accounting_verified": true
+    },
+    "SHORT": {
+      "completed_trades": 1,
+      "realization_slices": 3,
+      "net_pnl": 448.7951,
+      "accounting_verified": true
+    }
+  },
+  "funding": {
+    "reused_source_rejected": true,
+    "reason": "FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary",
+    "distinct_settlement_cashflow": 1.6
+  }
+}

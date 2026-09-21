@@ -1,6 +1,17 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
-## Current repair checkpoint — 2026-09-21
+## Current G0 checkpoint — 2026-09-22
+
+**PENDING INDEPENDENT REVIEW — NO SELF-ACCEPTANCE.** PM routes evidence to separate Tester and Independent Reviewer; the user decides acceptance/merge.
+
+- Branch: `codex/g0-market-validation`; code A: `2c9a4d0985fc9eafd29386482793425c26d47835`. New docs B is the documentation/evidence-only child of A; exact SHA accompanies final handoff.
+- G0 implements exact settlement source identity/readiness and completed-lifecycle primary metrics with separate raw slices. Missing/reused funding does not become a cashflow; unfinished positions do not become completed trade samples.
+- Regression coverage includes direct Position full/partial-final/force/breaker closes, broker atomic rejection after first settlement, distinct/zero funding, shared preparation readiness, lifecycle SQN/streak/benchmark and SQLite/report reconciliation.
+- Evidence and reproduction: `docs/reviews/G0_SETTLEMENT_LIFECYCLE_HANDOFF.md`. No live/testnet, market downloads or network experiments at G0/G1. PPO market performance and historical benchmark are not revalidated here.
+- Exact-A author results:382 offline passed,2 skipped,5 network deselected; historical26/11/3 passed; both synthetic LONG/SHORT replay paths1 completed position/3 slices with accounting reconciliation. Product contract and G0/G1 acceptance precede further implementation.
+- G2 data quality/acquisition, G3 period comparisons and G4 untouched holdout remain planned under `docs/superpowers/plans/2026-09-22-market-validation.md`; cache gaps/OI freshness/missing-taker flags remain open.
+
+## Previous Stage 6–11 repair checkpoint — 2026-09-21 (historical)
 
 **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW.** No acceptance is claimed.
 

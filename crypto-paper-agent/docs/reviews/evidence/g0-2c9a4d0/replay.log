@@ -1,0 +1,37 @@
+[32m2026-09-22 01:30:48.969[0m | [33m[1mWARNING [0m | [36msrc.features.indicators[0m:[36m<module>[0m:[36m28[0m - [33m[1m[Indicators] pandas-ta không kh\u1ea3 d\u1ee5ng (No module named 'pandas_ta'). S\u1ebd s\u1eed d\u1ee5ng pure pandas fallback cho toàn b\u1ed9 ch\u1ec9 báo.[0m
+[32m2026-09-22 01:30:55.567[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36m_prepare_features[0m:[36m168[0m - [1m[BTCUSDT] Calculating indicators for 13 4h candles...[0m
+[32m2026-09-22 01:30:55.662[0m | [34m[1mDEBUG   [0m | [36msrc.features.oi_features[0m:[36mcalculate_oi_features[0m:[36m58[0m - [34m[1m[OIFeatures] C\u1ed9t 'open_interest' không t\u1ed3n t\u1ea1i trong DataFrame. T\u1ea1o c\u1ed9t 'oi_delta_pct' v\u1edbi toàn b\u1ed9 giá tr\u1ecb NaN.[0m
+[32m2026-09-22 01:30:55.670[0m | [33m[1mWARNING [0m | [36msrc.features.cvd[0m:[36mcalculate_cvd[0m:[36m58[0m - [33m[1m[CVD] C\u1ed9t 'taker_buy_base_volume' không có trong DataFrame. \u01af\u1edbc tính taker buy = 50% volume (delta = 0). CVD s\u1ebd hoàn toàn \u0111i ngang.[0m
+[32m2026-09-22 01:30:55.763[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36mrun[0m:[36m186[0m - [1m[BTCUSDT] Starting backtest: 65 15m bars, 13 4h bars, force_close=True.[0m
+[32m2026-09-22 01:30:57.290[0m | [1mINFO    [0m | [36msrc.logging.trade_logger[0m:[36mlog_backtest_run[0m:[36m738[0m - [1mSuccessfully logged run 'LONG' with 3 trades and 1 orders.[0m
+[32m2026-09-22 01:30:58.620[0m | [1mINFO    [0m | [36msrc.report.generator[0m:[36mgenerate_all[0m:[36m382[0m - [1mGenerated all Stage 6 artifacts in: G:\CODEX\g0-validation-2c9a4d0\replay\LONG[0m
+[32m2026-09-22 01:30:58.882[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36m_prepare_features[0m:[36m168[0m - [1m[BTCUSDT] Calculating indicators for 13 4h candles...[0m
+[32m2026-09-22 01:30:58.892[0m | [34m[1mDEBUG   [0m | [36msrc.features.oi_features[0m:[36mcalculate_oi_features[0m:[36m58[0m - [34m[1m[OIFeatures] C\u1ed9t 'open_interest' không t\u1ed3n t\u1ea1i trong DataFrame. T\u1ea1o c\u1ed9t 'oi_delta_pct' v\u1edbi toàn b\u1ed9 giá tr\u1ecb NaN.[0m
+[32m2026-09-22 01:30:58.892[0m | [33m[1mWARNING [0m | [36msrc.features.cvd[0m:[36mcalculate_cvd[0m:[36m58[0m - [33m[1m[CVD] C\u1ed9t 'taker_buy_base_volume' không có trong DataFrame. \u01af\u1edbc tính taker buy = 50% volume (delta = 0). CVD s\u1ebd hoàn toàn \u0111i ngang.[0m
+[32m2026-09-22 01:30:58.896[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36mrun[0m:[36m186[0m - [1m[BTCUSDT] Starting backtest: 65 15m bars, 13 4h bars, force_close=True.[0m
+[32m2026-09-22 01:31:00.122[0m | [1mINFO    [0m | [36msrc.logging.trade_logger[0m:[36mlog_backtest_run[0m:[36m738[0m - [1mSuccessfully logged run 'SHORT' with 3 trades and 1 orders.[0m
+[32m2026-09-22 01:31:01.345[0m | [1mINFO    [0m | [36msrc.report.generator[0m:[36mgenerate_all[0m:[36m382[0m - [1mGenerated all Stage 6 artifacts in: G:\CODEX\g0-validation-2c9a4d0\replay\SHORT[0m
+{
+  "code_commit_sha": "2c9a4d0985fc9eafd29386482793425c26d47835",
+  "verification_status": "AUTHOR_TESTED / INDEPENDENT_REVIEW_PENDING",
+  "source": "synthetic fixtures; no downloaded market data",
+  "cases": {
+    "LONG": {
+      "completed_trades": 1,
+      "realization_slices": 3,
+      "net_pnl": 449.2124,
+      "accounting_verified": true
+    },
+    "SHORT": {
+      "completed_trades": 1,
+      "realization_slices": 3,
+      "net_pnl": 448.7951,
+      "accounting_verified": true
+    }
+  },
+  "funding": {
+    "reused_source_rejected": true,
+    "reason": "FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary",
+    "distinct_settlement_cashflow": 1.6
+  }
+}

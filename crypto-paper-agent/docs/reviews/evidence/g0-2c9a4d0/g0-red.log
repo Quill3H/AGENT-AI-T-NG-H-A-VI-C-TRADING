@@ -1,0 +1,246 @@
+FFFFFF.FFFFFFFFF                                                         [100%]
+================================== FAILURES ===================================
+_______ test_broker_reused_or_revised_source_rejected_atomically[0.001] _______
+
+rate = 0.001
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:40: Failed
+_______ test_broker_reused_or_revised_source_rejected_atomically[0.002] _______
+
+rate = 0.002
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:40: Failed
+________ test_broker_reused_or_revised_source_rejected_atomically[0.0] ________
+
+rate = 0.0
+
+    @pytest.mark.parametrize("rate", [.001, .002, 0.])
+    def test_broker_reused_or_revised_source_rejected_atomically(rate):
+        b = broker()
+        source = T + timedelta(minutes=1)
+        b.process_candle(candle(source, funding_rate=.001, funding_time=source,
+                                funding_readiness=True))
+        before = deepcopy(b.__dict__)
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:40: Failed
+___ test_basket_reused_or_revised_source_rejected_before_simulation[0.0002] ___
+
+rate = 0.0002
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:66: Failed
+___ test_basket_reused_or_revised_source_rejected_before_simulation[0.0003] ___
+
+rate = 0.0003
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:66: Failed
+____ test_basket_reused_or_revised_source_rejected_before_simulation[0.0] _____
+
+rate = 0.0
+
+    @pytest.mark.parametrize("rate", [.0002, .0003, 0.])
+    def test_basket_reused_or_revised_source_rejected_before_simulation(rate):
+        f = basket_frame()
+        f.loc[f.index[-1], "funding_time"] = f.index[-2]
+        f.loc[f.index[-1], "funding_rate"] = rate
+        sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0., "slippage_pct": 0.}})
+>       with pytest.raises(ValueError, match="settlement"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:66: Failed
+_________ test_merge_observation_is_not_missing_settlement_readiness __________
+
+    def test_merge_observation_is_not_missing_settlement_readiness():
+        idx = pd.to_datetime(["2024-01-01T08:00Z", "2024-01-01T15:59Z", "2024-01-01T16:00Z"])
+        f = pd.DataFrame({"close": [100.] * 3}, index=idx)
+        funding = pd.DataFrame({"funding_rate": [.001]}, index=idx[:1])
+        merged = merge_ohlcv_with_oi_and_funding(f, pd.DataFrame(), funding, "1m", {})
+        assert merged.funding_rate.iloc[-1] == .001  # still a historical observation
+        assert bool(merged.funding_readiness.iloc[0])
+>       assert not bool(merged.funding_readiness.iloc[-1])  # no source event at16:00
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert not True
+E        +  where True = bool(np.True_)
+
+tests\test_g0_settlement_lifecycle.py:89: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-09-22 01:07:43.588 | WARNING  | src.data_layer.fetcher:merge_ohlcv_with_oi_and_funding:618 - [Fetcher] OI data r\u1ed7ng, open_interest s\u1ebd l\xe0 NaN (k\xedch ho\u1ea1t fallback_when_nan).
+_____ test_metrics_group_explicit_position_identity_before_classification _____
+
+    def test_metrics_group_explicit_position_identity_before_classification():
+        rows = [{"position_id": p, "net_pnl": n} for p, n in
+                [("A", 10.), ("A", 10.), ("A", -30.), ("B", 5.)]]
+        result = calculate_trade_metrics(rows)
+>       assert result["total_trades"] == 2
+E       assert 4 == 2
+
+tests\test_g0_settlement_lifecycle.py:96: AssertionError
+_______ test_three_slices_one_lifecycle_with_sum_risk_not_mean_slice_r ________
+
+    def test_three_slices_one_lifecycle_with_sum_risk_not_mean_slice_r():
+        b = partial_broker(True)
+        assert len(b.trade_history) == 3
+        result = report_metrics(b)
+>       assert result["total_trades"] == result["long_trades_count"] == 1
+E       assert 3 == 1
+
+tests\test_g0_settlement_lifecycle.py:125: AssertionError
+_____ test_unfinished_position_cash_reconciles_but_is_not_completed_trade _____
+
+    def test_unfinished_position_cash_reconciles_but_is_not_completed_trade():
+        b = partial_broker(False)
+        result = report_metrics(b)
+>       assert result["total_trades"] == result["long_trades_count"] == 0
+E       assert 2 == 0
+
+tests\test_g0_settlement_lifecycle.py:138: AssertionError
+__________ test_corrupt_lifecycle_records_fail_closed[missing_slice] __________
+
+change = 'missing_slice'
+
+    @pytest.mark.parametrize("change", ["missing_slice", "duplicate_slice", "bad_terminal", "bad_quantity"])
+    def test_corrupt_lifecycle_records_fail_closed(change):
+        rows = deepcopy(partial_broker(True).trade_history)
+        if change == "missing_slice":
+            rows.pop(0)
+        elif change == "duplicate_slice":
+            rows.insert(0, deepcopy(rows[0]))
+        elif change == "bad_terminal":
+            rows[0].metadata["lifecycle_complete"] = True
+        else:
+            rows[-1].metadata["lifecycle_quantity"] = 123.
+>       with pytest.raises(ValueError, match="[Ll]ifecycle"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:157: Failed
+_________ test_corrupt_lifecycle_records_fail_closed[duplicate_slice] _________
+
+change = 'duplicate_slice'
+
+    @pytest.mark.parametrize("change", ["missing_slice", "duplicate_slice", "bad_terminal", "bad_quantity"])
+    def test_corrupt_lifecycle_records_fail_closed(change):
+        rows = deepcopy(partial_broker(True).trade_history)
+        if change == "missing_slice":
+            rows.pop(0)
+        elif change == "duplicate_slice":
+            rows.insert(0, deepcopy(rows[0]))
+        elif change == "bad_terminal":
+            rows[0].metadata["lifecycle_complete"] = True
+        else:
+            rows[-1].metadata["lifecycle_quantity"] = 123.
+>       with pytest.raises(ValueError, match="[Ll]ifecycle"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:157: Failed
+__________ test_corrupt_lifecycle_records_fail_closed[bad_terminal] ___________
+
+change = 'bad_terminal'
+
+    @pytest.mark.parametrize("change", ["missing_slice", "duplicate_slice", "bad_terminal", "bad_quantity"])
+    def test_corrupt_lifecycle_records_fail_closed(change):
+        rows = deepcopy(partial_broker(True).trade_history)
+        if change == "missing_slice":
+            rows.pop(0)
+        elif change == "duplicate_slice":
+            rows.insert(0, deepcopy(rows[0]))
+        elif change == "bad_terminal":
+            rows[0].metadata["lifecycle_complete"] = True
+        else:
+            rows[-1].metadata["lifecycle_quantity"] = 123.
+>       with pytest.raises(ValueError, match="[Ll]ifecycle"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:157: Failed
+__________ test_corrupt_lifecycle_records_fail_closed[bad_quantity] ___________
+
+change = 'bad_quantity'
+
+    @pytest.mark.parametrize("change", ["missing_slice", "duplicate_slice", "bad_terminal", "bad_quantity"])
+    def test_corrupt_lifecycle_records_fail_closed(change):
+        rows = deepcopy(partial_broker(True).trade_history)
+        if change == "missing_slice":
+            rows.pop(0)
+        elif change == "duplicate_slice":
+            rows.insert(0, deepcopy(rows[0]))
+        elif change == "bad_terminal":
+            rows[0].metadata["lifecycle_complete"] = True
+        else:
+            rows[-1].metadata["lifecycle_quantity"] = 123.
+>       with pytest.raises(ValueError, match="[Ll]ifecycle"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:157: Failed
+________ test_legacy_partial_without_identity_is_not_assumed_complete _________
+
+    def test_legacy_partial_without_identity_is_not_assumed_complete():
+>       with pytest.raises(ValueError, match="[Ll]ifecycle"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_g0_settlement_lifecycle.py:162: Failed
+=========================== short test summary info ===========================
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.001]
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.002]
+FAILED tests/test_g0_settlement_lifecycle.py::test_broker_reused_or_revised_source_rejected_atomically[0.0]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0002]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0003]
+FAILED tests/test_g0_settlement_lifecycle.py::test_basket_reused_or_revised_source_rejected_before_simulation[0.0]
+FAILED tests/test_g0_settlement_lifecycle.py::test_merge_observation_is_not_missing_settlement_readiness
+FAILED tests/test_g0_settlement_lifecycle.py::test_metrics_group_explicit_position_identity_before_classification
+FAILED tests/test_g0_settlement_lifecycle.py::test_three_slices_one_lifecycle_with_sum_risk_not_mean_slice_r
+FAILED tests/test_g0_settlement_lifecycle.py::test_unfinished_position_cash_reconciles_but_is_not_completed_trade
+FAILED tests/test_g0_settlement_lifecycle.py::test_corrupt_lifecycle_records_fail_closed[missing_slice]
+FAILED tests/test_g0_settlement_lifecycle.py::test_corrupt_lifecycle_records_fail_closed[duplicate_slice]
+FAILED tests/test_g0_settlement_lifecycle.py::test_corrupt_lifecycle_records_fail_closed[bad_terminal]
+FAILED tests/test_g0_settlement_lifecycle.py::test_corrupt_lifecycle_records_fail_closed[bad_quantity]
+FAILED tests/test_g0_settlement_lifecycle.py::test_legacy_partial_without_identity_is_not_assumed_complete
+15 failed, 1 passed in 17.88s

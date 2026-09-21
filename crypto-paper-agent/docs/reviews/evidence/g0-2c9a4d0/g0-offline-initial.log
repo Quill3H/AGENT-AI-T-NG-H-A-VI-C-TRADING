@@ -1,0 +1,97 @@
+..........F............................................................. [ 19%]
+.....................................................................s.s [ 38%]
+........................................................................ [ 57%]
+........................................................................ [ 77%]
+........................................................................ [ 96%]
+..............                                                           [100%]
+================================== FAILURES ===================================
+____________________ test_funding_metadata_valid_zero_rate ____________________
+
+backtest_env = ({'account': {'initial_equity_usd': 10000.0}, 'fees': {'taker_pct': 0.0005, 'maker_pct': 0.0002, 'slippage_pct': 0.000...490865  ...              False
+2023-01-05 23:45:00+00:00  20087.362047  ...              False
+
+[480 rows x 9 columns])
+
+    def test_funding_metadata_valid_zero_rate(backtest_env):
+        """
+        Ki\u1ec3m tra funding_rate = 0.0 h\u1ee3p l\u1ec7 v\u1edbi \u0111\u1ea7y \u0111\u1ee7 provenance (readiness=True, time h\u1ee3p l\u1ec7).
+        Settlement ph\u1ea3i th\u1ef1c thi th\xe0nh c\xf4ng v\xe0 kh\xf4ng g\xe2y bi\u1ebfn \u0111\u1ed5i s\u1ed1 d\u01b0 v\xed do cashflow = 0.
+        """
+        config, df_4h, df_15m = backtest_env
+        funding_idx = df_15m.index[0]  # 00:00 UTC
+    
+        df_15m_valid = df_15m.copy()
+        df_15m_valid.loc[funding_idx, "funding_rate"] = 0.0
+        df_15m_valid.loc[funding_idx, "funding_readiness"] = True
+        df_15m_valid.loc[funding_idx, "funding_time"] = funding_idx
+    
+        broker = PaperBroker(config=config)
+        broker.positions["BTCUSDT"] = Position(
+            position_id="POS_FUNDING_ZERO",
+            symbol="BTCUSDT",
+            direction=OrderDirection.LONG,
+            quantity=0.1,
+            entry_price=20000.0,
+            initial_margin=1000.0,
+            isolated_collateral=1000.0,
+            leverage=2.0,
+            stop_loss_price=18000.0,
+            liquidation_price=10000.0,
+            opened_at=funding_idx,
+        )
+        init_balance = broker.wallet_balance
+    
+        strategy = TrendFollowingStrategy(config=config, symbol="BTCUSDT")
+        engine = BacktestEngine(
+            config=config,
+            data_4h=df_4h,
+            data_15m=df_15m_valid,
+            strategy=strategy,
+            broker=broker,
+        )
+    
+>       metrics = engine.run(force_close=True)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_backtest_engine.py:496: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\backtest\engine.py:271: in run
+    metrics = self._calculate_metrics(finalize_summary, force_close)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\backtest\engine.py:295: in _calculate_metrics
+    return calculate_backtest_metrics(
+src\report\metrics.py:394: in calculate_backtest_metrics
+    trade_stats = calculate_trade_metrics(trades)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\report\metrics.py:177: in calculate_trade_metrics
+    result = _calculate_record_metrics(completed_lifecycles(trades))
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\report\lifecycles.py:57: in completed_lifecycles
+    original = [_positive(m.get("lifecycle_quantity")) for _, m, _ in group]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+value = None
+
+    def _positive(value):
+        if isinstance(value, bool) or value is None:
+>           raise ValueError("Lifecycle quantity/risk must be positive finite numeric")
+E           ValueError: Lifecycle quantity/risk must be positive finite numeric
+
+src\report\lifecycles.py:14: ValueError
+---------------------------- Captured stderr call -----------------------------
+2026-09-22 01:10:15.943 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 480 15m bars, 30 4h bars, force_close=True.
+2026-09-22 01:10:15.955 | DEBUG    | src.strategies.trend_following:update_trailing_stop:457 - [BTCUSDT] Trailing stop updated (LONG): 20038.92 -> 20038.92
+============================== warnings summary ===============================
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  G:\CODEX\.venv-repair\Lib\site-packages\gymnasium\utils\env_checker.py:373: UserWarning: [33mWARN: `check_env(warn=...)` parameter is now ignored.[0m
+    logger.warn("`check_env(warn=...)` parameter is now ignored.")
+
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  G:\CODEX\.venv-repair\Lib\site-packages\gymnasium\utils\env_checker.py:440: UserWarning: [33mWARN: Not able to test alternative render modes due to the environment not having a spec. Try instantiating the environment through `gymnasium.make`[0m
+    logger.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_backtest_engine.py::test_funding_metadata_valid_zero_rate
+1 failed, 371 passed, 2 skipped, 5 deselected, 2 warnings in 212.45s (0:03:32)
