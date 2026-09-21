@@ -1,7 +1,8 @@
 # Crypto Futures Paper Agent: Product Charter and Gate Specification
 
-Status: PM draft for owner review, 2026-09-22. This document is a stable product
-contract proposal, not an acceptance report or an amendment to approved risk ADRs.
+Status: Product direction frozen for planning, 2026-09-22. Entries explicitly
+marked `PENDING` or `PROPOSED` still require an owner decision. This document is
+not an acceptance report or an amendment to approved risk ADRs.
 The owner decides product choices and acceptance. The Technical Lead implements;
 Tester produces independent test evidence; Independent Reviewer gives the gate
 verdict; PM coordinates and preserves the decision trail.
