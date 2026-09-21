@@ -1,6 +1,6 @@
 # ADR 0009: Kiến Trúc Lưu Trữ Sự Kiện Giao Dịch & Báo Cáo Hiệu Năng (Trade Logger & Performance Reporting)
 
-**Trạng thái:** ACCEPTED / IMPLEMENTED (Hoàn thiện khắc phục triệt để các phát hiện theo GPT Review 11)  
+**Trạng thái:** ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO
 **Ngày đề xuất:** 2026-09-19  
 **Người đề xuất:** Quill3H & Antigravity (theo đặc tả kỹ thuật Giai đoạn 6 — Master Spec Section 4.6)
 
@@ -64,7 +64,7 @@ Sau khi hoàn thành và nghiệm thu Giai đoạn 5 (Chiến lược Trend Foll
      $$\text{Max DD} = \max_t (\text{Drawdown}_t)$$
   6. **Daily Sharpe Ratio (Resampled 1D UTC):**
      $$\text{Sharpe} = \sqrt{365} \times \frac{\bar{r}_d - \frac{r_f}{365}}{\sigma(r_d, \text{ddof}=1)}$$
-     - Xử lý biên nghiêm ngặt: nếu số ngày quan sát < 2 hoặc độ lệch chuẩn $\sigma = 0$, trả về `None`/`null`.
+      - Xử lý biên nghiêm ngặt: nếu số ngày quan sát < 2, trả về `None`/`null`; nếu có đủ mẫu nhưng độ lệch chuẩn $\sigma = 0$, trả về `0.0` hữu hạn và deterministic.
   7. **Kiểm tra kiểu dữ liệu & Chống ngụy tạo:** Ném `TypeError` nếu nhận giá trị boolean ở các trường tài chính, ném `ValueError` nếu nhận NaN hoặc Inf.
   8. **Phân tách Rủi ro Rõ ràng:** Tách biệt tuyệt đối trạng thái / số lần khóa của Circuit Breaker (`circuit_breaker_status`, `circuit_breaker_risk_multiplier`, `circuit_breaker_lock_count`, `circuit_breaker_rejections_count`) khỏi các lần từ chối do thiếu ký quỹ riêng lẻ (`margin_rejections_count`).
 
@@ -80,6 +80,8 @@ Sau khi hoàn thành và nghiệm thu Giai đoạn 5 (Chiến lược Trend Foll
 ### 2.5 Tích Hợp CLI & Độc Lập Môi Trường Thực Thi (`run_backtest.py`)
 - **Deterministic Run ID:** Nếu người dùng không truyền `--run-id`, ID được tự động sinh tất định từ mã SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` theo định dạng `run_{strategy}_{symbol}_{hash12}`. Không còn phụ thuộc đồng hồ hệ thống (wall-clock).
 - **Phân giải Đường dẫn Chuẩn tắc (Hermetic Path Resolution):** Mọi đường dẫn tương đối truyền vào `--output-dir` và `--db-path` đều được resolve từ `PROJECT_ROOT`, bảo đảm tính độc lập 100% với CWD của process gọi bên ngoài. Các đường dẫn tuyệt đối được giữ nguyên vẹn.
+- **Canonical Config Identity:** Config runtime có thể chứa cache root tuyệt đối để đọc dữ liệu, nhưng identity được canonicalize với placeholder ổn định (`<RAW_DATA_DIR>`, `<PROCESSED_DATA_DIR>` hoặc `<ABSOLUTE_PATH>`). Cùng config logic ở các máy/cache root khác nhau có cùng `config_hash` và run ID; thay đổi tham số có ý nghĩa như `fees.taker_pct` làm thay đổi cả hai. `summary.json`, `summary.md`, SQLite metadata và run ID dùng cùng định nghĩa này.
+- **Reproduction Metadata:** Reproduction command ghi đường dẫn config repo-relative khi có thể; config bên ngoài repository dùng `<CONFIG_PATH>`, không được tự nhận là `config/default_config.yaml`.
 
 ---
 

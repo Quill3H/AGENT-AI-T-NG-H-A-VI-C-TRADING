@@ -2,11 +2,11 @@
 ## TRADE LOGGER & PERFORMANCE REPORT — CODEX COMPLETION PASS
 
 > **Dự án**: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`
-> **Nhánh**: `codex/stage-06-completion`
+> **Nhánh**: `codex/stage-06-review-12-fixes`
 > **Baseline commit**: `e970337d504563e5987a4db6b5c06c635bf7244b`
-> **Code-under-test Commit A (Code & Tests)**: `321477fb5a3658d51475dd35a6a01205c2df8786`
-> **Documentation Commit B**: commit chứa bản báo cáo này; full SHA được ghi trong Git history và báo cáo bàn giao sau khi commit được tạo (SHA không thể tự nhúng vào chính nội dung commit mà không làm thay đổi SHA).
-> **Trạng thái**: HOÀN THÀNH NHIỆM VỤ TRIỂN KHAI — ĐANG CHỜ GPT REVIEW ĐỘC LẬP NGHIỆM THU
+> **Code-under-test Commit A2 (Code & Tests)**: `99d4b4063c798cf3a89d610e4bd64a19f3395659`
+> **Documentation Commit B2**: commit tài liệu được tạo sau Commit A2; full SHA được báo cáo từ Git history sau khi commit được tạo.
+> **Trạng thái**: ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO
 > **Nhãn dữ liệu Benchmark**: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`
 > **Ngày hoàn thành**: 2026-09-21
 
@@ -16,7 +16,7 @@
 
 Codex tiếp quản vai trò Implementation Engineer chính theo yêu cầu trực tiếp của người dùng. Antigravity không còn là implementer đang hoạt động; attribution của toàn bộ commit lịch sử vẫn được giữ nguyên. Không triển khai dashboard, Giai đoạn 7, Breakout & Retest, testnet hoặc live trading.
 
-### Blocker đã đóng tại Commit A
+### Blocker đã đóng tại Previous Commit A
 
 | Blocker | Thay đổi | Bằng chứng test |
 | :--- | :--- | :--- |
@@ -31,13 +31,21 @@ Codex tiếp quản vai trò Implementation Engineer chính theo yêu cầu tr�
 | Funding source có thể tự bịa rate 0 | Payload thiếu `fundingRate`/`funding` ném lỗi | `test_funding_adapter_does_not_synthesize_missing_rate_as_zero` |
 | Test CWD để lại report trong checkout | Chuyển output test vào `tmp_path` | offline full suite, working tree sạch sau test |
 
-### Test thực sự chạy trên Commit A
+### Blocker Review 12 đã khắc phục tại Commit A2
+
+| Blocker | Thay đổi | Bằng chứng test |
+| :--- | :--- | :--- |
+| Config identity phụ thuộc cache root và reproduction command ghi sai config | Canonicalize runtime config bằng placeholder portable; dùng cùng hash cho run ID, JSON/Markdown và SQLite; config ngoài repo dùng `<CONFIG_PATH>` | `test_config_identity_is_cross_root_and_sensitive_to_fees`, custom-config CLI integration |
+| Benchmark annotation hardcoded `50.00% on N=16` | Annotation lấy `win_rate` và `total_trades`, zero trades báo insufficient data | `test_benchmark_annotation_has_no_historical_hardcoded_sample` |
+| Summary thiếu loss rate/RRR/CB lock count | Bổ sung field hiển thị và giữ riêng CB lock, CB rejection, margin rejection | `test_generator_produces_all_six_artifacts` |
+
+### Test thực sự chạy trên Commit A2
 
 | Lệnh | Kết quả |
 | :--- | :--- |
-| `python -m pytest -p no:cacheprovider -m "not network" -q` | `274 passed, 2 skipped, 5 deselected` — 62.87s |
-| `python -m pytest -p no:cacheprovider docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q` | `40 passed` — 2.08s |
-| `python -m pytest -p no:cacheprovider -m network -q` | `5 passed, 276 deselected` — 15.23s |
+| `python -m pytest -p no:cacheprovider -m "not network" -q` | `276 passed, 2 skipped, 5 deselected` |
+| `python -m pytest -p no:cacheprovider docs/reviews/test_stage_04_review_05.py docs/reviews/test_stage_04_review_06.py docs/reviews/test_stage_04_review_07.py -q` | `40 passed` |
+| `python -m pytest -p no:cacheprovider -m network -q` | `5 passed, 278 deselected` |
 
 Môi trường: Python 3.12.14, pytest 9.1.1, pandas 3.0.1, numpy 2.3.5. `pandas_ta` không có; fallback pure pandas đã được dùng. Hai test đối chiếu tùy chọn với thư viện TA bị skip và được báo riêng, không tính là pass.
 
@@ -45,7 +53,7 @@ Môi trường: Python 3.12.14, pytest 9.1.1, pandas 3.0.1, numpy 2.3.5. `pandas
 
 - Chạy `run_backtest.py` từ CWD bên ngoài repository bằng cache tổng hợp trong `G:\CODEX\stage6-smoke-20260921-022836`.
 - Tạo đủ: `trades.sqlite`, `summary.json`, `trades.json`, `equity_curve.csv`, `equity_curve.png`, `summary.md`.
-- Đọc lại bằng standard JSON/CSV/SQLite; PNG magic hợp lệ; code SHA trong artifact khớp Commit A; final equity trong CSV khớp summary; JSON không có NaN/Infinity; config persisted không có absolute machine path.
+- Đọc lại bằng standard JSON/CSV/SQLite; PNG magic hợp lệ; code SHA trong artifact khớp checkout tại thời điểm smoke; final equity trong CSV khớp summary; JSON không có NaN/Infinity; config persisted không có absolute machine path. Smoke Review 12 bổ sung xác minh reproduction `<CONFIG_PATH>` và zero-trade annotation không chứa `50.00%` hoặc `N=16`.
 - Smoke dataset: 288 nến 15m, 18 nến 4h, 0 candle gaps, 0 trades, final equity 10,000 USDT. Do chưa đủ EMA200 warm-up, đây chỉ là smoke pipeline và empty-trade semantics.
 - Benchmark 3 năm ở phần lịch sử bên dưới không được chạy lại vì repository không có cache/artifact chuẩn tắc. Toàn bộ số liệu đó tiếp tục mang nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 
@@ -173,6 +181,6 @@ Chính thức tuyên bố vô hiệu và bác bỏ các số liệu dự thảo 
 
 ## 5. Cam Kết Tuân Thủ & Dừng Chờ Nghiệm Thu
 
-1. **Tuân thủ quy trình Hai bước Commit:** Codex đã hoàn tất Code-under-test Commit A (`321477fb5a3658d51475dd35a6a01205c2df8786`) và commit tài liệu chứa báo cáo này.
+1. **Tuân thủ quy trình Hai bước Commit:** Codex đã hoàn tất Code-under-test Commit A2 (`99d4b4063c798cf3a89d610e4bd64a19f3395659`) và commit tài liệu chứa báo cáo này.
 2. **DỪNG LẠI HOÀN TOÀN (HARD STOP):** Tuyệt đối không tự ý bắt đầu Giai đoạn 7 (Breakout & Retest) hoặc bất kỳ phân hệ nào tiếp theo.
 3. **Chờ Review:** Hệ thống sẵn sàng ở trạng thái sạch để GPT Reviewer tiến hành đợt đánh giá tiếp theo.

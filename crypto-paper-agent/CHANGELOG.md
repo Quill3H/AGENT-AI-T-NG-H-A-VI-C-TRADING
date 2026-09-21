@@ -1,11 +1,12 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
-Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md).
+Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`.
 
 ## [Giai đoạn 6] - Completion pass by Codex (2026-09-21)
 
 Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`
-Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786`
+Code-under-test Commit A2: `99d4b4063c798cf3a89d610e4bd64a19f3395659`
+Status: **ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO**
 
 ### Fixed
 
@@ -17,12 +18,15 @@ Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786`
 - Candle gaps are measured from actual 15m/4h indices. Funding payloads missing a rate fail closed instead of being converted to `0.0`.
 - JSON, Markdown, CSV, PNG and new SQLite artifacts use atomic replacement. Persisted config and reproduction commands omit author-machine absolute paths.
 - CLI CWD test writes reports only to pytest `tmp_path`, leaving a clean checkout.
+- Canonical config identity now normalizes absolute cache roots, so cross-root logical configs share `config_hash` and deterministic run ID while meaningful fee changes diverge.
+- Custom config reproduction metadata uses a repo-relative path or `<CONFIG_PATH>`; it no longer claims the default config was used. Summary JSON/Markdown and SQLite metrics share the same config hash.
+- CLI benchmark annotation is derived from actual win rate/trade count and explicitly reports insufficient data for zero trades. Summary Markdown now displays loss rate, average realized RRR and Circuit Breaker lock count separately from rejection counts.
 
 ### Verification on Commit A
 
-- Offline: `274 passed, 2 skipped, 5 deselected` in 62.87s.
-- Historical probes outside `tests/`: `40 passed` in 2.08s.
-- Network: `5 passed, 276 deselected` in 15.23s.
+- Offline: `276 passed, 2 skipped, 5 deselected` on Commit A2.
+- Historical probes outside `tests/`: `40 passed` on Commit A2.
+- Network: `5 passed, 278 deselected` on Commit A2.
 - CLI smoke from an external CWD generated and read back all six artifacts; SQLite/JSON trade counts and final CSV equity reconcile. Smoke dataset had 18 four-hour candles and therefore 0 trades/0 signals; it validates artifact plumbing and empty-trade semantics, not profitability.
 - Canonical 2021–2023 benchmark was not rerun because its cache/artifact bundle is absent from the checkout: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 

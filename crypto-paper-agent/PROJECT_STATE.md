@@ -2,10 +2,8 @@
 
 > [!IMPORTANT]
 > **QUY TẮC SỐNG CỦA DỰ ÁN (BẮT BUỘC ĐỌC ĐẦU MỖI PHIÊN LÀM VIỆC):**
-> 1. Trước khi viết bất kỳ dòng code nào, **BẮT BUỘC ĐỌC FILE NÀY** (`PROJECT_STATE.md`) kết hợp với mục liên quan trong [CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](file:///D:/Ta%CC%80i%20lie%CC%A3%CC%82u/Default%20Project/Project%20spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md). Tuyệt đối không dựa vào trí nhớ hội thoại để nhớ lại quyết định cũ.
-> 2. **Đường dẫn PROJECT_ROOT duy nhất và chính thức:**
->    `D:\Tài liệu\Default Project\crypto-paper-agent` (Unicode NFD: `Ta\u0300i lie\u0323\u0302u`).
->    Tuyệt đối không tự ý quét ổ đĩa, không suy luận hoặc tạo thêm thư mục ở đường dẫn khác. Nếu nghi ngờ có bản copy trùng, **DỪNG LẠI VÀ HỎI NGƯỜI DÙNG**.
+> 1. Trước khi viết bất kỳ dòng code nào, **BẮT BUỘC ĐỌC FILE NÀY** (`PROJECT_STATE.md`) kết hợp với `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md` trong repository. Tuyệt đối không dựa vào trí nhớ hội thoại để nhớ lại quyết định cũ.
+> 2. **Chính sách PROJECT_ROOT portable:** PROJECT_ROOT là thư mục chứa repository Git đang được quản lý trong phiên hiện tại. Ưu tiên đường dẫn repo-relative trong tài liệu và config; không suy luận hoặc sửa một checkout khác bên ngoài repository hiện tại.
 > 3. Sau khi hoàn thành một giai đoạn: Chạy toàn bộ pytest, cập nhật `PROJECT_STATE.md`, `CHANGELOG.md`, lưu báo cáo vào `BÁO CÁO TÓM TẮT/GIAI ĐOẠN X/` trước khi báo cáo hoàn thành.
 > 4. Nếu cuộc trò chuyện kéo dài qua nhiều giờ/nhiều lượt, chủ động đề xuất người dùng mở phiên hội thoại mới để tránh trôi ngữ cảnh.
 
@@ -19,7 +17,7 @@
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
 - [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09 — Code commit: `b16fa1e0...`)
 - [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ NGHIỆM THU THEO GPT REVIEW 10 — Code commit: `060f8a8d...`, Docs commit: `dc0ab9be...`)
-- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (CODE HOÀN THIỆN THEO NHIỆM VỤ NGƯỜI DÙNG — Baseline: `e970337d...`; Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786`; ĐANG CHỜ GPT REVIEW ĐỘC LẬP NGHIỆM THU; TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7)
+- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO; Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`; Code-under-test Commit A2: `99d4b4063c798cf3a89d610e4bd64a19f3395659`; tuyệt đối không bắt đầu Giai đoạn 7)
 - [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
 - [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
 - [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (`smc_features.py`, Order Block, FVG)
@@ -106,18 +104,18 @@
     - Xuất JSON trade chuẩn xác nguyên văn theo Master Spec Mục 4.6 (17 key gốc, nested `market_context` với 4 key null unmeasured, nested `outcome` với 7 key, `rule_compliance: true`, RFC 8259 `allow_nan=False`).
     - Chuẩn hoá nguồn chân lý tính toán metrics (`src/report/metrics.py`): Expectancy USD & R-multiple, Profit Factor (loss=0 xử lý là `None`/`null`), Max Drawdown USD & %, Daily Sharpe Ratio resampled 1D UTC $\sqrt{365}$ annualization (std=0 trả `0.0` hữu hạn và deterministic). Chặn đứng `bool`, `NaN`, `Inf` bằng fail-closed type validation.
     - Phân tách độc lập chỉ số Circuit Breaker (`status`, `multiplier`, `lock_count`, `rejections_count`) khỏi từ chối do thiếu ký quỹ riêng lẻ (`margin_rejections_count`).
-    - Run ID tất định (Deterministic Run ID) sinh từ mã băm SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` (loại bỏ wall-clock).
+    - Run ID tất định (Deterministic Run ID) sinh từ mã băm SHA-256 của `code_sha | strategy | symbol | start | end | config_hash` (loại bỏ wall-clock). Canonical config loại bỏ machine-specific absolute cache roots bằng placeholder ổn định; thay đổi `fees.taker_pct` làm thay đổi hash/run ID.
     - Phân giải đường dẫn chuẩn tắc (Hermetic Path Resolution): Mọi đường dẫn tương đối `--output-dir` và `--db-path` đều resolve từ `PROJECT_ROOT`, bảo đảm độc lập 100% với CWD ngoại vi; bảo toàn đường dẫn tuyệt đối.
     - Tự động sinh bộ 6 artifacts đa định dạng (`src/report/generator.py`) trong `reports/<run_id>/`: `summary.json` (đầy đủ provenance, candle counts, gaps, đối soát kế toán), `summary.md` (nhãn `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`, bảng đối soát, disclosures & caveats), `trades.json`, `equity_curve.csv`, `equity_curve.png`, `trades.sqlite`.
     - Thống nhất Benchmark Chuẩn Tắc 3 năm BTCUSDT (2021-2023): 22 orders (16 filled, 6 margin rejected), 16 trades (8 win, 8 loss, win rate 50.00%), fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT, final equity 12,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56) (Tham chiếu: ADR 0009).
-24. **Hoàn thiện Giai đoạn 6 bởi Codex tại Commit A `321477fb5a3658d51475dd35a6a01205c2df8786`:**
+24. **Hoàn thiện Giai đoạn 6 bởi Codex tại Commit A2 `99d4b4063c798cf3a89d610e4bd64a19f3395659`:**
     - `risk_ratio_percent` phản ánh stop risk thực tế trên entry equity; lưu order type và liquidation estimate tại thời điểm vào lệnh.
     - Canonical payload hash giữ nguyên độ chính xác float; truy vấn trade/order/funding có tie-breaker ID deterministic; SQLite connection được đóng rõ ràng để hỗ trợ atomic replace trên Windows.
     - Snapshot finalize chứa đúng phí/slippage force-close và không nhân đôi khi gọi finalize lại. Circuit Breaker đếm transition khóa thật.
     - Metrics bổ sung loss rate, average realized RRR, benchmark classification 35–45%, candle-gap measurement và accounting reconciliation fail-closed ở tolerance `1e-4`.
-    - Sáu artifact được ghi atomically; config/reproduction command trong artifact không chứa absolute machine path.
+    - Sáu artifact được ghi atomically; canonical config/hash dùng chung giữa CLI, report và SQLite; reproduction command phản ánh config thực tế và không chứa absolute machine path.
     - Funding adapter từ chối payload thiếu rate thay vì tự tổng hợp `0.0`.
-    - Xác minh trên Commit A: offline `274 passed, 2 skipped, 5 deselected`; network `5 passed, 276 deselected`; historical probes `40 passed`. CLI smoke tạo đủ 6 artifacts từ CWD ngoài project. Benchmark 3 năm chưa chạy lại: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+    - Xác minh trên Commit A2: offline `276 passed, 2 skipped, 5 deselected`; network `5 passed, 278 deselected`; historical probes `40 passed`. Regression tests kiểm tra custom config, cross-root hash/run ID, phí taker, benchmark annotation, summary fields và CWD ngoài project. Benchmark 3 năm chưa chạy lại: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
 
 ---
 

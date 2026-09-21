@@ -47,13 +47,14 @@
     8. Đối soát Benchmark Chuẩn Tắc 3 năm BTCUSDT: 22 orders, 16 trades, fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56).
     9. Bộ test mở rộng lên 29 tests cho Stage 6; toàn bộ 309/309 tests trong repo đều PASS 100%.
 - **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
-- **Hoàn thiện Giai đoạn 6 theo nhiệm vụ người dùng phê duyệt ngày 2026-09-21:**
-  - Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`.
-  - Code-under-test Commit A: `321477fb5a3658d51475dd35a6a01205c2df8786` trên branch `codex/stage-06-completion`.
-  - Codex sửa các blocker còn lại: risk ratio theo risk thực tế, hash không làm tròn float, deterministic ordering, order type persistence, initial liquidation estimate, final snapshot sau force-close, Circuit Breaker activation count, loss rate/average realized RRR/benchmark classification, candle-gap measurement, đối soát report fail-closed, atomic artifact writes, portable artifact config, funding adapter không tự bịa rate 0, và test CWD không ghi vào checkout.
-  - Xác minh trên chính Commit A: offline `274 passed, 2 skipped, 5 deselected`; historical probes `40 passed`; network `5 passed, 276 deselected`.
-  - CLI smoke từ CWD ngoài project tạo đủ 6 artifacts, code SHA khớp Commit A, SQLite/JSON/CSV/PNG đọc lại được, final equity khớp dòng equity cuối, không chứa absolute machine path. Dataset smoke chỉ có 18 nến 4h nên `0 trades`; đây là kiểm tra pipeline/artifact, không phải benchmark hiệu năng.
-  - Benchmark 2021–2023 cũ không được chạy lại vì checkout không có dataset/cache chuẩn tắc: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+- **GPT Review 12 repair pass theo nhiệm vụ người dùng phê duyệt ngày 2026-09-21:**
+  - Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`; Documentation Commit B hiện tại: `b04613a338c9678108f6349ad669bd1d9881abcb`.
+  - Branch triển khai: `codex/stage-06-review-12-fixes`; Code-under-test Commit A2: `99d4b4063c798cf3a89d610e4bd64a19f3395659`.
+  - Canonical config identity hiện chuẩn hóa machine-specific absolute cache roots; cùng config logic ở nhiều cache root có cùng `config_hash`/run ID, còn `fees.taker_pct` khác sẽ đổi cả hai. Reproduction metadata dùng config repo-relative hoặc `<CONFIG_PATH>`.
+  - CLI benchmark annotation dùng metric thực tế và xử lý zero-trade; summary Markdown hiển thị loss rate, average realized RRR và Circuit Breaker lock count riêng với hai loại rejection.
+  - Xác minh trên A2: offline `276 passed, 2 skipped, 5 deselected`; historical probes `40 passed`; network `5 passed, 278 deselected`; focused integration/report regressions `13 passed`.
+  - CLI smoke từ CWD ngoài project và custom-cache tests tạo/đọc đủ 6 artifacts, kiểm tra JSON/SQLite/CSV/PNG, config hash xuyên root, phí taker và không chứa absolute machine path. Dataset smoke chỉ có `0 trades`; đây là kiểm tra pipeline/artifact, không phải benchmark hiệu năng.
+  - Benchmark 2021–2023 không được chạy lại vì checkout không có dataset/cache chuẩn tắc: `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
   - Trạng thái: **DỪNG CHỜ GPT REVIEW GIAI ĐOẠN 6; không bắt đầu Giai đoạn 7.**
 
 ## 3. Tài liệu nguồn cần đọc
@@ -103,7 +104,7 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 | `b16fa1e0b7f064f764cea12fc97ae5c0677a40d2` | Review 09 | **Đạt — nghiệm thu Giai đoạn 4**; cho phép phát hành task riêng Giai đoạn 5 |
 | `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` | Review 10 | **Đạt — nghiệm thu Giai đoạn 5**; cho phép bắt đầu triển khai Giai đoạn 6 |
 | `1d486f76da1430e1c02fa1ac24be177262d53c67` | Review 11 | Chưa đạt: 9 điểm nghẽn (schema Mục 4.6, composite keys, full idempotency, CWD paths, benchmark reconciliation). Anti sửa tại Commit A: `0b63f2702024993575735157528d4738be181e75` |
-| `321477fb5a3658d51475dd35a6a01205c2df8786` | Review tiếp theo | Codex hoàn thiện các blocker Stage 6 còn phát hiện được; toàn bộ test bắt buộc đã chạy, đang chờ review độc lập và quyết định nghiệm thu của người dùng |
+| `99d4b4063c798cf3a89d610e4bd64a19f3395659` | GPT Review 12 | ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO; test bắt buộc và regression đã chạy, chưa nghiệm thu |
 
 Review 02/03/04/05/06/07/09 có file trong `crypto-paper-agent/docs/reviews/`; walkthrough 08 có file riêng. Không tìm thấy file Review 10/11 trong cây Git hiện tại. ADR 0006/0007/0008/0009 ghi quyết định risk, execution, strategy và reporting qua các vòng.
 
@@ -120,9 +121,9 @@ Review 02/03/04/05/06/07/09 có file trong `crypto-paper-agent/docs/reviews/`; w
 
 ## 7. Task hiện hành được phép triển khai
 
-Nhiệm vụ hoàn thiện Giai đoạn 6 do người dùng phê duyệt ngày 2026-09-21 đã hoàn tất tại Code-under-test Commit A `321477fb5a3658d51475dd35a6a01205c2df8786`.
+Nhiệm vụ sửa GPT Review 12 do người dùng phê duyệt ngày 2026-09-21 đã hoàn tất tại Code-under-test Commit A2 `99d4b4063c798cf3a89d610e4bd64a19f3395659`.
 
-Task hiện hành: **không có task sửa mới**. Chỉ review/nghiệm thu Commit A nêu trên. Không merge vào `main` và không bắt đầu Giai đoạn 7 nếu chưa có xác nhận mới của người dùng.
+Task hiện hành: **ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO**. Không merge vào `main` và không bắt đầu Giai đoạn 7 nếu chưa có xác nhận mới của người dùng.
 
 ## 8. Câu mở cuộc trò chuyện mới cho người dùng
 
