@@ -1,0 +1,23 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+
+[32m2026-09-21 23:43:49.798[0m | [33m[1mWARNING [0m | [36msrc.features.indicators[0m:[36m<module>[0m:[36m28[0m - [33m[1m[Indicators] pandas-ta không khả dụng (No module named 'pandas_ta'). Sẽ sử dụng pure pandas fallback cho toàn bộ chỉ báo.[0m
+[32m2026-09-21 23:43:51.607[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36m_prepare_features[0m:[36m168[0m - [1m[BTCUSDT] Calculating indicators for 12 4h candles...[0m
+[32m2026-09-21 23:43:51.617[0m | [34m[1mDEBUG   [0m | [36msrc.features.oi_features[0m:[36mcalculate_oi_features[0m:[36m58[0m - [34m[1m[OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.[0m
+[32m2026-09-21 23:43:51.618[0m | [33m[1mWARNING [0m | [36msrc.features.cvd[0m:[36mcalculate_cvd[0m:[36m58[0m - [33m[1m[CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.[0m
+[32m2026-09-21 23:43:51.620[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36mrun[0m:[36m186[0m - [1m[BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.[0m
+[32m2026-09-21 23:43:52.460[0m | [1mINFO    [0m | [36msrc.logging.trade_logger[0m:[36mlog_backtest_run[0m:[36m738[0m - [1mSuccessfully logged run 'fold_0_trend_following' with 0 trades and 0 orders.[0m
+[32m2026-09-21 23:43:53.180[0m | [1mINFO    [0m | [36msrc.report.generator[0m:[36mgenerate_all[0m:[36m382[0m - [1mGenerated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\external-all\fold_000\trend_following\fold_0_trend_following[0m
+[32m2026-09-21 23:43:53.186[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36m_prepare_features[0m:[36m168[0m - [1m[BTCUSDT] Calculating indicators for 12 4h candles...[0m
+[32m2026-09-21 23:43:53.196[0m | [34m[1mDEBUG   [0m | [36msrc.features.oi_features[0m:[36mcalculate_oi_features[0m:[36m58[0m - [34m[1m[OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.[0m
+[32m2026-09-21 23:43:53.196[0m | [33m[1mWARNING [0m | [36msrc.features.cvd[0m:[36mcalculate_cvd[0m:[36m58[0m - [33m[1m[CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.[0m
+[32m2026-09-21 23:43:53.199[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36mrun[0m:[36m186[0m - [1m[BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.[0m
+[32m2026-09-21 23:43:53.767[0m | [1mINFO    [0m | [36msrc.logging.trade_logger[0m:[36mlog_backtest_run[0m:[36m738[0m - [1mSuccessfully logged run 'fold_0_breakout_retest' with 0 trades and 0 orders.[0m
+[32m2026-09-21 23:43:54.365[0m | [1mINFO    [0m | [36msrc.report.generator[0m:[36mgenerate_all[0m:[36m382[0m - [1mGenerated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\external-all\fold_000\breakout_retest\fold_0_breakout_retest[0m
+[32m2026-09-21 23:43:54.376[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36m_prepare_features[0m:[36m168[0m - [1m[BTCUSDT] Calculating indicators for 576 4h candles...[0m
+[32m2026-09-21 23:43:54.389[0m | [34m[1mDEBUG   [0m | [36msrc.features.oi_features[0m:[36mcalculate_oi_features[0m:[36m58[0m - [34m[1m[OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.[0m
+[32m2026-09-21 23:43:54.389[0m | [33m[1mWARNING [0m | [36msrc.features.cvd[0m:[36mcalculate_cvd[0m:[36m58[0m - [33m[1m[CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.[0m
+[32m2026-09-21 23:43:54.709[0m | [1mINFO    [0m | [36msrc.backtest.engine[0m:[36mrun[0m:[36m186[0m - [1m[BTCUSDT] Starting backtest: 1440 15m bars, 576 4h bars, force_close=True.[0m
+[32m2026-09-21 23:43:56.263[0m | [1mINFO    [0m | [36msrc.logging.trade_logger[0m:[36mlog_backtest_run[0m:[36m738[0m - [1mSuccessfully logged run 'fold_0_smc_liquidity_sweep' with 0 trades and 0 orders.[0m
+[32m2026-09-21 23:43:56.985[0m | [1mINFO    [0m | [36msrc.report.generator[0m:[36mgenerate_all[0m:[36m382[0m - [1mGenerated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\external-all\fold_000\smc_liquidity_sweep\fold_0_smc_liquidity_sweep[0m

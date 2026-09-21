@@ -1,5 +1,22 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Current repair checkpoint — 2026-09-21
+
+**IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW.** No acceptance is claimed.
+
+- Active branch: `codex/stage-06-to-11-completion`; final code/test/script A: `23f94376215a7fca69c8a7606e34139bc21d090c`.
+- Baseline: `2236e839529cbcfb31cfd399107617f0b541e907`; main preserved at `e970337d504563e5987a4db6b5c06c635bf7244b`.
+- User has authorized continuous implementation through Stage 11 including actual PPO, isolated dependencies and branch push. Earlier stop-before-7 and optional-RL task instructions are **SUPERSEDED**. No main merge, force-push, live/testnet, credentials, money or paid resources.
+- Stage6: parsed calendar semantic snapshot, portable config/report identity and exact byte checksums. Stage7: causal LONG/SHORT Breakout E2E. Stage8: funded atomic basket + existing risk/breaker + cash ledger. Stage9: real 5m/1m FVG limits and 40/30/30 partial/BE/trailing exits. Stage10: executable four-account OOS workflow. Stage11: actual Gymnasium/SB3 PPO train/evaluate/save/load through PaperBroker.
+- Final A gates: offline **356 passed, 2 skipped, 5 deselected**; network **5 passed, 358 deselected**; Review05 **26**, Review06 **11**, Review07 **3** passed; clean detached A offline **356 passed, 2 skipped, 5 deselected**. Two existing skips require optional pandas-ta.
+- Four external-CWD custom-config synthetic CLI runs have actual fills and closed realizations. Public three-day dataset, four-strategy OOS, real PPO256/save-load/holdout and evaluate-only CLI all ran. Artifact audit checked JSON/SQLite/hash/CSV/PNG consistency and found no absolute machine paths in report artifacts.
+- Public directional OOS:0 trades; funding1 basket/-25.18825656 USDT. PPO holdout:-477.11246108 USDT. Short sample proves engineering paths, not economic quality. All performance is **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED**. Full historical window/2021–2023 replay is **PARTIAL / NOT_VERIFIED**.
+- SMC report rows are realization slices, not independent full-position samples. Funding uses sampled spot/perp quotes, not hidden intrabar paths. Four comparison accounts have independent capital. No shared portfolio or profitable learned policy is claimed.
+- Documentation commit B is the documentation-only child of A. Obtain its actual full SHA from the final branch handoff; do not confuse B with the code commit tested above.
+
+Current evidence: [repair report](docs/reviews/STAGE_06_11_REPAIR_REPORT.md), [matrix](docs/planning/STAGE_06_11_REPAIR_MATRIX.md), [ADR0010](docs/decisions/0010-research-strategies-and-rl-boundary.md), [ADR0011](docs/decisions/0011-funded-basket-and-research-execution.md), [ADR0012](docs/decisions/0012-causal-smc-limits-and-partial-accounting.md).
+
+
 > [!IMPORTANT]
 > **QUY TẮC SỐNG CỦA DỰ ÁN (BẮT BUỘC ĐỌC ĐẦU MỖI PHIÊN LÀM VIỆC):**
 > 1. Trước khi viết bất kỳ dòng code nào, **BẮT BUỘC ĐỌC FILE NÀY** (`PROJECT_STATE.md`) kết hợp với `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md` trong repository. Tuyệt đối không dựa vào trí nhớ hội thoại để nhớ lại quyết định cũ.
@@ -17,16 +34,18 @@
 - [x] **Giai đoạn 3 — Risk Manager** (ĐÃ NGHIỆM THU THEO GPT REVIEW 04; người dùng đã cho phép chuyển Giai đoạn 4)
 - [x] **Giai đoạn 4 — Paper Execution Engine** (ĐÃ NGHIỆM THU THEO GPT REVIEW 09 — Code commit: `b16fa1e0...`)
 - [x] **Giai đoạn 5 — Phân hệ 1: Trend Following** (ĐÃ NGHIỆM THU THEO GPT REVIEW 10 — Code commit: `060f8a8d...`, Docs commit: `dc0ab9be...`)
-- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO; Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`; Code-under-test Commit A2: `99d4b4063c798cf3a89d610e4bd64a19f3395659`; tuyệt đối không bắt đầu Giai đoạn 7)
-- [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest**
-- [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (Delta-neutral)
-- [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (`smc_features.py`, Order Block, FVG)
-- [ ] **Giai đoạn 10 — Tổng hợp & So sánh đa chiến lược** (Walk-forward testing)
-- [ ] **Giai đoạn 11 — Reinforcement Learning (Optional, nâng cao)**
+- [ ] **Giai đoạn 6 — Trade Logger & Performance Report** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
+- [ ] **Giai đoạn 7 — Phân hệ 2: Breakout & Retest** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
+- [ ] **Giai đoạn 8 — Phân hệ 4: Funding Arbitrage** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
+- [ ] **Giai đoạn 9 — Phân hệ 3: SMC Liquidity Sweep** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
+- [ ] **Giai đoạn 10 — Tổng hợp & So sánh đa chiến lược** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
+- [ ] **Giai đoạn 11 — Reinforcement Learning — PPO/Gymnasium thực** (IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW; code A `23f94376215a7fca69c8a7606e34139bc21d090c`; xem giới hạn dữ liệu ở checkpoint)
 
 ---
 
-## 2. DANH SÁCH TOÀN BỘ QUYẾT ĐỊNH ĐÃ CHỐT
+## 2. QUYẾT ĐỊNH LỊCH SỬ VÀ INVARIANT ĐƯỢC GIỮ
+
+Các lệnh dừng/chuyển giai đoạn và số lượng test cũ dưới đây thuộc mốc lịch sử; quyền hiện tại và gates trên A ở đầu file. Nội dung risk không bị nới lỏng. ADR0010–0012 cập nhật semantics Stage8–11.
 
 1. **News Filter (`news_filter`):** Mặc định `enabled: false`. Không chặn lệnh cho đến khi người dùng nạp file lịch CSV thực tế (Tham chiếu: Mục 10.1 Spec).
 2. **Khoảng thời gian Backtest (`data.start_date`):** Bắt đầu từ `"2021-01-01"` đến `"2026-09-01"` (~5.5 năm), bao phủ đầy đủ chu kỳ bull 2021, bear 2022 (LUNA/FTX), hồi phục 2023-2024 và hiện tại (Tham chiếu: Mục 10.3 Spec).
@@ -119,7 +138,7 @@
 
 ---
 
-## 3. BẢN ĐỒ CÁC FILE QUAN TRỌNG VAI TRÒ
+## 3. (Historical inventory; test counts below are old snapshots) BẢN ĐỒ CÁC FILE QUAN TRỌNG VAI TRÒ
 
 | Đường dẫn File | Vai trò chính |
 | :--- | :--- |
@@ -194,7 +213,9 @@
 2. **Warm-up Period 199 nến đầu của EMA 200 là NaN:** Đây là tính chất toán học chuẩn mực của TA-Lib (`presma=True`), không phải bug. Các chiến lược khi chạy backtest sẽ bắt đầu quét lệnh sau khi đã đủ 200 nến.
 3. **CVD Flatline khi thiếu Taker Buy Volume:** Nếu klines API không có cột `taker_buy_base_volume` (hoặc có giá trị `NaN`), hệ thống ước tính bằng 50% volume $\to \text{delta} = 0$, khiến đường CVD đi ngang (flatline) thay vì ném ngoại lệ làm crash engine. Đã thêm log cảnh báo chi tiết trong `cvd.py`. **LƯU Ý NGHIỆP VỤ:** Nếu sau này thấy `cvd_divergence` có vẻ bất thường ở một giai đoạn cụ thể, đây là nghi phạm đầu tiên cần kiểm tra xem dữ liệu sàn trong giai đoạn đó có bị khuyết taker buy volume hay không.
 
-## Stage 7-11 implementation checkpoint (2026-09-21)
+## Historical Stage 7–11 implementation checkpoint before repair
+
+**SUPERSEDED:** bằng chứng dưới đây thuộc implementation trước findings; không mô tả code A mới. Kết quả suite cũ không được dùng làm kết quả A.
 
 - Stage 7: `BreakoutRetestStrategy` added with causal prior-range breakout, delayed retest, volume filters, timeout/invalidation, LONG/SHORT symmetry and configurable RRR. CLI supports `breakout_retest`.
 - Stage 8: `FundingArbitrageSimulator` added with explicit `spot_close`, `perp_close`, and `funding_rate` inputs, separate leg PnL, fees, funding cashflow and two-negative-cycle exit. Standalone config added. Main multi-timeframe runner remains NOT_VERIFIED for this strategy.

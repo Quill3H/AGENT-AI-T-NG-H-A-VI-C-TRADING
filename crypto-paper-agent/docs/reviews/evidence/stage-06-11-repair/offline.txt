@@ -1,0 +1,51 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: <LOCAL_PATH>\crypto-paper-agent
+configfile: pytest.ini
+testpaths: tests
+collected 363 items / 5 deselected / 358 selected
+
+tests\test_backtest_engine.py ................                           [  4%]
+tests\test_breakout_retest.py ............                               [  7%]
+tests\test_circuit_breakers.py .................                         [ 12%]
+tests\test_comparison.py ...........                                     [ 15%]
+tests\test_cvd.py ....                                                   [ 16%]
+tests\test_data_layer.py .....................                           [ 22%]
+tests\test_execution_accounting.py ...                                   [ 23%]
+tests\test_execution_models.py ....                                      [ 24%]
+tests\test_execution_no_lookahead.py ...                                 [ 25%]
+tests\test_funding_arbitrage.py .................................        [ 34%]
+tests\test_indicators.py .s.s.....                                       [ 37%]
+tests\test_invariant_checks.py ......................................... [ 48%]
+......                                                                   [ 50%]
+tests\test_liquidation_calc.py ...............                           [ 54%]
+tests\test_news_calendar.py .........                                    [ 56%]
+tests\test_no_lookahead.py ......                                        [ 58%]
+tests\test_oi_features.py ......                                         [ 60%]
+tests\test_paper_broker.py ........                                      [ 62%]
+tests\test_partial_execution.py ......                                   [ 64%]
+tests\test_position_sizing.py .....................                      [ 70%]
+tests\test_report_generator.py .....                                     [ 71%]
+tests\test_report_metrics.py .............                               [ 75%]
+tests\test_rl_env.py .....                                               [ 76%]
+tests\test_smc_liquidity_sweep.py .......                                [ 78%]
+tests\test_stage_04_review_06_coverage.py ...........                    [ 81%]
+tests\test_stage_04_review_07_coverage.py ................               [ 86%]
+tests\test_stage_06_integration.py ........                              [ 88%]
+tests\test_trade_logger.py ...................                           [ 93%]
+tests\test_trend_following_strategy.py .......................           [100%]
+
+============================== warnings summary ===============================
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  <LOCAL_PATH>\Lib\site-packages\gymnasium\utils\env_checker.py:373: UserWarning: [33mWARN: `check_env(warn=...)` parameter is now ignored.[0m
+    logger.warn("`check_env(warn=...)` parameter is now ignored.")
+
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  <LOCAL_PATH>\Lib\site-packages\gymnasium\utils\env_checker.py:440: UserWarning: [33mWARN: Not able to test alternative render modes due to the environment not having a spec. Try instantiating the environment through `gymnasium.make`[0m
+    logger.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==== 356 passed, 2 skipped, 5 deselected, 2 warnings in 111.13s (0:01:51) =====

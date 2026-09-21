@@ -1,6 +1,6 @@
 # ADR 0009: Kiến Trúc Lưu Trữ Sự Kiện Giao Dịch & Báo Cáo Hiệu Năng (Trade Logger & Performance Reporting)
 
-**Trạng thái:** ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO
+**Trạng thái:** IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW (Stage6–11 repair; xem báo cáo và commit A hiện tại)
 **Ngày đề xuất:** 2026-09-19  
 **Người đề xuất:** Quill3H & Antigravity (theo đặc tả kỹ thuật Giai đoạn 6 — Master Spec Section 4.6)
 
@@ -87,10 +87,12 @@ Sau khi hoàn thành và nghiệm thu Giai đoạn 5 (Chiến lược Trend Foll
 
 ## 3. Đối Soát & Thống Nhất Benchmark Chuẩn Tắc (Benchmark Reconciliation)
 
-Theo yêu cầu của GPT Review 11, văn bản này xác nhận và đối soát rõ ràng giữa số liệu benchmark thực tế và các số liệu dự thảo trước đó:
+Theo yêu cầu của GPT Review 11, phần này lưu đối chiếu do tác giả lịch sử cung cấp giữa hai bộ số liệu; không xác minh lại dataset hoặc kết quả trong repair pass hiện tại:
 
 ### 3.1 Benchmark Chuẩn Tắc (Canonical Benchmark 2021-2023 BTCUSDT)
-Kết quả backtest thực tế chính xác trên tập dữ liệu 3 năm (2021-01-01 đến 2023-12-31, 105,120 nến 15m, 6,570 nến 4h):
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — không chạy lại trong repair pass hiện tại; chưa được reviewer xác minh hoặc nghiệm thu.**
+
+Số liệu do tác giả lịch sử báo cáo trên tập dữ liệu 3 năm (2021-01-01 đến 2023-12-31, 105,120 nến 15m, 6,570 nến 4h):
 - **Vốn ban đầu:** 10,000.00 USDT
 - **Equity kết thúc:** 12,100.96 USDT (+21.01%)
 - **Max Drawdown:** -2,050.72 USDT (-16.15%)
@@ -107,4 +109,10 @@ Kết quả backtest thực tế chính xác trên tập dữ liệu 3 năm (202
 - **Kiểm toán Kế toán:** 100% PASSED (`wallet_balance` khớp chính xác ledger)
 
 ### 3.2 Bác Bỏ Số Liệu Dự Thảo Không Đồng Bộ (Repudiation of Discordant Draft Figures)
-Các số liệu từng xuất hiện trong một số bản thảo nháp chưa qua nghiệm thu (ví dụ: *48 orders, 24 trades, fees 82.49 USDT, funding -22.56 USDT*) là các con số giả định/dự phóng chưa được kiểm chứng. Văn bản này **chính thức bác bỏ và tuyên bố vô hiệu** các con số dự thảo không nhất quán đó; con số duy nhất có giá trị nghiệm thu là Benchmark Chuẩn Tắc tại mục 3.1.
+Các số liệu từng xuất hiện trong một số bản thảo nháp chưa qua nghiệm thu (ví dụ: *48 orders, 24 trades, fees 82.49 USDT, funding -22.56 USDT*) là các con số giả định/dự phóng chưa được kiểm chứng. Văn bản này **chính thức bác bỏ và tuyên bố vô hiệu** các con số dự thảo không nhất quán đó; bộ số liệu lịch sử được giữ để truy vết là mục 3.1, nhưng vẫn AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED và không có giá trị nghiệm thu độc lập.
+
+## 4. Repair addendum (2026-09-21)
+
+Config identity now snapshots the exact bytes parsed by NewsCalendarFilter and shares that snapshot across CLI/folds/PPO and persisted outputs. Str/Path and different roots with equal content have equal identity; changed enabled calendar content changes identity; repeated canonicalization is stable. Atomic UTF-8 LF output ensures manifest SHA matches actual Windows file bytes and SQLite payload. ISO UTC CLI input and custom config reproduction are tested. See the repair report for exact A and gate results; historical benchmark numbers above remain unverified.
+
+For partial exits, report rows count realization slices. `sample_unit` discloses this limitation; `bars_by_timeframe` supplements legacy count keys and Markdown displays actual configured timeframes. Descriptive win-rate ranges are strategy-specific, never optimization targets.

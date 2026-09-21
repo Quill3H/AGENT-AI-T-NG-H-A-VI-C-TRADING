@@ -1,0 +1,202 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+2026-09-21 23:41:52.785 | WARNING  | src.features.indicators:<module>:28 - [Indicators] pandas-ta không khả dụng (No module named 'pandas_ta'). Sẽ sử dụng pure pandas fallback cho toàn bộ chỉ báo.
+2026-09-21 23:41:54.380 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 13 4h candles...
+2026-09-21 23:41:54.397 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:41:54.397 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:41:54.403 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 65 15m bars, 13 4h bars, force_close=True.
+2026-09-21 23:41:55.311 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'smc_long' with 3 trades and 1 orders.
+2026-09-21 23:41:56.963 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\smc_long
+2026-09-21 23:41:57.868 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 5m ohlcv → 13 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_long\binance\BTCUSDT\5m\ohlcv.parquet
+2026-09-21 23:41:57.874 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 1m ohlcv → 65 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_long\binance\BTCUSDT\1m\ohlcv.parquet
+2026-09-21 23:41:57.879 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 8h funding_rate → 1 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_long\binance\BTCUSDT\8h\funding_rate.parquet
+2026-09-21 23:41:57.894 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 13 4h candles...
+2026-09-21 23:41:57.911 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:41:57.913 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:41:57.919 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 65 15m bars, 13 4h bars, force_close=True.
+2026-09-21 23:41:58.590 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'smc_short' with 3 trades and 1 orders.
+2026-09-21 23:41:59.486 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\smc_short
+2026-09-21 23:41:59.926 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 5m ohlcv → 13 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_short\binance\BTCUSDT\5m\ohlcv.parquet
+2026-09-21 23:41:59.933 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 1m ohlcv → 65 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_short\binance\BTCUSDT\1m\ohlcv.parquet
+2026-09-21 23:41:59.939 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 8h funding_rate → 1 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\smc_short\binance\BTCUSDT\8h\funding_rate.parquet
+2026-09-21 23:41:59.962 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 8 4h candles...
+2026-09-21 23:41:59.981 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:41:59.982 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:41:59.988 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 128 15m bars, 8 4h bars, force_close=True.
+2026-09-21 23:42:00.655 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'breakout_long' with 1 trades and 1 orders.
+2026-09-21 23:42:01.525 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\breakout_long
+2026-09-21 23:42:01.943 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 4h ohlcv → 8 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_long\binance\BTCUSDT\4h\ohlcv.parquet
+2026-09-21 23:42:01.962 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 15m ohlcv → 128 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_long\binance\BTCUSDT\15m\ohlcv.parquet
+2026-09-21 23:42:01.970 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 8h funding_rate → 4 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_long\binance\BTCUSDT\8h\funding_rate.parquet
+2026-09-21 23:42:02.004 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 8 4h candles...
+2026-09-21 23:42:02.024 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:02.026 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:02.038 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 128 15m bars, 8 4h bars, force_close=True.
+2026-09-21 23:42:02.804 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'breakout_short' with 1 trades and 1 orders.
+2026-09-21 23:42:03.624 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\breakout_short
+2026-09-21 23:42:04.028 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 4h ohlcv → 8 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_short\binance\BTCUSDT\4h\ohlcv.parquet
+2026-09-21 23:42:04.032 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 15m ohlcv → 128 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_short\binance\BTCUSDT\15m\ohlcv.parquet
+2026-09-21 23:42:04.036 | DEBUG    | src.data_layer.cache_manager:save_to_cache:90 - [Cache] Saved binance BTCUSDT 8h funding_rate → 4 rows → <LOCAL_PATH>\artifacts-23f9437\cli-cache\breakout_short\binance\BTCUSDT\8h\funding_rate.parquet
+2026-09-21 23:42:05.249 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 12 4h candles...
+2026-09-21 23:42:05.269 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:05.270 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:05.278 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.
+2026-09-21 23:42:05.970 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_trend_following' with 0 trades and 0 orders.
+2026-09-21 23:42:06.948 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\walk\fold_000\trend_following\fold_0_trend_following
+2026-09-21 23:42:06.956 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 12 4h candles...
+2026-09-21 23:42:06.969 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:06.971 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:06.977 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.
+2026-09-21 23:42:07.570 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_breakout_retest' with 0 trades and 0 orders.
+2026-09-21 23:42:08.300 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\walk\fold_000\breakout_retest\fold_0_breakout_retest
+2026-09-21 23:42:08.326 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 576 4h candles...
+2026-09-21 23:42:08.340 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:08.341 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:08.783 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 1440 15m bars, 576 4h bars, force_close=True.
+2026-09-21 23:42:10.739 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_smc_liquidity_sweep' with 0 trades and 0 orders.
+2026-09-21 23:42:11.562 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\synthetic\walk\fold_000\smc_liquidity_sweep\fold_0_smc_liquidity_sweep
+2026-09-21 23:42:14.772 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 12 4h candles...
+2026-09-21 23:42:14.791 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:14.792 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:14.797 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.
+2026-09-21 23:42:15.558 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_trend_following' with 0 trades and 0 orders.
+2026-09-21 23:42:16.526 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\public\walk\fold_000\trend_following\fold_0_trend_following
+2026-09-21 23:42:16.539 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 12 4h candles...
+2026-09-21 23:42:16.558 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:16.559 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:16.564 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 96 15m bars, 12 4h bars, force_close=True.
+2026-09-21 23:42:17.289 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_breakout_retest' with 0 trades and 0 orders.
+2026-09-21 23:42:18.213 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\public\walk\fold_000\breakout_retest\fold_0_breakout_retest
+2026-09-21 23:42:18.228 | INFO     | src.backtest.engine:_prepare_features:168 - [BTCUSDT] Calculating indicators for 576 4h candles...
+2026-09-21 23:42:18.251 | DEBUG    | src.features.oi_features:calculate_oi_features:58 - [OIFeatures] Cột 'open_interest' không tồn tại trong DataFrame. Tạo cột 'oi_delta_pct' với toàn bộ giá trị NaN.
+2026-09-21 23:42:18.254 | WARNING  | src.features.cvd:calculate_cvd:58 - [CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang.
+2026-09-21 23:42:18.918 | INFO     | src.backtest.engine:run:186 - [BTCUSDT] Starting backtest: 1440 15m bars, 576 4h bars, force_close=True.
+2026-09-21 23:42:21.241 | INFO     | src.logging.trade_logger:log_backtest_run:738 - Successfully logged run 'fold_0_smc_liquidity_sweep' with 0 trades and 0 orders.
+2026-09-21 23:42:22.215 | INFO     | src.report.generator:generate_all:382 - Generated all Stage 6 artifacts in: <LOCAL_PATH>\artifacts-23f9437\public\walk\fold_000\smc_liquidity_sweep\fold_0_smc_liquidity_sweep
+2026-09-21 23:42:47.659 | WARNING  | src.risk.circuit_breakers:record_trade_outcome:244 - [CircuitBreaker] Thua 3 lệnh liên tiếp (ngưỡng: 3). Giảm risk xuống 50% (multiplier = 0.50).
+2026-09-21 23:42:50.528 | WARNING  | src.risk.circuit_breakers:record_trade_outcome:244 - [CircuitBreaker] Thua 3 lệnh liên tiếp (ngưỡng: 3). Giảm risk xuống 50% (multiplier = 0.50).
+2026-09-21 23:42:51.018 | WARNING  | src.risk.circuit_breakers:record_cashflow:209 - [CircuitBreaker] KÍCH HOẠT KHÓA 24H qua cashflow! Rolling 24h PnL: -477.11$ vượt ngưỡng lỗ tối đa: -476.14$ (5.0%). Khóa giao dịch tới: 2024-01-04T04:41:00+00:00
+2026-09-21 23:42:53.110 | WARNING  | src.risk.circuit_breakers:record_trade_outcome:244 - [CircuitBreaker] Thua 3 lệnh liên tiếp (ngưỡng: 3). Giảm risk xuống 50% (multiplier = 0.50).
+2026-09-21 23:42:53.549 | WARNING  | src.risk.circuit_breakers:record_cashflow:209 - [CircuitBreaker] KÍCH HOẠT KHÓA 24H qua cashflow! Rolling 24h PnL: -477.11$ vượt ngưỡng lỗ tối đa: -476.14$ (5.0%). Khóa giao dịch tới: 2024-01-04T04:41:00+00:00
+2026-09-21 23:42:56.222 | WARNING  | src.risk.circuit_breakers:record_trade_outcome:244 - [CircuitBreaker] Thua 3 lệnh liên tiếp (ngưỡng: 3). Giảm risk xuống 50% (multiplier = 0.50).
+2026-09-21 23:42:56.272 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.662 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.746 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.775 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.846 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.934 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:56.949 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (2/3 để phục hồi).
+2026-09-21 23:42:56.990 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:57.001 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:57.213 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:57.257 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:57.296 | INFO     | src.risk.circuit_breakers:record_trade_outcome:255 - [CircuitBreaker] Đang ở chế độ giảm risk, ghi nhận lệnh thắng (1/3 để phục hồi).
+2026-09-21 23:42:57.358 | WARNING  | src.risk.circuit_breakers:record_cashflow:209 - [CircuitBreaker] KÍCH HOẠT KHÓA 24H qua cashflow! Rolling 24h PnL: -478.76$ vượt ngưỡng lỗ tối đa: -476.06$ (5.0%). Khóa giao dịch tới: 2024-01-04T18:26:00+00:00
+{
+  "smc_long": {
+    "fills": 1,
+    "realizations": 3,
+    "total_net_pnl": 449.2124
+  },
+  "smc_short": {
+    "fills": 1,
+    "realizations": 3,
+    "total_net_pnl": 448.7951
+  },
+  "breakout_long": {
+    "fills": 1,
+    "realizations": 1,
+    "total_net_pnl": 388.5477
+  },
+  "breakout_short": {
+    "fills": 1,
+    "realizations": 1,
+    "total_net_pnl": 387.4512
+  },
+  "synthetic_walk": [
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "breakout_retest"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "smc_liquidity_sweep"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "trend_following"
+    },
+    {
+      "total_net_pnl": -14.992006495428083,
+      "sample_count": 1,
+      "fold_count": 1,
+      "mean_fold_return_pct": -0.1499200649542808,
+      "strategy": "funding_arbitrage"
+    }
+  ],
+  "public_walk": [
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "breakout_retest"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "smc_liquidity_sweep"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "trend_following"
+    },
+    {
+      "total_net_pnl": -25.188256559296043,
+      "sample_count": 1,
+      "fold_count": 1,
+      "mean_fold_return_pct": -0.2518825655929604,
+      "strategy": "funding_arbitrage"
+    }
+  ],
+  "ppo": {
+    "actual_timesteps": 256,
+    "final_holdout": {
+      "reward": -1318.077144843794,
+      "total_net_pnl": -477.1124610771403,
+      "final_equity": 9522.88753892286,
+      "total_trades": 60,
+      "risk_violations": 1318
+    },
+    "no_trade": {
+      "reward": 0.0,
+      "total_net_pnl": 0.0,
+      "final_equity": 10000.0,
+      "total_trades": 0,
+      "risk_violations": 0
+    },
+    "rule_based_ma_5_20": {
+      "reward": -333.1743693975078,
+      "total_net_pnl": -478.76004201834985,
+      "final_equity": 9521.23995798165,
+      "total_trades": 75,
+      "risk_violations": 333
+    },
+    "save_load_equal": true
+  }
+}

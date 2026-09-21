@@ -1,0 +1,107 @@
+{
+  "smc_long": {
+    "fills": 1,
+    "realizations": 3,
+    "total_net_pnl": 449.2124
+  },
+  "smc_short": {
+    "fills": 1,
+    "realizations": 3,
+    "total_net_pnl": 448.7951
+  },
+  "breakout_long": {
+    "fills": 1,
+    "realizations": 1,
+    "total_net_pnl": 388.5477
+  },
+  "breakout_short": {
+    "fills": 1,
+    "realizations": 1,
+    "total_net_pnl": 387.4512
+  },
+  "synthetic_walk": [
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "breakout_retest"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "smc_liquidity_sweep"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "trend_following"
+    },
+    {
+      "total_net_pnl": -14.992006495428083,
+      "sample_count": 1,
+      "fold_count": 1,
+      "mean_fold_return_pct": -0.1499200649542808,
+      "strategy": "funding_arbitrage"
+    }
+  ],
+  "public_walk": [
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "breakout_retest"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "smc_liquidity_sweep"
+    },
+    {
+      "total_net_pnl": 0.0,
+      "sample_count": 0,
+      "fold_count": 1,
+      "mean_fold_return_pct": 0.0,
+      "strategy": "trend_following"
+    },
+    {
+      "total_net_pnl": -25.188256559296043,
+      "sample_count": 1,
+      "fold_count": 1,
+      "mean_fold_return_pct": -0.2518825655929604,
+      "strategy": "funding_arbitrage"
+    }
+  ],
+  "ppo": {
+    "actual_timesteps": 256,
+    "final_holdout": {
+      "reward": -1318.077144843794,
+      "total_net_pnl": -477.1124610771403,
+      "final_equity": 9522.88753892286,
+      "total_trades": 60,
+      "risk_violations": 1318
+    },
+    "no_trade": {
+      "reward": 0.0,
+      "total_net_pnl": 0.0,
+      "final_equity": 10000.0,
+      "total_trades": 0,
+      "risk_violations": 0
+    },
+    "rule_based_ma_5_20": {
+      "reward": -333.1743693975078,
+      "total_net_pnl": -478.76004201834985,
+      "final_equity": 9521.23995798165,
+      "total_trades": 75,
+      "risk_violations": 333
+    },
+    "save_load_equal": true
+  }
+}

@@ -1,5 +1,19 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Stage 6–11 repair] — 2026-09-21
+
+Code A: `23f94376215a7fca69c8a7606e34139bc21d090c`. **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW**. User authorization supersedes earlier stop-before-7 and optional-PPO restrictions for this task.
+
+- Fix invalid offline CLI fixture, semantic calendar snapshots, portable replay identity, UTC aware CLI input, exact LF report checksums and sample/timeframe benchmark metadata.
+- Validate Breakout LONG/SHORT causal retest, duplicate/conflict/timeouts, broker gate rejection and nonempty report execution.
+- Replace funding arithmetic with fully funded spot/perp atomic basket, risk/breaker adapter, settlement provenance, reconciled cashflow ledger and runner/report.
+- Add confirmed SMC OB/FVG state, actual 5m/1m limit execution, quantity/collateral/fee/funding-aware partial exits, BE and trailing. Keep conservative protection priority.
+- Run chronological four-strategy independent-account OOS comparisons with fresh folds, fixed rules and portable outputs.
+- Implement real Gymnasium PaperBroker environment and SB3 PPO train/evaluate/save/load, frozen train scaler, CPU smoke and unchanged final holdout with baselines.
+- Verify exact A: offline356 passed/2 skipped/5 deselected; network5 passed/358 deselected; Review05/06/07=26/11/3 passed; clean A offline356 passed/2 skipped/5 deselected. Four nonempty external CLI fixtures, public workflow, PPO256 and artifact integrity audit passed. Full historical/performance acceptance remains NOT_VERIFIED.
+- Full evidence, known limitations and reproduction: [Stage6–11 repair report](docs/reviews/STAGE_06_11_REPAIR_REPORT.md). Earlier entries below retain historical results only.
+
+
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`.
 
 ## [Giai đoạn 6] - Completion pass by Codex (2026-09-21)

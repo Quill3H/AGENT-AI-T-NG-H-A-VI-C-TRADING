@@ -1,0 +1,17 @@
+# ADR 0012 — Causal SMC limits and partial-exit accounting
+
+Status: IMPLEMENTED POLICY — PENDING INDEPENDENT REVIEW. Date: 2026-09-21.
+
+SMC runs on 5m signal candles and 1m execution candles. Swing requires N bars on both sides (default3) and becomes available only when confirmation closes. Sweep uses a previously confirmed level; structure break threshold0.1%, displacement body>=0.5 times the mean high-low range of up to14 closed signal candles. Here the configurable ATR-labelled thresholds use that range estimator, not Wilder ATR. OB is the last opposite candle body before BOS/CHoCH, available at break confirmation. FVG is the closed three-candle gap, minimum0.3 range units. A setup ages for at most12 signal candles by default.
+
+A known directional protective OB body within `ob_max_distance_atr` (default1.0) of the FVG is confluence; geometric intersection is not required. `require_order_block_confluence` defaults true and actually blocks nonconfluent orders; false allows the setup without this extra condition. Stops sit outside the sweep and the protective OB with0.2% buffer. These ordinary rule details are configurable; existing leverage/conviction/stop-budget limits still apply.
+
+After the FVG candle closes, submit LIMIT_ENTRY at its midpoint. Only a subsequent execution candle can fill. Untouched limits remain pending until expiry; equality with expiry cancels before fill. Favorable open gaps can improve entry; fills are bounded by the limit. The model conservatively charges taker fees and models no queue depth/partial entry. If an entry is touched intrabar, same-bar profit targets are forbidden, but stop/liquidation remain possible. For ambiguous same-bar SL/TP, protection precedes profit. No retroactive fill is invented from a closed candle.
+
+Exit fractions are of original quantity:40% at1.5R,30% at3R,30% trailing. Targets derive from actual fill and original stop, and nonpositive/nonfinite targets reject before fee debit. Each exit mutates quantity, margin, collateral, proportional entry fees, funding and ledger; remaining liquidation price is solved before mutation. Realized slice cashflows enter breaker cash ledger once. The accumulated whole-position result updates win/loss streak once when the remainder closes. A breaker transition can force remaining positions closed without duplicate cashflow.
+
+Gap partial TP is processed before funding; settlement uses surviving quantity. TP1 arms BE after the execution candle closes, never retroactively. If the close has already crossed BE, a close request is queued for next open. TP2 enables trailing on closed signal high/low with buffer; the broker accepts tightening only. BE is entry-price breakeven, not fee-adjusted net breakeven. Quote gaps can still realize losses.
+
+TradeRecords and exported metrics count realization slices. This preserves existing report schema/accounting, but counts, win rate, expectancy and SQN must not be interpreted as independent full-position observations. Whole-position aggregate statistics remain future work. Descriptive benchmarks (Trend35–45%, Breakout40–50%, SMC50–60%, from AGENT_SPEC matrix) are not optimization targets or evidence of future profitability.
+
+Tests: `test_smc_liquidity_sweep.py`, `test_partial_execution.py`, existing Review05/06/07. Both synthetic LONG/SHORT produce one fill and three accounted closed slices through 5m/1m engine and CLI. Default-rule public nonempty SMC performance remains NOT_VERIFIED.

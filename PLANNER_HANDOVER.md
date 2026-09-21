@@ -1,11 +1,28 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Current repair checkpoint — 2026-09-21
+
+**IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW.** No acceptance is claimed.
+
+- Active branch: `codex/stage-06-to-11-completion`; final code/test/script A: `23f94376215a7fca69c8a7606e34139bc21d090c`.
+- Baseline: `2236e839529cbcfb31cfd399107617f0b541e907`; main preserved at `e970337d504563e5987a4db6b5c06c635bf7244b`.
+- User has authorized continuous implementation through Stage 11 including actual PPO, isolated dependencies and branch push. Earlier stop-before-7 and optional-RL task instructions are **SUPERSEDED**. No main merge, force-push, live/testnet, credentials, money or paid resources.
+- Stage6: parsed calendar semantic snapshot, portable config/report identity and exact byte checksums. Stage7: causal LONG/SHORT Breakout E2E. Stage8: funded atomic basket + existing risk/breaker + cash ledger. Stage9: real 5m/1m FVG limits and 40/30/30 partial/BE/trailing exits. Stage10: executable four-account OOS workflow. Stage11: actual Gymnasium/SB3 PPO train/evaluate/save/load through PaperBroker.
+- Final A gates: offline **356 passed, 2 skipped, 5 deselected**; network **5 passed, 358 deselected**; Review05 **26**, Review06 **11**, Review07 **3** passed; clean detached A offline **356 passed, 2 skipped, 5 deselected**. Two existing skips require optional pandas-ta.
+- Four external-CWD custom-config synthetic CLI runs have actual fills and closed realizations. Public three-day dataset, four-strategy OOS, real PPO256/save-load/holdout and evaluate-only CLI all ran. Artifact audit checked JSON/SQLite/hash/CSV/PNG consistency and found no absolute machine paths in report artifacts.
+- Public directional OOS:0 trades; funding1 basket/-25.18825656 USDT. PPO holdout:-477.11246108 USDT. Short sample proves engineering paths, not economic quality. All performance is **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED**. Full historical window/2021–2023 replay is **PARTIAL / NOT_VERIFIED**.
+- SMC report rows are realization slices, not independent full-position samples. Funding uses sampled spot/perp quotes, not hidden intrabar paths. Four comparison accounts have independent capital. No shared portfolio or profitable learned policy is claimed.
+- Documentation commit B is the documentation-only child of A. Obtain its actual full SHA from the final branch handoff; do not confuse B with the code commit tested above.
+
+Current evidence: [repair report](crypto-paper-agent/docs/reviews/STAGE_06_11_REPAIR_REPORT.md), [requirement matrix](crypto-paper-agent/docs/planning/STAGE_06_11_REPAIR_MATRIX.md), ADR0010–0012. Đọc các tài liệu này trước phần lịch sử bên dưới.
+
+
 > Đọc file này đầu mỗi phiên mới, rồi đối chiếu GitHub hiện tại. File này thay cho việc phụ thuộc trí nhớ hội thoại; không bảo đảm AI tự nhớ hoặc tự theo dõi GitHub.
 > Chỉ cập nhật thông tin đã xác minh hoặc đánh dấu rõ “tác giả báo cáo”, “chưa kiểm tra”, “chờ người dùng”.
 
 ## 1. Dự án và cách phối hợp
 
-- Repo: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`, nhánh `main`.
+- Repo: `Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING`; branch triển khai hiện tại ở checkpoint đầu file, không phải main.
 - Gốc chương trình trong repo: `crypto-paper-agent/`.
 - Mục tiêu: crypto paper trading agent; làm tuần tự từng giai đoạn, risk-first, chống lookahead.
 - Người dùng là người quyết định cuối cùng. Codex là Implementation Engineer chính từ 2026-09-21; GPT Planner/Reviewer ở phiên độc lập thực hiện review và nghiệm thu. Antigravity không còn là implementer đang hoạt động; attribution của các commit lịch sử được giữ nguyên.
@@ -13,7 +30,7 @@
 - Người dùng quyết định nghiệm thu và cho phép chuyển giai đoạn. GPT không coi câu “Anti làm xong” là quyền tự bắt đầu giai đoạn tiếp.
 - Không có kênh điều khiển trực tiếp Antigravity được thiết lập; GitHub không tự cập nhật nếu Anti chưa commit/push. Chỉ kiểm tra khi có phiên làm việc/yêu cầu; không hứa giám sát nền.
 
-## 2. Trạng thái mới nhất đã xác minh
+## 2. Lịch sử các checkpoint trước repair pass (không phải kết quả trên A hiện tại)
 
 - **Giai đoạn 0–2:** PROJECT_STATE ghi đã được Claude duyệt trước khi GPT tiếp quản; không tuyên bố GPT đã review lại toàn bộ.
 - **Giai đoạn 3:** Anti sửa qua ba vòng. Code cuối đã kiểm tra: `44014393a2ed6dba7188096a6d1de600daa972d0`.
@@ -33,7 +50,7 @@
   - 237/237 unit tests offline pass (5 deselected network tests).
   - Script mô phỏng Phần A và Phần B đạt đối soát 100%.
   - Báo cáo sửa đổi chi tiết tại `crypto-paper-agent/BÁO CÁO TÓM TẮT/GIAI ĐOẠN 4/BAO_CAO_SUA_DOI_THEO_GPT_REVIEW_08.md`.
-- **Giai đoạn 5 — Trend Following & Backtest Engine:** ĐÃ ĐƯỢC NGHIỆM THU CHÍNH THỨC theo GPT Review 10 tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` và Documentation commit `dc0ab9bec51ec34351e9f21ec8ef31970ff8392e`. Người dùng đã cho phép chuyển sang Giai đoạn 6.
+- **Giai đoạn 5 — Trend Following & Backtest Engine:** tài liệu lịch sử ghi ĐÃ ĐƯỢC NGHIỆM THU CHÍNH THỨC theo GPT Review 10 tại Code-under-test commit `060f8a8d72e0eb2acbb6bd327ae67fbcb0805aac` và Documentation commit `dc0ab9bec51ec34351e9f21ec8ef31970ff8392e`. Người dùng đã cho phép chuyển sang Giai đoạn 6.
 - **Giai đoạn 6 — Trade Logger & Performance Report:**
   - Bản đầu tại commit code `1d486f76da1430e1c02fa1ac24be177262d53c67` và docs `8e7a3cd735e5a55f78ba05a7e4dc5d67f1af3c77` bị GPT Review 11 phát hiện các điểm nghẽn (schema Section 4.6, composite keys, full idempotency, hermetic CWD paths, benchmark reconciliation).
   - Tác giả (Antigravity) đã hoàn thiện khắc phục triệt để toàn bộ 9 yêu cầu của GPT Review 11 tại Code Commit A: `0b63f2702024993575735157528d4738be181e75`:
@@ -46,7 +63,7 @@
     7. Phân tách rành mạch chỉ số Circuit Breaker khỏi từ chối do thiếu ký quỹ riêng lẻ.
     8. Đối soát Benchmark Chuẩn Tắc 3 năm BTCUSDT: 22 orders, 16 trades, fees -162.82 USDT, funding -225.89 USDT, net PnL +2,100.96 USDT (+21.01%), Max Drawdown -16.15%. Chính thức bác bỏ và tuyên bố vô hiệu số liệu dự thảo không đồng bộ (48 orders, 24 trades, fees 82.49, funding -22.56).
     9. Bộ test mở rộng lên 29 tests cho Stage 6; toàn bộ 309/309 tests trong repo đều PASS 100%.
-- **Quyền hiện tại:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
+- **Quyền lịch sử — SUPERSEDED bởi nhiệm vụ Stage6–11:** Giai đoạn 6 ĐANG CHỜ GPT REVIEW TIẾP THEO NGHIỆM THU. **TUYỆT ĐỐI KHÔNG BẮT ĐẦU GIAI ĐOẠN 7** hoặc bất kỳ giai đoạn nào tiếp theo cho đến khi có xác nhận nghiệm thu chính thức từ người dùng và GPT Reviewer.
 - **GPT Review 12 repair pass theo nhiệm vụ người dùng phê duyệt ngày 2026-09-21:**
   - Baseline: `e970337d504563e5987a4db6b5c06c635bf7244b`; Documentation Commit B hiện tại: `b04613a338c9678108f6349ad669bd1d9881abcb`.
   - Branch triển khai: `codex/stage-06-review-12-fixes`; Code-under-test Commit A2: `99d4b4063c798cf3a89d610e4bd64a19f3395659`.
@@ -78,7 +95,7 @@ Khi mâu thuẫn: yêu cầu hiện tại được người dùng xác nhận v�
 - News filter mặc định disabled. Nếu bật thì lịch thiếu/hỏng phải chặn; lịch rỗng đúng schema được phép theo chính sách đã công bố.
 - Phục hồi risk sau **3 lệnh thắng liên tiếp** (`after_3_wins`), không quay về mặc định cũ phục hồi sau 1 thắng.
 - Mốc dữ liệu backtest đã chọn: `2021-01-01` → `2026-09-01`; không tự đổi.
-- RL chỉ optional Giai đoạn 11; không chen vào 0–10.
+- RL thuộc Giai đoạn 11 và đã được người dùng yêu cầu triển khai; nhãn optional cũ đã được thay thế cho nhiệm vụ hiện tại.
 - Đồng hồ UTC mô phỏng; không fallback datetime.now để duyệt lệnh. Admission dùng `account_state.current_time`, không dùng thời điểm signal cũ.
 - Không lookahead; swing CVD xác nhận tại i+k, không gán ngược tín hiệu về i.
 - OI hybrid Data Vision + REST; confluence optional, NaN fallback có chủ đích theo ADR 0005.
@@ -119,7 +136,7 @@ Review 02/03/04/05/06/07/09 có file trong `crypto-paper-agent/docs/reviews/`; w
 7. Handoff cho Codex Implementation Engineer: đọc hồ sơ + task được người dùng phê duyệt; code đúng phạm vi, tests, cập nhật PROJECT_STATE/CHANGELOG/báo cáo, commit/push branch riêng rồi dừng chờ review.
 8. Nếu tài liệu sống quá dài: giữ hồ sơ này ngắn, chuyển lịch sử chi tiết sang review/ADR; không xóa bằng chứng cũ.
 
-## 7. Task hiện hành được phép triển khai
+## 7. (HISTORICAL — quyền dừng cũ đã được thay thế) Task hiện hành được phép triển khai
 
 Nhiệm vụ sửa GPT Review 12 do người dùng phê duyệt ngày 2026-09-21 đã hoàn tất tại Code-under-test Commit A2 `99d4b4063c798cf3a89d610e4bd64a19f3395659`.
 
@@ -131,7 +148,9 @@ Task hiện hành: **ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TI�
 
 Nếu không còn kết nối GitHub, người dùng có thể gửi bản hồ sơ và PROJECT_STATE hiện tại. Không cần gửi lại toàn bộ lịch sử chat.
 
-## Implementation handoff Stage 7-11 (2026-09-21)
+## Historical implementation handoff before repair (2026-09-21)
+
+**SUPERSEDED:** phần dưới ghi trạng thái trước findings, không mô tả implementation hiện tại. Xem checkpoint đầu file và báo cáo repair.
 
 Working branch: `codex/stage-06-to-11-completion`.
 

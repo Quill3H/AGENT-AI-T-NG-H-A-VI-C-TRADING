@@ -1,0 +1,30 @@
+{
+  "smc_long": {
+    "exit_code": 0,
+    "fills": 1,
+    "realizations": 3,
+    "config_hash": "67f57fa8647f8b02e15e7dee6d34c14a5fe612d5bc438d4dcd57efd2593f6642",
+    "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c"
+  },
+  "smc_short": {
+    "exit_code": 0,
+    "fills": 1,
+    "realizations": 3,
+    "config_hash": "67f57fa8647f8b02e15e7dee6d34c14a5fe612d5bc438d4dcd57efd2593f6642",
+    "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c"
+  },
+  "breakout_long": {
+    "exit_code": 0,
+    "fills": 1,
+    "realizations": 1,
+    "config_hash": "d61a2ed5872d4aa160ff3438d4c49a5fad80b1cdde522c104441f6925ebf3cda",
+    "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c"
+  },
+  "breakout_short": {
+    "exit_code": 0,
+    "fills": 1,
+    "realizations": 1,
+    "config_hash": "d61a2ed5872d4aa160ff3438d4c49a5fad80b1cdde522c104441f6925ebf3cda",
+    "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c"
+  }
+}

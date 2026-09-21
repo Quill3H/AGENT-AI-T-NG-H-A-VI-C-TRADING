@@ -1,0 +1,15 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+{
+  "evaluate_saved_ppo": {
+    "exit_code": 0,
+    "holdout_equal": true
+  },
+  "basket": {
+    "exit_code": 0
+  },
+  "all": {
+    "exit_code": 0
+  }
+}

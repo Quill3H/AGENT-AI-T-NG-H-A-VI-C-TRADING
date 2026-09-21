@@ -1,0 +1,5 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+
+[32m2026-09-21 23:43:44.937[0m | [33m[1mWARNING [0m | [36msrc.features.indicators[0m:[36m<module>[0m:[36m28[0m - [33m[1m[Indicators] pandas-ta không khả dụng (No module named 'pandas_ta'). Sẽ sử dụng pure pandas fallback cho toàn bộ chỉ báo.[0m

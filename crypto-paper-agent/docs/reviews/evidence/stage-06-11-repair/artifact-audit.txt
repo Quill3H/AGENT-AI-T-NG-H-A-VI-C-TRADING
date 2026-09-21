@@ -1,0 +1,17 @@
+Portable log copy; machine path prefixes replaced; line endings normalized. Test results unchanged.
+Code commit: 23f94376215a7fca69c8a7606e34139bc21d090c
+
+2026-09-21 23:44:40.253 | WARNING  | src.features.indicators:<module>:28 - [Indicators] pandas-ta không khả dụng (No module named 'pandas_ta'). Sẽ sử dụng pure pandas fallback cho toàn bộ chỉ báo.
+{
+  "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c",
+  "status": "AUTHOR_VERIFIED_ARTIFACT_INTEGRITY / REVIEWER_NOT_VERIFIED",
+  "checks": {
+    "json": 76,
+    "portable_text": 128,
+    "research_manifests": 13,
+    "sqlite_reports": 17,
+    "png": 21,
+    "datasets": 6
+  },
+  "absolute_paths_found": 0
+}
