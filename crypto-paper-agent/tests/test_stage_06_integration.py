@@ -11,11 +11,15 @@ Kiểm tra tích hợp toàn diện:
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import shutil
+import sqlite3
 import subprocess
 import sys
 import pandas as pd
 import pytest
 import yaml
+
+from run_backtest import _format_benchmark_note
 
 from src.data_layer.cache_manager import save_to_cache
 
@@ -160,6 +164,22 @@ def test_cli_end_to_end_with_report_generation(hermetic_env):
         assert p.is_file(), f"Expected artifact {fn} was not generated in {run_report_dir}"
         assert p.stat().st_size > 0, f"Artifact {fn} is empty"
 
+    summary_text = (run_report_dir / "summary.json").read_text(encoding="utf-8")
+    summary_md = (run_report_dir / "summary.md").read_text(encoding="utf-8")
+    assert str(tmp_dir) not in summary_text
+    assert str(tmp_dir) not in summary_md
+    assert "--config <CONFIG_PATH>" in summary_text
+    assert "config/default_config.yaml" not in summary_text
+    with sqlite3.connect(str(run_report_dir / "trades.sqlite")) as conn:
+        stored_config = conn.execute(
+            "SELECT config_json FROM runs WHERE run_id = ?", (run_id,)
+        ).fetchone()[0]
+        stored_metrics = conn.execute(
+            "SELECT metrics_json FROM run_metrics WHERE run_id = ?", (run_id,)
+        ).fetchone()[0]
+    assert str(tmp_dir) not in stored_config
+    assert json.loads(stored_metrics)["config_hash"] == json.loads(summary_text)["config_hash"]
+
 
 def test_cli_no_report_flag(hermetic_env):
     """Kiểm tra cờ --no-report ngăn chặn xuất artifacts."""
@@ -302,6 +322,66 @@ def test_deterministic_run_id_across_invocations(hermetic_env):
             run_id_3 = line.split(":", 1)[1].strip()
             break
     assert run_id_3 != run_id_1, "Different parameters must yield different Run ID"
+
+
+def test_config_identity_is_cross_root_and_sensitive_to_fees(hermetic_env, tmp_path):
+    """Logical config identity ignores cache roots but changes for fee policy."""
+    cfg_file, tmp_dir = hermetic_env
+    root_a = tmp_dir / "cache_a"
+    root_b = tmp_dir / "cache_b"
+    shutil.copytree(tmp_dir / "mock_cache", root_a)
+    shutil.copytree(tmp_dir / "mock_cache", root_b)
+
+    def write_variant(path, raw_root, taker_pct=None):
+        config = yaml.safe_load(cfg_file.read_text(encoding="utf-8"))
+        config["data"]["raw_data_dir"] = str(raw_root)
+        if taker_pct is not None:
+            config["fees"]["taker_pct"] = taker_pct
+        path.write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    cfg_a = tmp_path / "config_a.yaml"
+    cfg_b = tmp_path / "config_b.yaml"
+    cfg_fee = tmp_path / "config_fee.yaml"
+    write_variant(cfg_a, root_a)
+    write_variant(cfg_b, root_b)
+    write_variant(cfg_fee, root_a, taker_pct=0.0007)
+
+    def run(cfg, output):
+        result = subprocess.run(
+            [
+                sys.executable, str(PROJECT_ROOT / "run_backtest.py"),
+                "--config", str(cfg), "--strategy", "trend_following",
+                "--start", "2023-01-01", "--end", "2023-01-03",
+                "--no-fetch", "--output-dir", str(output),
+            ],
+            cwd=str(tmp_path / "outside"),
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        assert result.returncode == 0, result.stderr
+        run_id = next(line.split(":", 1)[1].strip() for line in result.stdout.splitlines() if line.startswith("Run ID"))
+        summary = json.loads((output / run_id / "summary.json").read_text(encoding="utf-8"))
+        return run_id, summary
+
+    (tmp_path / "outside").mkdir()
+    run_a, summary_a = run(cfg_a, tmp_path / "reports_a")
+    run_b, summary_b = run(cfg_b, tmp_path / "reports_b")
+    run_fee, summary_fee = run(cfg_fee, tmp_path / "reports_fee")
+
+    assert summary_a["config_hash"] == summary_b["config_hash"]
+    assert run_a == run_b
+    assert summary_fee["config_hash"] != summary_a["config_hash"]
+    assert run_fee != run_a
+    assert str(root_a) not in json.dumps(summary_a)
+    assert str(root_b) not in json.dumps(summary_b)
+
+
+def test_benchmark_annotation_has_no_historical_hardcoded_sample():
+    zero = _format_benchmark_note({"total_trades": 0, "win_rate": 0.0})
+    observed = _format_benchmark_note({"total_trades": 7, "win_rate": 42.86})
+    assert "insufficient data" in zero.lower()
+    assert "50.00%" not in zero and "N=16" not in zero
+    assert "42.86%" in observed and "N=7" in observed
+    assert "50.00%" not in observed and "N=16" not in observed
 
 
 def test_cwd_independence_and_path_resolution(hermetic_env, tmp_path):

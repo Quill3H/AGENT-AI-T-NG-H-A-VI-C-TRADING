@@ -12,7 +12,6 @@ Tuân thủ nghiêm ngặt ANTIGRAVITY_STAGE_05_TASK.md:
 import argparse
 from datetime import datetime, timezone
 import hashlib
-import json
 import os
 from pathlib import Path
 import subprocess
@@ -41,6 +40,7 @@ from src.data_layer.cache_manager import (
 )
 from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
 from src.report.generator import ReportGenerator
+from src.logging.trade_logger import compute_config_hash
 from src.strategies.trend_following import TrendFollowingStrategy
 
 
@@ -62,6 +62,25 @@ def _deep_merge_dict(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, 
         else:
             result[k] = v
     return result
+
+
+def _config_reference(config_path: Path) -> str:
+    """Return a truthful, portable config reference for reproduction metadata."""
+    try:
+        return config_path.resolve().relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return "<CONFIG_PATH>"
+
+
+def _format_benchmark_note(metrics: Dict[str, Any]) -> str:
+    """Describe the observed sample without embedding historical benchmark values."""
+    total_trades = int(metrics.get("total_trades", 0))
+    if total_trades == 0:
+        return "insufficient data; no trade sample is available"
+    return (
+        f"observed {float(metrics.get('win_rate', 0.0)):.2f}% on N={total_trades}; "
+        "small samples are not statistically generalizable"
+    )
 
 
 def _get_git_commit_sha() -> str:
@@ -228,8 +247,7 @@ def main():
     sym_clean = symbol.replace("/", "").replace(":", "").lower()
     start_iso = start_dt.isoformat()
     end_iso = end_dt.isoformat()
-    config_canonical = json.dumps(config, sort_keys=True, ensure_ascii=False, default=str)
-    config_hash = hashlib.sha256(config_canonical.encode("utf-8")).hexdigest()
+    config_hash = compute_config_hash(config)
 
     run_seed = f"{code_sha}|{strat_clean}|{sym_clean}|{start_iso}|{end_iso}|{config_hash}"
     deterministic_hash = hashlib.sha256(run_seed.encode("utf-8")).hexdigest()[:12]
@@ -384,7 +402,8 @@ def main():
     print(f"  - LONG Trades      : {metrics['long_trades_count']} (Win: {metrics['win_rate_long']:.1f}%)")
     print(f"  - SHORT Trades     : {metrics['short_trades_count']} (Win: {metrics['win_rate_short']:.1f}%)")
     print(f"Trade Outcomes       : {metrics['win_trades_count']} Win / {metrics['loss_trades_count']} Loss / {metrics['breakeven_trades_count']} Breakeven")
-    print(f"Win Rate (Overall)   : {metrics['win_rate']:.2f}% (Reference: 35-45%; note: 50.00% on N=16 not statistically generalizable)")
+    benchmark_note = _format_benchmark_note(metrics)
+    print(f"Win Rate (Overall)   : {metrics['win_rate']:.2f}% (Reference: 35-45%; {benchmark_note})")
     print(f"Loss Rate (Overall)  : {metrics['loss_rate']:.2f}%")
     print(f"Win Rate (LONG)      : {metrics['win_rate_long']:.2f}%")
     print(f"Win Rate (SHORT)     : {metrics['win_rate_short']:.2f}%")
@@ -409,12 +428,13 @@ def main():
         print("\n[Report] Generating Stage 6 artifacts (SQLite, JSON, CSV, PNG, MD)...")
         metrics["code_commit_sha"] = code_sha
         metrics["no_fetch"] = args.no_fetch
+        metrics["config_hash"] = config_hash
         # Keep artifacts portable: never embed author-machine absolute paths from
         # argv.  Exact data/config identity is carried separately by config_hash
         # and provenance fields.
         reproduction_parts = [
             "python", "run_backtest.py",
-            "--config", "config/default_config.yaml",
+            "--config", _config_reference(config_path),
             "--strategy", args.strategy,
             "--start", str(args.start or config.get("data", {}).get("start_date", "2021-01-01")),
             "--end", str(args.end or config.get("data", {}).get("end_date", "2023-12-31")),

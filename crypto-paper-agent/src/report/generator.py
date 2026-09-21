@@ -11,7 +11,6 @@ dưới thư mục `reports/<run_id>/`:
 6. trades.sqlite     - File SQLite cơ sở dữ liệu lưu toàn bộ sự kiện của run
 """
 from datetime import datetime, timezone
-import hashlib
 import json
 import math
 import os
@@ -35,7 +34,15 @@ from src.execution.order_models import (
     TradeRecord,
     _ensure_utc,
 )
-from src.logging.trade_logger import TradeLogger, _clean_float, _to_epoch, _to_iso, parse_config_metadata
+from src.logging.trade_logger import (
+    TradeLogger,
+    _clean_float,
+    _to_epoch,
+    _to_iso,
+    canonicalize_config,
+    compute_config_hash,
+    parse_config_metadata,
+)
 from src.report.metrics import _to_dt
 
 
@@ -199,18 +206,8 @@ def _sanitize_for_json(obj: Any) -> Any:
 
 
 def _portable_config(obj: Any, key: str = "") -> Any:
-    """Remove machine-specific absolute paths from persisted report config."""
-    if isinstance(obj, dict):
-        return {str(k): _portable_config(v, str(k)) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_portable_config(v, key) for v in obj]
-    if isinstance(obj, tuple):
-        return tuple(_portable_config(v, key) for v in obj)
-    if isinstance(obj, str) and any(token in key.lower() for token in ("path", "dir", "file")):
-        candidate = Path(obj)
-        if candidate.is_absolute():
-            return candidate.name
-    return obj
+    """Backward-compatible alias for the shared canonical config policy."""
+    return canonicalize_config(obj, key)
 
 
 class ReportGenerator:
@@ -250,8 +247,7 @@ class ReportGenerator:
 
         artifact_config = _portable_config(config)
         meta = parse_config_metadata(artifact_config)
-        config_canonical_str = json.dumps(artifact_config, sort_keys=True, ensure_ascii=False, default=str)
-        config_hash = hashlib.sha256(config_canonical_str.encode("utf-8")).hexdigest()
+        config_hash = compute_config_hash(artifact_config)
         accounting_rec = _validate_accounting(metrics, broker)
         metrics = dict(metrics)
         metrics.update({
@@ -266,6 +262,7 @@ class ReportGenerator:
             "total_funding_trades": accounting_rec["funding_cashflow"],
             "total_net_pnl": accounting_rec["net_realized_pnl"],
             "accounting_invariants_verified": True,
+            "config_hash": config_hash,
         })
         code_commit_sha = metrics.get("code_commit_sha") or _get_git_commit_sha()
 
@@ -520,8 +517,7 @@ class ReportGenerator:
         end_t = _to_iso(metrics.get("end_time")) or meta["end_date"] or "N/A"
 
         code_commit_sha = str(metrics.get("code_commit_sha") or _get_git_commit_sha())
-        config_canonical_str = json.dumps(config, sort_keys=True, ensure_ascii=False, default=str)
-        config_hash = hashlib.sha256(config_canonical_str.encode("utf-8")).hexdigest()
+        config_hash = compute_config_hash(config)
 
         init_cap = float(metrics.get("initial_capital", 10000.0))
         fin_eq = float(metrics.get("final_equity", init_cap))
@@ -540,6 +536,12 @@ class ReportGenerator:
 
         tot_trades = int(metrics.get("total_trades", 0))
         win_rate = float(metrics.get("win_rate", 0.0))
+        loss_rate = float(metrics.get("loss_rate", 0.0))
+        average_realized_rrr = metrics.get("average_realized_rrr")
+        average_realized_rrr_str = (
+            f"{float(average_realized_rrr):+.2f} R"
+            if average_realized_rrr is not None else "N/A"
+        )
         win_cnt = int(metrics.get("win_trades_count", 0))
         loss_cnt = int(metrics.get("loss_trades_count", 0))
         be_cnt = int(metrics.get("breakeven_trades_count", 0))
@@ -559,6 +561,7 @@ class ReportGenerator:
         cb_status = str(metrics.get("circuit_breaker_status", "ACTIVE"))
         cb_multiplier = metrics.get("circuit_breaker_risk_multiplier", 1.0)
         cb_rej = metrics.get("circuit_breaker_rejections_count", 0)
+        cb_lock_count = metrics.get("circuit_breaker_lock_count", 0)
         margin_rej = metrics.get("margin_rejections_count", metrics.get("orders_rejected_count", 0))
         audit_status = "PASSED" if metrics.get("accounting_invariants_verified") is True else "FAILED"
         benchmark = metrics.get("benchmark_comparison", {})
@@ -597,6 +600,8 @@ class ReportGenerator:
 | **Profit Factor** | `{pf_str}` |
 | **Expectancy (USD)** | `${exp_usd:+,.2f}` |
 | **Expectancy (R)** | `{exp_r_str}` |
+| **Loss Rate** | `{loss_rate:.2f}%` |
+| **Average Realized RRR** | `{average_realized_rrr_str}` |
 
 ---
 
@@ -615,6 +620,7 @@ class ReportGenerator:
 | **Net Realized PnL** | `${tot_net_pnl:+,.2f}` | Gross - Fees + Funding |
 | **Kiểm toán Bất biến Kế toán** | `{audit_status}` | Sai lệch vượt tolerance sẽ làm report thất bại |
 | **Trạng thái Circuit Breaker** | `{cb_status}` | Multiplier: `{cb_multiplier}` |
+| **Circuit Breaker Activations / Lock Count** | `{cb_lock_count}` lần | Số lần khóa được ghi nhận |
 | **Từ chối Lệnh do Ký quỹ (Margin Gate)** | `{margin_rej}` lần | Độc lập với Circuit Breaker |
 | **Từ chối Lệnh do Circuit Breaker** | `{cb_rej}` lần | Khóa khi chạm ngưỡng rủi ro |
 

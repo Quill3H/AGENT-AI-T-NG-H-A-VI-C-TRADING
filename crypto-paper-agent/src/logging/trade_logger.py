@@ -113,6 +113,46 @@ def parse_config_metadata(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def canonicalize_config(obj: Any, key: str = "") -> Any:
+    """Return a portable logical config for hashes and persisted metadata.
+
+    Runtime configs may contain absolute cache/output roots. Those locations are
+    deployment details, so they are represented by stable placeholders while
+    relative paths are normalized to POSIX form. Other values remain unchanged.
+    """
+    key_lower = key.lower()
+    if isinstance(obj, dict):
+        return {str(k): canonicalize_config(v, str(k)) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [canonicalize_config(v, key) for v in obj]
+    if isinstance(obj, tuple):
+        return [canonicalize_config(v, key) for v in obj]
+    if isinstance(obj, Path):
+        obj = str(obj)
+    if isinstance(obj, str) and any(token in key_lower for token in ("path", "dir", "file", "root")):
+        candidate = Path(obj)
+        if candidate.is_absolute():
+            if "raw" in key_lower:
+                return "<RAW_DATA_DIR>"
+            if "processed" in key_lower:
+                return "<PROCESSED_DATA_DIR>"
+            return "<ABSOLUTE_PATH>"
+        return candidate.as_posix()
+    return obj
+
+
+def compute_config_hash(config: Dict[str, Any]) -> str:
+    """Compute the canonical SHA-256 identity shared by all Stage 6 artifacts."""
+    canonical_json = json.dumps(
+        canonicalize_config(config),
+        sort_keys=True,
+        ensure_ascii=False,
+        allow_nan=False,
+        default=str,
+    )
+    return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+
 def _format_conviction_tier(tier: Any) -> str:
     """Quy chuẩn conviction tier sang định dạng chuẩn Master Spec."""
     if not tier:
@@ -195,7 +235,7 @@ def compute_canonical_payload_hash(
     - metrics.
     """
     full_payload = {
-        "config": _normalize_for_canonical_hash(config),
+        "config": _normalize_for_canonical_hash(canonicalize_config(config)),
         "run_metadata": _normalize_for_canonical_hash(run_metadata),
         "orders": [_normalize_for_canonical_hash(o) for o in orders],
         "trades": [_normalize_for_canonical_hash(t) for t in trades],
@@ -371,7 +411,8 @@ class TradeLogger:
         if not run_id:
             raise ValueError("run_id cannot be empty")
 
-        meta = parse_config_metadata(config)
+        canonical_config = canonicalize_config(config)
+        meta = parse_config_metadata(canonical_config)
         strategy_name = meta["strategy_name"]
         symbol = meta["symbol"]
         tf_signal = meta["timeframe_signal"]
@@ -388,7 +429,7 @@ class TradeLogger:
         profit_factor = _clean_float(metrics.get("profit_factor"))
         max_drawdown = float(metrics.get("max_drawdown_pct", metrics.get("max_drawdown", 0.0)))
         sharpe_ratio = _clean_float(metrics.get("sharpe_ratio"))
-        config_json = json.dumps(config, ensure_ascii=False, allow_nan=False, sort_keys=True, default=str)
+        config_json = json.dumps(canonical_config, ensure_ascii=False, allow_nan=False, sort_keys=True, default=str)
         metrics_json = json.dumps(metrics, ensure_ascii=False, allow_nan=False, sort_keys=True, default=str)
         created_at = datetime.now(timezone.utc).isoformat()
 
@@ -410,7 +451,7 @@ class TradeLogger:
         }
 
         payload_hash = compute_canonical_payload_hash(
-            config=config,
+            config=canonical_config,
             run_metadata=run_metadata,
             orders=orders,
             trades=trades,

@@ -123,6 +123,11 @@ def test_generator_produces_all_six_artifacts(tmp_path):
         "loss_trades_count": 0,
         "breakeven_trades_count": 0,
         "win_rate": 100.0,
+        "loss_rate": 0.0,
+        "average_realized_rrr": 1.97,
+        "circuit_breaker_lock_count": 2,
+        "circuit_breaker_rejections_count": 1,
+        "margin_rejections_count": 3,
         "total_fees": 8.2,
         "total_gross_pnl": 500.0,
         "total_funding_trades": 0.0,
@@ -169,6 +174,12 @@ def test_generator_produces_all_six_artifacts(tmp_path):
     assert "Disclosures & Benchmark Caveats" in md_text
     assert "BTCUSDT" in md_text
     assert "Accounting Reconciliation & Risk Audit" in md_text
+    assert "Loss Rate" in md_text
+    assert "0.00%" in md_text
+    assert "Average Realized RRR" in md_text
+    assert "+1.97 R" in md_text
+    assert "Circuit Breaker Activations / Lock Count" in md_text
+    assert "`2` lần" in md_text
 
     # 4. Kiểm tra trades.json chuẩn xác schema Master Spec Mục 4.6
     with open(artifacts["trades.json"], "r", encoding="utf-8") as f:
