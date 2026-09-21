@@ -571,6 +571,17 @@ def _fetch_funding_chunk(
 # Merge & Align
 # ---------------------------------------------------------------------------
 
+def funding_readiness(frame, settlement_hours=(0, 8, 16)):
+    """Past rates are observations; a due cashflow requires an exact source event."""
+    ready = (frame["funding_rate"].notna() & np.isfinite(frame["funding_rate"])
+             & frame["funding_time"].notna()
+             & (frame["funding_time"] <= frame.index)
+             & (frame["funding_time"] >= frame.index - pd.Timedelta(hours=24)))
+    boundary = frame.index.hour.isin(settlement_hours) & (frame.index.minute == 0)
+    boundary &= (frame.index.second == 0) & (frame.index.microsecond == 0) & (frame.index.nanosecond == 0)
+    return (ready & (~boundary | (frame["funding_time"] == frame.index))).astype(bool)
+
+
 def merge_ohlcv_with_oi_and_funding(
     ohlcv_df: pd.DataFrame,
     oi_df: pd.DataFrame,
@@ -640,12 +651,8 @@ def merge_ohlcv_with_oi_and_funding(
             tolerance=tolerance,   # QUAN TRỌNG: chỉ forward-fill tối đa max_ffill nến
         )
 
-        is_finite_rate = df["funding_rate"].notna() & np.isfinite(df["funding_rate"])
-        has_valid_time = df["funding_time"].notna()
-        not_future = df["funding_time"] <= df.index
-        not_stale = df["funding_time"] >= (df.index - pd.Timedelta(hours=24))
-
-        df["funding_readiness"] = (is_finite_rate & has_valid_time & not_future & not_stale).astype(bool)
+        hours = config.get("funding_rate", {}).get("settlement_hours_utc", [0, 8, 16])
+        df["funding_readiness"] = funding_readiness(df, hours)
     else:
         df["funding_rate"] = float("nan")
         df["funding_time"] = pd.NaT

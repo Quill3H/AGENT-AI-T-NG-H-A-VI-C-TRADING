@@ -225,6 +225,9 @@ class Position:
             self.initial_stop_loss_price = self.stop_loss_price
         if self.initial_liquidation_price is None:
             self.initial_liquidation_price = self.liquidation_price
+        self.metadata = dict(self.metadata)
+        self.metadata["lifecycle_id"] = self.position_id
+        self.metadata.setdefault("lifecycle_quantity", self.quantity)
 
     def notional_value(self, current_price: float) -> float:
         """Giá trị danh nghĩa theo giá hiện tại."""
@@ -246,8 +249,8 @@ class Position:
 @dataclass
 class TradeRecord:
     """
-    Bản ghi đầy đủ của một giao dịch đã tất toán (Position đã đóng hoàn tất).
-    Dùng cho việc kiểm toán, thống kê streak của Circuit Breaker và sinh báo cáo.
+    Realized exit slice, including full exits. Metadata records lifecycle identity,
+    original quantity and completion; reports aggregate completed lifecycles.
     """
     trade_id: str
     symbol: str

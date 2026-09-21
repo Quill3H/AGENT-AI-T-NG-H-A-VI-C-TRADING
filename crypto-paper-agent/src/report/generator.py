@@ -603,6 +603,11 @@ class ReportGenerator:
 | **Expectancy (R)** | `{exp_r_str}` |
 | **Loss Rate** | `{loss_rate:.2f}%` |
 | **Average Realized RRR** | `{average_realized_rrr_str}` |
+| **Completed Position Lifecycles** | `{tot_trades}` |
+| **Realization Slices** | `{int(metrics.get("realization_slices", {}).get("total_trades", tot_trades))}` |
+
+Win rate, expectancy and SQN use completed position lifecycles. Realization slices
+remain separate ledger rows; cash PnL also includes realized portions of open positions.
 
 ---
 

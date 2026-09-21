@@ -170,6 +170,17 @@ def calculate_max_drawdown(
 def calculate_trade_metrics(
     trades: List[Union[TradeRecord, Dict[str, Any]]],
 ) -> Dict[str, Any]:
+    """Primary statistics use completed positions; raw slice amounts remain visible."""
+    from src.report.lifecycles import completed_lifecycles
+
+    slices = _calculate_record_metrics(trades)  # validate even unfinished cash records
+    result = _calculate_record_metrics(completed_lifecycles(trades))
+    result["sample_unit"] = "completed_position_lifecycle"
+    result["realization_slices"] = {**slices, "sample_unit": "realization_slice"}
+    return result
+
+
+def _calculate_record_metrics(trades):
     """
     Tính toán các chỉ số chi tiết trên tập hợp các giao dịch đã đóng.
     """
@@ -387,8 +398,10 @@ def calculate_backtest_metrics(
             return item.get(name, default)
         return getattr(item, name, default)
 
-    long_trades = [t for t in trades if _get_trade_field(t, "direction") == OrderDirection.LONG]
-    short_trades = [t for t in trades if _get_trade_field(t, "direction") == OrderDirection.SHORT]
+    from src.report.lifecycles import completed_lifecycles
+    completed = completed_lifecycles(trades)
+    long_trades = [t for t in completed if _get_trade_field(t, "direction") == OrderDirection.LONG]
+    short_trades = [t for t in completed if _get_trade_field(t, "direction") == OrderDirection.SHORT]
     long_wins = [t for t in long_trades if _get_trade_field(t, "net_pnl", 0.0) > 0]
     short_wins = [t for t in short_trades if _get_trade_field(t, "net_pnl", 0.0) > 0]
 
@@ -436,8 +449,9 @@ def calculate_backtest_metrics(
     open_positions = getattr(broker, "positions", {})
     open_position_values = open_positions.values() if isinstance(open_positions, dict) else open_positions
     open_entry_fees = sum(float(getattr(p, "entry_fee", 0.0)) for p in open_position_values)
-    ledger_gross_pnl = float(trade_stats["total_gross_pnl"])
-    ledger_fees = float(trade_stats["total_fees"]) + open_entry_fees
+    slice_stats = trade_stats["realization_slices"]
+    ledger_gross_pnl = float(slice_stats["total_gross_pnl"])
+    ledger_fees = float(slice_stats["total_fees"]) + open_entry_fees
     funding_history = getattr(broker, "funding_history", None)
     if funding_history:
         ledger_funding = sum(
@@ -446,7 +460,7 @@ def calculate_backtest_metrics(
             for f in funding_history
         )
     else:
-        ledger_funding = float(trade_stats["total_funding_trades"])
+        ledger_funding = float(slice_stats["total_funding_trades"])
 
     ledger_net_pnl = ledger_gross_pnl - ledger_fees + ledger_funding
     actual_wallet = float(broker.wallet_balance)
@@ -480,7 +494,9 @@ def calculate_backtest_metrics(
 
     reference = {"BREAKOUT_RETEST": (40.0, 50.0), "SMC_LIQUIDITY_SWEEP": (50.0, 60.0)}.get(meta["strategy_name"].upper(), (35.0, 45.0))
     metrics = {
-        "sample_unit": "realization_slice; partial exits are not independent completed trades",
+        "sample_unit": "completed_position_lifecycle",
+        "realization_slices": slice_stats,
+        "completed_lifecycle_net_pnl": trade_stats["total_net_pnl"],
         "bars_by_timeframe": {meta["timeframe_signal"]: bars_4h_count, meta["timeframe_execution"]: bars_15m_count},
         # Metadata
         "symbol": meta["symbol"],

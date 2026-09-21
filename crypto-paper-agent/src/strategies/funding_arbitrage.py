@@ -129,6 +129,8 @@ class FundingArbitrageSimulator:
                     raise ValueError("funding_readiness must be True at settlement")
                 number(row.funding_rate, "funding_rate", minimum=-1, maximum=1)
                 source_time(row.funding_time, ts, "funding_time")
+                if pd.Timestamp(row.funding_time) != ts:
+                    raise ValueError("FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary")
         if not frame.empty:
             required_times = pd.date_range(
                 frame.index[0].normalize(), frame.index[-1], freq=f"{self.period}h"
@@ -243,9 +245,10 @@ class FundingArbitrageSimulator:
                 if reason:
                     unwind(ts, spot, perp, reason)
                 elif self._settlement(ts):
-                    if ts in settled:
+                    event_time = pd.Timestamp(row.funding_time)
+                    if event_time in settled:
                         raise ValueError("duplicate settlement identity")
-                    settled.add(ts)
+                    settled.add(event_time)
                     cashflow = r.quantity * perp * float(row.funding_rate)
                     r.perp_collateral += cashflow
                     r.funding_cashflow += cashflow

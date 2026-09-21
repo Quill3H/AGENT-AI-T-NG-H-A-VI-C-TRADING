@@ -465,6 +465,11 @@ class PaperBroker:
                         raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
                     if f_dt < open_time - timedelta(hours=24):
                         raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+                    if f_dt != open_time:
+                        raise ValueError(
+                            f"FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary {open_time.isoformat()}; "
+                            f"received {f_dt.isoformat()} (observation is not a settlement event)"
+                        )
 
                     # J2: Pre-check liquidation solver với candidate collateral (zero mutation if solver fails)
                     direction_sign = 1.0 if pos.direction == OrderDirection.LONG else -1.0
@@ -572,7 +577,7 @@ class PaperBroker:
         if symbol in self.positions:
             pos = self.positions[symbol]
             if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
-                f_key = (symbol, open_time)
+                f_key = (symbol, f_dt)  # exact source event validated in preflight
                 if f_key not in self._settled_funding_keys:
                     raw_rate = candle.get("funding_rate", 0.0)
                     f_rate = float(raw_rate)
@@ -774,6 +779,7 @@ class PaperBroker:
                 position_metadata.update({
                     "entry_equity": entry_equity,
                     "risk_ratio_percent": actual_risk_ratio_percent,
+                    "lifecycle_quantity": calc_quantity,
                 })
                 if req.partial_exits:
                     sign = 1 if req.direction == OrderDirection.LONG else -1
@@ -1004,6 +1010,10 @@ class PaperBroker:
         position.exit_price = exit_price
         position.exit_reason = exit_reason
         position.exit_fee = exit_fee
+        # Record identity/completion independently of raw realization row IDs.
+        # Entry metadata belongs to the caller, so overwrite identity and terminal state.
+        position.metadata["lifecycle_id"] = position.position_id
+        position.metadata["lifecycle_complete"] = remaining is None
 
         trade_rec = TradeRecord(
             trade_id=self._next_trade_id(position.symbol, exit_time),

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import pandas as pd
 from src.research.artifacts import dataset_manifest
+from src.data_layer.fetcher import funding_readiness
 
 
 def main():
@@ -86,9 +87,7 @@ def main():
     merged = pd.merge_asof(
         perp, funding, left_index=True, right_index=True, direction="backward"
     )
-    merged["funding_readiness"] = merged.funding_rate.notna() & (
-        merged.index - merged.funding_time <= pd.Timedelta(hours=24)
-    )
+    merged["funding_readiness"] = funding_readiness(merged)
     lag = pd.merge_asof(
         perp.iloc[:, :0],
         funding,
@@ -124,7 +123,7 @@ def main():
         bars = pd.merge_asof(
             bars, funding, left_index=True, right_index=True, direction="backward"
         )
-        bars["funding_readiness"] = bars.funding_rate.notna()
+        bars["funding_readiness"] = funding_readiness(bars)
         datasets[tf] = bars
     manifests = {}
     for name, df in datasets.items():
