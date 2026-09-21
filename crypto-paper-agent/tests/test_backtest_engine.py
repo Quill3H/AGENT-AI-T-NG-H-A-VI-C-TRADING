@@ -536,15 +536,15 @@ def test_replay_determinism_and_accounting_invariants(backtest_env):
 # 13. CLI --no-fetch, override date, path độc lập CWD và strategy chưa hỗ trợ
 # ===========================================================================
 
-def test_cli_unsupported_strategy_fails_clearly():
+def test_cli_invalid_strategy_fails_clearly():
     cmd = [
         sys.executable,
         str(PROJECT_ROOT / "run_backtest.py"),
-        "--strategy", "breakout_retest",
+        "--strategy", "invalid_strategy",
     ]
-    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
-    assert res.returncode == 1
-    assert "not implemented" in res.stderr.lower() or "not implemented" in res.stdout.lower()
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, timeout=30)
+    assert res.returncode != 0
+    assert "invalid choice" in res.stderr.lower() or "invalid strategy" in res.stderr.lower()
 
 
 def test_cli_no_fetch_missing_cache_fails_clearly():
@@ -556,7 +556,7 @@ def test_cli_no_fetch_missing_cache_fails_clearly():
         "--end", "1990-01-10",
         "--no-fetch",
     ]
-    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     assert res.returncode == 1
     assert "incomplete" in res.stderr.lower() or "error" in res.stderr.lower()
 
@@ -621,6 +621,7 @@ def test_cli_cwd_independence(tmp_path):
         text=True,
         encoding="utf-8",
         errors="replace",
+        timeout=90,
     )
     assert res.returncode == 0, f"CLI failed from external CWD:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
     assert "BACKTEST EXECUTION REPORT" in res.stdout

@@ -37,17 +37,30 @@ class BreakoutRetestStrategy(BaseStrategy):
         self.max_setup_age_bars = int(rules.get("max_setup_age_bars", 6))
         self.level_tolerance_pct = float(rules.get("level_tolerance_pct", 0.001))
         self.rrr = float(rules.get("rrr", 2.0))
+        self.stop_buffer_pct = float(rules.get("stop_buffer_pct", 0.002))
+        for name in ("lookback_bars", "max_setup_age_bars"):
+            value = rules.get(name, 20 if name == "lookback_bars" else 6)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        for name, value in (("rrr", self.rrr), ("volume_multiplier", self.volume_multiplier),
+                            ("retest_volume_max", self.retest_volume_max), ("stop_buffer_pct", self.stop_buffer_pct)):
+            if type(rules.get(name)) is bool or not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive")
+        if not 0 <= self.level_tolerance_pct < 1 or not self.stop_buffer_pct < 1:
+            raise ValueError("tolerance/buffer must be fractions below one")
         self.leverage = float(config.get("leverage", 2.0))
         self.base_risk_percent = float(config.get("base_risk_percent", 0.02))
         self.default_conviction = str(config.get("default_conviction", "normal"))
         self.setup = BreakoutSetup()
         self.setup_count = 0
         self.candidate_count = 0
+        self._last_event = None
 
     def reset_state(self) -> None:
         self.setup.reset()
         self.setup_count = 0
         self.candidate_count = 0
+        self._last_event = None
 
     @staticmethod
     def _finite(value: Any) -> Optional[float]:
@@ -64,10 +77,21 @@ class BreakoutRetestStrategy(BaseStrategy):
         return bool(positions) or bool(getattr(broker, "pending_orders", []))
 
     def on_candle_close(self, candle_4h: Dict[str, Any], history_4h: pd.DataFrame, broker_state: Any) -> Optional[OrderRequest]:
+        current_time = _ensure_utc(candle_4h.get("close_time") or candle_4h.get("timestamp"))
+        if self._last_event is not None:
+            if current_time < self._last_event:
+                raise ValueError("strategy event time reversal")
+            if current_time == self._last_event:
+                return None
+        self._last_event = current_time
         if history_4h is None or len(history_4h) < self.lookback + 1:
             return None
         current = history_4h.iloc[-1]
         prior = history_4h.iloc[-(self.lookback + 1):-1]
+        # Reject an incomplete baseline; pandas mean/max would silently skip NaN.
+        for column in ("high", "low", "volume"):
+            if any(self._finite(v) is None or float(v) <= 0 for v in prior[column]):
+                return None
         close = self._finite(current.get("close"))
         high = self._finite(current.get("high"))
         low = self._finite(current.get("low"))
@@ -77,7 +101,6 @@ class BreakoutRetestStrategy(BaseStrategy):
         avg_volume = self._finite(prior["volume"].mean())
         if None in (close, high, low, volume, prior_high, prior_low, avg_volume) or avg_volume <= 0:
             return None
-        current_time = _ensure_utc(candle_4h.get("close_time") or candle_4h.get("timestamp"))
 
         if self.setup.direction is not None:
             self.setup.age += 1
@@ -95,10 +118,10 @@ class BreakoutRetestStrategy(BaseStrategy):
                 elif retest_volume and not self._has_active_position(broker_state):
                     if direction == OrderDirection.LONG:
                         retest = low <= level * (1 + self.level_tolerance_pct) and close > level
-                        stop = min(low, level * (1 - 0.002))
+                        stop = min(low, level * (1 - self.stop_buffer_pct))
                     else:
                         retest = high >= level * (1 - self.level_tolerance_pct) and close < level
-                        stop = max(high, level * (1 + 0.002))
+                        stop = max(high, level * (1 + self.stop_buffer_pct))
                     risk_distance = abs(close - stop)
                     if retest and risk_distance > 0 and math.isfinite(risk_distance):
                         take_profit = close + self.rrr * risk_distance if direction == OrderDirection.LONG else close - self.rrr * risk_distance

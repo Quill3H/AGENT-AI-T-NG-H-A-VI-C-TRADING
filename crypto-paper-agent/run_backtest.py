@@ -40,7 +40,9 @@ from src.data_layer.cache_manager import (
 )
 from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
 from src.report.generator import ReportGenerator
-from src.logging.trade_logger import compute_config_hash
+from src.logging.trade_logger import compute_config_hash, snapshot_run_config
+from src.features.news_calendar import NewsCalendarFilter
+from src.execution.paper_broker import PaperBroker
 from src.strategies.trend_following import TrendFollowingStrategy
 from src.strategies.breakout_retest import BreakoutRetestStrategy
 from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
@@ -197,6 +199,12 @@ def main():
     else:
         raw_dir = (PROJECT_ROOT / raw_val).resolve()
     config["data"]["raw_data_dir"] = str(raw_dir)
+    calendar = Path(config.get("news_filter", {}).get("calendar_file", "data/news_calendar.csv"))
+    if not calendar.is_absolute():
+        calendar = PROJECT_ROOT / calendar
+    config.setdefault("news_filter", {})["calendar_file"] = str(calendar)
+    news_filter = NewsCalendarFilter(config)
+    persisted_config = snapshot_run_config(config, news_filter)
 
     # 4. Xác định khoảng thời gian start và end
     start_str = args.start or config.get("data", {}).get("start_date", "2021-01-01")
@@ -249,7 +257,7 @@ def main():
     sym_clean = symbol.replace("/", "").replace(":", "").lower()
     start_iso = start_dt.isoformat()
     end_iso = end_dt.isoformat()
-    config_hash = compute_config_hash(config)
+    config_hash = compute_config_hash(persisted_config)
 
     run_seed = f"{code_sha}|{strat_clean}|{sym_clean}|{start_iso}|{end_iso}|{config_hash}"
     deterministic_hash = hashlib.sha256(run_seed.encode("utf-8")).hexdigest()[:12]
@@ -362,6 +370,7 @@ def main():
         data_15m=data["15m"],
         strategy=strategy,
         symbol=symbol,
+        broker=PaperBroker(config=config, news_filter=news_filter),
     )
 
     # 7. Chạy Backtest
@@ -453,7 +462,7 @@ def main():
         generator = ReportGenerator(base_reports_dir=output_dir)
         artifacts = generator.generate_all(
             run_id=run_id,
-            config=config,
+            config=persisted_config,
             metrics=metrics,
             broker=engine.broker,
             custom_output_dir=output_dir,

@@ -35,7 +35,7 @@ def test_breakout_waits_for_retest_and_builds_rrr_two_order():
     assert req.metadata["rrr"] == 2.0
 
 
-def test_breakout_fakeout_invalidation_and_short_symmetry():
+def test_long_breakout_fakeout_invalidation():
     strategy = BreakoutRetestStrategy(_cfg())
     history = _history([100, 100, 100, 100, 103], [10, 10, 10, 10, 20])
     candle = {**history.iloc[-1].to_dict(), "close_time": history.index[-1].to_pydatetime()}
@@ -44,3 +44,63 @@ def test_breakout_fakeout_invalidation_and_short_symmetry():
     candle = {**invalid.iloc[-1].to_dict(), "close_time": invalid.index[-1].to_pydatetime()}
     assert strategy.on_candle_close(candle, invalid, type("B", (), {"positions": {}, "pending_orders": []})()) is None
     assert strategy.setup.direction is None
+
+import pytest
+from dataclasses import asdict
+
+
+def _call(strategy, frame, broker=None):
+    broker = broker or type('B', (), {'positions': {}, 'pending_orders': []})()
+    return strategy.on_candle_close({'close_time': frame.index[-1].to_pydatetime()}, frame, broker)
+
+
+@pytest.mark.parametrize('short', [False, True])
+def test_real_long_short_retest_and_duplicate_event(short):
+    prices = [100, 100, 100, 100, 103, 101.8]
+    if short: prices = [200-p for p in prices]
+    frame = _history(prices, [10,10,10,10,20,5])
+    s = BreakoutRetestStrategy(_cfg())
+    assert _call(s, frame.iloc[:-1]) is None
+    age = s.setup.age
+    assert _call(s, frame.iloc[:-1]) is None
+    assert s.setup.age == age
+    req = _call(s, frame)
+    assert req is not None
+    assert req.direction == (OrderDirection.SHORT if short else OrderDirection.LONG)
+    assert abs(req.take_profit_price-req.signal_price) == pytest.approx(2*abs(req.signal_price-req.stop_loss_price))
+    assert _call(s, frame) is None
+    assert s.candidate_count == 1
+
+
+def test_setup_timeout_high_volume_retest_and_pending_conflict():
+    cfg = _cfg(); cfg['breakout']['max_setup_age_bars'] = 1
+    s = BreakoutRetestStrategy(cfg)
+    f = _history([100,100,100,100,103,101.8,101.8], [10,10,10,10,20,18,5])
+    assert _call(s, f.iloc[:5]) is None
+    assert _call(s, f.iloc[:6]) is None
+    assert _call(s, f) is None
+    assert s.setup.direction is None
+    s = BreakoutRetestStrategy(_cfg())
+    _call(s, f.iloc[:5])
+    f.iloc[-1, f.columns.get_loc('volume')] = 5
+    assert _call(s, f, type('B', (), {'positions': {}, 'pending_orders': [object()]})()) is None
+
+
+def test_invalid_historical_volume_cannot_be_skipped_in_baseline():
+    f = _history([100,100,100,100,103], [10,10,float('nan'),10,20])
+    s = BreakoutRetestStrategy(_cfg())
+    assert _call(s, f) is None
+    assert s.setup_count == 0
+
+
+def test_future_perturbation_preserves_orders():
+    f = _history([100,100,100,100,103,101.8,110,120], [10,10,10,10,20,5,20,50])
+    changed = f.copy(); changed.iloc[6:, :4] *= 2
+    def orders(frame):
+        s = BreakoutRetestStrategy(_cfg()); result=[]
+        for i in range(1, 7):
+            req = _call(s, frame.iloc[:i])
+            if req: result.append(asdict(req))
+        return result
+    assert len(orders(f)) == 1
+    assert orders(f) == orders(changed)

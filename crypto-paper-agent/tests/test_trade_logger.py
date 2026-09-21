@@ -557,3 +557,30 @@ def test_enabled_news_calendar_identity_uses_content_digest(tmp_path):
     assert compute_config_hash(config_a) != compute_config_hash(config_b)
     second.write_text(content, encoding="utf-8")
     assert compute_config_hash(config_a) == compute_config_hash(config_c)
+
+@pytest.mark.parametrize('as_path', [True, False])
+def test_calendar_identity_idempotent_and_path_equivalent(tmp_path, as_path):
+    from src.logging.trade_logger import canonicalize_config
+    f = tmp_path / 'calendar.csv'
+    f.write_text('datetime_utc,event\n', encoding='utf-8')
+    cfg = {'news_filter': {'enabled': True, 'calendar_file': f if as_path else str(f)}}
+    canonical = canonicalize_config(cfg)
+    assert canonical['news_filter']['calendar_content_sha256']
+    assert canonicalize_config(canonical) == canonical
+    assert compute_config_hash(cfg) == compute_config_hash(canonical)
+    assert compute_config_hash(cfg) == compute_config_hash({'news_filter': {'enabled': True, 'calendar_file': str(f)}})
+
+
+def test_snapshot_uses_parsed_bytes_after_source_changes(tmp_path):
+    from src.logging.trade_logger import snapshot_run_config
+    from src.features.news_calendar import NewsCalendarFilter
+    f = tmp_path / 'calendar.csv'
+    f.write_text('datetime_utc,event\n2024-01-01T00:00:00Z,CPI\n', encoding='utf-8')
+    cfg = {'news_filter': {'enabled': True, 'calendar_file': f}}
+    news = NewsCalendarFilter(cfg)
+    expected = compute_config_hash(cfg)
+    f.write_text('datetime_utc,event\n', encoding='utf-8')
+    frozen = snapshot_run_config(cfg, news)
+    assert compute_config_hash(frozen) == expected
+    assert compute_config_hash(cfg) != expected
+    assert len(news.events) == 1

@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 import math
+import hashlib
+from io import BytesIO
 import pandas as pd
 from loguru import logger
 
@@ -88,6 +90,7 @@ class NewsCalendarFilter:
         self._events: List[EconomicEvent] = []
         self.is_ready: bool = True if not self.enabled else False
         self.load_error: Optional[str] = None
+        self.source_sha256: Optional[str] = None
 
         if events is not None:
             self._events = list(events)
@@ -120,6 +123,7 @@ class NewsCalendarFilter:
         Không âm thầm nuốt lỗi hoặc bỏ qua dòng HIGH hỏng.
         """
         path = Path(file_path)
+        self.source_sha256 = None
         if not path.exists():
             self.load_error = f"CALENDAR_LOAD_ERROR: Calendar file not found: '{file_path}'"
             self.is_ready = False
@@ -128,7 +132,9 @@ class NewsCalendarFilter:
             return
 
         try:
-            df = pd.read_csv(path)
+            content = path.read_bytes()
+            self.source_sha256 = hashlib.sha256(content).hexdigest()
+            df = pd.read_csv(BytesIO(content))
             time_col = "datetime_utc" if "datetime_utc" in df.columns else ("timestamp" if "timestamp" in df.columns else None)
             if not time_col:
                 self.load_error = (

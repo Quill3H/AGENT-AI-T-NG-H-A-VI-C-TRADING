@@ -130,7 +130,7 @@ def canonicalize_config(obj: Any, key: str = "") -> Any:
         news_cfg = obj.get("news_filter")
         if isinstance(news_cfg, dict) and bool(news_cfg.get("enabled", False)):
             raw_calendar = news_cfg.get("calendar_file")
-            if isinstance(raw_calendar, str) and not raw_calendar.startswith("<"):
+            if isinstance(raw_calendar, (str, Path)) and not str(raw_calendar).startswith("<"):
                 calendar_path = Path(raw_calendar)
                 if calendar_path.is_file():
                     result["news_filter"]["calendar_file"] = "<NEWS_CALENDAR>"
@@ -149,6 +149,8 @@ def canonicalize_config(obj: Any, key: str = "") -> Any:
         obj = str(obj)
     if isinstance(obj, str) and key_lower in portable_path_keys:
         candidate = Path(obj)
+        if obj.startswith("<") and obj.endswith(">"):
+            return obj
         if candidate.is_absolute():
             if "raw" in key_lower:
                 return "<RAW_DATA_DIR>"
@@ -159,6 +161,21 @@ def canonicalize_config(obj: Any, key: str = "") -> Any:
             return f"<{key.upper()}>"
         return candidate.as_posix()
     return obj
+
+
+def snapshot_run_config(config: Dict[str, Any], news_filter: Any) -> Dict[str, Any]:
+    """Identity of the exact calendar bytes parsed by the run's news filter.
+
+    No filesystem reads here. Reuse this immutable-by-convention copy for the run
+    ID and all persisted artifacts, even when the source file later changes.
+    """
+    from copy import deepcopy
+    frozen = deepcopy(config)
+    if news_filter.enabled:
+        news = frozen.setdefault("news_filter", {})
+        news["calendar_file"] = "<NEWS_CALENDAR>" if news_filter.source_sha256 else "<MISSING_NEWS_CALENDAR>"
+        news["calendar_content_sha256"] = news_filter.source_sha256
+    return canonicalize_config(frozen)
 
 
 def compute_config_hash(config: Dict[str, Any]) -> str:
