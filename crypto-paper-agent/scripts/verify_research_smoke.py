@@ -81,7 +81,14 @@ def main():
                 (cfg["strategy"]["timeframe_signal"], signal),
                 (cfg["strategy"]["timeframe_execution"], execution),
             ):
-                save_to_cache(frame, str(cache), "binance", "BTCUSDT", tf, "ohlcv")
+                save_to_cache(
+                    frame[["open", "high", "low", "close", "volume"]],
+                    str(cache),
+                    "binance",
+                    "BTCUSDT",
+                    tf,
+                    "ohlcv",
+                )
             funding = (
                 execution.loc[
                     execution.index.isin(execution.funding_time), ["funding_rate"]
