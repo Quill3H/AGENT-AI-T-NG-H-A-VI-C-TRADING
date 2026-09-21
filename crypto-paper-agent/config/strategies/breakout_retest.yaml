@@ -1,0 +1,17 @@
+strategy:
+  name: "BREAKOUT_RETEST"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+breakout:
+  lookback_bars: 20
+  volume_multiplier: 1.5
+  retest_volume_max: 1.0
+  max_setup_age_bars: 6
+  level_tolerance_pct: 0.001
+  rrr: 2.0

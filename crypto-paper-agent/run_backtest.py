@@ -42,6 +42,8 @@ from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
 from src.report.generator import ReportGenerator
 from src.logging.trade_logger import compute_config_hash
 from src.strategies.trend_following import TrendFollowingStrategy
+from src.strategies.breakout_retest import BreakoutRetestStrategy
+from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
 
 
 def _load_yaml(file_path: Path) -> Dict[str, Any]:
@@ -158,10 +160,10 @@ def main():
 
 
     # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
-    if args.strategy != "trend_following":
+    if args.strategy not in {"trend_following", "breakout_retest", "smc_liquidity_sweep"}:
         sys.stderr.write(
-            f"ERROR: Strategy '{args.strategy}' is not implemented in Stage 5. "
-            f"Only 'trend_following' is supported. Out of scope strategies fail-closed.\n"
+            f"ERROR: Strategy '{args.strategy}' is not implemented in the current rule-based runner. "
+            f"Supported strategies: trend_following, breakout_retest, smc_liquidity_sweep.\n"
         )
         sys.exit(1)
 
@@ -348,7 +350,12 @@ def main():
 
     # 6. Khởi tạo Strategy và BacktestEngine
     print("\n[Engine] Initializing TrendFollowingStrategy and BacktestEngine...")
-    strategy = TrendFollowingStrategy(config=config, symbol=symbol)
+    strategy_cls = {
+        "trend_following": TrendFollowingStrategy,
+        "breakout_retest": BreakoutRetestStrategy,
+        "smc_liquidity_sweep": SMCLiquiditySweepStrategy,
+    }[args.strategy]
+    strategy = strategy_cls(config=config, symbol=symbol)
     engine = BacktestEngine(
         config=config,
         data_4h=data["4h"],

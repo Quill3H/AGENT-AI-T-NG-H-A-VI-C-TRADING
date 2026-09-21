@@ -28,7 +28,7 @@ from src.execution.order_models import (
     OrderType,
     TradeRecord,
 )
-from src.logging.trade_logger import TradeLogger, parse_config_metadata
+from src.logging.trade_logger import TradeLogger, compute_config_hash, parse_config_metadata
 
 
 @pytest.fixture
@@ -534,3 +534,26 @@ def test_nested_production_config_mapping():
     assert meta["start_date"] == "2021-01-01"
     assert meta["end_date"] == "2023-12-31"
     assert "{" not in meta["strategy_name"]
+
+
+def test_config_hash_does_not_normalize_unrelated_keys(tmp_path):
+    base = {"strategy": "TREND_FOLLOWING", "metadata": {"directory_name": "alpha"}}
+    changed = {"strategy": "TREND_FOLLOWING", "metadata": {"directory_name": "beta"}}
+    assert compute_config_hash(base) != compute_config_hash(changed)
+
+
+def test_enabled_news_calendar_identity_uses_content_digest(tmp_path):
+    first = tmp_path / "one" / "calendar.csv"
+    second = tmp_path / "two" / "calendar.csv"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    content = "datetime_utc,event,impact\n2023-01-01T00:00:00Z,CPI,HIGH\n"
+    first.write_text(content, encoding="utf-8")
+    second.write_text(content, encoding="utf-8")
+    config_a = {"news_filter": {"enabled": True, "calendar_file": str(first)}}
+    config_b = {"news_filter": {"enabled": True, "calendar_file": str(second)}}
+    config_c = {"news_filter": {"enabled": True, "calendar_file": str(second)}}
+    second.write_text(content.replace("CPI", "FOMC"), encoding="utf-8")
+    assert compute_config_hash(config_a) != compute_config_hash(config_b)
+    second.write_text(content, encoding="utf-8")
+    assert compute_config_hash(config_a) == compute_config_hash(config_c)

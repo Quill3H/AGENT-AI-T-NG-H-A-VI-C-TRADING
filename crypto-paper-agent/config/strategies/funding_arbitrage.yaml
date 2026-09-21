@@ -1,0 +1,7 @@
+strategy:
+  name: "FUNDING_ARBITRAGE"
+  enabled: true
+funding_arbitrage:
+  min_apr: 0.15
+  funding_period_hours: 8
+  negative_cycles_to_exit: 2

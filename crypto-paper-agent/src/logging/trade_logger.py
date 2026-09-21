@@ -121,22 +121,42 @@ def canonicalize_config(obj: Any, key: str = "") -> Any:
     relative paths are normalized to POSIX form. Other values remain unchanged.
     """
     key_lower = key.lower()
+    portable_path_keys = {
+        "raw_data_dir", "processed_data_dir", "output_dir", "db_path",
+        "trade_log_db", "trade_log_json_dir", "calendar_file",
+    }
     if isinstance(obj, dict):
-        return {str(k): canonicalize_config(v, str(k)) for k, v in obj.items()}
+        result = {str(k): canonicalize_config(v, str(k)) for k, v in obj.items()}
+        news_cfg = obj.get("news_filter")
+        if isinstance(news_cfg, dict) and bool(news_cfg.get("enabled", False)):
+            raw_calendar = news_cfg.get("calendar_file")
+            if isinstance(raw_calendar, str) and not raw_calendar.startswith("<"):
+                calendar_path = Path(raw_calendar)
+                if calendar_path.is_file():
+                    result["news_filter"]["calendar_file"] = "<NEWS_CALENDAR>"
+                    result["news_filter"]["calendar_content_sha256"] = hashlib.sha256(
+                        calendar_path.read_bytes()
+                    ).hexdigest()
+                else:
+                    result["news_filter"]["calendar_file"] = "<MISSING_NEWS_CALENDAR>"
+                    result["news_filter"]["calendar_content_sha256"] = None
+        return result
     if isinstance(obj, list):
         return [canonicalize_config(v, key) for v in obj]
     if isinstance(obj, tuple):
         return [canonicalize_config(v, key) for v in obj]
     if isinstance(obj, Path):
         obj = str(obj)
-    if isinstance(obj, str) and any(token in key_lower for token in ("path", "dir", "file", "root")):
+    if isinstance(obj, str) and key_lower in portable_path_keys:
         candidate = Path(obj)
         if candidate.is_absolute():
             if "raw" in key_lower:
                 return "<RAW_DATA_DIR>"
             if "processed" in key_lower:
                 return "<PROCESSED_DATA_DIR>"
-            return "<ABSOLUTE_PATH>"
+            if key_lower == "calendar_file":
+                return "<NEWS_CALENDAR>"
+            return f"<{key.upper()}>"
         return candidate.as_posix()
     return obj
 
