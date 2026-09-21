@@ -130,3 +130,11 @@ Task hiện hành: **ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TI�
 “Tôi tiếp tục dự án Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING. Hãy đọc PLANNER_HANDOVER.md ở gốc repo, PROJECT_STATE.md và review mới nhất trên GitHub rồi làm planner tiếp; kiểm tra trạng thái hiện tại, không dựa vào trí nhớ chat cũ.”
 
 Nếu không còn kết nối GitHub, người dùng có thể gửi bản hồ sơ và PROJECT_STATE hiện tại. Không cần gửi lại toàn bộ lịch sử chat.
+
+## Implementation handoff Stage 7-11 (2026-09-21)
+
+Working branch: `codex/stage-06-to-11-completion`.
+
+Implemented modules are paper/research only. Stage 7 and Stage 9 are wired into the existing 4h signal/15m execution runner. Stage 8 is a standalone explicit-leg simulator with fail-closed input validation. Stage 10 provides split/comparison helpers. Stage 11 provides a risk-aware environment and explicitly refuses to claim PPO completion when dependencies are absent.
+
+Evidence: source files under `crypto-paper-agent/src/strategies`, `src/features`, `src/research`; configs under `config/strategies`; focused tests under `tests`. Test execution used pytest after installing missing local dependencies; full suite remains NOT_VERIFIED.

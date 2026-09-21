@@ -507,3 +507,7 @@ Status: **ĐÃ KHẮC PHỤC — ĐANG CHỜ GPT REVIEW 12 LẦN TIẾP THEO**
 - File cấu hình trung tâm `config/default_config.yaml` và các config chiến lược mẫu (`trend_following.yaml`, `smc_liquidity_sweep.yaml`).
 - Chốt 4 quyết định kỹ thuật: `news_filter.enabled: false`, `start_date: "2021-01-01"`, `recovery_mode: "after_3_wins"`, loại bỏ hoàn toàn phần thừa RL.
 - Cập nhật `requirements.txt` tương thích Python 3.13 (`numpy>=2.1.0`).
+
+## 2026-09-21 — Stage 7-11 implementation checkpoint
+
+Added causal Breakout/Retest, Funding Arbitrage simulator, SMC liquidity-sweep strategy/features, walk-forward comparison utilities, and optional risk-aware RL environment. Extended runner for Breakout/Retest and SMC. Added explicit NOT_VERIFIED/BLOCKED labels where dependencies or execution paths are incomplete. No live trading, testnet, API keys, or main merge.

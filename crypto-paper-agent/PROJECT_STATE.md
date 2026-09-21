@@ -193,3 +193,13 @@
 1. **Giới hạn Binance REST API cho OI:** Endpoint `/fapi/v1/openInterestHist` chỉ trả về tối đa 30 ngày. Đã giải quyết bằng cơ chế Hybrid kết hợp Binance Data Vision cho dữ liệu sâu.
 2. **Warm-up Period 199 nến đầu của EMA 200 là NaN:** Đây là tính chất toán học chuẩn mực của TA-Lib (`presma=True`), không phải bug. Các chiến lược khi chạy backtest sẽ bắt đầu quét lệnh sau khi đã đủ 200 nến.
 3. **CVD Flatline khi thiếu Taker Buy Volume:** Nếu klines API không có cột `taker_buy_base_volume` (hoặc có giá trị `NaN`), hệ thống ước tính bằng 50% volume $\to \text{delta} = 0$, khiến đường CVD đi ngang (flatline) thay vì ném ngoại lệ làm crash engine. Đã thêm log cảnh báo chi tiết trong `cvd.py`. **LƯU Ý NGHIỆP VỤ:** Nếu sau này thấy `cvd_divergence` có vẻ bất thường ở một giai đoạn cụ thể, đây là nghi phạm đầu tiên cần kiểm tra xem dữ liệu sàn trong giai đoạn đó có bị khuyết taker buy volume hay không.
+
+## Stage 7-11 implementation checkpoint (2026-09-21)
+
+- Stage 7: `BreakoutRetestStrategy` added with causal prior-range breakout, delayed retest, volume filters, timeout/invalidation, LONG/SHORT symmetry and configurable RRR. CLI supports `breakout_retest`.
+- Stage 8: `FundingArbitrageSimulator` added with explicit `spot_close`, `perp_close`, and `funding_rate` inputs, separate leg PnL, fees, funding cashflow and two-negative-cycle exit. Standalone config added. Main multi-timeframe runner remains NOT_VERIFIED for this strategy.
+- Stage 9: causal SMC features and `SMCLiquiditySweepStrategy` added. Confirmed swings are delayed by `swing_n`; sweep/FVG entries emit partial-exit metadata. CLI supports `smc_liquidity_sweep`. Full 1m/5m execution and order-block confluence are NOT_VERIFIED.
+- Stage 10: deterministic `walk_forward_splits` and `compare_metrics` utilities added. No performance claim is made; AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED.
+- Stage 11: paper-only `RiskAwareTradingEnv` added with reward `net change - 0.5*drawdown - 1.0*violation`. PPO training is BLOCKED/NOT_VERIFIED unless `stable-baselines3` and a reviewed Gymnasium adapter are installed.
+
+Validation in this environment: `python -m compileall -q src run_backtest.py tests` passed. `pytest` could not run because the active Python environment has no pytest module. No live/testnet execution or API keys were used.
