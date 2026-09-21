@@ -478,7 +478,10 @@ def calculate_backtest_metrics(
     margin_rejections = sum(cnt for r, cnt in rejection_reasons_tally.items() if "MARGIN" in r.upper())
     cb_rejections = sum(cnt for r, cnt in rejection_reasons_tally.items() if "CIRCUIT_BREAKER" in r.upper() or "HALTED" in r.upper())
 
+    reference = {"BREAKOUT_RETEST": (40.0, 50.0), "SMC_LIQUIDITY_SWEEP": (50.0, 60.0)}.get(meta["strategy_name"].upper(), (35.0, 45.0))
     metrics = {
+        "sample_unit": "realization_slice; partial exits are not independent completed trades",
+        "bars_by_timeframe": {meta["timeframe_signal"]: bars_4h_count, meta["timeframe_execution"]: bars_15m_count},
         # Metadata
         "symbol": meta["symbol"],
         "strategy": meta["strategy_name"],
@@ -567,6 +570,7 @@ def calculate_backtest_metrics(
         "benchmark_comparison": classify_benchmark_win_rate(
             trade_stats["win_rate"],
             trade_stats["total_trades"],
+            expected_min=reference[0], expected_max=reference[1],
         ),
     }
 

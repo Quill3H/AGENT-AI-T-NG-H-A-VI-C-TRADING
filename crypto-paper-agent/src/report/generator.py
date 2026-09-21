@@ -57,6 +57,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
+            newline="\n",
             dir=path.parent,
             prefix=f".{path.name}.",
             suffix=".tmp",
@@ -588,7 +589,7 @@ class ReportGenerator:
 | **Strategy** | `{strategy}` |
 | **Symbol / Timeframes** | `{symbol}` (Signal: `{tf_sig}`, Execution: `{tf_exec}`) |
 | **Backtest Period (UTC)** | `{start_t}` $\\rightarrow$ `{end_t}` |
-| **Bars Processed** | 15m=`{bars_15m}`, 4h=`{bars_4h}` |
+| **Bars Processed** | {tf_exec}=`{bars_15m}`, {tf_sig}=`{bars_4h}` |
 | **Candle Gaps Detected** | `{metrics.get("candle_gaps_count", 0)}` (Max gap: `{metrics.get("max_gap_duration_seconds", 0)}s`) |
 | **Initial Capital** | `${init_cap:,.2f} USDT` |
 | **Final Equity** | `${fin_eq:,.2f} USDT` |

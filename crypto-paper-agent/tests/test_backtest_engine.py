@@ -627,3 +627,9 @@ def test_cli_cwd_independence(tmp_path):
     assert "BACKTEST EXECUTION REPORT" in res.stdout
     assert "PASSED (wallet_balance matches ledger)" in res.stdout
     assert "[STATUS: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED]" in res.stdout
+
+
+def test_utc_parquet_roundtrip_is_accepted_by_engine(tmp_path):
+    from src.research.synthetic import smc_frames
+    frame,_=smc_frames();path=tmp_path/'utc.parquet';frame.to_parquet(path)
+    BacktestEngine.validate_dataset(pd.read_parquet(path),'UTC Parquet roundtrip')

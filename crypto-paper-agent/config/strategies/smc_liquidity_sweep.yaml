@@ -1,6 +1,6 @@
 # smc_liquidity_sweep.yaml - Strategy Config: SMC Liquidity Sweep
 # Implement ở Giai đoạn 9 (phức tạp nhất)
-# Expected win rate benchmark: 45-60%
+# Expected win rate benchmark: 50-60%
 
 strategy:
   name: "SMC_LIQUIDITY_SWEEP"
@@ -22,7 +22,7 @@ smc:
 # Entry: tại 50% của FVG
 entry:
   method: "fvg_50pct"
-  require_order_block_confluence: true   # cần OB trùng với FVG
+  require_order_block_confluence: true   # directional OB body within smc.ob_max_distance_atr of FVG
 
 # Cấu hình OI Confluence (Phương án B: fallback khi thiếu dữ liệu lịch sử)
 oi_confluence:
@@ -35,7 +35,7 @@ stop_loss:
   buffer_pct: 0.002             # thêm 0.2% buffer
 
 take_profit:
-  method: "previous_high_low"   # TP tại đỉnh/đáy cấu trúc trước
+  method: "partial_r_then_trailing"   # 40% at 1.5R, 30% at 3R, 30% trailing
   rrr_min: 2.0
   partial_exits: [[1.5, 0.4], [3.0, 0.3]]
 

@@ -89,6 +89,12 @@ class BacktestEngine:
         self.timeframe_execution = strat_cfg.get("timeframe_execution", "15m")
         self.duration_signal = timeframe_to_timedelta(self.timeframe_signal)
         self.duration_exec = timeframe_to_timedelta(self.timeframe_execution)
+        for frame, duration in ((self.data_4h, self.duration_signal), (self.data_15m, self.duration_exec)):
+            if (frame.index.to_series().diff().dropna() < duration).any():
+                raise ValueError("overlapping candles for configured timeframe")
+        if hasattr(strategy, "prime"):
+            warm = self.data_4h.loc[self.data_4h.index + self.duration_signal <= self.data_15m.index[0]]
+            strategy.prime(warm)
 
         # 7. Bộ đếm theo dõi
         self.submitted_orders_count = 0
@@ -108,7 +114,7 @@ class BacktestEngine:
         if not isinstance(df.index, pd.DatetimeIndex):
             raise TypeError(f"Dataset {name} index must be DatetimeIndex, got {type(df.index).__name__}")
 
-        if df.index.tz is None or df.index.tz != timezone.utc:
+        if df.index.tz is None or str(df.index.tz) not in ("UTC", "UTC+00:00"):
             raise ValueError(f"Dataset {name} DatetimeIndex must have UTC timezone.")
 
         if not df.index.is_monotonic_increasing:
@@ -270,8 +276,8 @@ class BacktestEngine:
         from src.report.metrics import calculate_backtest_metrics
         gap_details: Dict[str, Dict[str, Any]] = {}
         for label, frame, timeframe in (
-            ("15m", self.data_15m, self.timeframe_execution),
-            ("4h", self.data_4h, self.timeframe_signal),
+            (self.timeframe_execution, self.data_15m, self.timeframe_execution),
+            (self.timeframe_signal, self.data_4h, self.timeframe_signal),
         ):
             expected = pd.Timedelta(timeframe_to_timedelta(timeframe))
             deltas = frame.index.to_series().diff().dropna()

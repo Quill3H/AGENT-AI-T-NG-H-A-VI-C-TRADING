@@ -87,6 +87,8 @@ class NewsCalendarFilter:
         self.blackout_before: int = int(self.news_cfg.get("blackout_minutes_before", 15))
         self.blackout_after: int = int(self.news_cfg.get("blackout_minutes_after", 15))
         self.calendar_file: str = self.news_cfg.get("calendar_file", "data/news_calendar.csv")
+        if not Path(self.calendar_file).is_absolute():
+            self.calendar_file = str(Path(__file__).resolve().parents[2] / self.calendar_file)
         self._events: List[EconomicEvent] = []
         self.is_ready: bool = True if not self.enabled else False
         self.load_error: Optional[str] = None
@@ -125,7 +127,7 @@ class NewsCalendarFilter:
         path = Path(file_path)
         self.source_sha256 = None
         if not path.exists():
-            self.load_error = f"CALENDAR_LOAD_ERROR: Calendar file not found: '{file_path}'"
+            self.load_error = f"CALENDAR_LOAD_ERROR: Calendar file not found: '<NEWS_CALENDAR>'"
             self.is_ready = False
             self._events = []
             logger.warning("[NewsFilter] {}", self.load_error)
@@ -138,7 +140,7 @@ class NewsCalendarFilter:
             time_col = "datetime_utc" if "datetime_utc" in df.columns else ("timestamp" if "timestamp" in df.columns else None)
             if not time_col:
                 self.load_error = (
-                    f"CALENDAR_LOAD_ERROR: File CSV '{file_path}' missing time column "
+                    f"CALENDAR_LOAD_ERROR: File CSV '<NEWS_CALENDAR>' missing time column "
                     f"('datetime_utc' or 'timestamp'). Available columns: {list(df.columns)}"
                 )
                 self.is_ready = False
@@ -149,7 +151,7 @@ class NewsCalendarFilter:
             name_col = "event" if "event" in df.columns else ("event_name" if "event_name" in df.columns else None)
             if not name_col:
                 self.load_error = (
-                    f"CALENDAR_LOAD_ERROR: File CSV '{file_path}' missing event name column "
+                    f"CALENDAR_LOAD_ERROR: File CSV '<NEWS_CALENDAR>' missing event name column "
                     f"('event' or 'event_name'). Available columns: {list(df.columns)}"
                 )
                 self.is_ready = False
@@ -182,7 +184,7 @@ class NewsCalendarFilter:
                     impact = str(row[impact_col]).strip().upper() if impact_col and not pd.isna(row[impact_col]) else "HIGH"
                     loaded.append(EconomicEvent(timestamp=dt, event_name=name, impact=impact))
                 except Exception as row_err:
-                    self.load_error = f"CALENDAR_LOAD_ERROR: Malformed or unparseable row {idx} in '{file_path}': {row_err}"
+                    self.load_error = f"CALENDAR_LOAD_ERROR: Malformed or unparseable row {idx} in '<NEWS_CALENDAR>': {row_err}"
                     self.is_ready = False
                     self._events = []
                     logger.warning("[NewsFilter] {}", self.load_error)
@@ -193,7 +195,7 @@ class NewsCalendarFilter:
             self.load_error = None
             logger.info("[NewsFilter] Đã nạp thành công {} sự kiện kinh tế từ '{}'", len(self._events), file_path)
         except Exception as e:
-            self.load_error = f"CALENDAR_LOAD_ERROR: Error parsing calendar file '{file_path}': {e}"
+            self.load_error = f"CALENDAR_LOAD_ERROR: Error parsing calendar file '<NEWS_CALENDAR>': {type(e).__name__}"
             self.is_ready = False
             self._events = []
             logger.warning("[NewsFilter] {}", self.load_error)

@@ -550,6 +550,24 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "GAP_EXIT", "trade": trade_rec})
 
+        # Gap partial take-profits execute before funding, just like full gap TP.
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            targets = pos.metadata.get("partial_targets", [])
+            for idx in range(pos.metadata.get("partials_done", 0), len(targets)):
+                target, fraction = targets[idx]
+                crossed = open_p >= target if pos.direction == OrderDirection.LONG else open_p <= target
+                if not crossed:
+                    break
+                price = open_p * (1 - self.slippage_pct if pos.direction == OrderDirection.LONG else 1 + self.slippage_pct)
+                self._execute_exit(pos, price, open_time, ExitReason.TAKE_PROFIT,
+                                   quantity=pos.metadata["original_quantity"] * fraction)
+                if symbol not in self.positions:
+                    break
+                pos = self.positions[symbol]
+                pos.metadata["partials_done"] = idx + 1
+                pos.metadata["breakeven_pending"] = True
+
         # PHA 2: Funding Settlement (chỉ cho vị thế còn sống qua Pha 1)
         if symbol in self.positions:
             pos = self.positions[symbol]
@@ -735,6 +753,14 @@ class PaperBroker:
 
             is_valid, reasons = check_all_invariants(order_dict, account_state, self.config)
 
+            if is_valid and req.partial_exits:
+                sign = 1 if req.direction == OrderDirection.LONG else -1
+                distance = abs(fill_price - req.stop_loss_price)
+                if any(not math.isfinite(fill_price + sign * rr * distance) or fill_price + sign * rr * distance <= 0
+                       for rr, _ in req.partial_exits):
+                    is_valid = False
+                    reasons = ["EXECUTION_REJECT_INVALID_PARTIAL_TARGET"]
+
             if is_valid:
                 entry_fee = calc_notional * self.taker_fee_pct
                 initial_margin = calc_notional / req.leverage
@@ -896,6 +922,11 @@ class PaperBroker:
             if pos.metadata.get("breakeven_pending"):
                 if self.update_stop_loss(symbol, pos.entry_price):
                     pos.metadata["breakeven_pending"] = False
+                elif ((pos.direction == OrderDirection.LONG and close_p <= pos.entry_price)
+                      or (pos.direction == OrderDirection.SHORT and close_p >= pos.entry_price)):
+                    # Closed below/above BE before it could become effective:
+                    # queue a next-open exit; do not invent an earlier BE fill.
+                    self.request_close(symbol, close_time)
 
         if self.equity <= 0:
             self.is_halted = True

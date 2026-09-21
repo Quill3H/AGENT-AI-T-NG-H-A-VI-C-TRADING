@@ -125,8 +125,8 @@ def test_cli_end_to_end_with_report_generation(hermetic_env):
         str(PROJECT_ROOT / "run_backtest.py"),
         "--config", str(cfg_file),
         "--strategy", "trend_following",
-        "--start", "2023-01-01",
-        "--end", "2023-01-03",
+        "--start", "2023-01-01T00:00:00+00:00",
+        "--end", "2023-01-03T23:59:59+00:00",
         "--no-fetch",
         "--output-dir", str(output_dir),
         "--run-id", run_id,
@@ -138,7 +138,7 @@ def test_cli_end_to_end_with_report_generation(hermetic_env):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        errors="replace",
+        errors="replace", timeout=90,
     )
 
     assert res.returncode == 0, f"CLI error:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
@@ -206,7 +206,7 @@ def test_cli_no_report_flag(hermetic_env):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        errors="replace",
+        errors="replace", timeout=90,
     )
 
     assert res.returncode == 0
@@ -230,19 +230,19 @@ def test_zero_semantic_drift_between_reporting_modes(hermetic_env):
         str(PROJECT_ROOT / "run_backtest.py"),
         "--config", str(cfg_file),
         "--strategy", "trend_following",
-        "--start", "2023-01-01",
-        "--end", "2023-01-03",
+        "--start", "2023-01-01T00:00:00+00:00",
+        "--end", "2023-01-03T23:59:59+00:00",
         "--no-fetch",
     ]
 
     # Chạy 1: Có sinh report
     cmd1 = cmd_base + ["--output-dir", str(out_dir_1), "--run-id", "run_with_report"]
-    res1 = subprocess.run(cmd1, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res1 = subprocess.run(cmd1, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res1.returncode == 0
 
     # Chạy 2: Không sinh report (--no-report)
     cmd2 = cmd_base + ["--output-dir", str(out_dir_2), "--run-id", "run_without_report", "--no-report"]
-    res2 = subprocess.run(cmd2, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res2 = subprocess.run(cmd2, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res2.returncode == 0
 
     # So sánh các chỉ số trong stdout
@@ -277,14 +277,14 @@ def test_deterministic_run_id_across_invocations(hermetic_env):
         str(PROJECT_ROOT / "run_backtest.py"),
         "--config", str(cfg_file),
         "--strategy", "trend_following",
-        "--start", "2023-01-01",
-        "--end", "2023-01-03",
+        "--start", "2023-01-01T00:00:00+00:00",
+        "--end", "2023-01-03T23:59:59+00:00",
         "--no-fetch",
         "--output-dir", str(output_dir),
     ]
 
     # Run 1
-    res1 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res1 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res1.returncode == 0
     run_id_1 = None
     for line in res1.stdout.splitlines():
@@ -294,7 +294,7 @@ def test_deterministic_run_id_across_invocations(hermetic_env):
     assert run_id_1 is not None and len(run_id_1) > 0
 
     # Run 2 (same parameters)
-    res2 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res2 = subprocess.run(cmd_base, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res2.returncode == 0
     run_id_2 = None
     for line in res2.stdout.splitlines():
@@ -314,7 +314,7 @@ def test_deterministic_run_id_across_invocations(hermetic_env):
         "--no-fetch",
         "--output-dir", str(output_dir),
     ]
-    res3 = subprocess.run(cmd3, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res3 = subprocess.run(cmd3, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res3.returncode == 0
     run_id_3 = None
     for line in res3.stdout.splitlines():
@@ -355,7 +355,7 @@ def test_config_identity_is_cross_root_and_sensitive_to_fees(hermetic_env, tmp_p
                 "--no-fetch", "--output-dir", str(output),
             ],
             cwd=str(tmp_path / "outside"),
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90,
         )
         assert result.returncode == 0, result.stderr
         run_id = next(line.split(":", 1)[1].strip() for line in result.stdout.splitlines() if line.startswith("Run ID"))
@@ -409,7 +409,7 @@ def test_cwd_independence_and_path_resolution(hermetic_env, tmp_path):
         "--output-dir", str(abs_out_dir),
         "--run-id", "run_abs_cwd_1",
     ]
-    res1 = subprocess.run(cmd1, cwd=str(cwd_1), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res1 = subprocess.run(cmd1, cwd=str(cwd_1), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res1.returncode == 0
     assert (abs_out_dir / "run_abs_cwd_1" / "summary.json").is_file()
 
@@ -425,7 +425,7 @@ def test_cwd_independence_and_path_resolution(hermetic_env, tmp_path):
         "--output-dir", str(abs_out_dir),
         "--run-id", "run_abs_cwd_2",
     ]
-    res2 = subprocess.run(cmd2, cwd=str(cwd_2), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res2 = subprocess.run(cmd2, cwd=str(cwd_2), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res2.returncode == 0
     assert (abs_out_dir / "run_abs_cwd_2" / "summary.json").is_file()
 
@@ -452,7 +452,7 @@ def test_future_perturbation_report_invariance(hermetic_env, tmp_path):
         "--output-dir", str(out_dir_1),
         "--run-id", "run_perturb_pre",
     ]
-    res1 = subprocess.run(cmd, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res1 = subprocess.run(cmd, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res1.returncode == 0
 
     # Đọc trades.json lần 1
@@ -489,7 +489,7 @@ def test_future_perturbation_report_invariance(hermetic_env, tmp_path):
         "--output-dir", str(out_dir_2),
         "--run-id", "run_perturb_post",
     ]
-    res2 = subprocess.run(cmd2, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res2 = subprocess.run(cmd2, cwd=str(tmp_dir), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     assert res2.returncode == 0
 
     with open(out_dir_2 / "run_perturb_post" / "trades.json", "r", encoding="utf-8") as f:

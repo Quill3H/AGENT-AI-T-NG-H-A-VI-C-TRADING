@@ -158,15 +158,22 @@ def main():
         action="store_true",
         help="Chạy backtest nhưng không xuất file báo cáo (artifacts)",
     )
+    parser.add_argument("--basket-input", help="Explicit spot/perp quote Parquet for funding_arbitrage")
+    parser.add_argument("--comparison-data-dir", help="Parquet directory for four-strategy walk-forward")
+    parser.add_argument("--train-bars", type=int, default=1440)
+    parser.add_argument("--test-bars", type=int, default=1440)
+    parser.add_argument("--source", default="SUPPLIED_DATA_NOT_VERIFIED")
     args = parser.parse_args()
 
 
     # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
-    if args.strategy not in {"trend_following", "breakout_retest", "smc_liquidity_sweep"}:
+    if args.strategy == "funding_arbitrage" and not args.basket_input:
         sys.stderr.write(
-            f"ERROR: Strategy '{args.strategy}' is not implemented in the current rule-based runner. "
-            f"Supported strategies: trend_following, breakout_retest, smc_liquidity_sweep.\n"
+            "ERROR: funding_arbitrage requires --basket-input with explicit spot/perp quotes.\n"
         )
+        sys.exit(1)
+    if args.strategy == "all" and not args.comparison_data_dir:
+        sys.stderr.write("ERROR: all requires --comparison-data-dir.\n")
         sys.exit(1)
 
     # 2. Xử lý đường dẫn độc lập CWD
@@ -183,14 +190,32 @@ def main():
 
     # 3. Tải và hợp nhất cấu hình
     base_config = _load_yaml(config_path)
+    if args.strategy in {"all", "funding_arbitrage"}:
+        from src.research.artifacts import dataset_manifest, persist_basket
+        output = Path(args.output_dir)
+        if not output.is_absolute():
+            output = PROJECT_ROOT / output
+        if args.strategy == "all":
+            from src.research.workflow import run_comparison
+            directory = Path(args.comparison_data_dir)
+            data = {k: pd.read_parquet(directory / f"{k}.parquet") for k in ("4h", "15m", "5m", "1m", "basket")}
+            run_comparison(data, base_config, output, args.train_bars, args.test_bars, source=args.source)
+        else:
+            from src.strategies.funding_arbitrage import FundingArbitrageSimulator
+            frame = pd.read_parquet(args.basket_input)
+            simulator = FundingArbitrageSimulator(base_config)
+            result = simulator.simulate(frame, base_config["account"]["initial_equity_usd"])
+            persist_basket(output, result, simulator.persisted_config, dataset_manifest(frame, args.source, "BTCUSDT", "spot_and_perpetual", "1m"))
+        return 0
 
     # Đọc thêm config riêng của chiến lược nếu có
     strat_cfg_path = PROJECT_ROOT / "config" / "strategies" / f"{args.strategy}.yaml"
     if strat_cfg_path.is_file():
         strat_cfg = _load_yaml(strat_cfg_path)
-        config = _deep_merge_dict(base_config, strat_cfg)
+        config = _deep_merge_dict(strat_cfg, base_config)
     else:
         config = base_config
+    config.setdefault("strategy", {})["name"] = args.strategy.upper()
 
     # Điều chỉnh raw_data_dir thành đường dẫn tuyệt đối
     raw_val = Path(config.get("data", {}).get("raw_data_dir", "data/raw"))
@@ -211,7 +236,7 @@ def main():
     end_str = args.end or config.get("data", {}).get("end_date", "2023-12-31")
 
     try:
-        start_dt = pd.Timestamp(start_str, tz="UTC")
+        start_dt = pd.to_datetime(start_str, utc=True)
         if len(start_str) == 10:  # Format YYYY-MM-DD
             start_dt = start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     except Exception as e:
@@ -219,7 +244,7 @@ def main():
         sys.exit(1)
 
     try:
-        end_dt = pd.Timestamp(end_str, tz="UTC")
+        end_dt = pd.to_datetime(end_str, utc=True)
         if len(end_str) == 10:  # Format YYYY-MM-DD -> inclusive to end of day
             end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
     except Exception as e:
@@ -420,7 +445,8 @@ def main():
     print(f"  - SHORT Trades     : {metrics['short_trades_count']} (Win: {metrics['win_rate_short']:.1f}%)")
     print(f"Trade Outcomes       : {metrics['win_trades_count']} Win / {metrics['loss_trades_count']} Loss / {metrics['breakeven_trades_count']} Breakeven")
     benchmark_note = _format_benchmark_note(metrics)
-    print(f"Win Rate (Overall)   : {metrics['win_rate']:.2f}% (Reference: 35-45%; {benchmark_note})")
+    comparison = metrics["benchmark_comparison"]
+    print(f"Win Rate (Overall)   : {metrics['win_rate']:.2f}% (Reference: {comparison['expected_min']:g}-{comparison['expected_max']:g}%; {benchmark_note})")
     print(f"Loss Rate (Overall)  : {metrics['loss_rate']:.2f}%")
     print(f"Win Rate (LONG)      : {metrics['win_rate_long']:.2f}%")
     print(f"Win Rate (SHORT)     : {metrics['win_rate_short']:.2f}%")

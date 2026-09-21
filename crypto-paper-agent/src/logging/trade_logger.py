@@ -132,6 +132,8 @@ def canonicalize_config(obj: Any, key: str = "") -> Any:
             raw_calendar = news_cfg.get("calendar_file")
             if isinstance(raw_calendar, (str, Path)) and not str(raw_calendar).startswith("<"):
                 calendar_path = Path(raw_calendar)
+                if not calendar_path.is_absolute():
+                    calendar_path = Path(__file__).resolve().parents[2] / calendar_path
                 if calendar_path.is_file():
                     result["news_filter"]["calendar_file"] = "<NEWS_CALENDAR>"
                     result["news_filter"]["calendar_content_sha256"] = hashlib.sha256(
