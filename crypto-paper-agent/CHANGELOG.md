@@ -1,5 +1,10 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Owner-directed single-main integration] — 2026-09-23
+
+- Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.
+- No strategy, broker, funding, risk or test code changed. Independent acceptance and economic validation remain pending. Preserved unrelated local dirty files without staging them. See [owner sync decision](docs/planning/2026-09-23-main-sync-decision.md).
+
 ## [G2 public Binance funding-coverage diagnostic] — 2026-09-22
 
 Code-under-test commit: `d4afed6d365b3e435e79a772f7de912ee4a39b11`. Documentation commit: see Git history and final handoff. **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED; G2 NOT ACCEPTED.**

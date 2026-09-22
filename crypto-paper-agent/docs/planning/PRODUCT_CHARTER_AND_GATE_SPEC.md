@@ -7,6 +7,14 @@ The owner decides product choices and acceptance. The Technical Lead implements;
 Tester produces independent test evidence; Independent Reviewer gives the gate
 verdict; PM coordinates and preserves the decision trail.
 
+Workflow addendum, 2026-09-23: the owner designated `main` as the single active
+integration branch and authorized a fast-forward of the latest G2 snapshot.
+Local and GitHub `main` must be checked for the same SHA after each push. This
+does **not** accept any pending gate or replace separate Tester/Reviewer work.
+The prior no-main-merge instruction is superseded only for branch integration,
+not for risk controls or evidence labels. See
+`docs/planning/2026-09-23-main-sync-decision.md` for the change record.
+
 ## 1. Source of truth and original intent
 
 Read in this order at the start of any new project task:

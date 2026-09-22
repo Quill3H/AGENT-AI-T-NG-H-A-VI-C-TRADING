@@ -1,5 +1,13 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Current single-main integration — 2026-09-23
+
+**OWNER-AUTHORIZED BRANCH CONSOLIDATION; NOT GATE ACCEPTANCE.** `main` is the active integration branch. It was fast-forwarded from `e970337d504563e5987a4db6b5c06c635bf7244b` to G2 docs B `5c191856b4a5877923dabbae5426fffa7f01a9b9` with code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`; local/GitHub refs matched before this documentation-only update. Read the final docs SHA from Git history and the handoff. No force push, rebase, strategy/risk change or gate acceptance occurred.
+
+- Use the primary local checkout on `main` for subsequent scoped work; verify `HEAD`, `origin/main` and remote `refs/heads/main` agree after each push. Keep old worktrees/branches only as historical evidence or isolated tests; do not delete user data automatically.
+- The owner-local dirty `AGENTS.md`, `.serena/` and `crypto-paper-agent/docs/planning/PM_SKILL_MCP_ROUTING.md` are preserved and **not** GitHub-synchronized. Market datasets outside Git remain local evidence, not repository content.
+- G0/G1, functional Stage 6–11 and G2 remain pending separate Tester/Independent Reviewer evidence and owner acceptance. Do not call `main` production-ready or economically validated. Workflow change record: `crypto-paper-agent/docs/planning/2026-09-23-main-sync-decision.md`.
+
 ## Current G2 Binance data diagnostic — 2026-09-22
 
 **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT G2 ACCEPTANCE.** Branch `codex/g2-binance-funding-coverage`, code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`, docs B is the direct documentation-only child (full SHA in Git history/final handoff). Parent B `4b26525cc0c12b73b47d93242b218e24674f1ea6`; `main` observed unchanged at `e970337d504563e5987a4db6b5c06c635bf7244b`.

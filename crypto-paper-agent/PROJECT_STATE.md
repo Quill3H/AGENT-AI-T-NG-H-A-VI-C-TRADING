@@ -1,5 +1,13 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Single-main integration and sync — 2026-09-23
+
+**OWNER-AUTHORIZED INTEGRATION, NOT GATE ACCEPTANCE.** The owner requested one visible `main` workflow and matching local/GitHub committed state. `main` was fast-forwarded (no rebase or force push) from `e970337d504563e5987a4db6b5c06c635bf7244b` to the G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9`. Local `main`, `origin/main` and GitHub `main` matched at that SHA before this documentation-only update; the final documentation SHA is in Git history and the task handoff. Code-under-test remains `d4afed6d365b3e435e79a772f7de912ee4a39b11`.
+
+- `main` is now the active integration branch, not a production-ready or independently accepted release. G0/G1, functional Stage 6–11 and the bounded G2 diagnostic still require separate Tester and Independent Reviewer verdicts. Full historical validation and prospective paper trading remain incomplete.
+- The primary checkout preserves owner-local, uncommitted `AGENTS.md`, `.serena/`, and `docs/planning/PM_SKILL_MCP_ROUTING.md`; those bytes are **not** on GitHub and must not be mistaken for synchronized committed files. Public market-data artifacts outside Git are also not Git-synchronized.
+- Future scoped edits: use the primary local `main` checkout, commit/push without force, then verify the local and remote SHA. Keep temporary worktrees only when isolation is needed for testing. Decision record: `docs/planning/2026-09-23-main-sync-decision.md`.
+
 ## G2 Binance public-data diagnostic — 2026-09-22
 
 **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — G2 NOT ACCEPTED.** Branch `codex/g2-binance-funding-coverage`, code-under-test commit `d4afed6d365b3e435e79a772f7de912ee4a39b11`; documentation commit: see Git history and final handoff. Parent functional candidate B: `4b26525cc0c12b73b47d93242b218e24674f1ea6`. `main` remains `e970337d504563e5987a4db6b5c06c635bf7244b` at author check.
