@@ -39,7 +39,7 @@ def main():
         return 2
 
     import pandas as pd
-    from src.research.artifacts import dataset_manifest
+    from src.research.artifacts import dataset_manifest, funding_settlement_coverage
     from src.data_layer.fetcher import funding_readiness
 
     records = []
@@ -150,6 +150,7 @@ def main():
         )
         bars["funding_readiness"] = funding_readiness(bars)
         datasets[tf] = bars
+    coverage = funding_settlement_coverage(basket, funding)
     output.mkdir(parents=True, exist_ok=False)
     manifests = {}
     for name, df in datasets.items():
@@ -172,6 +173,7 @@ def main():
                 "synthetic": False,
                 "sources": records,
                 "datasets": manifests,
+                "funding_settlement_coverage": coverage,
             },
             indent=2,
         ),

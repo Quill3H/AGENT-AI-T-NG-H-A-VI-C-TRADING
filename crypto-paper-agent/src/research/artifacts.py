@@ -53,6 +53,66 @@ def dataset_manifest(frame, source, symbol, market_type, timeframe):
     }
 
 
+def funding_settlement_coverage(basket, source_events):
+    """Audit exact 8-hour source coverage without changing settlement availability.
+
+    The source-event comparison is retrospective metadata only. A late source
+    event is never made available at the earlier nominal boundary.
+    """
+    time_index(basket)
+    time_index(source_events)
+    required = {"funding_time", "funding_readiness"}
+    if not required.issubset(basket.columns):
+        raise ValueError("basket requires funding_time and funding_readiness")
+    boundaries = (
+        pd.date_range(basket.index[0].ceil("8h"), basket.index[-1], freq="8h")
+        if len(basket)
+        else pd.DatetimeIndex([], tz="UTC")
+    )
+    unready = []
+    missing_rows = 0
+    late_events = 0
+    max_delay_ms = 0
+    for boundary in boundaries:
+        source_exact = boundary in source_events.index
+        if not source_exact:
+            next_pos = source_events.index.searchsorted(boundary, side="right")
+            if next_pos < len(source_events):
+                delay = source_events.index[next_pos] - boundary
+                if pd.Timedelta(0) < delay < pd.Timedelta(minutes=1):
+                    late_events += 1
+                    delay_ms = int(delay / pd.Timedelta(milliseconds=1))
+                    max_delay_ms = max(max_delay_ms, delay_ms)
+        if boundary not in basket.index:
+            missing_rows += 1
+            unready.append(boundary.isoformat())
+            continue
+        row = basket.loc[boundary]
+        ready = row["funding_readiness"]
+        exact = (
+            isinstance(ready, (bool, np.bool_))
+            and bool(ready)
+            and row["funding_time"] == boundary
+            and source_exact
+        )
+        if exact:
+            continue
+        unready.append(boundary.isoformat())
+    expected = len(boundaries)
+    exact_ready = expected - len(unready)
+    return {
+        "schedule": "00:00/08:00/16:00 UTC",
+        "expected": expected,
+        "exact_ready": exact_ready,
+        "unready": len(unready),
+        "missing_basket_rows": missing_rows,
+        "source_late_within_next_minute": late_events,
+        "max_source_delay_ms": max_delay_ms,
+        "unready_boundaries": unready,
+        "exact_funding_coverage_complete": expected > 0 and exact_ready == expected,
+    }
+
+
 def persist_research_run(output, name, config, report):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
