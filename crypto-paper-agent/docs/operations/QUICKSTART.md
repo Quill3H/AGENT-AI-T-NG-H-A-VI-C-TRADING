@@ -1,6 +1,6 @@
 # Paper research quick-start
 
-Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`.
+Code-under-test commit: `d4afed6d365b3e435e79a772f7de912ee4a39b11` (G2 additive data diagnostic); prior functional candidate A: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`.
 
 Run from `crypto-paper-agent/` with Python 3.12 and the pinned project dependencies. Use a **new** output directory each time. The first command is entirely synthetic, uses no exchange credentials or network, and creates six LONG/SHORT strategy lifecycles, a four-account comparison, a 256-step CPU PPO train/save/load/evaluate smoke, and an artifact audit:
 
@@ -17,7 +17,7 @@ python scripts/prepare_public_research_sample.py --start 2024-01-01 --days 3 --o
 python scripts/verify_research_smoke.py --public-dir <NEW_PUBLIC_DIRECTORY> --output <NEW_RESEARCH_DIRECTORY>
 ```
 
-The first command fetches Binance Vision spot/perpetual 1m and funding archives and writes `dataset_manifest.json` with raw URL and archive/CSV hashes. It allows 1–7 days and 0–3 retries, and refuses an existing output target. The second command evaluates the public sample without tuning strategy parameters and also runs synthetic evidence. Read `smoke_results.json`, walk-forward reports and PPO manifests before interpreting results. Three days do not establish economic validity.
+The first command fetches Binance Vision spot/perpetual 1m and funding archives and writes `dataset_manifest.json` with raw URL and archive/CSV hashes. It allows 1–7 days and 0–3 retries, and refuses an existing output target. Read `funding_settlement_coverage`: `exact_funding_coverage_complete=false` means the full-window funding and four-strategy replay must not be presented as completed. Do not round or backdate millisecond-late source events to force the run. The second command evaluates the public sample without tuning strategy parameters and also runs synthetic evidence, but its full-window comparison requires exact funding coverage. Read `smoke_results.json`, walk-forward reports and PPO manifests before interpreting results. Three days do not establish economic validity.
 
 For a near-current read-only public REST snapshot, use `scripts/fetch_market_data.py --symbol BTCUSDT --interval 15m --kline-limit 500 --funding-limit 100 --output-dir <NEW_CACHE_DIRECTORY> --allow-network`. This is a downloader/cache operation, **not** a prospective paper session or proof of complete candles. Inspect timestamps and source availability before replay. Repeated runs require a fresh cache root; existing parquet targets are never overwritten.
 

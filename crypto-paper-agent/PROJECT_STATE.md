@@ -1,5 +1,14 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## G2 Binance public-data diagnostic — 2026-09-22
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — G2 NOT ACCEPTED.** Branch `codex/g2-binance-funding-coverage`, code-under-test commit `d4afed6d365b3e435e79a772f7de912ee4a39b11`; documentation commit: see Git history and final handoff. Parent functional candidate B: `4b26525cc0c12b73b47d93242b218e24674f1ea6`. `main` remains `e970337d504563e5987a4db6b5c06c635bf7244b` at author check.
+
+- New dataset manifest reports exact 8-hour funding-source coverage without rounding/backdating. On a public 2026-08-20 to 2026-08-26 BTCUSDT spot/perpetual sample, all 15 source ZIP checksums matched Binance public `.CHECKSUM`, all six normalized datasets had zero candle gaps, but only **11/21** funding boundaries were exact-ready; 10 source events arrived 1–6 ms late. Full-window funded replay **FAIL_CLOSED** with no output.
+- Fixed-rule seven-day Trend/Breakout each returned `NO_TRADES` with accounting reconciliation; SMC stopped at unready funding. An integrity-selected one-day funded slice returned `NO_TRADES`. A 2026-09-22 near-current REST snapshot was read and the still-open last 15m bar excluded; 9/16 funding boundaries exact, 7 late. No native TradingView test, full historical benchmark, prospective paper session or profitability claim.
+- Exact code A author tests: offline **412 passed, 2 skipped, 5 deselected**; network **5 passed, 414 deselected**; historical Review05/06/07 **26/11/3 passed**. Clean detached A/external-CWD public download produced identical source/dataset hashes; no-network invocation created no output. Evidence, limitations and next decision: `docs/reviews/G2_BINANCE_PUBLIC_DATA_DIAGNOSTIC.md`.
+- ADR 0011 exact-source rule is unchanged. Whether later millisecond event-time settlement should be modeled is an owner/PM policy decision requiring a new plan and tests. Separate Tester/Independent Reviewer and owner acceptance remain pending; no self-acceptance or `main` merge.
+
 ## Functional completion candidate — 2026-09-22
 
 **AUTHOR_SELF_REVIEWED / PENDING SEPARATE TESTER AND INDEPENDENT REVIEWER. NOT OWNER-ACCEPTED.** This is a local paper-research bot; no live/testnet orders, trading credentials or real money. Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73` on `codex/final-project-completion`, based on `1903dc286878719c94786480481e50e99dddf26f`. Documentation commit: see Git history and final handoff. `main` was observed unchanged at `e970337d504563e5987a4db6b5c06c635bf7244b`.

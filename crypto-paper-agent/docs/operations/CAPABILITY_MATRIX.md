@@ -1,6 +1,6 @@
 # Operator capability matrix
 
-Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`.
+Code-under-test commit: `d4afed6d365b3e435e79a772f7de912ee4a39b11` (G2 additive data diagnostic); prior functional candidate A: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`.
 Evidence level: **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED**. These are local research commands, not live trading endpoints.
 
 | Command | Required input and network mode | Output / valid result | Failure contract |
@@ -11,7 +11,7 @@ Evidence level: **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED**. These are local res
 | `python scripts/run_walk_forward.py --data-dir <parquet-dir> --train-bars <n> --test-bars <n> --source <label> --output <new>` | UTC, unique, sorted 4h/15m/5m/1m/basket datasets; no HTTP | Four separate experimental accounts, fold and aggregate manifests | Missing data `DATASET_UNAVAILABLE`; invalid chronology/config rejected; existing output `OUTPUT_EXISTS` |
 | `python scripts/train_ppo.py --train <p> --validation <p> --holdout <p> --config <yaml> --output <new>` | Strict chronological partitions; local Gymnasium/SB3/PyTorch CPU; no HTTP | Model/scaler/manifest, baseline comparison, holdout report | Missing data/model/config and output collisions fail before training/output |
 | `python scripts/evaluate_ppo.py --model-dir <dir> --input <p> --config <yaml> --output <new>` | Saved model/scaler and later evaluation data; no HTTP | Evaluate-only report; no scaler fit | Checksum, config, boundary or input mismatch rejects; existing output `OUTPUT_EXISTS` |
-| `python scripts/prepare_public_research_sample.py --start <UTC-date> --days <1..7> --output <new> --allow-network` | Public Binance Vision archives; explicit HTTP opt-in | Parquet dataset and raw-source hash manifest | Without opt-in `NETWORK_DISABLED`; bounded retries; existing output `OUTPUT_EXISTS` |
+| `python scripts/prepare_public_research_sample.py --start <UTC-date> --days <1..7> --output <new> --allow-network` | Public Binance Vision archives; explicit HTTP opt-in | Parquet dataset, raw-source hashes and exact UTC funding-coverage manifest | Without opt-in `NETWORK_DISABLED`; bounded retries; existing output `OUTPUT_EXISTS`; unready funding is flagged, not backdated |
 | `python scripts/fetch_market_data.py --symbol BTCUSDT --interval 15m --output-dir <new> --allow-network` | Public Binance Futures REST; explicit HTTP opt-in | Atomic parquet kline and funding cache | `NETWORK_DISABLED`, `INVALID_ARGUMENTS`, `OUTPUT_EXISTS`, `DATASET_UNAVAILABLE` |
 
 `run_backtest.py --strategy funding_arbitrage` requires `--basket-input`; `--strategy all` requires `--comparison-data-dir`. Neither route silently creates a shared-capital portfolio. The `all` aggregate is independent-account diagnostics, not portfolio PnL. The main CLI is offline/cache-only by default; explicit `--allow-network` is required for public fetch. Commands can be launched from an external current directory with absolute input/output paths.

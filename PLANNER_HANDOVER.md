@@ -1,5 +1,14 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Current G2 Binance data diagnostic — 2026-09-22
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT G2 ACCEPTANCE.** Branch `codex/g2-binance-funding-coverage`, code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`, docs B is the direct documentation-only child (full SHA in Git history/final handoff). Parent B `4b26525cc0c12b73b47d93242b218e24674f1ea6`; `main` observed unchanged at `e970337d504563e5987a4db6b5c06c635bf7244b`.
+
+- Scope: an additive, portable exact-funding-coverage diagnostic in the public dataset manifest; no broker, ADR, strategy, risk, or cashflow policy change. Code/test files: `src/research/artifacts.py`, `scripts/prepare_public_research_sample.py`, `tests/test_public_data_pipeline.py`; planning/evidence and precise reproduction are in `crypto-paper-agent/docs/superpowers/plans/2026-09-22-g2-binance-funding-coverage.md` and `crypto-paper-agent/docs/reviews/G2_BINANCE_PUBLIC_DATA_DIAGNOSTIC.md`.
+- Public 2026-08-20..26 seven-day Binance sample: 15/15 ZIP checksums matched official sidecars, 10,080 spot and 10,080 perpetual 1m rows, no gaps, 21 scheduled funding events but only 11 exact-ready; 10 arrive 1–6 ms late. Funding replay fails before output, Trend/Breakout produce zero trades, SMC fails closed. Near-current REST 2026-09-22 snapshot was downloaded but has no synchronized spot/1m or prospective paper fill evidence; the open last candle was excluded. Source/data/parquet SHA-256 values are in the review report.
+- Exact A tests: offline 412 passed/2 skipped/5 deselected; historical Review05/06/07 26/11/3 passed; network 5 passed/414 deselected. Clean detached A/external-CWD seven-day download matched all 15 source and six dataset hashes. Pinned QA Python 3.12.14 was used; fresh standalone environment remains blocked by the previously reported dependency build problem.
+- Next owner: PM/owner decide how to treat millisecond-late funding source events under ADR 0011 *before* any settlement policy change. Separate Tester verifies A and raw-source equality; Independent Reviewer audits causality/fail-closed behavior. Full G2, canonical 2021–2026 history, G3/G4, native TradingView and prospective paper remain NOT_VERIFIED/NOT_RUN. No self-acceptance, no live/testnet/keys, no main merge.
+
 ## Current functional completion candidate — 2026-09-22
 
 **AUTHOR_SELF_REVIEWED / REVIEWER_NOT_VERIFIED — PENDING TESTER, INDEPENDENT REVIEWER AND OWNER DECISION.** No self-acceptance or merge. Paper-only scope remains binding.

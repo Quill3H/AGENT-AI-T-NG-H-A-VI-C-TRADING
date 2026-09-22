@@ -1,5 +1,13 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [G2 public Binance funding-coverage diagnostic] — 2026-09-22
+
+Code-under-test commit: `d4afed6d365b3e435e79a772f7de912ee4a39b11`. Documentation commit: see Git history and final handoff. **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED; G2 NOT ACCEPTED.**
+
+- Added exact 8-hour funding-source coverage to the bounded public dataset manifest, including source-late millisecond events and missing boundary rows. Raw event timestamps and ADR 0011 settlement policy are unchanged.
+- Mocked-archive and pure regressions cover exact, delayed, absent, missing-candle and source-mismatch cases. Exact A offline: 412 passed/2 skipped/5 deselected; historical probes: 26/11/3 passed; network: 5 passed/414 deselected.
+- Seven-day public Binance spot/perpetual sample: 15 source ZIP checksums matched official sidecars; 11/21 funding boundaries exact, 10 late by 1–6 ms. Full-window funding and SMC fail closed; fixed-rule Trend/Breakout have zero trades. Near-current REST data was read with the open last 15m candle excluded. No profit, native TradingView, full-history or prospective-paper claim. See [G2 diagnostic](docs/reviews/G2_BINANCE_PUBLIC_DATA_DIAGNOSTIC.md).
+
 ## [Functional completion candidate] — 2026-09-22
 
 Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`. Documentation commit: see Git history and final handoff. **AUTHOR_SELF_REVIEWED / PENDING INDEPENDENT REVIEW**.
