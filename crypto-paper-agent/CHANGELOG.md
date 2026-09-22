@@ -1,5 +1,15 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Functional completion candidate] — 2026-09-22
+
+Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`. Documentation commit: see Git history and final handoff. **AUTHOR_SELF_REVIEWED / PENDING INDEPENDENT REVIEW**.
+
+- Kept the Stage 6–11 research/broker implementations and added offline-by-default command contracts with explicit public-network opt-in, input/output validation and named errors.
+- Added an offline synthetic quick-start with Trend/Breakout/SMC LONG/SHORT executions, four-account comparison, real PPO train/save/load/evaluate and JSON/SQLite/CSV/PNG audit.
+- Bounded public archive requests and REST limits; downloader now avoids Windows cp1252 output failure and atomically replaces individual parquet files.
+- Clean detached A: offline409 passed/2 skipped/5 deselected; network5 passed/411 deselected; historical probes26/11/3 passed. The full canonical historical window is not run; empirical validation remains partial.
+- Full details, self-review and known debt: [functional completion handoff](docs/reviews/FINAL_FUNCTIONAL_COMPLETION_HANDOFF.md). Operator entry points: [quick-start](docs/operations/QUICKSTART.md) and [capability matrix](docs/operations/CAPABILITY_MATRIX.md).
+
 ## [Stage 6–11 repair] — 2026-09-21
 
 Code A: `23f94376215a7fca69c8a7606e34139bc21d090c`. **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW**. User authorization supersedes earlier stop-before-7 and optional-PPO restrictions for this task.

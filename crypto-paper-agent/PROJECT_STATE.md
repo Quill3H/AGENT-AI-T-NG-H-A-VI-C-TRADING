@@ -1,5 +1,15 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Functional completion candidate — 2026-09-22
+
+**AUTHOR_SELF_REVIEWED / PENDING SEPARATE TESTER AND INDEPENDENT REVIEWER. NOT OWNER-ACCEPTED.** This is a local paper-research bot; no live/testnet orders, trading credentials or real money. Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73` on `codex/final-project-completion`, based on `1903dc286878719c94786480481e50e99dddf26f`. Documentation commit: see Git history and final handoff. `main` was observed unchanged at `e970337d504563e5987a4db6b5c06c635bf7244b`.
+
+- Stage 6–11 implementation is present. The added operator contract, offline synthetic quick-start, Trend LONG/SHORT fixtures, bounded public downloader and artifact audit are described in `docs/reviews/FINAL_FUNCTIONAL_COMPLETION_HANDOFF.md` and `docs/operations/`.
+- Detached clean A: offline **409 passed, 2 skipped, 5 deselected**; network **5 passed, 411 deselected**; historical Review05/06/07 **26/11/3 passed**. This is author execution, not independent verification.
+- Synthetic Trend/Breakout/SMC LONG and SHORT produced nonempty completed lifecycles. Real PPO trained 256 CPU timesteps with save/load equality. Public three-day 2024 sample and near-current 2026 REST snapshot were downloaded/read; public directional OOS had zero trades, funding one loss, PPO holdout a loss. No profitability claim.
+- Full canonical 2021-01-01 to 2026-09-01 history and prospective live-data paper session were **NOT RUN**. Empirical validation remains **PARTIAL**; the previous 2021–2023 benchmark remains `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`.
+- A fresh standalone environment install is **BLOCKED** by a `coincurve`/cffi LICENSE build failure; pinned Python 3.12 QA runtime passed. Separate Tester/Independent Reviewer and owner acceptance are still required. Prior G0 checkpoint below remains historical; this candidate does not silently accept it.
+
 ## Current G0 checkpoint — 2026-09-22
 
 **PENDING INDEPENDENT REVIEW — NO SELF-ACCEPTANCE.** PM routes evidence to separate Tester and Independent Reviewer; the user decides acceptance/merge.

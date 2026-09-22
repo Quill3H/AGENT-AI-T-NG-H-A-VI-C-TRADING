@@ -1,5 +1,16 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Current functional completion candidate — 2026-09-22
+
+**AUTHOR_SELF_REVIEWED / REVIEWER_NOT_VERIFIED — PENDING TESTER, INDEPENDENT REVIEWER AND OWNER DECISION.** No self-acceptance or merge. Paper-only scope remains binding.
+
+- Branch `codex/final-project-completion`; base `1903dc286878719c94786480481e50e99dddf26f`; code A `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`; documentation B is the direct docs/evidence-only child of A (obtain full SHA from Git history/final handoff). `main` was observed at `e970337d504563e5987a4db6b5c06c635bf7244b`.
+- Scope: stable offline-by-default CLI, synthetic quick-start for all directional rulebooks and PPO, bounded public archive/REST download, portable artifact checks. Detailed changed files, runtime, config/data/model identity, commands, outcomes, limits and self-review: `crypto-paper-agent/docs/reviews/FINAL_FUNCTIONAL_COMPLETION_HANDOFF.md`. Operator instructions: `crypto-paper-agent/docs/operations/`.
+- Clean detached A author gates: offline **409 passed, 2 skipped, 5 deselected**, network **5 passed, 411 deselected**, historical Review05/06/07 **26/11/3 passed**. No Critical/High finding remains in author self-review; independent review is pending.
+- Public 2024 three-day sample: directional `NO_TRADES`, one losing funding basket, losing public PPO holdout. Near-current 2026 REST fetch only proved public-data access/readability. Canonical 2021–2026 replay and scored prospective paper observation are **NOT VERIFIED/NOT RUN**. Do not promote any of these to economic validation.
+- Clean dependency install is **BLOCKED** by `coincurve`/cffi build failure; pinned QA Python 3.12 runtime was used. A second consecutive quick-start aborted without a final report in the same Windows session; cross-run byte reproducibility remains **NOT_VERIFIED**.
+- Next owner: separate Tester pins A/B and reruns gates and artifact/hash checks; Independent Reviewer audits broker/data causality, funding/collateral/accounting, training leakage and evidence claims. PM records result; the user decides acceptance and later empirical gates.
+
 ## Current G0 checkpoint — 2026-09-22
 
 **PENDING INDEPENDENT REVIEW — NO SELF-ACCEPTANCE.** PM coordinates separate Tester and Independent Reviewer tasks; the former reviewer task is now PM and does not issue the independent verdict.
