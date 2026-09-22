@@ -395,13 +395,23 @@ def test_public_preparation_marks_missing_boundary_unready_offline(
         return buf
 
     monkeypatch.setattr(module, "urlopen", archive_response)
+    output = tmp_path / "sample"
     monkeypatch.setattr(
         sys,
         "argv",
-        [str(path), "--output", str(tmp_path), "--start", "2024-01-02", "--days", "1"],
+        [
+            str(path),
+            "--output",
+            str(output),
+            "--start",
+            "2024-01-02",
+            "--days",
+            "1",
+            "--allow-network",
+        ],
     )
     assert module.main() == 0
     for name in ("1m", "5m", "15m", "4h", "basket"):
-        data = pd.read_parquet(tmp_path / f"{name}.parquet")
+        data = pd.read_parquet(output / f"{name}.parquet")
         assert not bool(data.loc[idx[960], "funding_readiness"])
         assert bool(data.loc[idx[480], "funding_readiness"])

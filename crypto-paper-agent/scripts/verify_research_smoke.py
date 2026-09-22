@@ -11,10 +11,13 @@ from src.research.synthetic import (
     smc_frames,
     smc_config,
     breakout_frames,
+    trend_frames,
+    trend_config,
     comparison_datasets,
 )
 from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
 from src.strategies.breakout_retest import BreakoutRetestStrategy
+from src.strategies.trend_following import TrendFollowingStrategy
 from src.backtest.engine import BacktestEngine
 from src.report.generator import ReportGenerator
 from src.research.artifacts import dataset_manifest, persist_research_run
@@ -31,14 +34,20 @@ def main():
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
     results = {}
-    for kind in ("smc", "breakout"):
+    for kind in ("trend", "smc", "breakout"):
         for short in (False, True):
             name = f'{kind}_{"short" if short else "long"}'
             signal, execution = (
-                smc_frames(short) if kind == "smc" else breakout_frames(short)
+                trend_frames(short)
+                if kind == "trend"
+                else smc_frames(short)
+                if kind == "smc"
+                else breakout_frames(short)
             )
             cfg = (
-                smc_config()
+                trend_config()
+                if kind == "trend"
+                else smc_config()
                 if kind == "smc"
                 else {
                     "strategy": {
@@ -50,7 +59,13 @@ def main():
                     "account": {"initial_equity_usd": 10000},
                 }
             )
-            cls = SMCLiquiditySweepStrategy if kind == "smc" else BreakoutRetestStrategy
+            cls = (
+                TrendFollowingStrategy
+                if kind == "trend"
+                else SMCLiquiditySweepStrategy
+                if kind == "smc"
+                else BreakoutRetestStrategy
+            )
             engine = BacktestEngine(cfg, signal, execution, cls(cfg))
             metrics = engine.run()
             if metrics["orders_filled_count"] < 1 or metrics["total_trades"] < 1:
@@ -105,8 +120,9 @@ def main():
                 "end_date": execution.index[-1].isoformat(),
             }
             (out / f"{name}.yaml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    synthetic_datasets = comparison_datasets()
     synthetic = run_comparison(
-        comparison_datasets(),
+        synthetic_datasets,
         {"account": {"initial_equity_usd": 10000}},
         out / "synthetic" / "walk",
         1440,
@@ -114,6 +130,35 @@ def main():
         source="SYNTHETIC_TEST",
     )
     results["synthetic_walk"] = synthetic["aggregate"]
+    synthetic_config = yaml.safe_load(
+        (ROOT / "config/default_config.yaml").read_text(encoding="utf-8")
+    )
+    synthetic_config["research"] = {"source": "SYNTHETIC_TEST"}
+    minute_frame = synthetic_datasets["1m"]
+    synthetic_ppo = train_ppo(
+        minute_frame.iloc[:1440],
+        minute_frame.iloc[1440:2880],
+        minute_frame.iloc[2880:4320],
+        synthetic_config,
+        out / "synthetic" / "ppo",
+        total_timesteps=256,
+        seed=42,
+    )
+    results["synthetic_ppo"] = {
+        "actual_timesteps": synthetic_ppo["actual_timesteps"],
+        "save_load_equal": synthetic_ppo["save_load_equal"],
+        "seed": synthetic_ppo["seed"],
+        "validation": {
+            key: value
+            for key, value in synthetic_ppo["validation"].items()
+            if key != "actions"
+        },
+        "final_holdout": {
+            key: value
+            for key, value in synthetic_ppo["final_holdout"].items()
+            if key != "actions"
+        },
+    }
     if args.public_dir:
         public = Path(args.public_dir)
         datasets = {

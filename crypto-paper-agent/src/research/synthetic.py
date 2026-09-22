@@ -3,6 +3,91 @@
 import pandas as pd
 
 
+def trend_config():
+    return {
+        "account": {"initial_equity_usd": 10000},
+        "fees": {"taker_pct": 0.0005, "slippage_pct": 0},
+        "strategy": {
+            "name": "TREND_FOLLOWING",
+            "timeframe_signal": "4h",
+            "timeframe_execution": "15m",
+        },
+        "rules": {
+            "crossover_fast_ema": 20,
+            "crossover_slow_ema": 50,
+            "regime_ema": 200,
+            "rsi_period": 14,
+            "rsi_threshold": 50.0,
+            "max_setup_age_bars": 12,
+            "swing_lookback_bars": 5,
+        },
+        "oi_confluence": {
+            "mode": "optional",
+            "fallback_when_nan": True,
+            "nan_log_note": "OI_BYPASSED_SYNTHETIC",
+        },
+        "base_risk_percent": 0.02,
+        "leverage": 2.0,
+    }
+
+
+def trend_frames(short=False):
+    closes = [100.0, 100.5, 101.0, 101.5, 102.0, 104.0, 104.0, 110.0]
+    fast = [100.0, 100.1, 100.2, 100.4, 101.0, 103.0, 103.5, 106.0]
+    slow = [101.0, 101.0, 101.1, 101.2, 101.5, 102.0, 102.5, 103.0]
+    rows = []
+    for index, close in enumerate(closes):
+        low = close - 1.0
+        high = close + 1.0
+        if index == 6:
+            low, high = 102.0, 105.0
+        rows.append(
+            {
+                "open": close,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": 50.0,
+                "ema_20": fast[index],
+                "ema_50": slow[index],
+                "ema_200": 90.0,
+                "rsi_14": 60.0,
+                "oi_delta_pct": 1.0,
+            }
+        )
+    signal = pd.DataFrame(
+        rows,
+        index=pd.date_range("2024-01-01", periods=len(rows), freq="4h", tz="UTC"),
+    )
+    if short:
+        for column in ("open", "close", "ema_20", "ema_50", "ema_200"):
+            signal[column] = 220.0 - signal[column]
+        old_high = signal["high"].copy()
+        signal["high"] = 220.0 - signal["low"]
+        signal["low"] = 220.0 - old_high
+        signal["rsi_14"] = 40.0
+
+    records = []
+    times = []
+    for timestamp, row in signal.iterrows():
+        path = [row.open, row.low, row.high, row.close] + [row.close] * 14
+        if short:
+            path = [row.open, row.high, row.low, row.close] + [row.close] * 14
+        for minute in range(16):
+            start, end = path[minute : minute + 2]
+            records.append((start, max(start, end), min(start, end), end, 10.0))
+            times.append(timestamp + pd.Timedelta(minutes=15 * minute))
+    execution = pd.DataFrame(
+        records,
+        index=pd.DatetimeIndex(times),
+        columns=["open", "high", "low", "close", "volume"],
+    )
+    execution["funding_time"] = execution.index.floor("8h")
+    execution["funding_rate"] = 0.0002
+    execution["funding_readiness"] = True
+    return signal, execution
+
+
 def smc_frames(short=False):
     rows = [
         (100, 102, 99, 101),

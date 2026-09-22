@@ -114,8 +114,16 @@ def persist_research_run(output, name, config, report):
 
 
 def persist_basket(output, result, config, manifest):
+    run_status = (
+        "NO_TRADES"
+        if not result.entered
+        else "COMPLETED_WITH_OPEN_BASKET"
+        if not result.exited
+        else "COMPLETED"
+    )
     report = {
         "status": "AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED",
+        "run_status": run_status,
         "dataset": manifest,
         "metrics": result.metrics(),
         "basket": result.to_dict(),

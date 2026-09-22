@@ -6,9 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import pandas as pd
-import yaml
-from src.research.workflow import run_comparison
+from src.cli_contract import fail, missing_paths, output_exists
 
 
 def main():
@@ -21,22 +19,39 @@ def main():
     p.add_argument("--step-bars", type=int)
     p.add_argument("--source", required=True)
     args = p.parse_args()
-    folder = Path(args.data_dir)
-    datasets = {
-        k: pd.read_parquet(folder / f"{k}.parquet")
-        for k in ("4h", "15m", "5m", "1m", "basket")
-    }
-    config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
-    run_comparison(
-        datasets,
-        config,
-        args.output,
-        args.train_bars,
-        args.test_bars,
-        args.step_bars,
-        args.source,
-    )
-    return 0
+    output = Path(args.output).resolve()
+    if output_exists(output):
+        return fail("OUTPUT_EXISTS", f"output target already exists: {output}")
+    folder = Path(args.data_dir).resolve()
+    config_path = Path(args.config).resolve()
+    dataset_paths = [folder / f"{k}.parquet" for k in ("4h", "15m", "5m", "1m", "basket")]
+    missing = missing_paths([config_path, *dataset_paths])
+    if missing:
+        return fail("DATASET_UNAVAILABLE", f"required file not found: {missing[0]}")
+    try:
+        import pandas as pd
+        import yaml
+        from src.research.workflow import run_comparison
+
+        datasets = {
+            key: pd.read_parquet(path)
+            for key, path in zip(("4h", "15m", "5m", "1m", "basket"), dataset_paths)
+        }
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        if not isinstance(config, dict):
+            return fail("INVALID_CONFIG", "config root must be a mapping")
+        run_comparison(
+            datasets,
+            config,
+            output,
+            args.train_bars,
+            args.test_bars,
+            args.step_bars,
+            args.source,
+        )
+        return 0
+    except Exception as exc:
+        return fail("INVALID_INPUT", str(exc))
 
 
 if __name__ == "__main__":

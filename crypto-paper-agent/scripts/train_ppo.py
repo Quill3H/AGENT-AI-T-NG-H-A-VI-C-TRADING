@@ -5,9 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import pandas as pd
-import yaml
-from src.research.rl_env import train_ppo
+from src.cli_contract import fail, missing_paths, output_exists
 
 
 def main():
@@ -21,17 +19,33 @@ def main():
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--timeframe", default="1m")
     args = p.parse_args()
-    config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
-    report = train_ppo(
-        *(pd.read_parquet(x) for x in (args.train, args.validation, args.holdout)),
-        config,
-        args.output,
-        args.timesteps,
-        args.seed,
-        args.timeframe
-    )
-    print(json.dumps(report, indent=2, default=str))
-    return 0
+    output = Path(args.output).resolve()
+    if output_exists(output):
+        return fail("OUTPUT_EXISTS", f"output target already exists: {output}")
+    paths = [Path(value).resolve() for value in (args.train, args.validation, args.holdout, args.config)]
+    missing = missing_paths(paths)
+    if missing:
+        return fail("DATASET_UNAVAILABLE", f"required file not found: {missing[0]}")
+    try:
+        import pandas as pd
+        import yaml
+        from src.research.rl_env import train_ppo
+
+        config = yaml.safe_load(paths[3].read_text(encoding="utf-8"))
+        if not isinstance(config, dict):
+            return fail("INVALID_CONFIG", "config root must be a mapping")
+        report = train_ppo(
+            *(pd.read_parquet(path) for path in paths[:3]),
+            config,
+            output,
+            args.timesteps,
+            args.seed,
+            args.timeframe,
+        )
+        print(json.dumps(report, indent=2, default=str))
+        return 0
+    except Exception as exc:
+        return fail("INVALID_INPUT", str(exc))
 
 
 if __name__ == "__main__":

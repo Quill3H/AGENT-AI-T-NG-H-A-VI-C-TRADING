@@ -12,9 +12,6 @@ from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import pandas as pd
-from src.research.artifacts import dataset_manifest
-from src.data_layer.fetcher import funding_readiness
 
 
 def main():
@@ -22,15 +19,43 @@ def main():
     p.add_argument("--output", required=True)
     p.add_argument("--start", default="2024-01-01")
     p.add_argument("--days", type=int, default=3)
+    p.add_argument("--retries", type=int, default=2)
+    p.add_argument("--allow-network", action="store_true")
     args = p.parse_args()
+    output = Path(args.output).resolve()
+    if not args.allow_network:
+        sys.stderr.write(
+            "ERROR [NETWORK_DISABLED]: public archive download requires --allow-network.\n"
+        )
+        return 2
     if args.days < 1 or args.days > 7:
-        raise ValueError("bounded sample requires 1..7 days")
-    output = Path(args.output)
-    output.mkdir(parents=True, exist_ok=True)
+        sys.stderr.write("ERROR [INVALID_ARGUMENTS]: bounded sample requires 1..7 days.\n")
+        return 2
+    if args.retries < 0 or args.retries > 3:
+        sys.stderr.write("ERROR [INVALID_ARGUMENTS]: retries must be between 0 and 3.\n")
+        return 2
+    if output.exists():
+        sys.stderr.write(f"ERROR [OUTPUT_EXISTS]: output target already exists: {output}\n")
+        return 2
+
+    import pandas as pd
+    from src.research.artifacts import dataset_manifest
+    from src.data_layer.fetcher import funding_readiness
+
     records = []
 
     def download(url):
-        content = urlopen(url, timeout=40).read()
+        last_error = None
+        for attempt in range(args.retries + 1):
+            try:
+                content = urlopen(url, timeout=40).read()
+                break
+            except Exception as exc:
+                last_error = exc
+        else:
+            raise RuntimeError(
+                f"public archive unavailable after {args.retries + 1} attempts: {url}: {last_error}"
+            ) from last_error
         with ZipFile(BytesIO(content)) as archive:
             name = next(n for n in archive.namelist() if n.endswith(".csv"))
             data = archive.read(name)
@@ -125,6 +150,7 @@ def main():
         )
         bars["funding_readiness"] = funding_readiness(bars)
         datasets[tf] = bars
+    output.mkdir(parents=True, exist_ok=False)
     manifests = {}
     for name, df in datasets.items():
         df.to_parquet(output / f"{name}.parquet")

@@ -12,16 +12,10 @@ Tuân thủ nghiêm ngặt ANTIGRAVITY_STAGE_05_TASK.md:
 import argparse
 from datetime import datetime, timezone
 import hashlib
-import os
 from pathlib import Path
 import subprocess
 import sys
 from typing import Any, Dict
-
-from loguru import logger
-import numpy as np
-import pandas as pd
-import yaml
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -33,23 +27,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.backtest.engine import BacktestEngine
-from src.data_layer.cache_manager import (
-    has_complete_cache,
-    load_from_cache,
-)
-from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
-from src.report.generator import ReportGenerator
-from src.logging.trade_logger import compute_config_hash, snapshot_run_config
-from src.features.news_calendar import NewsCalendarFilter
-from src.execution.paper_broker import PaperBroker
-from src.strategies.trend_following import TrendFollowingStrategy
-from src.strategies.breakout_retest import BreakoutRetestStrategy
-from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
-
-
 def _load_yaml(file_path: Path) -> Dict[str, Any]:
     """Đọc file YAML an toàn."""
+    import yaml
+
     if not file_path.is_file():
         raise FileNotFoundError(f"Config file not found: {file_path}")
     with open(file_path, "r", encoding="utf-8") as f:
@@ -85,6 +66,11 @@ def _format_benchmark_note(metrics: Dict[str, Any]) -> str:
         f"observed {float(metrics.get('win_rate', 0.0)):.2f}% on N={total_trades}; "
         "small samples are not statistically generalizable"
     )
+
+
+def _run_status(metrics: Dict[str, Any]) -> str:
+    """Return the operator-facing outcome for a structurally valid run."""
+    return "NO_TRADES" if int(metrics.get("total_trades", 0)) == 0 else "COMPLETED"
 
 
 def _get_git_commit_sha() -> str:
@@ -133,6 +119,11 @@ def main():
         help="Chỉ dùng cache local, không fetch dữ liệu mới từ network",
     )
     parser.add_argument(
+        "--allow-network",
+        action="store_true",
+        help="Explicitly allow public market-data network access",
+    )
+    parser.add_argument(
         "--force-close",
         action="store_true",
         default=True,
@@ -165,8 +156,15 @@ def main():
     parser.add_argument("--source", default="SUPPLIED_DATA_NOT_VERIFIED")
     args = parser.parse_args()
 
+    if args.no_fetch and args.allow_network:
+        sys.stderr.write(
+            "ERROR [INVALID_ARGUMENTS]: --no-fetch and --allow-network are mutually exclusive.\n"
+        )
+        return 2
+    # Offline/cache-only is the safe default. Network must be explicitly opted in.
+    args.no_fetch = not args.allow_network
 
-    # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
+    # Validate special-mode paths before importing data/strategy modules or mutating output.
     if args.strategy == "funding_arbitrage" and not args.basket_input:
         sys.stderr.write(
             "ERROR: funding_arbitrage requires --basket-input with explicit spot/perp quotes.\n"
@@ -174,7 +172,35 @@ def main():
         sys.exit(1)
     if args.strategy == "all" and not args.comparison_data_dir:
         sys.stderr.write("ERROR: all requires --comparison-data-dir.\n")
-        sys.exit(1)
+        return 2
+    if args.strategy == "funding_arbitrage" and not Path(args.basket_input).is_file():
+        sys.stderr.write(
+            f"ERROR [DATASET_UNAVAILABLE]: required file not found: {Path(args.basket_input).resolve()}\n"
+        )
+        return 2
+    if args.strategy == "all":
+        comparison_dir = Path(args.comparison_data_dir).resolve()
+        missing = [comparison_dir / f"{key}.parquet" for key in ("4h", "15m", "5m", "1m", "basket") if not (comparison_dir / f"{key}.parquet").is_file()]
+        if missing:
+            sys.stderr.write(
+                f"ERROR [DATASET_UNAVAILABLE]: required file not found: {missing[0]}\n"
+            )
+            return 2
+
+    import numpy as np
+    import pandas as pd
+    from src.backtest.engine import BacktestEngine
+    from src.data_layer.cache_manager import has_complete_cache, load_from_cache
+    from src.data_layer.fetcher import fetch_all, merge_ohlcv_with_oi_and_funding
+    from src.report.generator import ReportGenerator
+    from src.logging.trade_logger import compute_config_hash, snapshot_run_config
+    from src.features.news_calendar import NewsCalendarFilter
+    from src.execution.paper_broker import PaperBroker
+    from src.strategies.trend_following import TrendFollowingStrategy
+    from src.strategies.breakout_retest import BreakoutRetestStrategy
+    from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
+
+    # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
 
     # 2. Xử lý đường dẫn độc lập CWD
     config_path = Path(args.config)
@@ -186,7 +212,7 @@ def main():
 
     if not config_path.is_file():
         sys.stderr.write(f"ERROR: Config file not found at: {config_path}\n")
-        sys.exit(1)
+        return 2
 
     # 3. Tải và hợp nhất cấu hình
     base_config = _load_yaml(config_path)
@@ -241,7 +267,7 @@ def main():
             start_dt = start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     except Exception as e:
         sys.stderr.write(f"ERROR: Invalid start date format '{start_str}': {e}\n")
-        sys.exit(1)
+        return 2
 
     try:
         end_dt = pd.to_datetime(end_str, utc=True)
@@ -402,6 +428,7 @@ def main():
     # 7. Chạy Backtest
     print("\n[Engine] Running causal multi-timeframe backtest loop...")
     metrics = engine.run(force_close=args.force_close)
+    metrics["run_status"] = _run_status(metrics)
 
     # 8. Xuất báo cáo kết quả chi tiết
     print("\n" + "=" * 70)
@@ -409,6 +436,7 @@ def main():
     print("   [STATUS: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED]")
     print("=" * 70)
     print(f"Git Commit SHA       : {_get_git_commit_sha()}")
+    print(f"Run Status           : {metrics['run_status']}")
     print(f"Python Environment   : Python {sys.version.split()[0]} | pandas {pd.__version__} | numpy {np.__version__}")
     print(f"Strategy & Symbol    : {args.strategy} | {symbol}")
     print(f"Time Range 15m       : {metrics['start_time']} -> {metrics['end_time']}")
