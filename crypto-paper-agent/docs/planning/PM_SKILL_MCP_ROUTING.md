@@ -6,6 +6,24 @@ Owner workflow update (2026-09-23): `main` is the active integration branch and
 must match GitHub after each push. This does not accept pending technical gates;
 see `2026-09-23-main-sync-decision.md` and the latest `PROJECT_STATE.md`.
 
+## Invocation syntax
+
+- In Codex, `$skill-name` explicitly selects a skill. Examples:
+  `$writing-plans`, `$crypto-bot-engineering`, `$systematic-debugging`,
+  `$test-driven-development`, `$verification-before-completion`, and
+  `$tradingview-paper-research`.
+- `/name` is a harness command or compatibility shim, not a universal skill
+  syntax. Execute it only when the command is registered and its backing
+  command-skill has been read. Do not invent `/deploy`, `/review`, or `/plan`
+  merely because the words sound plausible.
+- Plain language is sufficient. The PM must classify the task and activate the
+  matching skill automatically rather than asking the owner to resend it with
+  `/` or `$`.
+- For a feature use: planning -> TDD/domain implementation -> verification ->
+  review. For a defect use: systematic debugging -> regression test -> minimal
+  fix -> verification. Each arrow is a gate; do not load all skill bodies at
+  once.
+
 ## Fast route
 
 | Request | Primary skill | Add only when needed | MCP/CLI choice | Stop/evidence rule |
@@ -20,6 +38,7 @@ see `2026-09-23-main-sync-decision.md` and the latest `PROJECT_STATE.md`.
 | API, secrets, webhook, external input | `ecc:security-review` | `crypto-bot-engineering` when trading data/risk affected; `ecc:error-handling` for retry/fail-closed design | Official docs/Context7; no credentials in MCP prompts, logs, fixtures or memory | Paper-only; no live/testnet orders, signing or credentialed deployment without explicit owner decision and plan. |
 | Code review or acceptance | `requesting-code-review` for a completed implementation; `receiving-code-review` when responding to feedback | `verification-before-completion`; `ecc:ai-regression-testing` for AI-authored regression blind spots; specialist tester/reviewer only at the declared gate | Fresh tests/diff, exact SHA, runtime, artifact hashes; GitHub MCP only if exposed/authenticated for requested remote PR work | Author test is not independent verification; PM cannot self-accept. Owner-directed `main` integration is not gate acceptance. |
 | Agent workflow or token-cost issue | `ecc:context-budget` for context bloat; `ecc:agent-architecture-audit` only when agent behavior is failing | `ecc:cost-aware-llm-pipeline` only for measured LLM API spend in the product | `headroom` stats/compression for large outputs; inspect enabled MCP namespaces rather than adding servers blindly | Record the measured bottleneck and proposed saving; do not disable shared/global tools without owner approval. |
+| Preview web demo and deploy | Web/frontend skill exposed by the current harness; otherwise inspect stack and implement the smallest viable UI | `writing-plans`, security review for inputs/secrets, deployment/verification skill when exposed | Prefer a preview deployment. Use an existing authenticated provider/CLI; never put tokens in prompts or files | Browser smoke, build/test evidence, deployment URL and exact commit. Do not promote to production or expose trading credentials. |
 
 ## Resource discipline
 
@@ -29,7 +48,11 @@ see `2026-09-23-main-sync-decision.md` and the latest `PROJECT_STATE.md`.
 4. Use `headroom` compression only for large outputs that must be retained; retrieve by hash when exact lines are needed. `dev_memory` is a hint for stable decisions, never a substitute for repo files, current SHA, or evidence. Do not store secrets, market snapshots, mutable status, or unreviewed claims there.
 5. Do not run `crypto_market`, AIcoin, browser automation, downloads, broad tests, or external research for a status/planning request unless its answer needs them. Do not enable every MCP server just to make it available.
 6. Before delivery, state selected route, source/commit, commands actually run, pass/skip/deselected/network status, unresolved evidence, and next owner. Use `verification-before-completion` for implementation; a read-only PM handoff needs source checks, not a synthetic test pass.
+7. For delegated work, call the event watcher once with the returned cursor and
+   wait for a state transition. Do not re-read an unchanged thread. A timeout is
+   not a failure and does not justify another immediate poll; remain quiet until
+   completion, failure, required input, or a meaningful progress change.
 
 ## Current handoff priority (verify before reuse)
 
-At the 2026-09-23 owner checkpoint, `main` contains the functional-completion candidate and the bounded G2 Binance diagnostic. Separate Tester and Independent Reviewer work and owner acceptance remain pending. The PM must recheck branch/HEAD and `PROJECT_STATE.md` before acting. This guide does not authorize further G2/G3/G4/G5 work, a TradingView account integration, market downloads, or live/testnet trading merely because a tool is available.
+At the 2026-09-23 owner checkpoint, `main` contains the functional-completion candidate and the bounded G2 Binance diagnostic. Separate Tester and Independent Reviewer work and owner acceptance remain pending. The PM must recheck branch/HEAD and `PROJECT_STATE.md` before acting. The 2026-09-25 owner instruction separately authorizes a two-hour preview-web-demo task; it does not authorize further G2/G3/G4/G5 work, a TradingView account integration, market downloads, or live/testnet trading merely because a tool is available.

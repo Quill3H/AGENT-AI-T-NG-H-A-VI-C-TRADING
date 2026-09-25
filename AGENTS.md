@@ -11,6 +11,14 @@ GitHub `main` have the same SHA. This branch consolidation does not accept any
 pending engineering gate or relax the paper-only/risk rules. See
 `crypto-paper-agent/docs/planning/2026-09-23-main-sync-decision.md`.
 
+Owner timebox authorization (2026-09-25): the PM may coordinate up to two hours
+of focused work to produce and deploy a safe **preview web demo** of the current
+paper/research system. This authorizes the preview deployment and its required
+web code, but not live/testnet orders, trading credentials, wallet operations,
+production promotion, economic-validation claims, or silent changes to trading
+risk/strategy semantics. The task contract is
+`crypto-paper-agent/docs/planning/2026-09-25-two-hour-web-preview.md`.
+
 ## Codex skill and MCP routing contract
 
 This project is configured for automatic skill selection. The Project Manager (PM) and coding chats must route each request before acting; do not wait for the owner to name a skill. Use only skills actually available in the current session, and fall back to the same workflow manually when one is unavailable.
@@ -25,6 +33,21 @@ This project is configured for automatic skill selection. The Project Manager (P
 8. **Safety boundary:** The default mode is paper-only and read-only credentials. No live/testnet order, wallet signing, withdrawal permission, secret creation, deployment with trading credentials, or external mutation is implied by a coding request. Stop and request explicit owner authorization plus a plan before any such action.
 
 PM routing: use the task-to-skill/MCP matrix in `crypto-paper-agent/docs/planning/PM_SKILL_MCP_ROUTING.md` before assigning a new gate or specialist task. Select one primary skill and only the additional skill/MCP needed for the current step; do not load every installed skill or query every code graph by default. For status-only work, direct Git/file checks may be sufficient. State the selected route and evidence level in the handoff. Do not start market downloads, browser login, TradingView webhooks, or a new project gate just because a tool is available.
+
+Slash and skill invocation: a user-entered `/name` is a command request only
+when that command is registered in the current harness; read its backing
+command-skill before executing it. A Codex-native skill is normally invoked as
+`$skill-name`, while a plain-language task should be auto-routed without asking
+the owner to repeat it using either syntax. If `/name` is unavailable, select
+the closest installed skill, state the fallback, and continue when the intent
+is unambiguous. Never invent a slash command or run the slash text as a shell
+command. See the invocation examples in `PM_SKILL_MCP_ROUTING.md`.
+
+Long-running coordination: after dispatching another Codex task, record its
+thread id, host id and wait cursor. Use the event-driven `wait_threads` watcher
+with `afterCursor`; do not repeatedly call `list_threads`, `read_thread`, Git
+status, or sleep/poll loops while nothing changes. Notify the owner only when
+the task completes, fails, needs input, or produces a meaningful gate change.
 
 Before taking project action, read:
 
