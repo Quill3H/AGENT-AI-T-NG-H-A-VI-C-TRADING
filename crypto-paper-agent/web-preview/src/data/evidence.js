@@ -1,0 +1,42 @@
+export const evidence = {
+  mode: 'PAPER / RESEARCH',
+  source: 'Binance Vision public archives',
+  evidenceLevel: 'AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED',
+  historicalWindow: {
+    start: '2024-01-01T00:00:00Z',
+    end: '2024-01-03T23:59:00Z',
+    cutoff: '2024-01-03T23:59:00Z',
+    rows: 4320,
+    gaps: 0,
+    datasetHash: 'b99069942ceff4a1666a4e168beff3f51c7d3419693823afdf351622e616eef1',
+  },
+  fundingCoverage: {
+    start: '2026-08-20T00:00:00Z',
+    end: '2026-08-26T23:59:00Z',
+    expected: 21,
+    exactReady: 11,
+    delayed: 10,
+    maxDelayMs: 6,
+    status: 'FAIL_CLOSED',
+  },
+  strategies: [
+    { name: 'Trend following', sample: '7-day diagnostic', trades: '0', result: '0.0000 USDT', state: 'No entry', level: 'author' },
+    { name: 'Breakout & retest', sample: '7-day diagnostic', trades: '0', result: '0.0000 USDT', state: 'No entry', level: 'author' },
+    { name: 'SMC liquidity sweep', sample: '7-day diagnostic', trades: '—', result: '—', state: 'Fail-closed', level: 'blocked' },
+    { name: 'Funding arbitrage', sample: '2024 public replay', trades: '1 basket', result: '−25.1883 USDT', state: 'Historical sample', level: 'author' },
+  ],
+  controls: [
+    { label: 'Maximum leverage', value: '5× cap', tone: 'neutral' },
+    { label: 'Directional stop-loss', value: 'Required', tone: 'good' },
+    { label: 'Funding provenance', value: 'Fail-closed', tone: 'warn' },
+    { label: 'Exchange credentials', value: 'None', tone: 'good' },
+  ],
+  artifactAudit: {
+    json: 76,
+    sqliteReports: 17,
+    png: 21,
+    datasets: 6,
+    absolutePathsFound: 0,
+    codeCommit: '23f94376215a7fca69c8a7606e34139bc21d090c',
+  },
+}
