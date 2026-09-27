@@ -32,7 +32,7 @@ Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệ
 
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
-| [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) | **CANONICAL** | Thiết kế kiến trúc tổng thể, luồng dữ liệu 5 pha, cơ chế isolated margin và HTTP loopback server. |
+| [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) | **CANONICAL** | Thiết kế kiến trúc tổng thể, luồng dữ liệu 5 pha, HTTP loopback backend và WebSocket trình duyệt chỉ phục vụ hiển thị giá/nến 1m. |
 | [docs/architecture/architecture-and-task-tree.md](architecture/architecture-and-task-tree.md) | **CANONICAL** | Sơ đồ Mermaid luồng code, ma trận đối chiếu 6 quan hệ cốt lõi và cây tác vụ phụ thuộc. |
 | [docs/adr/0001-oi-hybrid-fetch.md](adr/0001-oi-hybrid-fetch.md) | **CANONICAL** | ADR 0001: Cơ chế kéo Open Interest kết hợp Vision archive (>28 ngày) và REST API (gần). |
 | [docs/adr/0002-risk-recovery-mode.md](adr/0002-risk-recovery-mode.md) | **CANONICAL** | ADR 0002: Cơ chế phục hồi 100% risk budget sau đúng 3 lệnh thắng liên tiếp (`after_3_wins`). |
