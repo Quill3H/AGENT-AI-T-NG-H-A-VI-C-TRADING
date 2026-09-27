@@ -1,5 +1,25 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Local BTC/ETH/SOL paper scanner candidate — 2026-09-27
+
+**AUTHOR_SELF_REVIEWED / REVIEWER_NOT_VERIFIED; NOT A GATE ACCEPTANCE.**
+Branch `codex/local-paper-scanner`, code-under-test
+`d8fd92815bd389c5fa792220f434009e8aac9921`; documentation commit is
+the subsequent commit in Git history. Base `main`
+`fe1c1330d913e78239db575ff8433cf069fe1b01` remains unmodified.
+The local-only web console uses public Binance USD-M BTC 1m chart data and
+closed 4h/15m BTC/ETH/SOL bars for a fixed Trend Following paper session
+through PaperBroker. Hosted preview remains archived evidence only. The
+author's final offline run: **447 passed, 2 skipped, 5 deselected**; network:
+**5 passed**; web: **9 passed** and Vite build passed. Browser desktop/mobile
+showed the chart and three-symbol watchlist, zero completed trades, working
+stop control, and no console/network errors. This is a functioning paper
+observation prototype, not economic validation or independent acceptance.
+Funding first observed after its settlement time quarantines an open-position
+session. The 15m closed-bar fill model is not an executable live exchange
+price. See `docs/reviews/LOCAL_PAPER_WEB_HANDOFF.md` for identities, limits
+and reproduction.
+
 ## Single-main integration and sync — 2026-09-23
 
 **OWNER-AUTHORIZED INTEGRATION, NOT GATE ACCEPTANCE.** The owner requested one visible `main` workflow and matching local/GitHub committed state. `main` was fast-forwarded (no rebase or force push) from `e970337d504563e5987a4db6b5c06c635bf7244b` to the G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9`. Local `main`, `origin/main` and GitHub `main` matched at that SHA before this documentation-only update; the final documentation SHA is in Git history and the task handoff. Code-under-test remains `d4afed6d365b3e435e79a772f7de912ee4a39b11`.

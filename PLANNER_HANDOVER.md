@@ -1,5 +1,17 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Local prospective paper UI candidate — 2026-09-27
+
+Branch `codex/local-paper-scanner`, code A
+`d8fd92815bd389c5fa792220f434009e8aac9921`, base `main`
+`fe1c1330d913e78239db575ff8433cf069fe1b01`. Documentation B is
+the following Git commit. The loopback web app auto-starts a public-data
+BTC/ETH/SOL paper session and displays a BTC chart, broker account and ledger;
+it does not send exchange orders. Author browser and tests passed with zero
+observed trades. Funding availability and 15m closed-bar fill fidelity remain
+explicit limits. Independent Tester/Reviewer and owner acceptance remain
+pending. Reproduction/evidence: `crypto-paper-agent/docs/reviews/LOCAL_PAPER_WEB_HANDOFF.md`.
+
 ## Current single-main integration — 2026-09-23
 
 **OWNER-AUTHORIZED BRANCH CONSOLIDATION; NOT GATE ACCEPTANCE.** `main` is the active integration branch. It was fast-forwarded from `e970337d504563e5987a4db6b5c06c635bf7244b` to G2 docs B `5c191856b4a5877923dabbae5426fffa7f01a9b9` with code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`; local/GitHub refs matched before this documentation-only update. Read the final docs SHA from Git history and the handoff. No force push, rebase, strategy/risk change or gate acceptance occurred.
