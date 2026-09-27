@@ -73,4 +73,37 @@ describe('paper research console', () => {
     )
     expect(evidence.artifactAudit.absolutePathsFound).toBe(artifactAudit.absolute_paths_found)
   })
+
+  it('clearly presents flat design category badges and non-coder explanations', () => {
+    render(<App />)
+    // Three explicit data tiers
+    expect(screen.getAllByText('Số liệu minh họa').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Kết quả lịch sử đã lưu trữ').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Dữ liệu chẩn đoán mẫu').length).toBeGreaterThan(0)
+
+    // Non-coder explanations
+    expect(screen.getByText(/Dành cho người không biết code/)).toBeInTheDocument()
+    expect(screen.getByText(/Vì sao không gọi là "Chạy bot"\?/)).toBeInTheDocument()
+    expect(screen.getByText(/Nguyên tắc an toàn Fail-Closed/)).toBeInTheDocument()
+
+    // Friendly strategy names
+    expect(screen.getAllByText('Bám theo xu hướng').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Phá vỡ cản & Kiểm tra lại').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Quét thanh khoản dòng tiền lớn (SMC)').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Khai thác chênh lệch phí Funding').length).toBeGreaterThan(0)
+  })
+
+  it('renders KPI metric cards and snapshot table upon replay inspection', () => {
+    render(<App />)
+    expect(screen.getByText(/10,000.00/)).toBeInTheDocument()
+    expect(screen.getByText(/10,449.21/)).toBeInTheDocument()
+    expect(screen.getByText('KHÓA HOÀN TOÀN')).toBeInTheDocument()
+
+    const button = screen.getByRole('button', { name: 'Inspect archived replay' })
+    fireEvent.click(button)
+
+    expect(screen.getByText('Mốc thời gian (UTC)')).toBeInTheDocument()
+    expect(screen.getByText(/2024-01-01T01:01:00\+00:00 \(Bắt đầu\)/)).toBeInTheDocument()
+    expect(screen.getByText(/2024-01-01T02:05:00\+00:00 \(Kết thúc\)/)).toBeInTheDocument()
+  })
 })
