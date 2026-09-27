@@ -7,7 +7,8 @@ Binance USD-M **paper/research** simulator.
 ## Git identity
 
 - Branch: `codex/paper-windows-recovery`
-- Code and tests commit: `c47249258756f6f3c7e5deb3352438add32cd2cf`
+- Code and tests commits: `c47249258756f6f3c7e5deb3352438add32cd2cf` and
+  `e1c840626468d47173c7c8308b8bc575832b576a` (restart probe correction)
 - Base integration commit: `2118e2cae327b005b314fc801db1a9fcafcc6149`
 - `main` is untouched at `fe1c1330d913e78239db575ff8433cf069fe1b01` at the start of this work.
 - Documentation commit is the later commit in this branch and is recorded by Git.
@@ -58,6 +59,7 @@ All commands used the existing Windows Python 3.12.14 environment
 | Focused recovery/API/session tests | `64 passed`, 10.64 s |
 | PowerShell AST parse of `scripts/windows/*.ps1` | 3 scripts parsed, 0 errors |
 | `git diff --check` | pass before code commit |
+| `scripts/verify_paper_integration.py --output-dir data/paper_sessions/qa-recovery-20260928b --seconds 20` | API/browser restart flow completed; `0` simulated orders/trades; public WebSocket `BLOCKED`; chart `898 x 768.5`; three intentional `ERR_CONNECTION_REFUSED` polls during restart are recorded |
 
 The regression tests cover flat restart, open position, pending order, funding
 and long gap, corrupt/torn checkpoint, repeated restart, duplicate stream,
