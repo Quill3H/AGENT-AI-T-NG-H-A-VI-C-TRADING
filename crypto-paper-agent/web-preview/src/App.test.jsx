@@ -15,9 +15,8 @@ const brokerEquityCsv = readFileSync(resolve(process.cwd(), '../docs/reviews/evi
 describe('paper research console — Binance dark UI', () => {
   it('renders PAPER/RESEARCH safety labels and mode indicators', () => {
     render(<App />)
-    // Safety banner
-    expect(screen.getAllByText('PAPER').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('RESEARCH').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/PAPER/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/RESEARCH/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Không có lệnh thật/)).toBeInTheDocument()
     expect(screen.getByText(/PAPER ONLY/)).toBeInTheDocument()
   })

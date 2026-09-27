@@ -9,18 +9,18 @@
  * EMA crossover logic applied to the artifact data.
  */
 
-// Seed price data for each symbol (based on approximate 2024 Jan values)
+// Seed price data for each symbol (current market levels for authenticity)
 export const SYMBOL_SEED = {
-  BTCUSDT: { price: 45000, volatility: 0.0025, name: 'BTC', color: '#F7931A', precision: 2 },
-  ETHUSDT:  { price: 2400,  volatility: 0.0032, name: 'ETH', color: '#627EEA', precision: 2 },
-  SOLUSDT:  { price: 102,   volatility: 0.0045, name: 'SOL', color: '#9945FF', precision: 3 },
+  BTCUSDT: { price: 64280.50, volatility: 0.0016, name: 'BTC', color: '#F7931A', precision: 2 },
+  ETHUSDT: { price: 2582.40,  volatility: 0.0024, name: 'ETH', color: '#627EEA', precision: 2 },
+  SOLUSDT: { price: 148.65,   volatility: 0.0036, name: 'SOL', color: '#9945FF', precision: 2 },
 }
 
 export const INITIAL_EQUITY = 10000
 
-// Simulate price walk from seed with realistic noise
+// Generate initial 1-minute historical candlestick series with valid OHLC and timestamps in seconds
 export function simulatePriceWalk(symbol, steps = 120, seed = 42) {
-  const config = SYMBOL_SEED[symbol]
+  const config = SYMBOL_SEED[symbol] || SYMBOL_SEED.BTCUSDT
   let price = config.price
   let rng = seed
 
@@ -30,34 +30,70 @@ export function simulatePriceWalk(symbol, steps = 120, seed = 42) {
   }
 
   const candles = []
-  const now = Date.now()
-  for (let i = steps; i >= 0; i--) {
-    const t = now - i * 60000
-    const change = (next() - 0.5) * 2 * config.volatility
-    const open = price
-    price = price * (1 + change)
-    const high = Math.max(open, price) * (1 + next() * config.volatility * 0.5)
-    const low  = Math.min(open, price) * (1 - next() * config.volatility * 0.5)
-    candles.push({ time: t, open, high, low, close: price })
+  // Align to exact 60-second boundary in unix seconds
+  const nowSec = Math.floor(Date.now() / 60000) * 60
+  const baseSec = nowSec - steps * 60
+
+  for (let i = 0; i <= steps; i++) {
+    const t = baseSec + i * 60
+    const change = (next() - 0.49) * 2 * config.volatility
+    const open = Number(price.toFixed(config.precision))
+    price = Math.max(1, price * (1 + change))
+    const close = Number(price.toFixed(config.precision))
+    const wick1 = next() * config.volatility * 0.5
+    const wick2 = next() * config.volatility * 0.5
+    const high = Number((Math.max(open, close) * (1 + wick1)).toFixed(config.precision))
+    const low = Number((Math.min(open, close) * (1 - wick2)).toFixed(config.precision))
+    candles.push({ time: t, open, high, low, close })
   }
   return candles
 }
 
-// Compute EMA over closes
-function computeEMA(closes, period) {
-  const k = 2 / (period + 1)
-  let ema = closes[0]
-  return closes.map((c) => { ema = c * k + ema * (1 - k); return ema })
+// Generate the next live tick or new 1-minute candle
+export function generateNextTick(lastCandle, symbol, isNewBar = false) {
+  const config = SYMBOL_SEED[symbol] || SYMBOL_SEED.BTCUSDT
+  const change = (Math.random() - 0.495) * 0.0008
+  const newPrice = Math.max(1, Number((lastCandle.close * (1 + change)).toFixed(config.precision)))
+
+  if (isNewBar) {
+    const time = lastCandle.time + 60
+    return {
+      time,
+      open: lastCandle.close,
+      high: Math.max(lastCandle.close, newPrice),
+      low: Math.min(lastCandle.close, newPrice),
+      close: newPrice,
+    }
+  }
+
+  return {
+    time: lastCandle.time,
+    open: lastCandle.open,
+    high: Math.max(lastCandle.high, newPrice),
+    low: Math.min(lastCandle.low, newPrice),
+    close: newPrice,
+  }
 }
 
-// Generate a synthetic paper trade signal
+// Compute EMA over closes
+export function computeEMA(closes, period) {
+  if (!closes.length) return []
+  const k = 2 / (period + 1)
+  let ema = closes[0]
+  return closes.map((c) => {
+    ema = c * k + ema * (1 - k)
+    return ema
+  })
+}
+
+// Generate a synthetic paper trade signal from EMA crossover
 export function generateSignal(candles) {
   if (candles.length < 26) return null
   const closes = candles.map((c) => c.close)
-  const ema9  = computeEMA(closes, 9)
+  const ema9 = computeEMA(closes, 9)
   const ema21 = computeEMA(closes, 21)
-  const last  = ema9.length - 1
-  const prev  = last - 1
+  const last = ema9.length - 1
+  const prev = last - 1
 
   if (ema9[prev] < ema21[prev] && ema9[last] >= ema21[last]) return 'LONG'
   if (ema9[prev] > ema21[prev] && ema9[last] <= ema21[last]) return 'SHORT'
@@ -79,17 +115,17 @@ export function createPaperBroker(equity = INITIAL_EQUITY) {
   }
 }
 
-// Execute a paper trade (fills at next-close price simulation)
+// Execute a paper trade (fills at simulated market price)
 export function executePaperTrade(broker, symbol, signal, price, timestamp) {
   if (broker.breaker) return { status: 'REJECTED', reason: 'Circuit breaker active' }
 
-  // Risk: 2% of wallet per trade, max leverage 5x
+  // Risk: 2% of wallet per trade, max leverage 2x
   const riskAmount = broker.wallet * 0.02
-  const leverage   = 2
-  const quantity   = (riskAmount * leverage) / price
-  const fee        = riskAmount * leverage * 0.0005 // 0.05% taker fee
-  const stopLoss   = signal === 'LONG'
-    ? price * (1 - 0.03)  // 3% stop-loss
+  const leverage = 2
+  const quantity = (riskAmount * leverage) / price
+  const fee = riskAmount * leverage * 0.0005 // 0.05% taker fee
+  const stopLoss = signal === 'LONG'
+    ? price * (1 - 0.03) // 3% stop-loss
     : price * (1 + 0.03)
 
   if (broker.available < riskAmount) {
@@ -97,7 +133,7 @@ export function executePaperTrade(broker, symbol, signal, price, timestamp) {
   }
 
   const position = {
-    id: `${symbol}-${Date.now()}`,
+    id: `${symbol}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     symbol,
     side: signal,
     quantity,
@@ -142,12 +178,12 @@ export function tickPositions(broker, symbol, currentPrice, timestamp) {
       : currentPrice >= pos.stopLoss
 
     if (hitStop) {
-      const grossPnl    = (pos.stopLoss - pos.entryPrice) * pos.quantity * (pos.side === 'LONG' ? 1 : -1)
-      const fundingEst  = -Math.abs(grossPnl) * 0.0001
-      const netPnl      = grossPnl - pos.fee - Math.abs(fundingEst)
-      broker.wallet    += netPnl
-      broker.equity     = broker.wallet
-      broker.available += Math.abs(pos.entryPrice * pos.quantity / pos.leverage) + netPnl
+      const grossPnl = (pos.stopLoss - pos.entryPrice) * pos.quantity * (pos.side === 'LONG' ? 1 : -1)
+      const fundingEst = -Math.abs(grossPnl) * 0.0001
+      const netPnl = grossPnl - pos.fee - Math.abs(fundingEst)
+      broker.wallet += netPnl
+      broker.equity = broker.wallet
+      broker.available += Math.abs((pos.entryPrice * pos.quantity) / pos.leverage) + netPnl
       closed.push({
         id: pos.id,
         symbol: pos.symbol,
@@ -175,7 +211,7 @@ export function tickPositions(broker, symbol, currentPrice, timestamp) {
   })
 
   // Update aggregate unrealized
-  broker.unrealized = broker.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0)
+  broker.unrealized = broker.positions.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0)
   broker.equity = broker.wallet + broker.unrealized
 
   broker.trades.push(...closed)
