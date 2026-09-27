@@ -27,14 +27,14 @@ Hệ thống mã nguồn mở nghiên cứu định lượng, kiểm thử hồi
    - *SMC Liquidity Sweep:* Săn thanh khoản với lệnh Limit tại FVG và chốt lời 3 phần 40/30/30.
    - *Funding Arbitrage:* Khai thác chênh lệch lãi suất funding giữa Spot và Perpetual.
    - *Reinforcement Learning (PPO):* Môi trường huấn luyện tác tử AI dựa trên Gymnasium.
-6. **Ứng dụng Web Console thời gian thực:** Giao diện tối chuyên nghiệp mô phỏng sàn Binance Futures, tự động cập nhật nến thời gian thực qua Binance public REST polling cho cặp BTC, ETH, SOL.
+6. **Ứng dụng Web Console thời gian thực:** Backend paper-trading dùng Binance public REST polling cho dữ liệu quyết định/khớp lệnh; frontend React có thêm Binance public WebSocket `kline_1m` chỉ để hiển thị giá/nến 1m trực tiếp, với fallback về giá REST nến đóng khi stream gián đoạn.
 
 ---
 
 ## 2. Kiến trúc Tổng quát (Architecture Overview)
 
 ```
-Binance Public Data (Public REST / Vision Archives)
+Binance Public Data (REST / Vision + display-only browser WebSocket)
        ↓
 1. Data Layer (Fetcher / Parquet Cache / Vision Downloader)
        ↓
@@ -51,7 +51,7 @@ Binance Public Data (Public REST / Vision Archives)
   ┌────┴──────────────────────────┐
   ▼                               ▼
 7A. Backtest Reporting           7B. Realtime Web Console
-(JSON / CSV / SQLite / PNG)      (HTTP Loopback + React Dark UI)
+(JSON / CSV / SQLite / PNG)      (HTTP Loopback + React; display-only WS)
 ```
 *Chi tiết kiến trúc:* Xem tài liệu [docs/architecture/SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md).
 
