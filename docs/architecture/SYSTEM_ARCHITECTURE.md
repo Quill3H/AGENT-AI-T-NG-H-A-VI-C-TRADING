@@ -14,8 +14,8 @@ Hệ thống được thiết kế theo nguyên tắc:
 ```
                     ┌─────────────────────────┐
                     │   Binance Public Data   │
-                    │  (Public REST API /     │
-                    │    Vision Archives)     │
+                    │ (REST / Vision Archives │
+                    │ + Browser WS display)   │
                     └────────────┬────────────┘
                                  │
                                  ▼
@@ -77,7 +77,7 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 
 | Đặc tính | A. Backtest / Research Replay | B. Realtime Paper Web Stream |
 | :--- | :--- | :--- |
-| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | Binance Futures public REST polling (`/fapi/v1/klines`, `/fapi/v1/fundingRate`) qua `requests.Session()`. |
+| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | **Decision/execution path:** Binance Futures public REST polling (`/fapi/v1/klines`, `/fapi/v1/fundingRate`) qua `requests.Session()`. **Display path:** frontend browser mở Binance public WebSocket `@kline_1m` cho giá/nến trực tiếp; stream này không được dùng để sinh tín hiệu hay khớp lệnh. |
 | **Đồng hồ thời gian** | Đồng hồ mô phỏng đơn điệu duyệt qua từng nến đóng. | Đồng hồ thực tế UTC chạy theo event stream nến đóng 15m/4h. |
 | **Thực thi lệnh** | Khớp tại `Open` nến tiếp theo kèm trượt giá (slippage). | Khớp tại giá nến tiếp theo khi nến hiện tại xác nhận đóng. |
 | **Phân hệ điều phối**| `crypto-paper-agent/src/backtest/engine.py` | `crypto-paper-agent/src/paper/live_session.py` |
@@ -126,10 +126,10 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 - `generator.py`: Điều phối xuất báo cáo hoàn chỉnh gồm `summary.json`, `summary.md`, `trades.json`, `equity_curve.csv`, `equity_curve.png`.
 
 ### 3.7 Web Preview & Realtime Stream (`crypto-paper-agent/src/paper/` & `web-preview/`)
-- `local_server.py`: HTTP loopback server (`ThreadingHTTPServer` + `BaseHTTPRequestHandler`) cung cấp REST endpoints (`/api/state`, `/api/start`, `/api/stop`). Không dùng FastAPI, không có WebSocket server.
-- `live_session.py`: Quản lý phiên giao dịch paper trading thời gian thực trên dữ liệu Binance công khai.
+- `local_server.py`: HTTP loopback server (`ThreadingHTTPServer` + `BaseHTTPRequestHandler`) cung cấp REST endpoints (`/api/state`, `/api/start`, `/api/stop`). Không dùng FastAPI và không host WebSocket server.
+- `live_session.py`: Quản lý phiên paper-trading và **decision/execution data path** bằng Binance public REST polling; chỉ nến đóng/provenance hợp lệ mới được đưa vào strategy/risk/PaperBroker.
 - `persistence.py`: Tự động lưu và khôi phục trạng thái vị thế/số dư vào file JSON khi restart server.
-- `web-preview/`: Frontend React xây dựng bằng Vite, sử dụng giao diện tối chuẩn Binance Futures, tích hợp TradingView Lightweight Charts.
+- `web-preview/`: Frontend React/Vite. Trình duyệt mở trực tiếp Binance public WebSocket `wss://fstream.binance.com/...@kline_1m` để hiển thị giá/nến 1m realtime. Đây là **display-only path**; khi WebSocket stale/disconnected UI fallback về giá REST nến đóng từ backend. Dữ liệu WebSocket frontend không được dùng để tạo tín hiệu, sizing hay khớp lệnh.
 
 ---
 
