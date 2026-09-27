@@ -41,8 +41,8 @@ tracked `data/raw` or paper journal artifact.
 
 | Command | Result |
 | --- | --- |
-| `.venv-paper\Scripts\python.exe -m pytest -p no:cacheprovider tests/test_local_paper_session.py tests/test_local_paper_stream.py tests/test_local_paper_server.py -q` | 29 passed, 0 failed, 2.8 s (final focused run) |
-| `.venv-paper\Scripts\python.exe -m pytest -p no:cacheprovider -m "not network" -q` | 459 passed, 2 skipped, 5 deselected, 2 existing Gymnasium warnings, 149.23 s |
+| `.venv-paper\Scripts\python.exe -m pytest -p no:cacheprovider tests/test_local_paper_session.py tests/test_local_paper_stream.py tests/test_local_paper_server.py -q` | 30 passed, 0 failed, 7.21 s (final focused run) |
+| `.venv-paper\Scripts\python.exe -m pytest -p no:cacheprovider -m "not network" -q` | 461 passed, 2 skipped, 5 deselected, 2 existing Gymnasium warnings, 133.55 s (on final HEAD) |
 | `.venv-paper\Scripts\python.exe -m pytest -p no:cacheprovider -m network -q` | 5 passed, 461 deselected, 23.35 s |
 | JSON parse for `paper_stream_state.schema.json` and `paper_stream_api_examples.json` | passed; `jsonschema` package unavailable, so schema semantic validation was not run |
 | PowerShell AST parse for Windows scripts | 3 files, 0 parse errors |
@@ -84,5 +84,6 @@ wallet/private key, signing or withdrawal operation. The system remains
 PAPER/RESEARCH only.
 
 Code-under-test commit: `d06216195821231a60bf1dd9ee6b5e5129333bfc`.
-Documentation commit: see Git history after the documentation commit; do not
-replace it with a guessed SHA.
+Documentation commits: `087dbede515e9e9ca09f101c3f54fd63db493801` plus the
+final docs-only evidence update visible in Git history; do not replace its SHA
+with a guessed value.
