@@ -11,7 +11,7 @@ import artifactAudit from './data/artifact_audit.json'
 import { evidence } from './data/evidence'
 
 const brokerEquityCsv = readFileSync(
-  resolve(process.cwd(), '../docs/reviews/evidence/g0-2c9a4d0/replay/LONG/equity_curve.csv'),
+  resolve(process.cwd(), '../../docs/history/evidence/g0-2c9a4d0/replay/LONG/equity_curve.csv'),
   'utf8',
 )
 
@@ -87,7 +87,7 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
       ['artifact_audit.json', artifactAudit],
     ]) {
       const original = JSON.parse(
-        readFileSync(resolve(process.cwd(), `../docs/reviews/evidence/stage-06-11-repair/${name}`), 'utf8'),
+        readFileSync(resolve(process.cwd(), `../../docs/history/evidence/stage-06-11-repair/${name}`), 'utf8'),
       )
       expect(copy).toEqual(original)
     }

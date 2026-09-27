@@ -3,7 +3,7 @@
 ## [Owner-directed single-main integration] — 2026-09-23
 
 - Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.
-- No strategy, broker, funding, risk or test code changed. Independent acceptance and economic validation remain pending. Preserved unrelated local dirty files without staging them. See [owner sync decision](docs/planning/2026-09-23-main-sync-decision.md).
+- No strategy, broker, funding, risk or test code changed. Independent acceptance and economic validation remain pending. Preserved unrelated local dirty files without staging them. See [owner sync decision](../docs/planning/2026-09-23-main-sync-decision.md).
 
 ## [G2 public Binance funding-coverage diagnostic] — 2026-09-22
 
@@ -11,7 +11,7 @@ Code-under-test commit: `d4afed6d365b3e435e79a772f7de912ee4a39b11`. Documentatio
 
 - Added exact 8-hour funding-source coverage to the bounded public dataset manifest, including source-late millisecond events and missing boundary rows. Raw event timestamps and ADR 0011 settlement policy are unchanged.
 - Mocked-archive and pure regressions cover exact, delayed, absent, missing-candle and source-mismatch cases. Exact A offline: 412 passed/2 skipped/5 deselected; historical probes: 26/11/3 passed; network: 5 passed/414 deselected.
-- Seven-day public Binance spot/perpetual sample: 15 source ZIP checksums matched official sidecars; 11/21 funding boundaries exact, 10 late by 1–6 ms. Full-window funding and SMC fail closed; fixed-rule Trend/Breakout have zero trades. Near-current REST data was read with the open last 15m candle excluded. No profit, native TradingView, full-history or prospective-paper claim. See [G2 diagnostic](docs/reviews/G2_BINANCE_PUBLIC_DATA_DIAGNOSTIC.md).
+- Seven-day public Binance spot/perpetual sample: 15 source ZIP checksums matched official sidecars; 11/21 funding boundaries exact, 10 late by 1–6 ms. Full-window funding and SMC fail closed; fixed-rule Trend/Breakout have zero trades. Near-current REST data was read with the open last 15m candle excluded. No profit, native TradingView, full-history or prospective-paper claim. See [G2 diagnostic](../docs/history/reviews/G2_BINANCE_PUBLIC_DATA_DIAGNOSTIC.md).
 
 ## [Functional completion candidate] — 2026-09-22
 
@@ -21,7 +21,7 @@ Code-under-test commit: `51b039b5e1b4ec0b649e9d2604a93a83f01b0a73`. Documentatio
 - Added an offline synthetic quick-start with Trend/Breakout/SMC LONG/SHORT executions, four-account comparison, real PPO train/save/load/evaluate and JSON/SQLite/CSV/PNG audit.
 - Bounded public archive requests and REST limits; downloader now avoids Windows cp1252 output failure and atomically replaces individual parquet files.
 - Clean detached A: offline409 passed/2 skipped/5 deselected; network5 passed/411 deselected; historical probes26/11/3 passed. The full canonical historical window is not run; empirical validation remains partial.
-- Full details, self-review and known debt: [functional completion handoff](docs/reviews/FINAL_FUNCTIONAL_COMPLETION_HANDOFF.md). Operator entry points: [quick-start](docs/operations/QUICKSTART.md) and [capability matrix](docs/operations/CAPABILITY_MATRIX.md).
+- Full details, self-review and known debt: [functional completion handoff](../docs/history/reviews/FINAL_FUNCTIONAL_COMPLETION_HANDOFF.md). Operator entry points: [quick-start](../docs/operations/QUICKSTART.md) and [capability matrix](../docs/operations/CAPABILITY_MATRIX.md).
 
 ## [Stage 6–11 repair] — 2026-09-21
 
@@ -34,7 +34,7 @@ Code A: `23f94376215a7fca69c8a7606e34139bc21d090c`. **IMPLEMENTED AND AUTHOR_TES
 - Run chronological four-strategy independent-account OOS comparisons with fresh folds, fixed rules and portable outputs.
 - Implement real Gymnasium PaperBroker environment and SB3 PPO train/evaluate/save/load, frozen train scaler, CPU smoke and unchanged final holdout with baselines.
 - Verify exact A: offline356 passed/2 skipped/5 deselected; network5 passed/358 deselected; Review05/06/07=26/11/3 passed; clean A offline356 passed/2 skipped/5 deselected. Four nonempty external CLI fixtures, public workflow, PPO256 and artifact integrity audit passed. Full historical/performance acceptance remains NOT_VERIFIED.
-- Full evidence, known limitations and reproduction: [Stage6–11 repair report](docs/reviews/STAGE_06_11_REPAIR_REPORT.md). Earlier entries below retain historical results only.
+- Full evidence, known limitations and reproduction: [Stage6–11 repair report](../docs/history/reviews/STAGE_06_11_REPAIR_REPORT.md). Earlier entries below retain historical results only.
 
 
 Toàn bộ lịch sử cập nhật và hoàn thành các giai đoạn theo `Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md`.

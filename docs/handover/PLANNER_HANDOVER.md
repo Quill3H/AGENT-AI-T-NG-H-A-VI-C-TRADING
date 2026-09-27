@@ -66,7 +66,7 @@ pending. Reproduction/evidence: `crypto-paper-agent/docs/reviews/LOCAL_PAPER_WEB
 - SMC report rows are realization slices, not independent full-position samples. Funding uses sampled spot/perp quotes, not hidden intrabar paths. Four comparison accounts have independent capital. No shared portfolio or profitable learned policy is claimed.
 - Documentation commit B is the documentation-only child of A. Obtain its actual full SHA from the final branch handoff; do not confuse B with the code commit tested above.
 
-Current evidence: [repair report](crypto-paper-agent/docs/reviews/STAGE_06_11_REPAIR_REPORT.md), [requirement matrix](crypto-paper-agent/docs/planning/STAGE_06_11_REPAIR_MATRIX.md), ADR0010–0012. Đọc các tài liệu này trước phần lịch sử bên dưới.
+Current evidence: [repair report](../history/reviews/STAGE_06_11_REPAIR_REPORT.md), [requirement matrix](../planning/STAGE_06_11_REPAIR_MATRIX.md), ADR0010–0012. Đọc các tài liệu này trước phần lịch sử bên dưới.
 
 
 > Đọc file này đầu mỗi phiên mới, rồi đối chiếu GitHub hiện tại. File này thay cho việc phụ thuộc trí nhớ hội thoại; không bảo đảm AI tự nhớ hoặc tự theo dõi GitHub.
