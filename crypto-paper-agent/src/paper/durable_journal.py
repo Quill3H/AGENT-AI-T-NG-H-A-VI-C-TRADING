@@ -96,7 +96,7 @@ class DurableJournal:
             stream.flush()
             os.fsync(stream.fileno())
         digest = sha256(raw + payload).hexdigest()
-        snapshot = record.get('state', self.snapshot)
+        snapshot = decode(encode(record['state'])) if 'state' in record else self.snapshot
         checkpoint = {'version': 1, 'session_id': session_id, 'journal_sha256': digest, 'state': snapshot}
         temporary = self.directory / 'account.json.tmp'
         with temporary.open('xb') as stream:
