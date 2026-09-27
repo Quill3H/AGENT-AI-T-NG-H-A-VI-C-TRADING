@@ -1,5 +1,14 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Review 2026-09-23 high-priority repair candidate — 2026-09-27
+
+**AUTHOR_SELF_REVIEWED / INDEPENDENT_REVIEWER_NOT_VERIFIED — NO OWNER ACCEPTANCE.** Branch `codex/review-high-priority-data-fixes`, code-under-test commit `d6c639d000b1544003bffe63a382b73846550bd5`, documentation commit: see Git history and final handoff. Base local/remote `main` after fetch: `fe1c1330d913e78239db575ff8433cf069fe1b01`; `main` was not merged or changed in this task. The primary checkout's unrelated web-preview edits and `.serena/` were preserved; this repair used an isolated worktree.
+
+- Explicit broker `process_batch` handles simultaneous symbols with shared open/close phases, exact funding settlement for both symbols before breaker force-close, conservative peer marks, atomic exceptional rollback and external breaker identity preservation. Direct `process_candle` rejects breaker-time reversal before mutation and per-symbol candle interval overlap. Legacy direct sequential same-open processing without an intrabar future breaker event remains a limitation; multi-symbol callers must use `process_batch`.
+- RL train/validation/holdout/evaluate-only reject overlapping candle intervals. OI merge now exposes `oi_source_time`/`oi_available`, masks data older than one mapped OI interval, and preserves the ADR 0005 NaN fallback. Missing taker-buy no longer becomes a 50/50 pseudo-observation; cumulative CVD and PPO mask stay missing. Funding/all CLI modes explicitly reject unsupported `--start`/`--end`.
+- Synthetic-only UI fixture and field contract: `docs/reviews/evidence/review-high-priority-fixes/ui-example.json` and `docs/reviews/2026-09-27-high-priority-input-fixes.md`. No real market, profitability, live/testnet or credential claim.
+- Author last pre-commit full offline: **431 passed, 2 skipped, 5 deselected**; Review05/06/07: **26/11/3 passed**. Post-code-commit suite is recorded in the final handoff. Network/market download: **NOT_RUN** for this correction. F6 directional dataset-content identity, other special-mode flags, F7 README/checkpoint cleanup and separate review remain open.
+
 ## Single-main integration and sync — 2026-09-23
 
 **OWNER-AUTHORIZED INTEGRATION, NOT GATE ACCEPTANCE.** The owner requested one visible `main` workflow and matching local/GitHub committed state. `main` was fast-forwarded (no rebase or force push) from `e970337d504563e5987a4db6b5c06c635bf7244b` to the G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9`. Local `main`, `origin/main` and GitHub `main` matched at that SHA before this documentation-only update; the final documentation SHA is in Git history and the task handoff. Code-under-test remains `d4afed6d365b3e435e79a772f7de912ee4a39b11`.

@@ -1,5 +1,11 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## 2026-09-27 review high-priority correction candidate
+
+**AUTHOR_SELF_REVIEWED; TESTER/INDEPENDENT_REVIEWER_NOT_VERIFIED.** Base local/remote `main` `fe1c1330d913e78239db575ff8433cf069fe1b01`; isolated branch `codex/review-high-priority-data-fixes`; code A `d6c639d000b1544003bffe63a382b73846550bd5`; docs B: read Git history and final handoff. No `main` merge. Primary checkout's unrelated web-preview edits and `.serena/` were untouched.
+
+Scope: reviewer F1–F5 broker batch chronology, interval overlap, stale OI, missing taker/CVD and ignored special-mode date flags. Exact changed behavior, synthetic UI schema/example, test commands and residual F6/F7 debt: `crypto-paper-agent/docs/reviews/2026-09-27-high-priority-input-fixes.md`. Broker multi-symbol callers need explicit `process_batch`; direct same-open calls that would reverse the breaker fail before mutation. Funding-source exactness, stop/risk gates and paper-only boundary remain in force. No network market sample was run and no profit or independent acceptance is claimed. Next owner: separate Tester and Independent Reviewer on code A/docs B, then owner decision.
+
 ## Current single-main integration — 2026-09-23
 
 **OWNER-AUTHORIZED BRANCH CONSOLIDATION; NOT GATE ACCEPTANCE.** `main` is the active integration branch. It was fast-forwarded from `e970337d504563e5987a4db6b5c06c635bf7244b` to G2 docs B `5c191856b4a5877923dabbae5426fffa7f01a9b9` with code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`; local/GitHub refs matched before this documentation-only update. Read the final docs SHA from Git history and the handoff. No force push, rebase, strategy/risk change or gate acceptance occurred.

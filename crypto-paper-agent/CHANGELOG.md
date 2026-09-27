@@ -1,5 +1,13 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Review high-priority data and chronology repair candidate] — 2026-09-27
+
+Code A `d6c639d000b1544003bffe63a382b73846550bd5`; documentation B: see Git history/final handoff. **AUTHOR_SELF_REVIEWED / INDEPENDENT_REVIEWER_NOT_VERIFIED.**
+
+- Added explicit atomic same-open multi-symbol broker batch processing and fail-before-mutation interval/clock checks; settlement cashflows at one timestamp are processed before breaker force-close.
+- Validated RL candle/partition intervals; bounded OI staleness with source time and availability; removed synthetic 50/50 taker volume so missing CVD stays missing. Special funding/all CLI modes reject unsupported explicit dates.
+- Added regressions and a verified synthetic-only UI fixture. F6 data-content identity, other special-mode flags and F7 documentation drift remain open; no market-performance or live/testnet claim. Details: [author handoff](docs/reviews/2026-09-27-high-priority-input-fixes.md).
+
 ## [Owner-directed single-main integration] — 2026-09-23
 
 - Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.
