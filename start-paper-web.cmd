@@ -19,10 +19,10 @@ if not exist ".venv-paper\Scripts\python.exe" (
 
 cd web-preview
 if not exist "node_modules" (
-  npm ci
+  call npm ci
   if errorlevel 1 goto failed
 )
-npm run build
+call npm run build
 if errorlevel 1 goto failed
 cd ..
 .venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser --port %PAPER_PORT%
