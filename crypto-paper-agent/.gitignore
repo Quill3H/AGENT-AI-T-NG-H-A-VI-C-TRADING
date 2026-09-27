@@ -6,6 +6,7 @@ __pycache__/
 # Virtual environments
 venv/
 .venv/
+.venv-paper/
 env/
 ENV/
 
@@ -32,6 +33,7 @@ tmp/
 
 # Backtest Reports and Databases (Stage 6)
 reports/
+data/paper_sessions/
 *.sqlite
 *.sqlite3
 *.db

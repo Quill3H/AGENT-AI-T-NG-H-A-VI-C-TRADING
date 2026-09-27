@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { evidence } from './data/evidence'
 import { buildOfflineReplay, toPolyline } from './lib/replay'
+import { LocalPaperPanel } from './LocalPaperPanel'
 
 function Status({ children, tone = 'neutral' }) {
   return <span className={`status status--${tone}`}>{children}</span>
@@ -45,11 +46,12 @@ function Header() {
   )
 }
 
-function NavigationStrip() {
+function NavigationStrip({ localMode }) {
   return (
     <nav className="nav-strip" aria-label="Điều hướng nhanh các mục">
       <div className="nav-container">
-        <a href="#overview" className="nav-tab active">📋 Tổng quan (Overview)</a>
+        {localMode && <a href="#paper" className="nav-tab active">Thị trường PAPER</a>}
+        <a href="#overview" className={`nav-tab${localMode ? '' : ' active'}`}>📋 Tổng quan (Overview)</a>
         <a href="#replay" className="nav-tab">📈 Kết quả mô phỏng (Simulation Replay)</a>
         <a href="#strategy" className="nav-tab">⚡ Chiến lược (Strategies)</a>
         <a href="#funding" className="nav-tab">⏱️ Phí Funding (Funding Coverage)</a>
@@ -212,7 +214,7 @@ function ReplaySection({ idlePoints, runState, setRunState, finalEquity }) {
                   <span>No economic claim · no orders sent</span>
                 </>
               ) : (
-                <span>Ready. No process is running.</span>
+                <span>Archived replay is idle; the local paper session is separate.</span>
               )}
             </div>
           </div>
@@ -408,7 +410,7 @@ function RiskSection() {
       </div>
 
       <p className="note">
-        UI is read-only. No exchange client, wallet, API key, order endpoint or webhook is included.
+        Hosted evidence is read-only. Local controls start/stop only the paper session; no exchange order client, wallet, API key or webhook is included.
       </p>
     </section>
   )
@@ -459,27 +461,30 @@ function AuditSection() {
 }
 
 export function App() {
+  const localMode = (window.location.hostname === '127.0.0.1' && !!window.location.port)
+    || (window.location.hostname === 'localhost' && ['8765', '5173'].includes(window.location.port))
   const idlePoints = useMemo(() => buildOfflineReplay(), [])
   const [runState, setRunState] = useState('idle')
   const finalEquity = idlePoints.at(-1)?.equity || 10000
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${localMode ? ' app-shell--local' : ''}`}>
       {/* Top Banner with Strict Safety Label */}
       <div className="safety-bar" role="alert">
         <div className="safety-bar-left">
           <span className="safety-pill">CHẾ ĐỘ MÔ PHỎNG</span>
           <span className="safety-bar-text">
-            <strong>PAPER / RESEARCH — NO LIVE ORDERS:</strong> Không kết nối sàn thật, không đặt lệnh, không rủi ro tài chính.
+            <strong>PAPER / RESEARCH — NO LIVE ORDERS:</strong> Chỉ đọc dữ liệu công khai; không kết nối tài khoản hoặc đặt lệnh sàn.
           </span>
         </div>
         <span className="safety-bar-tag">AUDIT PREVIEW</span>
       </div>
 
       <Header />
-      <NavigationStrip />
+      <NavigationStrip localMode={localMode} />
 
       <main className="main-content">
+        {localMode && <LocalPaperPanel />}
         <div className="primary-column">
           <OverviewSection idlePoints={idlePoints} />
           <ReplaySection
