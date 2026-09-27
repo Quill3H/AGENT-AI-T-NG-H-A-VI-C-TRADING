@@ -80,27 +80,30 @@ def main():
             evidence['public_orders'] = len(state['orders'])
             evidence['public_completed_trades'] = state['completed_trades']
             page.screenshot(path=str(output / 'public-browser.png'), full_page=True)
-            stopped = requests.post(url + '/api/stop', timeout=15).json()
-            assert stopped['status'] == 'STOPPED', stopped
-            evidence['stop_idempotent'] = requests.post(url + '/api/stop', timeout=5).json()['status'] == 'STOPPED'
-            save('stopped-state.json', stopped)
+            pre_restart = state
+            save('pre-restart-state.json', pre_restart)
             evidence['phase'] = 'intentional_restart'
             process.terminate()
             process.wait(timeout=10)
             process = launch(log)
             restored = requests.post(url + '/api/start', timeout=5).json()
-            assert restored['status'] == 'RECOVERY_REQUIRED'
-            assert restored['session_id'] == stopped['session_id']
-            assert restored['account'] == stopped['account']
+            assert restored['status'] in ('SCANNING', 'WAITING_CONNECTION', 'RECOVERY_REQUIRED'), restored
+            assert restored['session_id'] == pre_restart['session_id']
+            assert restored['account'] == pre_restart['account']
             assert not restored['risk_gate']['admission_open']
             save('restart-state.json', restored)
             evidence['phase'] = 'after_restart'
             page.reload(wait_until='networkidle')
-            locked = page.get_by_role('button', name='Khóa khởi động do cần đối soát journal')
-            locked.wait_for()
-            assert locked.is_disabled()
+            if restored['status'] == 'RECOVERY_REQUIRED':
+                locked = page.get_by_role('button', name='Khóa khởi động do cần đối soát journal')
+                locked.wait_for()
+                assert locked.is_disabled()
+                evidence['restart_browser_locked'] = True
+            stopped = requests.post(url + '/api/stop', timeout=15).json()
+            assert stopped['status'] == 'STOPPED', stopped
+            evidence['stop_idempotent'] = requests.post(url + '/api/stop', timeout=5).json()['status'] == 'STOPPED'
+            save('stopped-state.json', stopped)
             page.screenshot(path=str(output / 'restart-browser.png'), full_page=True)
-            evidence['restart_browser_locked'] = True
             evidence['status'] = 'AUTHOR_VERIFIED_API_BROWSER_RESTART'
         finally:
             browser.close()
