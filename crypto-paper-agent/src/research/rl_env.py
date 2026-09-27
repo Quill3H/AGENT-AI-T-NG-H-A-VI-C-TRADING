@@ -43,6 +43,14 @@ def market_vectors(frame):
     return np.column_stack(arrays + masks)
 
 
+def _validate_candle_intervals(frame, timeframe, name):
+    """Require non-overlapping half-open candle intervals, allowing gaps."""
+    duration = pd.Timedelta(timeframe_to_timedelta(timeframe))
+    if len(frame) > 1 and (frame.index[1:] - frame.index[:-1] < duration).any():
+        raise ValueError(f"{name} contains overlapping {timeframe} candle intervals")
+    return duration
+
+
 class ObservationScaler:
     def __init__(self, mean, scale):
         self.mean = np.asarray(mean, dtype=float)
@@ -77,6 +85,7 @@ class RiskAwareTradingEnv(gym.Env):
     def __init__(self, frame, config, scaler, timeframe="1m", news_filter=None):
         super().__init__()
         BacktestEngine.validate_dataset(frame, "RL")
+        _validate_candle_intervals(frame, timeframe, "RL")
         if len(frame) < 2:
             raise ValueError("RL episode needs at least two closed candles")
         self.frame = frame.copy()
@@ -272,14 +281,16 @@ def train_ppo(
         ("holdout", holdout),
     ):
         BacktestEngine.validate_dataset(partition, name)
+        _validate_candle_intervals(partition, timeframe, name)
         if len(partition) < 2:
             raise ValueError(f"{name} needs at least two candles")
+    duration = pd.Timedelta(timeframe_to_timedelta(timeframe))
     if (
-        not train.index[-1] < validation.index[0]
-        or not validation.index[-1] < holdout.index[0]
+        train.index[-1] + duration > validation.index[0]
+        or validation.index[-1] + duration > holdout.index[0]
     ):
         raise ValueError(
-            "train, validation, final holdout must be strictly chronological and disjoint"
+            "train, validation, final holdout candle intervals overlap"
         )
     torch.set_num_threads(1)
     scaler = ObservationScaler.fit_train(train)
@@ -389,10 +400,11 @@ def evaluate_saved_ppo(model_dir, frame, config, output_dir, timeframe="1m", see
         raise ValueError("evaluation config differs from training config")
     if timeframe != payload["report"]["datasets"]["train"]["timeframe"]:
         raise ValueError("evaluation timeframe differs from training timeframe")
-    if frame.empty or frame.index[0] <= pd.Timestamp(
-        payload["report"]["datasets"]["train"]["end"]
-    ):
-        raise ValueError("evaluation must be after the training partition")
+    BacktestEngine.validate_dataset(frame, "RL evaluation")
+    duration = _validate_candle_intervals(frame, timeframe, "RL evaluation")
+    last_scored_open = pd.Timestamp(payload["report"]["datasets"]["validation"]["end"])
+    if frame.index[0] < last_scored_open + duration:
+        raise ValueError("evaluation must be after the training and validation candle intervals (overlap)")
     saved = payload["report"]["scaler"]
     scaler = ObservationScaler(saved["mean"], saved["scale"])
     model = PPO.load(model_path, device="cpu")

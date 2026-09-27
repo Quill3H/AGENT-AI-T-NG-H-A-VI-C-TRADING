@@ -195,6 +195,7 @@ class PaperBroker:
         self.current_time: Optional[datetime] = None
         self.last_candle_open_time: Optional[datetime] = None
         self.last_candle_open_time_per_symbol: Dict[str, datetime] = {}
+        self.last_candle_close_time_per_symbol: Dict[str, datetime] = {}
         self.current_batch_open_time: Optional[datetime] = None
         self.symbols_in_current_batch: Set[str] = set()
         self.is_halted: bool = False
@@ -202,6 +203,7 @@ class PaperBroker:
         self.last_mark_prices: Dict[str, float] = {}
         self._settled_funding_keys: Set[Tuple[str, datetime]] = set()
         self._is_handling_cb_lock: bool = False
+        self._defer_cb_lock_for_batch: bool = False
 
         # 6. Bộ đếm định danh xác định (Deterministic ID generator)
         self._order_seq: int = 0
@@ -338,6 +340,90 @@ class PaperBroker:
         self.order_history.append(rec)
         return rec
 
+    def process_batch(self, candles: List[dict]) -> List[Dict[str, Any]]:
+        """Process simultaneous symbols with all open phases before any close phase.
+
+        A shadow broker makes an exceptional batch atomic. Per-symbol
+        order is canonical so caller iteration order cannot change admission.
+        """
+        if not isinstance(candles, (list, tuple)) or not candles:
+            raise ValueError("process_batch requires nonempty candles")
+        if any(not isinstance(c, dict) for c in candles):
+            raise TypeError("process_batch candles must be dictionaries")
+        opens = [_ensure_utc(c.get("open_time", c.get("timestamp"))) for c in candles]
+        if len(set(opens)) != 1:
+            raise ValueError("process_batch requires one shared open_time")
+        closes = [
+            opens[i] + self._parse_timeframe_duration(
+                c.get("timeframe", self.config.get("data", {}).get("timeframes", ["1m"])[0])
+            )
+            for i, c in enumerate(candles)
+        ]
+        if len(set(closes)) != 1:
+            raise ValueError("process_batch requires the same close_time for every symbol")
+        symbols = [str(c.get("symbol", self.config.get("data", {}).get("futures_symbol", "BTCUSDT"))).upper()
+                   for c in candles]
+        if len(set(symbols)) != len(symbols):
+            raise ValueError("process_batch contains duplicate symbol")
+        shadow = deepcopy(self)
+        ordered = sorted(zip(symbols, candles), key=lambda pair: pair[0])
+        # Every simultaneous open quote is known at this timestamp. Make it
+        # available before a gap exit can lock the breaker and unwind peers.
+        for symbol, candle in ordered:
+            mark = _validate_finite_positive("open", candle.get("open"))
+            shadow.last_mark_prices[symbol] = mark
+            pos = shadow.positions.get(symbol)
+            if pos is not None:
+                pos._last_unrealized_pnl = pos.calculate_unrealized_pnl(mark)
+        shadow._defer_cb_lock_for_batch = True
+        phases = [(symbol, shadow._process_candle_open(c)) for symbol, c in ordered]
+        shadow._defer_cb_lock_for_batch = False
+        if shadow.circuit_breaker.is_locked:
+            shadow._handle_circuit_breaker_lock(opens[0])
+        # All bars in the batch become available at the same close. Publish a
+        # conservative mark for every still-open position before any close
+        # can trigger a breaker-driven force unwind of another symbol.
+        for symbol, part in phases:
+            pos = shadow.positions.get(symbol)
+            if pos is None:
+                continue
+            mark = part["close_p"]
+            if pos.direction == OrderDirection.LONG:
+                if part["low_p"] <= pos.liquidation_price:
+                    mark = pos.liquidation_price
+                elif part["low_p"] <= pos.stop_loss_price:
+                    mark = pos.stop_loss_price
+                elif (pos.take_profit_price is not None and part["high_p"] >= pos.take_profit_price
+                      and not (pos.metadata.get("intrabar_limit_entry") and pos.opened_at == part["open_time"])):
+                    mark = pos.take_profit_price
+            else:
+                if part["high_p"] >= pos.liquidation_price:
+                    mark = pos.liquidation_price
+                elif part["high_p"] >= pos.stop_loss_price:
+                    mark = pos.stop_loss_price
+                elif (pos.take_profit_price is not None and part["low_p"] <= pos.take_profit_price
+                      and not (pos.metadata.get("intrabar_limit_entry") and pos.opened_at == part["open_time"])):
+                    mark = pos.take_profit_price
+            shadow.last_mark_prices[symbol] = mark
+            pos._last_unrealized_pnl = pos.calculate_unrealized_pnl(mark)
+        completed = {
+            symbol: shadow._finish_candle(
+                part["open_time"], part["close_time"], part["symbol"],
+                part["low_p"], part["high_p"], part["close_p"], part["candle_events"],
+            )
+            for symbol, part in phases
+        }
+        # Caller-supplied collaborators are observable objects. Commit their
+        # validated shadow state without replacing their identities.
+        self.circuit_breaker.__dict__.clear()
+        self.circuit_breaker.__dict__.update(shadow.circuit_breaker.__dict__)
+        shadow.circuit_breaker = self.circuit_breaker
+        self.news_filter.__dict__.clear()
+        self.news_filter.__dict__.update(shadow.news_filter.__dict__)
+        shadow.news_filter = self.news_filter
+        self.__dict__.update(shadow.__dict__)
+        return [completed[symbol] for symbol in symbols]
+
     def process_candle(self, candle: Union[dict, Any]) -> Dict[str, Any]:
         """
         Xử lý 1 nến theo quy trình 5 pha chống nhìn trước:
@@ -347,6 +433,13 @@ class PaperBroker:
         Pha 4: Intrabar Protection (High / Low: Liquidation > SL > TP)
         Pha 5: Close time & Mark to Market
         """
+        part = self._process_candle_open(candle)
+        return self._finish_candle(
+            part["open_time"], part["close_time"], part["symbol"],
+            part["low_p"], part["high_p"], part["close_p"], part["candle_events"],
+        )
+
+    def _process_candle_open(self, candle: Union[dict, Any]) -> Dict[str, Any]:
         # =========================================================
         # PREFLIGHT PHASE - TUYỆT ĐỐI KHÔNG MUTATE BẤT KỲ TRƯỜNG NÀO CỦA SELF NẾU NẾN LỖI (E6)
         # =========================================================
@@ -394,9 +487,14 @@ class PaperBroker:
 
         # 5. Kiểm tra tính đơn điệu của thời gian theo symbol và watermark batch (H3)
         last_sym_open = self.last_candle_open_time_per_symbol.get(symbol)
+        last_sym_close = self.last_candle_close_time_per_symbol.get(symbol)
         if last_sym_open is not None and open_time <= last_sym_open:
             raise ValueError(
                 f"Time reversal or duplicate in candle sequence for {symbol}: {open_time} <= {last_sym_open}"
+            )
+        if last_sym_close is not None and open_time < last_sym_close:
+            raise ValueError(
+                f"Overlapping candle interval for {symbol}: {open_time} < prior close {last_sym_close}"
             )
 
         if self.current_batch_open_time is not None:
@@ -409,6 +507,14 @@ class PaperBroker:
                     raise ValueError(
                         f"Duplicate candle for {symbol} at open_time {open_time} in current batch"
                     )
+
+        # A prior intrabar close may have advanced the breaker past another
+        # symbol's same-open candle. Reject before touching broker clocks/marks.
+        if self.circuit_breaker.current_timestamp is not None and open_time < self.circuit_breaker.current_timestamp:
+            raise ValueError(
+                f"Cannot process candle before breaker time {self.circuit_breaker.current_timestamp}; "
+                "use process_batch for simultaneous symbols"
+            )
 
         # 6. Kiểm tra bỏ sót mốc Funding Settlement khi đang có vị thế mở (E1, H3)
         if last_sym_open is not None and symbol in self.positions:
@@ -503,6 +609,7 @@ class PaperBroker:
             self.symbols_in_current_batch.add(symbol)
 
         self.last_candle_open_time_per_symbol[symbol] = open_time
+        self.last_candle_close_time_per_symbol[symbol] = close_time
         self.last_candle_open_time = open_time
         self.current_time = open_time
         self.last_mark_prices[symbol] = open_p
@@ -849,6 +956,13 @@ class PaperBroker:
                 )
                 candle_events.append({"type": "ORDER_REJECTED", "reasons": reasons})
 
+        return {
+            "open_time": open_time, "close_time": close_time, "symbol": symbol,
+            "low_p": low_p, "high_p": high_p, "close_p": close_p,
+            "candle_events": candle_events,
+        }
+
+    def _finish_candle(self, open_time, close_time, symbol, low_p, high_p, close_p, candle_events):
         # PHA 4: Intrabar Protection (Liquidation > SL > TP trên [low_p, high_p])
         if symbol in self.positions:
             pos = self.positions[symbol]
@@ -1093,7 +1207,7 @@ class PaperBroker:
         Cưỡng chế đóng toàn bộ vị thế đang mở và hủy pending orders khi Circuit Breaker bị khóa (E3).
         Không gọi đệ quy.
         """
-        if self._is_handling_cb_lock:
+        if self._is_handling_cb_lock or self._defer_cb_lock_for_batch:
             return
         self._is_handling_cb_lock = True
         try:
