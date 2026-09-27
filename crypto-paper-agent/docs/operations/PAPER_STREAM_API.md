@@ -122,7 +122,20 @@ manual audit. A pending `PAPER_INPUT` without a `PAPER_BATCH` means the last
 state is uncertain. There is no operator "resume" or reset endpoint in this
 branch. Exact replay/reconciliation is a remaining engineering gate.
 
+## Recovery v2 and Windows process lifecycle
+
+See `PAPER_STREAM_RECOVERY_V2.md` for the exact restart contract. Version-2
+machine checkpoints can be restored only after broker/risk/strategy/accounting
+and the current closed-bar REST boundary agree. A legacy or unprovable session
+stays `RECOVERY_REQUIRED` with order admission closed. Process shutdown writes
+a resumable checkpoint; `POST /api/stop` remains a terminal operator stop.
+
 ## Known limits and evidence
+
+The earlier statement that exact restoration was unavailable is superseded by
+the version-2 process checkpoint described above. Exact restore is attempted
+only for sessions written by this backend; legacy evidence and any failed
+validation still remain read-only `RECOVERY_REQUIRED`.
 
 - The Binance public WebSocket feed must be reachable on the user's network.
   REST success alone does not verify stream availability. No stream means no

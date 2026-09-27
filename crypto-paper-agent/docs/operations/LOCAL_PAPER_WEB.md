@@ -34,6 +34,16 @@ cd ..
 
 ## Execution contract
 
+The backend persists a version-2 machine checkpoint for Windows process
+restarts. It verifies the broker ledger, pending orders, positions, funding
+keys, circuit-breaker clock, strategy setup and current closed-bar REST
+boundary before it accepts a WebSocket batch. Exact recovery enters
+`WAITING_CONNECTION`; legacy or unprovable evidence remains
+`RECOVERY_REQUIRED`. `POST /api/stop` is a terminal bot stop, while closing
+the backend process writes a resumable process checkpoint. See
+`PAPER_STREAM_RECOVERY_V2.md` for install, logon task and plugged-in sleep
+instructions.
+
 - Source: Binance public USD-M perpetual `/fapi/v1/time`, `/fapi/v1/klines`
   and `/fapi/v1/fundingRate` only. No order endpoint exists in this service.
 - BTC chart may show a **provisional** 1m candle. It is display-only.
