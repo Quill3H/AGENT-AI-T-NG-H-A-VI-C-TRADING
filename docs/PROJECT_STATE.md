@@ -14,7 +14,7 @@
 | **Nhánh tích hợp chính** | `main` (commit `fe1c1330d913e78239db575ff8433cf069fe1b01`) |
 | **Nhánh làm việc hiện tại** | `codex/repository-information-architecture-cleanup` |
 | **Chế độ giao dịch** | **PAPER TRADING ONLY** (mô phỏng, không API key, không nạp/rút, không ví tiền) |
-| **Cơ sở dữ liệu giá** | Binance USD-M Futures public REST API polling (BTC, ETH, SOL) |
+| **Nguồn dữ liệu thị trường** | Backend quyết định giao dịch: Binance USD-M Futures public REST polling (BTC, ETH, SOL); frontend hiển thị trực tiếp: Binance public WebSocket `kline_1m` (display-only, không tham gia quyết định lệnh) |
 | **Kết quả kiểm thử baseline**| **450 passed, 2 skipped, 5 deselected** (Python pytest) + **16 passed** (Vitest Web UI) |
 
 ---
@@ -35,7 +35,7 @@
 - [x] **SMC Liquidity Sweep (Giai đoạn 9):** Quét thanh khoản, lệnh limit tại FVG, chốt lời đa tầng 40/30/30 (ADR 0012).
 - [x] **Multi-Strategy Walk-Forward Engine (Giai đoạn 10):** So sánh đa chiến lược với tài khoản vốn phân lập cho từng fold.
 - [x] **Reinforcement Learning Environment (Giai đoạn 11):** Môi trường Gymnasium + Stable-Baselines3 PPO hoàn chỉnh.
-- [x] **Local Paper Web Console (Mới):** Ứng dụng web cục bộ chạy trên cổng 8765, tự động cập nhật nến BTC/ETH/SOL qua Binance public REST polling, hiển thị biểu đồ Candlestick và sổ lệnh mô phỏng.
+- [x] **Local Paper Web Console (Mới):** Backend local dùng REST polling cho trạng thái paper-trading; frontend React dùng WebSocket Binance public cho giá/nến 1m hiển thị trực tiếp và tự fallback về giá REST nến đóng khi stream stale/disconnected. WebSocket frontend không tạo tín hiệu hay lệnh.
 
 ---
 
