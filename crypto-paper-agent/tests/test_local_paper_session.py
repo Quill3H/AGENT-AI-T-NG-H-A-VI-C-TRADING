@@ -2,8 +2,10 @@ from datetime import datetime, timedelta, timezone
 import json
 import time
 
+import pandas as pd
 import pytest
 
+from src.execution.order_models import OrderRequest
 from src.paper.live_session import BinancePublicSource, LocalPaperSession, parse_klines
 
 
@@ -204,3 +206,164 @@ def test_exact_funding_event_observed_after_settlement_cannot_be_backdated(tmp_p
         session._funding_metadata(
             "BTCUSDT", BASE, observed_ms=int((BASE + timedelta(minutes=15)).timestamp() * 1000)
         )
+
+
+def stream_bar(symbol, opened=BASE, closed=True, interval="15m"):
+    return {"symbol": symbol, "interval": interval, "open_time": opened,
+            "close_time": opened + timedelta(minutes=15 if interval == "15m" else 1),
+            "event_time": opened + timedelta(minutes=15 if interval == "15m" else 1),
+            "received_at": opened + timedelta(minutes=16),
+            "available_at": opened + timedelta(minutes=16), "open": 100.0, "high": 101.0,
+            "low": 99.0, "close": 100.0, "volume": 5.0, "closed": closed}
+
+
+def test_only_complete_three_symbol_stream_batch_reaches_broker(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+    session.on_connection(True, None)
+    assert session.state()["status"] == "WAITING_SYNC"
+    assert session.state()["risk_gate"]["admission_open"] is False
+    source.phase = 1
+    source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol, closed=False))
+    assert session.broker.account_snapshots == []
+    session.on_stream_event(stream_bar("BTCUSDT"))
+    session.on_stream_event(stream_bar("ETHUSDT"))
+    assert session.broker.account_snapshots == []
+    assert session.on_stream_event(stream_bar("SOLUSDT"))["status"] == "SCANNING"
+    assert len(session.broker.account_snapshots) == 3
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol))
+    assert len(session.broker.account_snapshots) == 3
+
+
+def test_stream_disconnect_blocks_paper_admission_until_resync(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+    session.on_connection(True, None)
+    session.on_connection(False, "network dropped")
+    assert session.state()["status"] == "WAITING_CONNECTION"
+    assert session.state()["connection"]["connected"] is False
+    source.phase = 1
+    source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol))
+    assert session.broker.account_snapshots == []
+    session.on_connection(True, None)
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol))
+    assert len(session.broker.account_snapshots) == 3
+
+
+def test_restart_never_resets_existing_paper_account(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+    source.phase = 1
+    source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
+    session.poll()
+    old_state = session.state()
+    journal_path = next(tmp_path.glob("*.jsonl"))
+    original_bytes = journal_path.read_bytes()
+    restarted = LocalPaperSession(source=source, journal_dir=tmp_path)
+    state = restarted.start()
+    assert state["status"] == "RECOVERY_REQUIRED"
+    assert state["session_id"] == old_state["session_id"]
+    assert state["account"] == old_state["account"]
+    assert state["last_processed_open_utc"] == old_state["last_processed_open_utc"]
+    assert state["connection"]["connected"] is False
+    assert restarted.broker is None
+    assert journal_path.read_bytes() == original_bytes
+
+
+def test_contiguous_gap_without_exposure_is_journaled_but_never_filled(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+    source.now = int((BASE + timedelta(minutes=31)).timestamp() * 1000)
+    original = source.klines
+    source.klines = lambda symbol, interval, limit: (
+        rows(BASE - timedelta(minutes=30), 4, 15) if interval == "15m"
+        else original(symbol, interval, limit))
+    state = session.poll()
+    assert state["status"] == "WAITING_SYNC"
+    assert state["completed_trades"] == 0
+    assert state["last_processed_open_utc"] is None
+    assert session.broker.account_snapshots == []
+    records = [json.loads(line) for line in next(tmp_path.glob("*.jsonl")).read_text(encoding="utf-8").splitlines()]
+    assert [record["type"] for record in records] == ["SESSION_START", "PAPER_GAP_SKIPPED"]
+
+
+def test_gap_with_pending_order_requires_recovery_before_mutation(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+    session.broker.pending_closes["BTCUSDT"] = BASE
+    source.now = int((BASE + timedelta(minutes=31)).timestamp() * 1000)
+    original = source.klines
+    source.klines = lambda symbol, interval, limit: (
+        rows(BASE - timedelta(minutes=30), 4, 15) if interval == "15m"
+        else original(symbol, interval, limit))
+    state = session.poll()
+    assert state["status"] == "QUARANTINED"
+    assert "exposure" in state["error"]
+    assert session.broker.account_snapshots == []
+
+
+def test_halted_broker_never_advertises_open_admission(tmp_path):
+    session = LocalPaperSession(source=FakeSource(), journal_dir=tmp_path)
+    session.start()
+    session.on_connection(True, None)
+    session.status = "SCANNING"
+    session.broker.is_halted = True
+    assert session.state()["risk_gate"]["admission_open"] is False
+    assert "halted" in session.state()["risk_gate"]["reason"]
+
+
+def test_synthetic_strategy_request_fills_then_stops_with_reconciled_cash(tmp_path):
+    source = FakeSource()
+    session = LocalPaperSession(source=source, journal_dir=tmp_path)
+    session.start()
+
+    class SyntheticSignal:
+        def update_trailing_stop(self, candle, broker):
+            return None
+
+        def on_candle_close(self, candle, features, broker):
+            return OrderRequest(symbol="BTCUSDT", direction="LONG", signal_price=100,
+                                stop_loss_price=90, signal_time=BASE, leverage=1)
+
+    session.strategies["BTCUSDT"] = SyntheticSignal()
+    features = pd.DataFrame([{"open": 100, "high": 101, "low": 99, "close": 100, "volume": 5}],
+                            index=pd.DatetimeIndex([BASE - timedelta(hours=4)]))
+    session._on_signal_close(BASE, {"BTCUSDT": features})
+    assert len(session.broker.pending_orders) == 1
+    session.on_connection(True, None)
+    source.phase = 1
+    source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol))
+    assert "BTCUSDT" in session.broker.positions
+    assert session.state()["orders"][0]["status"] == "FILLED"
+
+    original = source.klines
+    def stop_bar(symbol, interval, limit):
+        if interval != "15m":
+            return original(symbol, interval, limit)
+        data = rows(BASE - timedelta(minutes=30), 4, 15)
+        data[-1][3] = "89"
+        return data
+
+    source.klines = stop_bar
+    source.now = int((BASE + timedelta(minutes=31)).timestamp() * 1000)
+    for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        session.on_stream_event(stream_bar(symbol, opened=BASE + timedelta(minutes=15)))
+    state = session.state()
+    assert state["completed_trades"] == 1
+    assert state["trades"][0]["exit_reason"] == "STOP_LOSS"
+    assert state["open_positions"] == []
+    assert state["account"]["equity_usd"] == pytest.approx(state["account"]["wallet_usd"])
+    session.broker.verify_accounting_invariants()

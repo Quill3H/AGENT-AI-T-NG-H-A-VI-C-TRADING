@@ -8,6 +8,7 @@
 
 # --- Data Fetching (public endpoints, no API key needed for OHLCV/OI/funding) ---
 ccxt>=4.4.27
+websocket-client>=1.8,<2  # Read-only public USD-M kline stream
 
 # --- Data Processing ---
 pandas>=2.2.3
