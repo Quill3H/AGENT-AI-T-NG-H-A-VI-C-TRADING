@@ -1,0 +1,48 @@
+{
+  "_note": "Synthetic fixtures only; failure examples are abbreviated. Not observations, fills or performance evidence.",
+  "normal": {
+    "mode": "PAPER_RESEARCH", "status": "SCANNING", "error": null,
+    "session_id": "synthetic-session", "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+    "venue": "Binance USD-M perpetual public data",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "source_time_utc": "2026-09-27T04:16:01+00:00",
+    "received_at_utc": "2026-09-27T04:16:02+00:00",
+    "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+    "connection": {"connected": true, "error": null, "last_event_received_at_utc": "2026-09-27T04:15:01+00:00", "source": "Binance USD-M public kline WebSocket"},
+    "markets": {
+      "BTCUSDT": {"last_closed_15m_price": 100.0, "as_of_utc": "2026-09-27T04:15:00+00:00"},
+      "ETHUSDT": {"last_closed_15m_price": 100.0, "as_of_utc": "2026-09-27T04:15:00+00:00"},
+      "SOLUSDT": {"last_closed_15m_price": 100.0, "as_of_utc": "2026-09-27T04:15:00+00:00"}
+    },
+    "chart": [], "config_sha256": "synthetic-not-a-real-hash",
+    "account": {"initial_equity_usd": 10000.0, "wallet_usd": 10000.0, "equity_usd": 10000.0, "available_margin_usd": 10000.0, "reserved_collateral_usd": 0.0, "unrealized_pnl_usd": 0.0, "breaker_locked": false},
+    "open_positions": [], "completed_trades": 0, "trades": [], "orders": [],
+    "pending_orders": [], "funding_events": [],
+    "risk_gate": {"admission_open": true, "reason": null, "halted": false},
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets."
+  },
+  "disconnected": {
+    "mode": "PAPER_RESEARCH", "status": "WAITING_CONNECTION", "error": null,
+    "connection": {"connected": false, "error": "public stream disconnected", "last_event_received_at_utc": "2026-09-27T04:15:01+00:00"},
+    "account": {"initial_equity_usd": 10000.0, "wallet_usd": 10000.0, "equity_usd": 10000.0},
+    "open_positions": [], "orders": [], "trades": [],
+    "risk_gate": {"admission_open": false, "reason": "public stream disconnected", "halted": false}
+  },
+  "blocked_data": {
+    "mode": "PAPER_RESEARCH", "status": "QUARANTINED",
+    "error": "BTCUSDT: gap exceeds verifiable public kline window",
+    "connection": {"connected": false, "error": "data reconciliation required"},
+    "account": {"initial_equity_usd": 10000.0, "wallet_usd": 10000.0, "equity_usd": 10000.0},
+    "open_positions": [], "orders": [], "trades": [],
+    "risk_gate": {"admission_open": false, "reason": "BTCUSDT: gap exceeds verifiable public kline window", "halted": true}
+  },
+  "after_restart": {
+    "mode": "PAPER_RESEARCH", "status": "RECOVERY_REQUIRED",
+    "error": "Prior paper journal exists; exact broker restoration is not available. No new orders admitted.",
+    "session_id": "synthetic-session",
+    "connection": {"connected": false, "error": "restart requires exact broker recovery", "last_event_received_at_utc": null},
+    "account": {"initial_equity_usd": 10000.0, "wallet_usd": 10000.0, "equity_usd": 10000.0},
+    "open_positions": [], "orders": [], "trades": [],
+    "risk_gate": {"admission_open": false, "reason": "Prior paper journal exists; exact broker restoration is not available. No new orders admitted.", "halted": true}
+  }
+}

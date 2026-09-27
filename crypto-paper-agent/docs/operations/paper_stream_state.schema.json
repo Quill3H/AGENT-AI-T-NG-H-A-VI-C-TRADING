@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Local paper stream GET /api/state",
+  "type": "object",
+  "required": ["mode", "status", "connection", "account", "risk_gate"],
+  "properties": {
+    "mode": {"const": "PAPER_RESEARCH"},
+    "status": {"enum": ["IDLE", "SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "QUARANTINED", "STOPPED", "RECOVERY_REQUIRED"]},
+    "error": {"type": ["string", "null"]},
+    "session_id": {"type": ["string", "null"]},
+    "symbols": {"type": "array", "items": {"enum": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]}},
+    "venue": {"type": "string"},
+    "strategy": {"type": "string"},
+    "source_time_utc": {"type": ["string", "null"], "format": "date-time"},
+    "received_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "last_processed_open_utc": {"type": ["string", "null"], "format": "date-time"},
+    "config_sha256": {"type": "string"},
+    "connection": {
+      "type": "object", "required": ["connected", "error"],
+      "properties": {
+        "connected": {"type": "boolean"},
+        "error": {"type": ["string", "null"]},
+        "last_event_received_at_utc": {"type": ["string", "null"], "format": "date-time"},
+        "source": {"type": "string"}
+      }
+    },
+    "account": {
+      "type": "object", "required": ["initial_equity_usd", "wallet_usd", "equity_usd"],
+      "properties": {
+        "initial_equity_usd": {"type": "number"},
+        "wallet_usd": {"type": "number"},
+        "equity_usd": {"type": "number"},
+        "available_margin_usd": {"type": "number"},
+        "reserved_collateral_usd": {"type": "number"},
+        "unrealized_pnl_usd": {"type": "number"},
+        "breaker_locked": {"type": "boolean"}
+      }
+    },
+    "markets": {"type": "object"},
+    "chart": {"type": "array", "items": {"type": "object"}},
+    "open_positions": {"type": "array", "items": {"type": "object"}},
+    "pending_orders": {"type": "array", "items": {"type": "object"}},
+    "orders": {"type": "array", "items": {"type": "object"}},
+    "trades": {"type": "array", "items": {"type": "object"}},
+    "funding_events": {"type": "array", "items": {"type": "object"}},
+    "completed_trades": {"type": "integer", "minimum": 0},
+    "risk_gate": {
+      "type": "object", "required": ["admission_open", "reason", "halted"],
+      "properties": {
+        "admission_open": {"type": "boolean"},
+        "reason": {"type": ["string", "null"]},
+        "halted": {"type": "boolean"}
+      }
+    },
+    "risk_note": {"type": "string"}
+  },
+  "allOf": [{"if": {"properties": {"status": {"const": "RECOVERY_REQUIRED"}}},
+             "then": {"properties": {"risk_gate": {"properties": {"admission_open": {"const": false}}}}}}]
+}
