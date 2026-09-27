@@ -443,6 +443,7 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
     const panel = container.querySelector('.account-panel')
     expect(panel.textContent).not.toMatch(/10,000|0\.00|Bình thường/)
     expect(panel.textContent).toContain('Chưa xác định')
+    expect(screen.queryByText(/Đang chạy trực tiếp \(Live paper\)/)).not.toBeInTheDocument()
   })
 
   it('allows Stop while the backend waits to reconnect', async () => {

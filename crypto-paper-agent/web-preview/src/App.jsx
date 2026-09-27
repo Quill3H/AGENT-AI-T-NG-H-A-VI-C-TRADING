@@ -31,8 +31,8 @@ export const STRATEGY_METADATA = [
     nameVi: 'Bám theo xu hướng (Trend Following)',
     timeframe: '4h / 15m',
     status: 'ACTIVE_LIVE',
-    statusLabel: '🟢 Đang chạy trực tiếp (Live paper)',
-    desc: 'Chiến lược duy nhất hiện đang quét và vào lệnh trực tiếp trên dữ liệu mới.',
+    statusLabel: 'Đã nối backend paper · Xem trạng thái Bot',
+    desc: 'Chỉ nhận lệnh mô phỏng khi dữ liệu và cổng rủi ro cho phép.',
   },
   {
     id: 'breakout',
@@ -371,7 +371,7 @@ export function App() {
     return null
   }
 
-  // 24h stats based on real symbolCandles
+  // Statistics cover only the supplied candle window, not a full 24 hours.
   const firstCandle = symbolCandles.length > 0 ? symbolCandles[0] : null
   const lastCandle = symbolCandles.length > 0 ? symbolCandles[symbolCandles.length - 1] : null
   const hasCandles = firstCandle && lastCandle && typeof firstCandle.open === 'number' && firstCandle.open > 0
@@ -531,7 +531,7 @@ export function App() {
           )}
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thay đổi</span>
+            <span className="ticker-stat-label">Thay đổi cửa sổ nến</span>
             {changePct24h !== null && change24h !== null ? (
               <span className={`ticker-stat-value mono ${changePct24h >= 0 ? 'text-buy' : 'text-sell'}`}>
                 {changePct24h >= 0 ? '+' : ''}
@@ -544,14 +544,14 @@ export function App() {
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Cao nhất</span>
+            <span className="ticker-stat-label">Cao nhất cửa sổ nến</span>
             <span className="ticker-stat-value mono">
               {high24h !== null ? money(high24h, precision) : '--'}
             </span>
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thấp nhất</span>
+            <span className="ticker-stat-label">Thấp nhất cửa sổ nến</span>
             <span className="ticker-stat-value mono">
               {low24h !== null ? money(low24h, precision) : '--'}
             </span>
@@ -703,7 +703,7 @@ export function App() {
         </aside>
 
         {/* CENTER PANEL: Chart Toolbar + Candlestick Chart + Bot Status Bar + Trade Log */}
-        <main className="chart-panel" aria-label="Biểu đồ giao dịch và lịch sử">
+        <main className="chart-panel center-panel" aria-label="Biểu đồ giao dịch và lịch sử">
           {/* Chart Toolbar */}
           <div className="chart-toolbar">
             <span className="toolbar-btn" style={{ color: activeCoinConfig.color, fontWeight: 700 }}>
