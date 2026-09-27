@@ -156,6 +156,13 @@ def main():
     parser.add_argument("--source", default="SUPPLIED_DATA_NOT_VERIFIED")
     args = parser.parse_args()
 
+    if args.strategy in {"all", "funding_arbitrage"} and (args.start is not None or args.end is not None):
+        sys.stderr.write(
+            "ERROR [UNSUPPORTED_DATE_RANGE]: --start/--end are not applied in this strategy mode; "
+            "provide a pre-sliced, provenance-labeled input dataset instead.\n"
+        )
+        return 2
+
     if args.no_fetch and args.allow_network:
         sys.stderr.write(
             "ERROR [INVALID_ARGUMENTS]: --no-fetch and --allow-network are mutually exclusive.\n"
