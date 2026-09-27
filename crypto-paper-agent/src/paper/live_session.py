@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import json
 import math
-import os
+from copy import deepcopy
 from pathlib import Path
 from threading import RLock
 import time
@@ -20,6 +20,7 @@ from src.execution.paper_broker import PaperBroker
 from src.features import add_all_features
 from src.strategies.trend_following import TrendFollowingStrategy
 from src.paper.public_stream import INTERVAL_MS, SYMBOLS
+from src.paper.durable_journal import DurableJournal
 
 
 UTC = timezone.utc
@@ -41,7 +42,8 @@ def parse_klines(raw: list, interval: str, server_ms: int):
         if not isinstance(item, list) or len(item) < 7:
             raise ValueError("malformed kline row")
         opened, last_ms = item[0], item[6]
-        if type(opened) is not int or type(last_ms) is not int or last_ms != opened + step - 1:
+        if (type(opened) is not int or type(last_ms) is not int or last_ms != opened + step - 1
+                or type(server_ms) is not int or opened > server_ms):
             raise ValueError("invalid kline event time")
         if previous is not None and opened <= previous:
             raise ValueError("duplicate or reversed kline sequence")
@@ -49,6 +51,8 @@ def parse_klines(raw: list, interval: str, server_ms: int):
             raise ValueError("kline gap in source sequence")
         previous = opened
         try:
+            if any(type(item[i]) is bool for i in range(1, 6)):
+                raise ValueError("boolean kline numeric field")
             o, h, l, c, volume = (float(item[i]) for i in range(1, 6))
         except (TypeError, ValueError) as exc:
             raise ValueError("invalid kline numeric field") from exc
@@ -145,45 +149,34 @@ class LocalPaperSession:
         self.stream_closed = {}
         self.stream_last_event_at = None
         self.recovery_snapshot = None
+        self.reconnect_required = False
+        self.storage = DurableJournal(self.journal_dir)
         self._load_existing_journal()
 
     def _load_existing_journal(self):
-        existing = sorted(self.journal_dir.glob("*.jsonl")) if self.journal_dir.is_dir() else []
-        if not existing:
-            return
-        latest = max(existing, key=lambda path: (path.stat().st_mtime_ns, path.name))
-        self.session_id = latest.stem
-        self.status = "RECOVERY_REQUIRED"
-        self.error = "Prior paper journal exists; exact broker restoration is not available. No new orders admitted."
-        try:
-            pending_input = False
-            for line in latest.read_text(encoding="utf-8").splitlines():
-                record = json.loads(line)
-                if record.get("type") == "PAPER_INPUT":
-                    pending_input = True
-                if record.get("type") == "PAPER_BATCH" and isinstance(record.get("state"), dict):
-                    self.recovery_snapshot = record["state"]
-                    pending_input = False
-                if record.get("type") == "SESSION_STOP" and isinstance(record.get("state"), dict):
-                    self.recovery_snapshot = record["state"]
-            if pending_input:
-                self.error = "Last paper input has no durable batch result; account state is uncertain. Manual reconciliation required."
-        except (OSError, ValueError, TypeError) as exc:
-            self.error = f"Prior paper journal cannot be read safely: {exc}"
+        existing, snapshot, reason = self.storage.inspect()
+        if existing:
+            self.session_id = self.storage.session_id
+            self.status = "RECOVERY_REQUIRED"
+            self.error = reason
+            self.recovery_snapshot = snapshot
 
     def _journal(self, record):
-        self.journal_dir.mkdir(parents=True, exist_ok=True)
-        path = self.journal_dir / f"{self.session_id}.jsonl"
-        with path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(record, sort_keys=True, default=str, allow_nan=False) + "\n")
-            stream.flush()
-            os.fsync(stream.fileno())
+        try:
+            self.storage.append(self.session_id, record)
+        except Exception as exc:
+            self.status = "RECOVERY_REQUIRED"
+            self.error = f"Durable account write failed; manual reconciliation required: {exc}"
+            self.stream_connected = False
+            raise
 
     def on_connection(self, connected: bool, reason: str | None):
         with self.lock:
             if self.status in ("STOPPED", "RECOVERY_REQUIRED", "QUARANTINED", "IDLE"):
+                self.stream_connected = False
                 return self.state()
             self.stream_connected = connected
+            self.reconnect_required = not connected
             self.stream_error = reason if not connected else "awaiting fresh market events after reconnect"
             if not connected:
                 self.stream_closed.clear()
@@ -232,8 +225,9 @@ class LocalPaperSession:
             if len(times) != 1:
                 self.on_connection(False, "closed stream candles disagree across symbols")
                 return self.state()
+            expected = dict(self.stream_closed)
             self.stream_closed.clear()
-            return self.poll()
+            return self.poll(expected=expected)
 
     def _refresh_chart(self, server_ms):
         bars, provisional = parse_klines(self.source.klines("BTCUSDT", "1m", 90), "1m", server_ms)
@@ -247,11 +241,15 @@ class LocalPaperSession:
         with self.lock:
             if self.status != "IDLE":
                 return self.state()
+            self._load_existing_journal()
+            if self.status == "RECOVERY_REQUIRED":
+                return self.state()
             try:
                 return self._start_unlocked()
             except Exception as exc:
-                self.status = "QUARANTINED"
-                self.error = str(exc)
+                if self.status != "RECOVERY_REQUIRED":
+                    self.status = "QUARANTINED"
+                    self.error = str(exc)
                 raise
 
     def _start_unlocked(self):
@@ -289,7 +287,7 @@ class LocalPaperSession:
                        "baseline_open_utc": {key: value.isoformat() for key, value in self.last_open.items()},
                        "input_sha256": sha256(json.dumps({"warmup": raw_warmup, "baseline": raw_baseline}, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
                        "raw_warmup_4h": raw_warmup, "raw_baseline_15m": raw_baseline,
-                       "symbols": SYMBOLS, "mode": "PAPER_RESEARCH"})
+                       "symbols": SYMBOLS, "mode": "PAPER_RESEARCH", "state": self._state_unlocked()})
         return self.state()
 
     def _funding_metadata(self, symbol, opened, observed_ms=None):
@@ -353,7 +351,7 @@ class LocalPaperSession:
         self.server_ms, self.received_at = server_ms, receipt
         self.status = "WAITING_SYNC"
 
-    def poll(self):
+    def poll(self, expected=None):
         with self.lock:
             if self.status not in ("SCANNING", "WAITING_SYNC"):
                 return self.state()
@@ -373,6 +371,11 @@ class LocalPaperSession:
                         self._rebaseline_after_gap(server_ms)
                         return self.state()
                     if fresh:
+                        if expected is not None and any(
+                            fresh[0][key] != expected[symbol][key]
+                            for key in ('open_time', 'close_time', 'open', 'high', 'low', 'close', 'volume')
+                        ):
+                            raise ValueError(f"{symbol}: closed WebSocket and REST candle disagree")
                         next_bars[symbol] = fresh[0]
                 if next_bars and len(next_bars) != len(SYMBOLS):
                     self.status = "WAITING_SYNC"
@@ -418,6 +421,8 @@ class LocalPaperSession:
                                "state": self._state_unlocked()})
                 return self.state()
             except Exception as exc:
+                if self.status == "RECOVERY_REQUIRED":
+                    return self.state()
                 self.status = "QUARANTINED"
                 self.error = str(exc)
                 if self.session_id:
@@ -449,7 +454,11 @@ class LocalPaperSession:
     def stop(self):
         with self.lock:
             if self.status in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "QUARANTINED"):
+                if self.session_id:
+                    self._journal({"type": "STOP_INTENT", "received_at_utc": datetime.now(UTC).isoformat()})
                 self.status = "STOPPED"
+                self.stream_connected = False
+                self.reconnect_required = False
                 if self.broker and self.broker.current_time:
                     self.broker.finalize(timestamp=self.broker.current_time, force_close=False)
                 if self.session_id:
@@ -465,11 +474,14 @@ class LocalPaperSession:
     def _state_unlocked(self):
         broker = self.broker
         if self.status == "RECOVERY_REQUIRED" and self.recovery_snapshot is not None:
-            saved = dict(self.recovery_snapshot)
+            saved = deepcopy(self.recovery_snapshot)
             saved.update(status=self.status, error=self.error, connection={
                 "connected": False, "error": "restart requires exact broker recovery",
-                "last_event_received_at_utc": None})
+                "last_event_received_at_utc": None, "reconnect_required": False})
             saved["risk_gate"] = {"admission_open": False, "reason": self.error, "halted": True}
+            saved["recovery"] = {"required": True, "account_known": True, "reconciled": False,
+                                 "view": "LAST_DURABLE_SNAPSHOT"}
+            saved["api_time_utc"] = datetime.now(UTC).isoformat()
             return saved
         trades = [] if broker is None else [
             {"id": trade.trade_id, "symbol": trade.symbol, "side": trade.direction.value,
@@ -479,13 +491,15 @@ class LocalPaperSession:
              "funding_usd": trade.funding_cashflow, "exit_reason": trade.exit_reason.value}
             for trade in broker.trade_history
         ]
-        return {
+        result = {
+            "api_version": 2, "api_time_utc": datetime.now(UTC).isoformat(),
             "mode": "PAPER_RESEARCH", "status": self.status, "error": self.error,
             "session_id": self.session_id, "symbols": list(SYMBOLS),
             "venue": "Binance USD-M perpetual public data", "strategy": "Trend Following 4h/15m fixed rules",
             "source_time_utc": _utc(self.server_ms).isoformat() if self.server_ms else None,
             "received_at_utc": self.received_at,
             "connection": {"connected": self.stream_connected, "error": self.stream_error,
+                           "reconnect_required": self.reconnect_required,
                            "last_event_received_at_utc": self.stream_last_event_at,
                            "source": "Binance USD-M public kline WebSocket"},
             "last_processed_open_utc": self.last_processed.isoformat() if self.last_processed else None,
@@ -515,7 +529,7 @@ class LocalPaperSession:
                  "processed_at_utc": order.processed_at.isoformat() if order.processed_at else None,
                  "fill_price": order.actual_fill_price, "quantity": order.filled_quantity,
                  "fee_usd": order.fee_usd, "slippage_usd": order.slippage_usd}
-                for order in broker.order_history[-30:]],
+                for order in broker.order_history],
             "pending_orders": [] if broker is None else [
                 {"symbol": order.symbol, "side": order.direction.value,
                  "signal_time_utc": order.signal_time.isoformat(),
@@ -535,3 +549,10 @@ class LocalPaperSession:
                           "halted": broker.is_halted if broker else False},
             "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
         }
+        result["recovery"] = {"required": self.status == "RECOVERY_REQUIRED", "account_known": True,
+                              "reconciled": self.status != "RECOVERY_REQUIRED", "view": "CURRENT_PROCESS"}
+        if self.status == "RECOVERY_REQUIRED":
+            result["recovery"].update(account_known=False, view="UNKNOWN")
+            result["account"] = {key: None for key in result["account"]}
+            result["risk_gate"] = {"admission_open": False, "reason": self.error, "halted": True}
+        return result

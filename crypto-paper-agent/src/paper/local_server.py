@@ -3,6 +3,7 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import socket
 from pathlib import Path
 from threading import Event, Lock, Thread
 from urllib.parse import unquote, urlparse
@@ -19,8 +20,13 @@ def host_allowed(host, server_port=8765):
 def origin_allowed(origin, server_port=8765):
     if origin is None:
         return True
-    parsed = urlparse(origin)
-    return parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost") and parsed.port in (server_port, 5173)
+    try:
+        parsed = urlparse(origin)
+        return (parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost")
+                and parsed.port in (server_port, 5173) and parsed.username is None
+                and parsed.password is None and not parsed.path and not parsed.query and not parsed.fragment)
+    except (TypeError, ValueError):
+        return False
 
 
 def public_path(root, requested):
@@ -35,9 +41,17 @@ def public_path(root, requested):
     return candidate
 
 
-def serve(port=8765, source=None, journal_dir=None, open_browser=False):
+class ExclusiveHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = False
+
+    def server_bind(self):
+        if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def create_server(port=8765, source=None, journal_dir=None):
     root = PROJECT_ROOT / "web-preview/dist"
-    session = LocalPaperSession(source=source, journal_dir=journal_dir)
     stopped = Event()
     worker = None
     stream = None
@@ -87,7 +101,10 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
             if urlparse(self.path).path == "/api/health":
                 state = session.state()
                 self._json(200, {"mode": "PAPER_RESEARCH", "status": state["status"],
-                                 "connection": state["connection"], "session_id": state["session_id"]})
+                                 "connection": state["connection"], "session_id": state["session_id"],
+                                 "api_time_utc": state["api_time_utc"], "recovery": state["recovery"],
+                                 "risk_gate": state["risk_gate"], "error": state["error"],
+                                 "source_time_utc": state["source_time_utc"]})
                 return
             target = public_path(root, self.path)
             if target is None:
@@ -110,7 +127,7 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
             if self.path not in ("/api/start", "/api/stop"):
                 self._json(404, {"error": "not found"})
                 return
-            if self.headers.get("Content-Length", "0") != "0":
+            if self.headers.get("Content-Length", "0") != "0" or self.headers.get("Transfer-Encoding"):
                 self._json(400, {"error": "request body not accepted"})
                 return
             nonlocal worker, stream
@@ -131,9 +148,34 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
                         result = session.stop()
                 self._json(200, result)
             except Exception as exc:
-                self._json(503, {"error": str(exc), "status": "UNAVAILABLE", "mode": "PAPER_RESEARCH"})
+                result = session.state()
+                result["error"] = result.get("error") or str(exc)
+                self._json(503, result)
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    class PaperServer(ExclusiveHTTPServer):
+        def server_close(self):
+            stopped.set()
+            if stream is not None:
+                stream.close()
+            try:
+                if hasattr(self, 'session'):
+                    self.session.stop()
+            finally:
+                super().server_close()
+
+    server = PaperServer(("127.0.0.1", port), Handler)
+    port = server.server_port
+    try:
+        session = LocalPaperSession(source=source, journal_dir=journal_dir)
+        server.session = session
+    except Exception:
+        server.server_close()
+        raise
+    return server
+
+
+def serve(port=8765, source=None, journal_dir=None, open_browser=False):
+    server = create_server(port=port, source=source, journal_dir=journal_dir)
     print(f"PAPER/RESEARCH local web: http://127.0.0.1:{port}/", flush=True)
     if open_browser:
         webbrowser.open(f"http://127.0.0.1:{port}/")
@@ -142,8 +184,4 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
     except KeyboardInterrupt:
         pass
     finally:
-        stopped.set()
-        if stream is not None:
-            stream.close()
-        session.stop()
         server.server_close()

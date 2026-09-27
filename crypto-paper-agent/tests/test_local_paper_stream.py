@@ -47,7 +47,7 @@ def test_stream_rejects_mismatch_malformed_and_stale(change):
     raw = event()
     change(raw)
     with pytest.raises(ValueError):
-        parse_stream_event(raw, received_ms=999_900_001_100)
+        parse_stream_event(raw, received_ms=999_901_100)
 
 
 def test_provisional_stream_event_is_not_closed():

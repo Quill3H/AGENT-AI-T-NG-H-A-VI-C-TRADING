@@ -49,6 +49,8 @@ def parse_stream_event(raw: dict, received_ms: int) -> dict:
     if not closed and emitted >= close_ms:
         raise ValueError("unfinished kline emitted after close")
     try:
+        if any(type(bar[name]) is bool for name in ("o", "h", "l", "c", "v")):
+            raise ValueError("boolean kline numeric field")
         prices = [float(bar[name]) for name in ("o", "h", "l", "c", "v")]
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError("invalid kline numeric field") from exc
@@ -103,7 +105,12 @@ class PublicKlineStream:
                     return
                 last_message = time.monotonic()
                 try:
-                    self.on_event(event)
+                    state = self.on_event(event)
+                    if state and (state.get("connection", {}).get("reconnect_required") or
+                                  state.get("status") in ("QUARANTINED", "RECOVERY_REQUIRED", "STOPPED")):
+                        _socket.close()
+                        if state.get("status") in ("QUARANTINED", "RECOVERY_REQUIRED", "STOPPED"):
+                            self.stop_event.set()
                 except Exception as exc:
                     self.on_connection(False, f"paper stream admission failed: {exc}")
                     _socket.close()

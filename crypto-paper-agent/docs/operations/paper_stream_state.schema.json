@@ -2,8 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Local paper stream GET /api/state",
   "type": "object",
-  "required": ["mode", "status", "connection", "account", "risk_gate"],
+  "required": ["api_version", "api_time_utc", "mode", "status", "connection", "account", "risk_gate", "recovery", "session_id", "orders", "pending_orders", "open_positions", "trades", "funding_events"],
   "properties": {
+    "api_version": {"const": 2},
+    "api_time_utc": {"type": "string", "format": "date-time"},
+    "recovery": {
+      "type": "object", "required": ["required", "account_known", "reconciled", "view"],
+      "properties": {
+        "required": {"type": "boolean"}, "account_known": {"type": "boolean"},
+        "reconciled": {"type": "boolean"},
+        "view": {"enum": ["CURRENT_PROCESS", "LAST_DURABLE_SNAPSHOT", "UNKNOWN"]}
+      }
+    },
     "mode": {"const": "PAPER_RESEARCH"},
     "status": {"enum": ["IDLE", "SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "QUARANTINED", "STOPPED", "RECOVERY_REQUIRED"]},
     "error": {"type": ["string", "null"]},
@@ -19,6 +29,7 @@
       "type": "object", "required": ["connected", "error"],
       "properties": {
         "connected": {"type": "boolean"},
+        "reconnect_required": {"type": "boolean"},
         "error": {"type": ["string", "null"]},
         "last_event_received_at_utc": {"type": ["string", "null"], "format": "date-time"},
         "source": {"type": "string"}
@@ -27,13 +38,13 @@
     "account": {
       "type": "object", "required": ["initial_equity_usd", "wallet_usd", "equity_usd"],
       "properties": {
-        "initial_equity_usd": {"type": "number"},
-        "wallet_usd": {"type": "number"},
-        "equity_usd": {"type": "number"},
-        "available_margin_usd": {"type": "number"},
-        "reserved_collateral_usd": {"type": "number"},
-        "unrealized_pnl_usd": {"type": "number"},
-        "breaker_locked": {"type": "boolean"}
+        "initial_equity_usd": {"type": ["number", "null"]},
+        "wallet_usd": {"type": ["number", "null"]},
+        "equity_usd": {"type": ["number", "null"]},
+        "available_margin_usd": {"type": ["number", "null"]},
+        "reserved_collateral_usd": {"type": ["number", "null"]},
+        "unrealized_pnl_usd": {"type": ["number", "null"]},
+        "breaker_locked": {"type": ["boolean", "null"]}
       }
     },
     "markets": {"type": "object"},

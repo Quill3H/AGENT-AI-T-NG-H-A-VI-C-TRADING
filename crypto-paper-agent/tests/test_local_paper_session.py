@@ -360,7 +360,9 @@ def test_synthetic_strategy_request_fills_then_stops_with_reconciled_cash(tmp_pa
     source.klines = stop_bar
     source.now = int((BASE + timedelta(minutes=31)).timestamp() * 1000)
     for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
-        session.on_stream_event(stream_bar(symbol, opened=BASE + timedelta(minutes=15)))
+        closed_bar = stream_bar(symbol, opened=BASE + timedelta(minutes=15))
+        closed_bar['low'] = 89.0
+        session.on_stream_event(closed_bar)
     state = session.state()
     assert state["completed_trades"] == 1
     assert state["trades"][0]["exit_reason"] == "STOP_LOSS"
