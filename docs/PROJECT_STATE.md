@@ -12,10 +12,10 @@
 | :--- | :--- |
 | **Giai đoạn dự án** | **Stage 06–11 Functional Complete & Local Paper Web Console Active** |
 | **Nhánh tích hợp chính** | `main` (commit `fe1c1330d913e78239db575ff8433cf069fe1b01`) |
-| **Nhánh làm việc hiện tại** | `codex/repository-information-architecture-cleanup` |
+| **Nhánh làm việc hiện tại** | `codex/local-paper-futures-app` (đã tích hợp nhánh cleanup qua PR #3) |
 | **Chế độ giao dịch** | **PAPER TRADING ONLY** (mô phỏng, không API key, không nạp/rút, không ví tiền) |
 | **Nguồn dữ liệu thị trường** | Backend quyết định giao dịch: Binance USD-M Futures public REST polling (BTC, ETH, SOL); frontend hiển thị trực tiếp: Binance public WebSocket `kline_1m` (display-only, không tham gia quyết định lệnh) |
-| **Kết quả kiểm thử baseline**| **450 passed, 2 skipped, 5 deselected** (Python pytest) + **16 passed** (Vitest Web UI) |
+| **Kết quả kiểm thử baseline**| **450 passed, 2 skipped, 5 deselected** (Python pytest trên nhánh cleanup, chưa chạy lại sau merge) + **22 passed** (Vitest Web UI trên cây đã merge) |
 
 ---
 
