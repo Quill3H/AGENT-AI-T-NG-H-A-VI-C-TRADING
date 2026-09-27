@@ -1,83 +1,94 @@
-# Project Agent Instructions
+# AGENTS.md — AI Agent Operating Manual
 
-This repository is a crypto futures **paper-only** research project. Public
-live market data may drive simulated orders. Do not add exchange order
-submission, testnet orders, trading keys, private keys, wallet signing or
-real-money behavior without a new, explicit owner authorization and plan.
+Chào mừng AI Agent! Đây là cẩm nang vận hành chính thức giúp bạn nắm bắt dự án, tuân thủ các ranh giới an toàn và bắt tay vào công việc trong vòng 3 phút mà không cần đọc lại lịch sử hội thoại cũ.
 
-Owner workflow update (2026-09-23): `main` is the single active integration
-branch. After an in-scope commit/push, verify the primary local checkout and
-GitHub `main` have the same SHA. This branch consolidation does not accept any
-pending engineering gate or relax the paper-only/risk rules. See
-`crypto-paper-agent/docs/planning/2026-09-23-main-sync-decision.md`.
+---
 
-Owner timebox authorization (2026-09-25): the PM may coordinate up to two hours
-of focused work to produce and deploy a safe **preview web demo** of the current
-paper/research system. This authorizes the preview deployment and its required
-web code, but not live/testnet orders, trading credentials, wallet operations,
-production promotion, economic-validation claims, or silent changes to trading
-risk/strategy semantics. The task contract is
-`crypto-paper-agent/docs/planning/2026-09-25-two-hour-web-preview.md`.
+## 1. Mục tiêu & Ranh giới Tuyệt đối (Project Mission & Boundaries)
 
-## Codex skill and MCP routing contract
+- **Mục tiêu:** Hệ thống nghiên cứu định lượng và mô phỏng giao dịch hợp đồng tương lai tiền điện tử (Crypto Futures Paper Trading & Backtesting) trên dữ liệu sàn Binance.
+- **Ranh giới an toàn tối cao (SAFETY BOUNDARY):**
+  - **PAPER TRADING ONLY:** Hệ thống chỉ chạy mô phỏng trên bộ nhớ và database nội bộ.
+  - **KHÔNG** kết nối API key thật, private key, seed phrase, chữ ký ví hay lệnh testnet/live.
+  - **KHÔNG** merge nhánh `main`, không force-push, không rebase, không squash lịch sử Git.
+  - **KHÔNG** thay đổi các nguyên tắc rủi ro hay logic giao dịch trừ khi có yêu cầu cụ thể từ chủ dự án.
 
-This project is configured for automatic skill selection. The Project Manager (PM) and coding chats must route each request before acting; do not wait for the owner to name a skill. Use only skills actually available in the current session, and fall back to the same workflow manually when one is unavailable.
+---
 
-1. **Session bootstrap:** Read this file, the current checkpoint at the top of `crypto-paper-agent/PROJECT_STATE.md`, the relevant part of `PLANNER_HANDOVER.md`, the applicable master-spec/ADR section, and the latest relevant review. Confirm repository root, branch, `HEAD`, and working-tree status. Read deeper only as the task needs; never infer state from an older chat.
-2. **Code context:** Use `codebase_memory` or GitNexus for repository structure, symbol relationships, impact analysis, and targeted snippets when that is more efficient than direct search. Use Serena for symbol-aware navigation/refactors when available. Re-index only when stale; never treat an index as fresher than the working tree.
-3. **Documentation lookup:** Use Context7 or official project documentation for library/API behavior. For exchange, market-data, or chain semantics, use the project's approved data sources and preserve source/event/availability timestamps.
-4. **Plan before multi-file work:** For a new feature, gate, migration, or cross-module change, use `writing-plans` when available and save a scoped plan under `crypto-paper-agent/docs/superpowers/plans/` before implementation. Keep one declared gate and one file-ownership scope active at a time.
-5. **Implementation workflow:** Use `crypto-bot-engineering` for trading/data/backtest/risk/execution work. Add `test-driven-development` and `ecc:python-testing` for Python behavior changes; use `systematic-debugging` for unexpected failures. Use `ecc:mle-workflow`/`ecc:pytorch-patterns` only for PPO/model work and `ecc:security-review` only for security-sensitive changes. Prefer the smallest change consistent with current ADRs.
-6. **Review and delivery:** Use `verification-before-completion` with fresh, scoped commands before claiming a fix or completion. Use `requesting-code-review`/`receiving-code-review` when their review workflows apply. Separate Tester/Independent Reviewer work is still required at the project's declared review gate; do not self-accept. Report pass, skip, deselected, network, author-reported, reviewer-verified, and blocked results separately.
-7. **Market/TradingView routing:** Use `tradingview-paper-research` plus the installed `crypto_market` MCP for read-only TradingView-style market comparison or a TradingView Strategy Tester reconciliation. `crypto_market` backtests are not native TradingView Strategy Tester runs. For native results, require a Pine strategy and TradingView Strategy Report/export; label it `NOT_VERIFIED` until observed. Use `aicoin-market` only for suitable market-data queries and `aicoin-hyperliquid` only for Hyperliquid/on-chain analytics. None substitutes for the repository's reproducible venue-specific data pipeline or proves executable fills/profitability.
-8. **Safety boundary:** The default mode is paper-only and read-only credentials. No live/testnet order, wallet signing, withdrawal permission, secret creation, deployment with trading credentials, or external mutation is implied by a coding request. Stop and request explicit owner authorization plus a plan before any such action.
+## 2. Tài liệu Cốt lõi (Canonical Source of Truth)
 
-PM routing: use the task-to-skill/MCP matrix in `crypto-paper-agent/docs/planning/PM_SKILL_MCP_ROUTING.md` before assigning a new gate or specialist task. Select one primary skill and only the additional skill/MCP needed for the current step; do not load every installed skill or query every code graph by default. For status-only work, direct Git/file checks may be sufficient. State the selected route and evidence level in the handoff. Do not start market downloads, browser login, TradingView webhooks, or a new project gate just because a tool is available.
+Khi bắt đầu một phiên làm việc mới, hãy đọc theo thứ tự ưu tiên:
+1. `AGENTS.md` (chính là file này — quy tắc vận hành).
+2. [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) (trạng thái sống hiện hành của dự án).
+3. [docs/INDEX.md](docs/INDEX.md) (bản đồ tài liệu toàn dự án).
+4. [docs/architecture/SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md) (kiến trúc tổng thể hệ thống).
+5. [docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md) (đặc tả kỹ thuật chuẩn).
+6. [docs/adr/](docs/adr/) (các quyết định kiến trúc từ ADR 0001 đến 0012).
 
-Slash and skill invocation: a user-entered `/name` is a command request only
-when that command is registered in the current harness; read its backing
-command-skill before executing it. A Codex-native skill is normally invoked as
-`$skill-name`, while a plain-language task should be auto-routed without asking
-the owner to repeat it using either syntax. If `/name` is unavailable, select
-the closest installed skill, state the fallback, and continue when the intent
-is unambiguous. Never invent a slash command or run the slash text as a shell
-command. See the invocation examples in `PM_SKILL_MCP_ROUTING.md`.
+> **Lưu ý Token / Context:** Bạn **KHÔNG CẦN** đọc thư mục `docs/history/` (chứa các báo cáo và review cũ) để hiểu hệ thống hiện tại. Chỉ tra cứu `docs/history/` khi cần bằng chứng lịch sử cụ thể.
 
-Long-running coordination: after dispatching another Codex task, record its
-thread id, host id and wait cursor. Use the event-driven `wait_threads` watcher
-with `afterCursor`; do not repeatedly call `list_threads`, `read_thread`, Git
-status, or sleep/poll loops while nothing changes. Notify the owner only when
-the task completes, fails, needs input, or produces a meaningful gate change.
+---
 
-Before taking project action, read:
+## 3. Bản đồ Điều phối Tác vụ (Agent Task Routing Map)
 
-1. `crypto-paper-agent/docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md` for
-   product intent, gate sequence and unresolved owner decisions.
-2. `crypto-paper-agent/PROJECT_STATE.md` and `PLANNER_HANDOVER.md` for the
-   current factual checkpoint. Verify branch, full code/docs/main SHA and
-   working-tree status; do not assume the document's SHA is still HEAD.
-3. Relevant approved ADRs and the master spec. Consult
-   `Initial idea/AGENT_SPEC.docx` to preserve founding intent, but do not
-   silently replace later owner decisions or binding risk policy with it.
-4. The exact gate plan and review/evidence manifest for the task at hand.
+Hãy đọc chính xác tài liệu và làm việc với code/test tương ứng theo bảng sau:
 
-Work on a single declared gate and file ownership at a time. Keep train,
-validation, historical OOS, near-current replay and prospective paper
-observations distinct. No future data in a decision or retrospective tuning
-on holdout. Preserve source/event/availability times, raw hashes, spot/perp
-identity, risk gates, broker accounting and funding event idempotency. No
-profit claim follows from test pass or a short backtest.
+| Loại Tác vụ | 1. Đọc Tài liệu này trước | 2. Code tương ứng tại | 3. Chạy Tests tương ứng |
+| :--- | :--- | :--- | :--- |
+| **Data Layer** | [ADR 0001](docs/adr/0001-oi-hybrid-fetch.md), [ADR 0005](docs/adr/0005-oi-confluence-optional-fallback.md) | `crypto-paper-agent/src/data_layer/` | `tests/test_data_layer.py`, `tests/test_public_data_pipeline.py` |
+| **Features & Indicators**| [ADR 0003](docs/adr/0003-anti-lookahead-cvd-divergence.md), [ADR 0004](docs/adr/0004-python-313-numpy-compatibility.md) | `crypto-paper-agent/src/features/` | `tests/test_indicators.py`, `tests/test_cvd.py`, `tests/test_no_lookahead.py` |
+| **Strategies** | [Master Spec §4](docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md), [ADR 0008](docs/adr/0008-trend-following-and-backtest-engine-architecture.md), [ADR 0011](docs/adr/0011-funded-basket-and-research-execution.md), [ADR 0012](docs/adr/0012-causal-smc-limits-and-partial-accounting.md) | `crypto-paper-agent/src/strategies/` | `tests/test_trend_following_strategy.py`, `tests/test_breakout_retest.py`, `tests/test_smc_liquidity_sweep.py`, `tests/test_funding_arbitrage.py` |
+| **Risk Management** | [ADR 0002](docs/adr/0002-risk-recovery-mode.md), [ADR 0006](docs/adr/0006-circuit-breaker-and-risk-gate-refinements.md) | `crypto-paper-agent/src/risk/` | `tests/test_position_sizing.py`, `tests/test_circuit_breakers.py`, `tests/test_invariant_checks.py`, `tests/test_liquidation_calc.py` |
+| **Paper Execution** | [ADR 0007](docs/adr/0007-paper-execution-engine-architecture.md) | `crypto-paper-agent/src/execution/` | `tests/test_paper_broker.py`, `tests/test_execution_accounting.py`, `tests/test_execution_no_lookahead.py`, `tests/test_g0_settlement_lifecycle.py` |
+| **Trade Logger & Metrics**| [ADR 0009](docs/adr/0009-trade-logging-and-performance-reporting.md) | `crypto-paper-agent/src/logging/`, `src/report/` | `tests/test_trade_logger.py`, `tests/test_report_metrics.py`, `tests/test_report_generator.py` |
+| **Realtime Web Console** | [docs/operations/LOCAL_PAPER_WEB.md](docs/operations/LOCAL_PAPER_WEB.md) | `crypto-paper-agent/src/paper/`, `crypto-paper-agent/web-preview/` | `tests/test_local_paper_server.py`, `tests/test_local_paper_session.py`, `npm test` trong `web-preview` |
+| **Reviewer / Verifier** | `docs/PROJECT_STATE.md`, spec/ADR liên quan, `git diff` | Toàn bộ repo liên quan | `pytest -q -m "not network"`, `npm test` |
 
-Every handoff records scope, branch/base/full code and docs SHAs, changed
-files, config/data/model identity, exact commands and outcomes, failures,
-unverified claims, resource limits and next owner. Label `VERIFIED` with who
-verified it; otherwise use `AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED`,
-`NOT_VERIFIED` or `BLOCKED` and name the cause. Do not self-accept; Tester and
-Independent Reviewer work separately, and the owner decides gate acceptance.
-The owner-authorized `main` integration is not itself an acceptance verdict.
+---
 
-If a new user requirement conflicts with the charter, spec or ADR, record
-the conflict and ask PM/owner to resolve it before widening scope. Update the
-decision register and affected gate plan after approval; do not erase old
-decisions. Preserve unrelated worktree changes and use separate worktrees for
-independent verification.
+## 4. Các Bất Biến Kỹ Thuật Bắt Buộc (Critical Invariants)
+
+1. **Tuyệt đối không nhìn trước (Zero-Lookahead):**
+   - Chỉ tính indicator trên nến đã đóng ($timestamp \le t$).
+   - Tín hiệu sinh tại giá đóng nến $t$, thực thi tại giá mở nến $t+1$.
+   - Phân kỳ CVD tại nến $i$ chỉ được công nhận tại nến $t = i + 3$, không gán ngược quá khứ.
+2. **Kỷ luật Rủi ro & Cắt lỗ (Risk Invariants):**
+   - Mọi vị thế bắt buộc có giá Stop Loss; đòn bẩy tối đa 5×; rủi ro tối đa cố định theo % vốn khả dụng.
+   - Circuit Breaker: khóa 24h nếu lỗ quá 5%/ngày; giảm 50% risk sau 3 lệnh thua liên tiếp; phục hồi sau đúng 3 lệnh thắng liên tiếp.
+3. **Thanh toán Funding & Hạch toán (Funding & Accounting):**
+   - Funding thanh toán tại 00:00, 08:00, 16:00 UTC. Nếu dữ liệu funding chưa sẵn sàng $\to$ **FAIL-CLOSED** (không vào lệnh).
+   - Kế toán oracle: bảo toàn công thức $Equity = Cash + Margin + UnrealizedPnL$.
+
+---
+
+## 5. Lệnh Thường Dùng (Essential Commands)
+
+Tất cả lệnh Python đều thực thi với môi trường ảo tại `crypto-paper-agent/.venv-paper`:
+
+```powershell
+# 1. Chạy toàn bộ test suite Python (không bao gồm test mạng)
+cd crypto-paper-agent
+.\.venv-paper\Scripts\python.exe -m pytest -q -m "not network"
+
+# 2. Chạy test có mục tiêu (ví dụ Risk & Execution)
+.\.venv-paper\Scripts\python.exe -m pytest tests/test_circuit_breakers.py tests/test_paper_broker.py -v
+
+# 3. Chạy test frontend Web UI
+cd web-preview
+npm test
+
+# 4. Chạy nhanh ứng dụng Web Paper Trading nội bộ
+cd ../..
+.\start-paper-web.cmd
+```
+
+---
+
+## 6. Quy chuẩn Đóng gói Công việc (Definition of Done)
+
+Trước khi bàn giao hoặc tạo commit mới:
+1. [ ] **Tests pass:** Chạy `pytest -q -m "not network"` đảm bảo không có bất kỳ regression nào so với baseline (450 passed, 2 skipped, 5 deselected).
+2. [ ] **Web tests pass:** Nếu có chỉnh sửa frontend, chạy `npm test` (16 passed).
+3. [ ] **Không leak secret:** Không commit file cấu hình chứa API key hay dữ liệu nhạy cảm.
+4. [ ] **Git history:** Không force-push hay xóa branch; commit có prefix chuẩn (`feat`, `fix`, `docs`, `refactor`, `chore`).
+5. [ ] **Cập nhật trạng thái:** Nếu hoàn thành một milestone kỹ thuật, cập nhật [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
