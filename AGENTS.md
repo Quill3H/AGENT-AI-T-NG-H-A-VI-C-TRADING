@@ -97,7 +97,7 @@ cd ../..
 
 Trước khi bàn giao hoặc tạo commit mới:
 1. [ ] **Tests pass:** Chạy `pytest -q -m "not network"` đảm bảo không có bất kỳ regression nào so với baseline (450 passed, 2 skipped, 5 deselected).
-2. [ ] **Web tests pass:** Nếu có chỉnh sửa frontend, chạy `npm test` (16 passed).
+2. [ ] **Web tests pass:** Nếu có chỉnh sửa frontend, chạy `npm test` (baseline sau tích hợp: 22 passed).
 3. [ ] **Không leak secret:** Không commit file cấu hình chứa API key hay dữ liệu nhạy cảm.
 4. [ ] **Git history:** Không force-push hay xóa branch; commit có prefix chuẩn (`feat`, `fix`, `docs`, `refactor`, `chore`).
 5. [ ] **Cập nhật trạng thái:** Nếu hoàn thành một milestone kỹ thuật, cập nhật [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
