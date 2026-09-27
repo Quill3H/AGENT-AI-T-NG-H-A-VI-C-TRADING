@@ -8,11 +8,23 @@ Tài liệu này là bản đồ dẫn đường (Documentation Map) thống nh�
 
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
-| [AGENTS.md](../../AGENTS.md) | **CANONICAL** | Sổ tay vận hành tối ưu cho AI Agent (quy tắc, boundaries, lệnh mẫu, routing map). |
-| [README.md](../../README.md) | **CANONICAL** | Điểm truy cập cho lập trình viên và người dùng (onboarding, setup, run, test). |
+| [AGENTS.md](../AGENTS.md) | **CANONICAL** | Sổ tay vận hành tối ưu cho AI Agent (quy tắc, boundaries, lệnh mẫu, routing map). |
+| [README.md](../README.md) | **CANONICAL** | Điểm truy cập cho lập trình viên và người dùng (onboarding, setup, run, test). |
 | [docs/PROJECT_STATE.md](PROJECT_STATE.md) | **CANONICAL** | Báo cáo trạng thái sống hiện hành của dự án, subsystems active, blockers và pending gates. |
 | [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) | **CANONICAL** | Tài liệu kiến trúc toàn diện của hệ thống paper trading (data pipeline, risk gate, execution, web stream). |
 | [docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md) | **CANONICAL** | Bản đặc tả kỹ thuật nền tảng điều khiển toàn bộ logic từ Giai đoạn 0 đến Giai đoạn 5+. |
+
+---
+
+## 1.1 Thứ bậc Ưu tiên Tài liệu & Xử lý Mâu thuẫn (Documentation Precedence)
+
+Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệu trong repository:
+1. **Accepted ADR hiện hành ([docs/adr/](adr/))** có giá trị cao nhất: supersede Master Spec ở quyết định cụ thể mà ADR đó đã thay đổi hoặc chuẩn hóa.
+   *(Ví dụ thực tế: ADR 0002 quy định `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè mô tả cũ `after_5_wins` / `after_1_win` trong Master Spec).*
+2. **[docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](planning/PRODUCT_CHARTER_AND_GATE_SPEC.md)** điều khiển ranh giới sản phẩm, tiêu chí nghiệm thu (acceptance criteria) và gate pass/fail.
+3. **[docs/PROJECT_STATE.md](PROJECT_STATE.md)** chỉ mô tả trạng thái hiện hành (current factual state), **không thay thế hay override** spec/ADR.
+4. **Mã nguồn (`crypto-paper-agent/src/`) + Executable Tests (`crypto-paper-agent/tests/`)** phải triển khai đúng hợp đồng canonical hiện hành.
+5. **Tài liệu lịch sử ([docs/history/](history/))** chỉ là hồ sơ lưu trữ bằng chứng kiểm định, **tuyệt đối không dùng làm Source of Truth** hiện hành.
 
 ---
 

@@ -8,7 +8,7 @@ if errorlevel 1 goto failed
 if not exist ".venv-paper\Scripts\python.exe" (
   where uv >nul 2>nul
   if errorlevel 1 (
-    echo Python environment is missing. Install uv or see docs\operations\LOCAL_PAPER_WEB.md.
+    echo Python environment is missing. Install uv or see ..\docs\operations\LOCAL_PAPER_WEB.md.
     goto failed
   )
   uv venv .venv-paper --python 3.12

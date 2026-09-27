@@ -97,10 +97,10 @@ AGENT-AI-T-NG-H-A-VI-C-TRADING/
 - **Python:** Phiên bản 3.11 hoặc 3.12 (khuyến nghị 3.12).
 - **Node.js:** Phiên bản 18+ (phục vụ Web Preview).
 
-### Cài đặt nhanh bằng môi trường ảo có sẵn:
-Repository đã cấu hình sẵn virtualenv Python 3.12 tại `crypto-paper-agent/.venv-paper`.
+### Khởi tạo môi trường ảo Python:
+Thư mục `.venv-paper` tại `crypto-paper-agent/.venv-paper` là môi trường cục bộ (được cấu hình trong `.gitignore` và **KHÔNG** commit sẵn vào Git).
 
-Nếu cần tạo môi trường mới:
+Môi trường này được tạo tự động khi chạy `start-paper-web.cmd` (nếu máy đã cài `uv`), hoặc người dùng có thể tự tạo thủ công:
 ```powershell
 cd crypto-paper-agent
 python -m venv .venv-paper

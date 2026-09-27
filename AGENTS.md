@@ -15,15 +15,23 @@ Chào mừng AI Agent! Đây là cẩm nang vận hành chính thức giúp bạ
 
 ---
 
-## 2. Tài liệu Cốt lõi (Canonical Source of Truth)
+## 2. Tài liệu Cốt lõi & Thứ bậc Ưu tiên (Source of Truth & Precedence)
 
 Khi bắt đầu một phiên làm việc mới, hãy đọc theo thứ tự ưu tiên:
-1. `AGENTS.md` (chính là file này — quy tắc vận hành).
+1. `AGENTS.md` (chính là file này — quy tắc vận hành tối cao).
 2. [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) (trạng thái sống hiện hành của dự án).
 3. [docs/INDEX.md](docs/INDEX.md) (bản đồ tài liệu toàn dự án).
 4. [docs/architecture/SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md) (kiến trúc tổng thể hệ thống).
 5. [docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md) (đặc tả kỹ thuật chuẩn).
 6. [docs/adr/](docs/adr/) (các quyết định kiến trúc từ ADR 0001 đến 0012).
+
+### Thứ bậc Hiệu lực khi có mâu thuẫn tài liệu (Documentation Precedence):
+- **Accepted ADR ([docs/adr/](docs/adr/))** có hiệu lực **ghi đè** Master Spec tại các điểm cụ thể mà ADR đó điều chỉnh.
+  *(Ví dụ thực tế đã xảy ra: ADR 0002 định nghĩa `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè mô tả cũ `after_5_wins` trong master spec).*
+- **[docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md)** có hiệu lực cao nhất về acceptance criteria và gate pass/fail.
+- **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** chỉ mô tả trạng thái hiện hành, **không thay thế hay override** spec/ADR.
+- **Mã nguồn (`crypto-paper-agent/src/`) + Executable Tests (`crypto-paper-agent/tests/`)** là hiện thực hóa của các hợp đồng kỹ thuật.
+- **Tài liệu trong [docs/history/](docs/history/)** chỉ là hồ sơ lịch sử, **tuyệt đối không dùng làm Source of Truth** hiện hành.
 
 > **Lưu ý Token / Context:** Bạn **KHÔNG CẦN** đọc thư mục `docs/history/` (chứa các báo cáo và review cũ) để hiểu hệ thống hiện tại. Chỉ tra cứu `docs/history/` khi cần bằng chứng lịch sử cụ thể.
 
@@ -31,18 +39,19 @@ Khi bắt đầu một phiên làm việc mới, hãy đọc theo thứ tự ưu
 
 ## 3. Bản đồ Điều phối Tác vụ (Agent Task Routing Map)
 
-Hãy đọc chính xác tài liệu và làm việc với code/test tương ứng theo bảng sau:
+> **Hướng dẫn CWD đồng bộ:** Toàn bộ đường dẫn code và test dưới đây được chuẩn hóa theo **Repository Root** (tiền tố `crypto-paper-agent/`).  
+> Khi thực thi: chạy từ repo root kèm tiền tố, hoặc `cd crypto-paper-agent` rồi chạy `tests/...`.
 
-| Loại Tác vụ | 1. Đọc Tài liệu này trước | 2. Code tương ứng tại | 3. Chạy Tests tương ứng |
+| Loại Tác vụ | 1. Đọc Tài liệu này trước | 2. Code tương ứng tại | 3. Chạy Tests tương ứng (từ repo root) |
 | :--- | :--- | :--- | :--- |
-| **Data Layer** | [ADR 0001](docs/adr/0001-oi-hybrid-fetch.md), [ADR 0005](docs/adr/0005-oi-confluence-optional-fallback.md) | `crypto-paper-agent/src/data_layer/` | `tests/test_data_layer.py`, `tests/test_public_data_pipeline.py` |
-| **Features & Indicators**| [ADR 0003](docs/adr/0003-anti-lookahead-cvd-divergence.md), [ADR 0004](docs/adr/0004-python-313-numpy-compatibility.md) | `crypto-paper-agent/src/features/` | `tests/test_indicators.py`, `tests/test_cvd.py`, `tests/test_no_lookahead.py` |
-| **Strategies** | [Master Spec §4](docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md), [ADR 0008](docs/adr/0008-trend-following-and-backtest-engine-architecture.md), [ADR 0011](docs/adr/0011-funded-basket-and-research-execution.md), [ADR 0012](docs/adr/0012-causal-smc-limits-and-partial-accounting.md) | `crypto-paper-agent/src/strategies/` | `tests/test_trend_following_strategy.py`, `tests/test_breakout_retest.py`, `tests/test_smc_liquidity_sweep.py`, `tests/test_funding_arbitrage.py` |
-| **Risk Management** | [ADR 0002](docs/adr/0002-risk-recovery-mode.md), [ADR 0006](docs/adr/0006-circuit-breaker-and-risk-gate-refinements.md) | `crypto-paper-agent/src/risk/` | `tests/test_position_sizing.py`, `tests/test_circuit_breakers.py`, `tests/test_invariant_checks.py`, `tests/test_liquidation_calc.py` |
-| **Paper Execution** | [ADR 0007](docs/adr/0007-paper-execution-engine-architecture.md) | `crypto-paper-agent/src/execution/` | `tests/test_paper_broker.py`, `tests/test_execution_accounting.py`, `tests/test_execution_no_lookahead.py`, `tests/test_g0_settlement_lifecycle.py` |
-| **Trade Logger & Metrics**| [ADR 0009](docs/adr/0009-trade-logging-and-performance-reporting.md) | `crypto-paper-agent/src/logging/`, `src/report/` | `tests/test_trade_logger.py`, `tests/test_report_metrics.py`, `tests/test_report_generator.py` |
-| **Realtime Web Console** | [docs/operations/LOCAL_PAPER_WEB.md](docs/operations/LOCAL_PAPER_WEB.md) | `crypto-paper-agent/src/paper/`, `crypto-paper-agent/web-preview/` | `tests/test_local_paper_server.py`, `tests/test_local_paper_session.py`, `npm test` trong `web-preview` |
-| **Reviewer / Verifier** | `docs/PROJECT_STATE.md`, spec/ADR liên quan, `git diff` | Toàn bộ repo liên quan | `pytest -q -m "not network"`, `npm test` |
+| **Data Layer** | [ADR 0001](docs/adr/0001-oi-hybrid-fetch.md), [ADR 0005](docs/adr/0005-oi-confluence-optional-fallback.md) | `crypto-paper-agent/src/data_layer/` | `crypto-paper-agent/tests/test_data_layer.py`, `crypto-paper-agent/tests/test_public_data_pipeline.py` |
+| **Features & Indicators**| [ADR 0003](docs/adr/0003-anti-lookahead-cvd-divergence.md), [ADR 0004](docs/adr/0004-python-313-numpy-compatibility.md) | `crypto-paper-agent/src/features/` | `crypto-paper-agent/tests/test_indicators.py`, `crypto-paper-agent/tests/test_cvd.py`, `crypto-paper-agent/tests/test_no_lookahead.py` |
+| **Strategies** | [Master Spec §4](docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md), [ADR 0008](docs/adr/0008-trend-following-and-backtest-engine-architecture.md), [ADR 0011](docs/adr/0011-funded-basket-and-research-execution.md), [ADR 0012](docs/adr/0012-causal-smc-limits-and-partial-accounting.md) | `crypto-paper-agent/src/strategies/` | `crypto-paper-agent/tests/test_trend_following_strategy.py`, `crypto-paper-agent/tests/test_breakout_retest.py`, `crypto-paper-agent/tests/test_smc_liquidity_sweep.py`, `crypto-paper-agent/tests/test_funding_arbitrage.py` |
+| **Risk Management** | [ADR 0002](docs/adr/0002-risk-recovery-mode.md), [ADR 0006](docs/adr/0006-circuit-breaker-and-risk-gate-refinements.md) | `crypto-paper-agent/src/risk/` | `crypto-paper-agent/tests/test_position_sizing.py`, `crypto-paper-agent/tests/test_circuit_breakers.py`, `crypto-paper-agent/tests/test_invariant_checks.py`, `crypto-paper-agent/tests/test_liquidation_calc.py` |
+| **Paper Execution** | [ADR 0007](docs/adr/0007-paper-execution-engine-architecture.md) | `crypto-paper-agent/src/execution/` | `crypto-paper-agent/tests/test_paper_broker.py`, `crypto-paper-agent/tests/test_execution_accounting.py`, `crypto-paper-agent/tests/test_execution_no_lookahead.py`, `crypto-paper-agent/tests/test_g0_settlement_lifecycle.py` |
+| **Trade Logger & Metrics**| [ADR 0009](docs/adr/0009-trade-logging-and-performance-reporting.md) | `crypto-paper-agent/src/logging/`, `crypto-paper-agent/src/report/` | `crypto-paper-agent/tests/test_trade_logger.py`, `crypto-paper-agent/tests/test_report_metrics.py`, `crypto-paper-agent/tests/test_report_generator.py` |
+| **Realtime Web Console** | [docs/operations/LOCAL_PAPER_WEB.md](docs/operations/LOCAL_PAPER_WEB.md) | `crypto-paper-agent/src/paper/`, `crypto-paper-agent/web-preview/` | `crypto-paper-agent/tests/test_local_paper_server.py`, `crypto-paper-agent/tests/test_local_paper_session.py`, `npm test` trong `crypto-paper-agent/web-preview` |
+| **Reviewer / Verifier** | `docs/PROJECT_STATE.md`, spec/ADR liên quan, `git diff` | Toàn bộ repo liên quan | `pytest -q -m "not network"` (trong `crypto-paper-agent`), `npm test` (trong `crypto-paper-agent/web-preview`) |
 
 ---
 

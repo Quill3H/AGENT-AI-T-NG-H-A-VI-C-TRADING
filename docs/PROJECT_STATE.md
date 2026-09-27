@@ -2,7 +2,7 @@
 
 > **Tài liệu trạng thái sống (Living Project State)**  
 > Cập nhật lần cuối: 2026-09-28  
-> Quy tắc: Tài liệu này **chỉ mô tả trạng thái hiện tại**. Toàn bộ nhật ký kiểm định, walkthrough và lịch sử phát triển chi tiết được lưu trữ tại [docs/history/](../docs/history/) và [docs/handover/](../docs/handover/).
+> Quy tắc: Tài liệu này **chỉ mô tả trạng thái hiện tại**. Toàn bộ nhật ký kiểm định, walkthrough và lịch sử phát triển chi tiết được lưu trữ tại [docs/history/](history/) và [docs/handover/](handover/).
 
 ---
 
@@ -43,7 +43,7 @@
 
 | Vai trò | Tài liệu Source of Truth |
 | :--- | :--- |
-| **Sổ tay AI Agent** | [AGENTS.md](../../AGENTS.md) |
+| **Sổ tay AI Agent** | [AGENTS.md](../AGENTS.md) |
 | **Đặc tả Kỹ thuật gốc** | [docs/specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md](specs/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md) |
 | **Kiến trúc Hệ thống** | [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) |
 | **Quy chuẩn Quyết định** | [docs/adr/](adr/) (ADR 0001 đến 0012) |

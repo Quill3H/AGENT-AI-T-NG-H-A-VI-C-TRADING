@@ -2,7 +2,7 @@
 
 Authority: user task 2026-09-21 authorizes continuous implementation through PPO and branch push. Historical stop-before-7 / optional-RL instructions are superseded. No main merge, force push, credentials, live/testnet or paid resources.
 
-Final code under test: `23f94376215a7fca69c8a7606e34139bc21d090c`. All implemented rows: **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW**. Results: [repair report](../reviews/STAGE_06_11_REPAIR_REPORT.md), [actual evidence](../reviews/evidence/stage-06-11-repair/).
+Final code under test: `23f94376215a7fca69c8a7606e34139bc21d090c`. All implemented rows: **IMPLEMENTED AND AUTHOR_TESTED — PENDING INDEPENDENT REVIEW**. Results: [repair report](../history/reviews/STAGE_06_11_REPAIR_REPORT.md), [actual evidence](../history/evidence/stage-06-11-repair/).
 
 | Finding / requirement | Cause | Production repair / decision | Regression / actual evidence |
 |---|---|---|---|
