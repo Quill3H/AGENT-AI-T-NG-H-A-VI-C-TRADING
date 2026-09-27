@@ -22,8 +22,10 @@ if not exist "node_modules" (
   call npm ci
   if errorlevel 1 goto failed
 )
-call npm run build
-if errorlevel 1 goto failed
+if not exist "dist\index.html" (
+  call npm run build
+  if errorlevel 1 goto failed
+)
 cd ..
 .venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser --port %PAPER_PORT%
 if errorlevel 1 goto failed

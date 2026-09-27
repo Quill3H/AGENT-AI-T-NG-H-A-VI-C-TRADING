@@ -23,6 +23,7 @@ class DurableJournal:
         self.session_id = None
         self.digest = None
         self.snapshot = None
+        self.machine = None
 
     def inspect(self):
         """Return (existing, snapshot, reason); never modify recovery evidence."""
@@ -32,7 +33,7 @@ class DurableJournal:
             if not evidence:
                 return False, None, None
             checkpoint = decode(self.marker.read_bytes())
-            if not isinstance(checkpoint, dict) or checkpoint.get('version') != 1:
+            if not isinstance(checkpoint, dict) or checkpoint.get('version') not in (1, 2):
                 raise ValueError('invalid account checkpoint')
             session_id = checkpoint.get('session_id')
             if not isinstance(session_id, str) or not re.fullmatch(r'[A-Za-z0-9-]+', session_id):
@@ -63,16 +64,22 @@ class DurableJournal:
                 raise ValueError('uncommitted paper mutation; last account state is uncertain')
             if not isinstance(snapshot, dict) or snapshot != checkpoint.get('state'):
                 raise ValueError('checkpoint view does not match journal')
+            machine = checkpoint.get('machine')
+            if machine is not None and not isinstance(machine, dict):
+                raise ValueError('invalid machine checkpoint')
             if snapshot.get('session_id') != session_id or not isinstance(snapshot.get('account'), dict):
                 raise ValueError('invalid saved account view')
             for name in ('orders', 'pending_orders', 'open_positions', 'trades', 'funding_events'):
                 if not isinstance(snapshot.get(name), list):
                     raise ValueError(f'missing saved {name}')
-            return True, snapshot, 'Saved account is read-only; exact broker/risk/funding recovery is required.'
+            self.machine = machine
+            self.digest = checkpoint.get('journal_sha256')
+            self.snapshot = snapshot
+            return True, snapshot, 'Saved account is read-only until exact broker/risk/funding recovery is verified.'
         except (OSError, ValueError, TypeError, KeyError) as exc:
             return True, None, f'Account evidence is incomplete or inconsistent: {exc}'
 
-    def append(self, session_id, record):
+    def append(self, session_id, record, machine=None):
         self.directory.mkdir(parents=True, exist_ok=True)
         path = self.directory / f'{session_id}.jsonl'
         if self.digest is None:
@@ -97,11 +104,14 @@ class DurableJournal:
             os.fsync(stream.fileno())
         digest = sha256(raw + payload).hexdigest()
         snapshot = decode(encode(record['state'])) if 'state' in record else self.snapshot
-        checkpoint = {'version': 1, 'session_id': session_id, 'journal_sha256': digest, 'state': snapshot}
+        if machine is None:
+            machine = self.machine
+        checkpoint = {'version': 2 if machine is not None else 1, 'session_id': session_id,
+                      'journal_sha256': digest, 'state': snapshot, 'machine': machine}
         temporary = self.directory / 'account.json.tmp'
         with temporary.open('xb') as stream:
             stream.write(encode(checkpoint))
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, self.marker)
-        self.digest, self.snapshot = digest, snapshot
+        self.digest, self.snapshot, self.machine = digest, snapshot, machine

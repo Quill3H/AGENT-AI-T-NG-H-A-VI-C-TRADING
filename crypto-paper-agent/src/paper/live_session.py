@@ -21,6 +21,7 @@ from src.features import add_all_features
 from src.strategies.trend_following import TrendFollowingStrategy
 from src.paper.public_stream import INTERVAL_MS, SYMBOLS
 from src.paper.durable_journal import DurableJournal
+from src.paper.recovery_state import capture_session, restore_session
 
 
 UTC = timezone.utc
@@ -126,8 +127,9 @@ def _frame(bars):
 
 
 class LocalPaperSession:
-    def __init__(self, source=None, journal_dir=None):
+    def __init__(self, source=None, journal_dir=None, auto_resume=False):
         self.source = source or BinancePublicSource()
+        self.auto_resume = auto_resume
         self.config = _config()
         self.config_hash = sha256(json.dumps(self.config, sort_keys=True, default=str).encode()).hexdigest()
         self.journal_dir = Path(journal_dir or PROJECT_ROOT / "data/paper_sessions")
@@ -149,6 +151,7 @@ class LocalPaperSession:
         self.stream_closed = {}
         self.stream_last_event_at = None
         self.recovery_snapshot = None
+        self.recovery_machine = None
         self.reconnect_required = False
         self.storage = DurableJournal(self.journal_dir)
         self._load_existing_journal()
@@ -160,15 +163,78 @@ class LocalPaperSession:
             self.status = "RECOVERY_REQUIRED"
             self.error = reason
             self.recovery_snapshot = snapshot
+            self.recovery_machine = self.storage.machine
+            if self.auto_resume and self.recovery_machine is not None:
+                self.reconcile_resume()
 
     def _journal(self, record):
         try:
-            self.storage.append(self.session_id, record)
+            machine = None
+            if self.broker is not None and self.session_id:
+                machine = capture_session(self)
+            self.storage.append(self.session_id, record, machine=machine)
         except Exception as exc:
             self.status = "RECOVERY_REQUIRED"
             self.error = f"Durable account write failed; manual reconciliation required: {exc}"
             self.stream_connected = False
             raise
+
+    def checkpoint(self):
+        """Durably commit the current broker machine without changing market state."""
+        with self.lock:
+            if not self.session_id or self.broker is None:
+                raise ValueError("paper session is not running")
+            self._journal({"type": "PAPER_CHECKPOINT", "received_at_utc": datetime.now(UTC).isoformat(),
+                           "state": self._state_unlocked()})
+            return self.state()
+
+    def reconcile_resume(self):
+        """Restore the exact saved machine and verify the closed-bar boundary.
+
+        No account is created and no broker event is applied until every saved
+        component and the public market boundary have passed validation.
+        """
+        with self.lock:
+            if self.status != "RECOVERY_REQUIRED":
+                return self.state()
+            if self.recovery_machine is None or self.recovery_snapshot is None:
+                self.error = self.error or "Legacy account evidence has no exact machine checkpoint"
+                return self.state()
+            try:
+                restore_session(self, self.recovery_machine, self.recovery_snapshot)
+                if self.status == "STOPPED":
+                    self.stream_connected = False
+                    self.reconnect_required = False
+                    return self.state()
+                server_ms = self.source.server_time_ms()
+                latest = {}
+                for symbol in SYMBOLS:
+                    bars, _ = parse_klines(self.source.klines(symbol, "15m", 500), "15m", server_ms)
+                    if not bars or server_ms - int(bars[-1]["close_time"].timestamp() * 1000) > INTERVAL_MS["15m"] + 120_000:
+                        raise ValueError(f"{symbol}: stale or missing recovery candle")
+                    latest[symbol] = bars[-1]
+                if len({bar["open_time"] for bar in latest.values()}) != 1:
+                    raise ValueError("recovery symbol candle time mismatch")
+                if any(bar["open_time"] < self.last_open[symbol] for symbol, bar in latest.items()):
+                    raise ValueError("recovery source precedes saved watermark")
+                if any(bar["open_time"] > self.last_open[symbol] + timedelta(minutes=15) for symbol, bar in latest.items()):
+                    if self.broker.positions or self.broker.pending_orders or self.broker.pending_closes:
+                        raise ValueError("recovery gap crosses saved exposure; exact fills and funding are unknown")
+                    self._rebaseline_after_gap(server_ms)
+                self.server_ms = server_ms
+                self.received_at = datetime.now(UTC).isoformat()
+                self.status = "WAITING_CONNECTION"
+                self.stream_connected = False
+                self.reconnect_required = True
+                self.stream_error = "restored checkpoint; awaiting a fresh synchronized stream batch"
+                return self.state()
+            except Exception as exc:
+                self.status = "RECOVERY_REQUIRED"
+                self.error = f"Exact paper recovery blocked: {exc}"
+                self.broker = None
+                self.stream_connected = False
+                self.reconnect_required = False
+                return self.state()
 
     def on_connection(self, connected: bool, reason: str | None):
         with self.lock:
@@ -465,6 +531,16 @@ class LocalPaperSession:
                     self._journal({"type": "SESSION_STOP", "received_at_utc": datetime.now(UTC).isoformat(),
                                    "open_positions_retained": len(self.broker.positions) if self.broker else 0,
                                    "state": self._state_unlocked()})
+            return self.state()
+
+    def shutdown(self):
+        """Stop transport ownership while preserving a resumable paper machine."""
+        with self.lock:
+            if self.session_id and self.broker is not None and self.status not in ("STOPPED", "RECOVERY_REQUIRED"):
+                self._journal({"type": "PROCESS_STOP", "received_at_utc": datetime.now(UTC).isoformat(),
+                               "state": self._state_unlocked()})
+            self.stream_connected = False
+            self.reconnect_required = False
             return self.state()
 
     def state(self):

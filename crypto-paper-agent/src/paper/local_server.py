@@ -135,7 +135,7 @@ def create_server(port=8765, source=None, journal_dir=None):
                 if self.path == "/api/start":
                     with worker_lock:
                         result = session.start()
-                        if result["status"] == "SCANNING" and (worker is None or not worker.is_alive()):
+                        if result["status"] in ("SCANNING", "WAITING_CONNECTION") and (worker is None or not worker.is_alive()):
                             stopped.clear()
                             stream = PublicKlineStream(session.on_stream_event, session.on_connection, stopped)
                             worker = Thread(target=stream.run, name="binance-public-kline", daemon=True)
@@ -159,14 +159,14 @@ def create_server(port=8765, source=None, journal_dir=None):
                 stream.close()
             try:
                 if hasattr(self, 'session'):
-                    self.session.stop()
+                    self.session.shutdown()
             finally:
                 super().server_close()
 
     server = PaperServer(("127.0.0.1", port), Handler)
     port = server.server_port
     try:
-        session = LocalPaperSession(source=source, journal_dir=journal_dir)
+        session = LocalPaperSession(source=source, journal_dir=journal_dir, auto_resume=True)
         server.session = session
     except Exception:
         server.server_close()

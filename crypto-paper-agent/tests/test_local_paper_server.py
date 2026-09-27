@@ -83,3 +83,18 @@ def test_api_source_failure_keeps_state_contract(api):
     assert response.json()['account']['equity_usd'] == 10000
     assert response.json()['risk_gate']['admission_open'] is False
     assert response.json()['api_time_utc']
+
+
+def test_server_startup_attempts_exact_resume_before_accepting_stream(tmp_path):
+    from src.paper.local_server import create_server
+    first = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    assert first.session.start()["status"] == "SCANNING"
+    first.server_close()
+
+    second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    try:
+        assert second.session.status == "WAITING_CONNECTION"
+        assert second.session.broker is not None
+        assert second.session.state()["risk_gate"]["admission_open"] is False
+    finally:
+        second.server_close()
