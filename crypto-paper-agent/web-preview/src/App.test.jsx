@@ -35,7 +35,13 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
   afterEach(() => {
     globalThis.fetch = originalFetch
     globalThis.WebSocket = originalWebSocket
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch {}
+    }
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('renders PAPER/RESEARCH safety labels and mode indicators', () => {
@@ -433,5 +439,321 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
     expect(screen.getAllByText(/PaperBroker mô phỏng/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Circuit breaker/i)).toBeInTheDocument()
     expect(screen.getAllByText(/không có lệnh sàn thật/i).length).toBeGreaterThan(0)
+  })
+
+  it('handles price stream loss: does not display WebSocket Trực tiếp and falls back to closed REST price', async () => {
+    let wsInstance = null
+    class ControllableWebSocket {
+      constructor(url) {
+        wsInstance = this
+        this.url = url
+      }
+      close() {
+        if (this.onclose) this.onclose({ wasClean: true })
+      }
+      send() {}
+    }
+    globalThis.WebSocket = ControllableWebSocket
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'SCANNING',
+        source_time_utc: new Date().toISOString(),
+        markets: {
+          BTCUSDT: {
+            last_closed_15m_price: 63800.0,
+            as_of_utc: new Date().toISOString(),
+          },
+        },
+        risk_gate: { admission_open: true, reason: null },
+      }),
+    })
+
+    render(<App />)
+
+    // Initially open WS and emit kline
+    await act(async () => {
+      if (wsInstance?.onopen) wsInstance.onopen()
+      if (wsInstance?.onmessage) {
+        wsInstance.onmessage({
+          data: JSON.stringify({
+            k: {
+              t: Date.now(),
+              o: '64000',
+              h: '64100',
+              l: '63900',
+              c: '64050',
+              x: false,
+            },
+          }),
+        })
+      }
+    })
+
+    // While WS is live, shows live price 64,050.00 and WebSocket Trực tiếp
+    await waitFor(() => {
+      expect(screen.getAllByText(/64,050.00/).length).toBeGreaterThan(0)
+      expect(screen.getByText(/● WebSocket Trực tiếp/i)).toBeInTheDocument()
+    })
+
+    // Now trigger WebSocket stream loss (disconnect)
+    await act(async () => {
+      wsInstance.close()
+    })
+
+    // Must NOT continue to claim "● WebSocket Trực tiếp"
+    await waitFor(() => {
+      expect(screen.queryByText(/● WebSocket Trực tiếp/i)).toBeNull()
+    })
+
+    // Must fall back to REST closed price (63,800.00), NOT keep stale 64,050.00
+    expect(screen.getAllByText(/63,800.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/REST nến đóng/i).length).toBeGreaterThan(0)
+  })
+
+  it('handles stale price (>15s without kline event): drops WebSocket Trực tiếp and falls back to closed REST price', async () => {
+    let wsInstance = null
+    class ControllableWebSocket {
+      constructor(url) {
+        wsInstance = this
+        this.url = url
+      }
+      close() {}
+      send() {}
+    }
+    globalThis.WebSocket = ControllableWebSocket
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'SCANNING',
+        source_time_utc: new Date().toISOString(),
+        markets: {
+          BTCUSDT: {
+            last_closed_15m_price: 63500.0,
+            as_of_utc: new Date().toISOString(),
+          },
+        },
+        risk_gate: { admission_open: true, reason: null },
+      }),
+    })
+
+    const baseTime = 1700000000000
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(baseTime)
+      render(<App />)
+
+      await act(async () => {
+        if (wsInstance?.onopen) wsInstance.onopen()
+        if (wsInstance?.onmessage) {
+          wsInstance.onmessage({
+            data: JSON.stringify({
+              k: {
+                t: baseTime,
+                o: '64000',
+                h: '64200',
+                l: '63900',
+                c: '64150',
+                x: false,
+              },
+            }),
+          })
+        }
+      })
+
+      // Fresh tick: live price 64,150.00
+      expect(screen.getAllByText(/64,150.00/).length).toBeGreaterThan(0)
+      expect(screen.getByText(/● WebSocket Trực tiếp/i)).toBeInTheDocument()
+
+      // Advance time by 16 seconds (>15s watchdog)
+      await act(async () => {
+        vi.advanceTimersByTime(16000)
+      })
+
+      // Must NOT continue to say "WebSocket Trực tiếp"
+      expect(screen.queryByText(/● WebSocket Trực tiếp/i)).toBeNull()
+
+      // Must show stale warning and fallback to REST closed price (63,500.00)
+      expect(screen.getAllByText(/gián đoạn|Giá cũ/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/63,500.00/).length).toBeGreaterThan(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('truthfully reports bot status: distinguishes permitted simulated orders from closed risk gates', async () => {
+    // 1. Closed Risk Gate while scanning
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'SCANNING',
+        source_time_utc: new Date().toISOString(),
+        markets: { BTCUSDT: { last_closed_15m_price: 63000.0 } },
+        risk_gate: {
+          admission_open: false,
+          reason: 'Circuit breaker triggered after 3 consecutive losses',
+          halted: true,
+        },
+      }),
+    })
+
+    const { unmount } = render(<App />)
+
+    await waitFor(() => {
+      // Must NOT claim "bot đang giao dịch"
+      expect(screen.queryByText(/bot đang giao dịch/i)).toBeNull()
+      // Must show closed admission gate
+      expect(screen.getAllByText(/CỔNG LỆNH ĐÓNG/i).length).toBeGreaterThan(0)
+      expect(screen.getByText(/Circuit breaker triggered/i)).toBeInTheDocument()
+    })
+
+    unmount()
+
+    // 2. Open Risk Gate with permitted order simulation
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'SCANNING',
+        session_id: 'test-session-456',
+        source_time_utc: new Date().toISOString(),
+        markets: { BTCUSDT: { last_closed_15m_price: 63000.0 } },
+        risk_gate: { admission_open: true, reason: null, halted: false },
+      }),
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/ĐƯỢC PHÉP TẠO LỆNH MÔ PHỎNG/i).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('displays waiting states WAITING_SYNC and WAITING_CONNECTION truthfully', async () => {
+    // WAITING_SYNC
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'WAITING_SYNC',
+        source_time_utc: new Date().toISOString(),
+        markets: { BTCUSDT: { last_closed_15m_price: 63000.0 } },
+        risk_gate: { admission_open: false, reason: 'Waiting 3 symbols sync' },
+      }),
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Đang chờ đồng bộ 3 cặp/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/chưa nhận lệnh/i).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('displays Không xác định for null financial info in RECOVERY_REQUIRED and includes browser closure notice', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'RECOVERY_REQUIRED',
+        session_id: 'prior-session-789',
+        source_time_utc: new Date().toISOString(),
+        account: {
+          initial_equity_usd: null,
+          wallet_usd: null,
+          equity_usd: null,
+          available_margin_usd: null,
+          reserved_collateral_usd: null,
+          unrealized_pnl_usd: null,
+          breaker_locked: null,
+        },
+        risk_gate: { admission_open: false, reason: 'Journal reconciliation required' },
+      }),
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      // Must display "Không xác định" for unknown account values
+      expect(screen.getAllByText(/Không xác định/i).length).toBeGreaterThan(0)
+    })
+
+    // Reassurance notice: closing browser does NOT stop backend
+    expect(screen.getByText(/Đóng tab trình duyệt KHÔNG làm dừng bot/i)).toBeInTheDocument()
+  })
+
+  it('handles successful recovery from RECOVERY_REQUIRED to active SCANNING', async () => {
+    // Phase 1: RECOVERY_REQUIRED
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'RECOVERY_REQUIRED',
+        session_id: 'prior-recovered',
+        source_time_utc: new Date().toISOString(),
+        account: {
+          initial_equity_usd: null,
+          wallet_usd: null,
+          equity_usd: null,
+          available_margin_usd: null,
+          reserved_collateral_usd: null,
+          unrealized_pnl_usd: null,
+          breaker_locked: null,
+        },
+        risk_gate: { admission_open: false, reason: 'Reconciling' },
+      }),
+    })
+
+    const { unmount } = render(<App />)
+
+    // Starts in RECOVERY_REQUIRED
+    await waitFor(() => {
+      expect(screen.getAllByText(/RECOVERY REQUIRED|YÊU CẦU ĐỐI SOÁT/i).length).toBeGreaterThan(0)
+    })
+
+    unmount()
+
+    // Phase 2: SCANNING after recovery
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'SCANNING',
+        session_id: 'recovered-clean',
+        source_time_utc: new Date().toISOString(),
+        markets: { BTCUSDT: { last_closed_15m_price: 64000.0 } },
+        account: {
+          initial_equity_usd: 10000.0,
+          wallet_usd: 10250.0,
+          equity_usd: 10250.0,
+          available_margin_usd: 10250.0,
+          reserved_collateral_usd: 0.0,
+          unrealized_pnl_usd: 0.0,
+          breaker_locked: false,
+        },
+        risk_gate: { admission_open: true, reason: null },
+      }),
+    })
+
+    render(<App />)
+
+    // Advances to SCANNING
+    await waitFor(() => {
+      expect(screen.getAllByText(/ĐƯỢC PHÉP TẠO LỆNH MÔ PHỎNG/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/10,250.00/).length).toBeGreaterThan(0)
+    })
   })
 })

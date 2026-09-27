@@ -31,8 +31,8 @@ export const STRATEGY_METADATA = [
     nameVi: 'Bám theo xu hướng (Trend Following)',
     timeframe: '4h / 15m',
     status: 'ACTIVE_LIVE',
-    statusLabel: '🟢 Đang chạy trực tiếp (Live paper)',
-    desc: 'Chiến lược duy nhất hiện đang quét và vào lệnh trực tiếp trên dữ liệu mới.',
+    statusLabel: '🟢 Đang chạy trên dữ liệu mới (Paper)',
+    desc: 'Chiến lược duy nhất hiện đang quét và tính toán lệnh mô phỏng trên luồng dữ liệu mới.',
   },
   {
     id: 'breakout',
@@ -68,6 +68,13 @@ export const money = (v, prec = 2) => {
   })
 }
 
+export const formatMoneyOrUnknown = (v, prec = 2, unit = 'USDT') => {
+  if (v === null || v === undefined || Number.isNaN(Number(v))) {
+    return 'Không xác định'
+  }
+  return `${money(v, prec)}${unit ? ' ' + unit : ''}`
+}
+
 function getInitialCoin() {
   if (typeof window !== 'undefined' && window.location?.search) {
     const param = new URLSearchParams(window.location.search).get('coin')
@@ -87,6 +94,11 @@ export function App() {
 
   const [backendState, setBackendState] = useState(null)
   const [liveCandle, setLiveCandle] = useState(null)
+  const [wsStatus, setWsStatus] = useState('CONNECTING')
+  // 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'STALE'
+  const [lastWsEventTime, setLastWsEventTime] = useState(null)
+  const [nowTime, setNowTime] = useState(Date.now())
+
   const [tradeTab, setTradeTab] = useState('closed')
   const [botActionState, setBotActionState] = useState(null) // 'STARTING' | 'STOPPING' | null
   const [actionError, setActionError] = useState(null)
@@ -94,6 +106,14 @@ export function App() {
 
   const activeCoinConfig = COINS.find((c) => c.symbol === activeCoin) || COINS[0]
   const precision = activeCoinConfig.precision
+
+  // ── Periodic Heartbeat for Freshness / Staleness Checks ──────────────────────
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTime(Date.now())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // ── 1. Resilient Sequential Polling (/api/state) with out-of-order drop ──────
   const pollSeqRef = useRef(0)
@@ -185,11 +205,18 @@ export function App() {
     let reconnectTimer = null
     let isCancelled = false
 
+    setWsStatus('CONNECTING')
+
     const connectWs = () => {
       if (typeof WebSocket === 'undefined') return
       try {
         const streamUrl = `wss://fstream.binance.com/ws/${activeCoin.toLowerCase()}@kline_1m`
         ws = new WebSocket(streamUrl)
+
+        ws.onopen = () => {
+          if (isCancelled) return
+          setWsStatus('CONNECTED')
+        }
 
         ws.onmessage = (event) => {
           if (isCancelled) return
@@ -197,6 +224,9 @@ export function App() {
             const data = JSON.parse(event.data)
             if (data && data.k) {
               const k = data.k
+              const receiveTime = Date.now()
+              setLastWsEventTime(receiveTime)
+              setWsStatus('CONNECTED')
               setLiveCandle({
                 time: Math.floor(k.t / 1000),
                 open: parseFloat(k.o),
@@ -204,19 +234,25 @@ export function App() {
                 low: parseFloat(k.l),
                 close: parseFloat(k.c),
                 provisional: !k.x, // true if bar is still forming, false if closed
+                updatedAt: receiveTime,
               })
             }
           } catch {}
         }
 
-        ws.onerror = () => {}
+        ws.onerror = () => {
+          if (isCancelled) return
+          setWsStatus('DISCONNECTED')
+        }
 
         ws.onclose = () => {
-          if (!isCancelled) {
-            reconnectTimer = setTimeout(connectWs, 3000)
-          }
+          if (isCancelled) return
+          setWsStatus('DISCONNECTED')
+          reconnectTimer = setTimeout(connectWs, 3000)
         }
-      } catch {}
+      } catch {
+        setWsStatus('DISCONNECTED')
+      }
     }
 
     connectWs()
@@ -225,7 +261,9 @@ export function App() {
       isCancelled = true
       clearTimeout(reconnectTimer)
       if (ws) {
+        ws.onopen = null
         ws.onclose = null
+        ws.onerror = null
         ws.close()
       }
     }
@@ -235,6 +273,8 @@ export function App() {
   const handleCoinChange = (newSymbol) => {
     setActiveCoin(newSymbol)
     setLiveCandle(null)
+    setLastWsEventTime(null)
+    setWsStatus('CONNECTING')
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       const url = new URL(window.location.href)
       url.searchParams.set('coin', newSymbol)
@@ -323,18 +363,18 @@ export function App() {
   }
 
   // ── Derived Data from Backend State (100% from backend, no client math) ─────
-  const isBotRunning = backendState?.status === 'SCANNING' || backendState?.status === 'WAITING_SYNC'
+  const isBotRunning = ['SCANNING', 'WAITING_SYNC', 'WAITING_CONNECTION'].includes(backendState?.status)
   const isQuarantined = backendState?.status === 'QUARANTINED' || connectionStatus === 'QUARANTINED'
   const isRecoveryRequired = backendState?.status === 'RECOVERY_REQUIRED' || connectionStatus === 'RECOVERY_REQUIRED'
 
   const account = backendState?.account || {
-    initial_equity_usd: 10000.0,
-    wallet_usd: 10000.0,
-    equity_usd: 10000.0,
-    available_margin_usd: 10000.0,
-    reserved_collateral_usd: 0.0,
-    unrealized_pnl_usd: 0.0,
-    breaker_locked: false,
+    initial_equity_usd: null,
+    wallet_usd: null,
+    equity_usd: null,
+    available_margin_usd: null,
+    reserved_collateral_usd: null,
+    unrealized_pnl_usd: null,
+    breaker_locked: null,
   }
 
   const openPositions = backendState?.open_positions || []
@@ -343,6 +383,10 @@ export function App() {
   const recentOrders = backendState?.orders || []
   const marketInfo = backendState?.markets?.[activeCoin]
   const riskGate = backendState?.risk_gate
+  const isAdmissionOpen = Boolean(riskGate?.admission_open)
+  const isScanning = backendState?.status === 'SCANNING'
+  const isWaitingSync = backendState?.status === 'WAITING_SYNC'
+  const isWaitingConnection = backendState?.status === 'WAITING_CONNECTION'
 
   // Symbol Candles from backend
   const symbolCandles =
@@ -355,7 +399,15 @@ export function App() {
   const lastCandlePrice = symbolCandles.length > 0 && typeof symbolCandles[symbolCandles.length - 1].close === 'number'
     ? symbolCandles[symbolCandles.length - 1].close
     : null
-  const currentPrice = liveCandle?.close ?? marketPrice ?? lastCandlePrice ?? null
+
+  // WebSocket freshness check:
+  // When disconnected or no new tick received for >15s, do NOT prioritize stale liveCandle price over fresh REST
+  const isWsStale = !lastWsEventTime || (nowTime - lastWsEventTime > 15_000)
+  const isWsLive = wsStatus === 'CONNECTED' && !isWsStale && liveCandle !== null
+
+  // Only use liveCandle.close if WebSocket stream is actively connected and receiving fresh ticks (<15s).
+  // If WebSocket is disconnected or stale, strictly fall back to closed REST price from backend.
+  const currentPrice = isWsLive ? (liveCandle.close ?? null) : (marketPrice ?? lastCandlePrice ?? null)
 
   // Function to get real price for any coin in the left list
   const getCoinPrice = (symbol) => {
@@ -384,52 +436,96 @@ export function App() {
   const low24h = validLows.length > 0 ? Math.min(...validLows) : currentPrice
 
   // Timestamp formatting
-  const priceUpdateUtc =
-    liveCandle
-      ? 'Vừa nhận (WebSocket)'
-      : marketInfo?.as_of_utc
-      ? new Date(marketInfo.as_of_utc).toLocaleTimeString('vi-VN', { hour12: false })
-      : backendState?.source_time_utc
-      ? new Date(backendState.source_time_utc).toLocaleTimeString('vi-VN', { hour12: false })
-      : null
+  const priceUpdateUtc = (() => {
+    if (isWsLive && lastWsEventTime) {
+      return `${new Date(lastWsEventTime).toLocaleTimeString('vi-VN', { hour12: false })} (Live WS)`
+    }
+    if (isWsStale && lastWsEventTime) {
+      return `${new Date(lastWsEventTime).toLocaleTimeString('vi-VN', { hour12: false })} (Mất kết nối/Giá cũ)`
+    }
+    if (marketInfo?.as_of_utc) {
+      return `${new Date(marketInfo.as_of_utc).toLocaleTimeString('vi-VN', { hour12: false })} (REST nến đóng)`
+    }
+    if (backendState?.source_time_utc) {
+      return `${new Date(backendState.source_time_utc).toLocaleTimeString('vi-VN', { hour12: false })} (REST)`
+    }
+    return null
+  })()
 
   // Market feed connection status
-  const marketFeedText =
-    liveCandle
-      ? '● WebSocket Trực tiếp'
-      : marketInfo
-      ? '● REST Nến đã đóng'
-      : connectionStatus === 'DATA_STALE'
-      ? '⚠ Nguồn nến gián đoạn'
-      : '○ Chờ dữ liệu nến'
+  const marketFeedText = (() => {
+    if (isWsLive) return '● WebSocket Trực tiếp'
+    if (isWsStale && lastWsEventTime) return '⚠ WebSocket gián đoạn (>15s)'
+    if (wsStatus === 'DISCONNECTED') {
+      return marketPrice !== null ? '○ REST nến đóng (WS ngắt)' : '○ WS mất kết nối'
+    }
+    if (marketInfo) return '● REST Nến đã đóng'
+    if (connectionStatus === 'DATA_STALE') return '⚠ Nguồn nến gián đoạn'
+    return '○ Chờ dữ liệu nến'
+  })()
 
-  const marketFeedColor =
-    liveCandle
-      ? '#0ECB81'
-      : marketInfo
-      ? '#2563EB'
-      : connectionStatus === 'DATA_STALE'
-      ? '#F0B90B'
-      : '#848E9C'
+  const marketFeedColor = (() => {
+    if (isWsLive) return '#0ECB81'
+    if (isWsStale && lastWsEventTime) return '#F0B90B'
+    if (wsStatus === 'DISCONNECTED') return marketPrice !== null ? '#2563EB' : '#F6465D'
+    if (marketInfo) return '#2563EB'
+    if (connectionStatus === 'DATA_STALE') return '#F0B90B'
+    return '#848E9C'
+  })()
 
   // Bot status text & color
   const botStatusBadge = (() => {
     switch (backendState?.status) {
       case 'SCANNING':
-        return { label: '● Đang quét (Live Paper)', color: '#0ECB81', indicator: 'running' }
+        if (isAdmissionOpen) {
+          return {
+            label: '● ĐƯỢC PHÉP TẠO LỆNH MÔ PHỎNG',
+            color: '#0ECB81',
+            indicator: 'running',
+          }
+        }
+        return {
+          label: '⚠ CỔNG LỆNH ĐÓNG (Chờ an toàn)',
+          color: '#F0B90B',
+          indicator: 'sync',
+        }
       case 'WAITING_SYNC':
-        return { label: '● Chờ đồng bộ 3 cặp', color: '#2563EB', indicator: 'sync' }
+        return {
+          label: '● Đang chờ đồng bộ 3 cặp (chưa nhận lệnh)',
+          color: '#2563EB',
+          indicator: 'sync',
+        }
       case 'WAITING_CONNECTION':
-        return { label: '○ Chờ kết nối stream', color: '#F0B90B', indicator: 'recovery' }
+        return {
+          label: '○ Đang chờ kết nối stream (chưa nhận lệnh)',
+          color: '#F0B90B',
+          indicator: 'recovery',
+        }
       case 'QUARANTINED':
-        return { label: '⚠ Bị cách ly (Quarantined)', color: '#F6465D', indicator: 'error' }
+        return {
+          label: '⚠ Bị cách ly an toàn (QUARANTINED)',
+          color: '#F6465D',
+          indicator: 'error',
+        }
       case 'RECOVERY_REQUIRED':
-        return { label: '⚠ Cần đối soát (Recovery Required)', color: '#F0B90B', indicator: 'recovery' }
+        return {
+          label: '⚠ Cần can thiệp phục hồi (RECOVERY REQUIRED)',
+          color: '#F0B90B',
+          indicator: 'recovery',
+        }
       case 'STOPPED':
-        return { label: '○ Đã dừng (Stopped)', color: '#848E9C', indicator: 'idle' }
+        return {
+          label: '○ Đã dừng (Stopped)',
+          color: '#848E9C',
+          indicator: 'idle',
+        }
       case 'IDLE':
       default:
-        return { label: '○ Chưa khởi động (Idle)', color: '#848E9C', indicator: 'idle' }
+        return {
+          label: '○ Chưa khởi động (Idle)',
+          color: '#848E9C',
+          indicator: 'idle',
+        }
     }
   })()
 
@@ -665,35 +761,59 @@ export function App() {
             <div className="account-row">
               <span className="account-key">Equity</span>
               <span
-                className={`account-value mono ${account.equity_usd >= account.initial_equity_usd ? 'green' : 'red'}`}
+                className={`account-value mono ${
+                  account.equity_usd === null
+                    ? 'text-muted'
+                    : account.equity_usd >= (account.initial_equity_usd ?? 10000.0)
+                    ? 'green'
+                    : 'red'
+                }`}
               >
-                {money(account.equity_usd)} USDT
+                {formatMoneyOrUnknown(account.equity_usd)}
               </span>
             </div>
             <div className="account-row">
               <span className="account-key">Wallet (Ví)</span>
-              <span className="account-value mono">{money(account.wallet_usd)} USDT</span>
+              <span className="account-value mono">{formatMoneyOrUnknown(account.wallet_usd)}</span>
             </div>
             <div className="account-row">
               <span className="account-key">Khả dụng</span>
-              <span className="account-value mono">{money(account.available_margin_usd)} USDT</span>
+              <span className="account-value mono">{formatMoneyOrUnknown(account.available_margin_usd)}</span>
             </div>
             <div className="account-row">
               <span className="account-key">Ký quỹ đang dùng</span>
-              <span className="account-value mono">{money(account.reserved_collateral_usd ?? 0.0)} USDT</span>
+              <span className="account-value mono">{formatMoneyOrUnknown(account.reserved_collateral_usd)}</span>
             </div>
             <div className="account-row">
               <span className="account-key">PnL chưa thực hiện</span>
               <span
-                className={`account-value mono ${(account.unrealized_pnl_usd ?? 0) >= 0 ? 'green' : 'red'}`}
+                className={`account-value mono ${
+                  account.unrealized_pnl_usd === null
+                    ? 'text-muted'
+                    : account.unrealized_pnl_usd >= 0
+                    ? 'green'
+                    : 'red'
+                }`}
               >
-                {money(account.unrealized_pnl_usd ?? 0.0)} USDT
+                {formatMoneyOrUnknown(account.unrealized_pnl_usd)}
               </span>
             </div>
             <div className="account-row">
               <span className="account-key">Circuit breaker</span>
-              <span className={`account-value ${account.breaker_locked ? 'red' : 'green'}`}>
-                {account.breaker_locked ? 'ĐÃ KHÓA' : 'Bình thường'}
+              <span
+                className={`account-value ${
+                  account.breaker_locked === true
+                    ? 'red'
+                    : account.breaker_locked === false
+                    ? 'green'
+                    : 'text-muted'
+                }`}
+              >
+                {account.breaker_locked === true
+                  ? 'ĐÃ KHÓA'
+                  : account.breaker_locked === false
+                  ? 'Bình thường'
+                  : 'Không xác định'}
               </span>
             </div>
             <div style={{ marginTop: '6px', fontSize: '10px', color: '#848E9C' }}>
@@ -703,7 +823,7 @@ export function App() {
         </aside>
 
         {/* CENTER PANEL: Chart Toolbar + Candlestick Chart + Bot Status Bar + Trade Log */}
-        <main className="chart-panel" aria-label="Biểu đồ giao dịch và lịch sử">
+        <main className="chart-panel center-panel" aria-label="Biểu đồ giao dịch và lịch sử">
           {/* Chart Toolbar */}
           <div className="chart-toolbar">
             <span className="toolbar-btn" style={{ color: activeCoinConfig.color, fontWeight: 700 }}>
@@ -719,12 +839,16 @@ export function App() {
             </span>
             <div className="toolbar-spacer" />
             <span style={{ fontSize: '11px', color: '#848E9C' }}>
-              {liveCandle ? (
-                liveCandle.provisional ? (
+              {isWsLive ? (
+                liveCandle?.provisional ? (
                   <span style={{ color: '#F0B90B' }}>● Nến 1m đang chạy (Provisional)</span>
                 ) : (
                   <span style={{ color: '#0ECB81' }}>✔ Nến 1m đã đóng</span>
                 )
+              ) : isWsStale && lastWsEventTime ? (
+                <span style={{ color: '#F0B90B' }}>⚠ Mất kết nối/Giá cũ (&gt;15s)</span>
+              ) : wsStatus === 'DISCONNECTED' ? (
+                <span style={{ color: '#848E9C' }}>○ WebSocket ngắt kết nối</span>
               ) : (
                 'Đang đồng bộ nến...'
               )}
@@ -758,22 +882,34 @@ export function App() {
           <div className="bot-status-bar" aria-live="polite">
             <span className={`bot-status-indicator ${botStatusBadge.indicator}`} aria-hidden="true" />
             <span className="bot-status-text">
-              {isBotRunning ? (
+              {isScanning && isAdmissionOpen ? (
                 <>
-                  <strong>Bot đang tự động quét & giao dịch mô phỏng</strong> · Phiên #{backendState?.session_id || 'live'} ·{' '}
+                  Tiến trình backend đang chạy · Dữ liệu hợp lệ · <strong>ĐƯỢC PHÉP TẠO LỆNH MÔ PHỎNG</strong> (Trend Following 4h/15m) · Phiên #{backendState?.session_id || 'live'} ·{' '}
                   {openPositions.length} vị thế mở · {completedTrades.length} lệnh hoàn tất
+                </>
+              ) : isScanning && !isAdmissionOpen ? (
+                <>
+                  Tiến trình backend đang chạy · <strong>CỔNG LỆNH ĐANG ĐÓNG</strong> ({riskGate?.reason || 'Chưa đủ điều kiện an toàn / Quá rủi ro'}) · Đang chờ mở cổng lệnh
+                </>
+              ) : isWaitingSync ? (
+                <>
+                  Tiến trình backend đang chạy · <strong>Đang chờ đồng bộ 3 cặp (BTC, ETH, SOL)</strong> · Chưa nhận lệnh mô phỏng
+                </>
+              ) : isWaitingConnection ? (
+                <>
+                  Tiến trình backend đang chạy · <strong>Đang chờ kết nối stream công khai</strong> · Chưa nhận lệnh mô phỏng
                 </>
               ) : isRecoveryRequired ? (
                 <>
-                  Bot đang ở chế độ <strong>Yêu cầu đối soát phục hồi (Recovery Required)</strong> · Đã dừng nhận lệnh · Cần kiểm tra journal
+                  Backend ở chế độ <strong>Chỉ-Đọc / Cần đối soát phục hồi (RECOVERY REQUIRED)</strong> · Giữ nguyên journal phiên trước · Không nhận lệnh mới
                 </>
               ) : isQuarantined ? (
                 <>
-                  Bot <strong>bị cách ly an toàn (Quarantined)</strong> · Đã dừng nhận lệnh để bảo vệ vốn
+                  Backend <strong>bị cách ly an toàn (QUARANTINED)</strong> · Dừng nhận lệnh để bảo vệ vốn
                 </>
               ) : (
                 <>
-                  Bot <strong>đã dừng</strong> · Nhấn &quot;Khởi động Bot&quot; để bot tự động tính toán & giao dịch thử
+                  Tiến trình bot <strong>đã dừng</strong> · Nhấn &quot;Khởi động Bot&quot; để bot bắt đầu quét dữ liệu và mô phỏng
                 </>
               )}
             </span>
@@ -1085,6 +1221,22 @@ export function App() {
                 ⚠ Dừng nhận lệnh: Dữ liệu bị gián đoạn và chưa thể khôi phục an toàn. Cần quản trị viên kiểm tra.
               </div>
             )}
+
+            {/* Reassurance on browser closure */}
+            <div
+              style={{
+                marginTop: '10px',
+                padding: '8px 10px',
+                background: 'rgba(30, 35, 41, 0.6)',
+                border: '1px solid #2B313A',
+                borderRadius: '3px',
+                fontSize: '10.5px',
+                color: '#848E9C',
+                lineHeight: '1.5',
+              }}
+            >
+              ℹ Web là giao diện quan sát &amp; điều khiển. Backend Codex chạy ngầm trên máy là nguồn sự thật duy nhất. <strong>Đóng tab trình duyệt KHÔNG làm dừng bot.</strong>
+            </div>
           </div>
 
           {/* Open Positions Cards */}
