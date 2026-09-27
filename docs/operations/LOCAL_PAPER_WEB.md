@@ -34,8 +34,8 @@ cd ..
 
 ## Execution contract
 
-- Source: Binance public USD-M perpetual `/fapi/v1/time`, `/fapi/v1/klines`
-  and `/fapi/v1/fundingRate` only. No order endpoint exists in this service.
+- Backend decision/execution source: Binance public USD-M perpetual `/fapi/v1/time`, `/fapi/v1/klines` and `/fapi/v1/fundingRate` only. No exchange order endpoint exists in this service.
+- Frontend display source: the browser may open Binance public WebSocket `@kline_1m` for live chart/price display. This stream is display-only and never enters strategy, risk-gate, sizing, or PaperBroker decisions; stale/disconnected WebSocket data falls back to backend REST closed-candle prices.
 - BTC chart may show a **provisional** 1m candle. It is display-only.
   Signals use fully closed 4h candles, with the existing fixed Trend Following
   rulebook; execution is simulated by PaperBroker on the next closed 15m bar.
