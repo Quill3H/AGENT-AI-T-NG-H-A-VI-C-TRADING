@@ -52,6 +52,7 @@ torch==2.14.0
 typing_extensions==4.16.0
 tzdata==2026.4
 urllib3==2.7.0
+websocket-client==1.9.2
 win32_setctime==1.2.0
 winloop==0.6.3
 yarl==1.25.1
