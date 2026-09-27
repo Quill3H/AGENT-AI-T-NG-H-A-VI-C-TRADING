@@ -202,3 +202,15 @@ def test_rest_boolean_values_fail_before_becoming_valid_prices(column):
 def test_rest_future_provisional_open_is_rejected():
     with pytest.raises(ValueError):
         parse_klines(rows(BASE + timedelta(minutes=15), 1, 15), '15m', int(BASE.timestamp()*1000))
+
+
+def test_provisional_display_updates_cannot_mutate_durable_snapshot(tmp_path):
+    session = LocalPaperSession(source=FakeSource(), journal_dir=tmp_path)
+    session.start()
+    session.on_connection(True, None)
+    session.on_stream_event(stream_bar('BTCUSDT', closed=False))
+    session.on_stream_event(stream_bar('BTCUSDT'))
+    restarted = LocalPaperSession(source=FakeSource(), journal_dir=tmp_path)
+    assert restarted.state()['status'] == 'RECOVERY_REQUIRED'
+    assert restarted.state()['account']['wallet_usd'] == 10000.0
+    assert restarted.state()['recovery']['view'] == 'LAST_DURABLE_SNAPSHOT'
