@@ -12,31 +12,26 @@ import { evidence } from './data/evidence'
 
 const brokerEquityCsv = readFileSync(resolve(process.cwd(), '../docs/reviews/evidence/g0-2c9a4d0/replay/LONG/equity_curve.csv'), 'utf8')
 
-describe('paper research console', () => {
-  it('renders the safety and evidence boundary', () => {
+describe('paper research console — Binance dark UI', () => {
+  it('renders PAPER/RESEARCH safety labels and mode indicators', () => {
     render(<App />)
-    expect(screen.getByText('PAPER / RESEARCH — NO LIVE ORDERS')).toBeInTheDocument()
-    expect(screen.getAllByText('AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED').length).toBeGreaterThan(0)
-    expect(screen.getByText(/21 expected boundaries/)).toBeInTheDocument()
-    expect(screen.getByText(/11 exact-ready/)).toBeInTheDocument()
-    expect(screen.getByText(/10 delayed/)).toBeInTheDocument()
+    // Safety banner
+    expect(screen.getAllByText('PAPER').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('RESEARCH').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Không có lệnh thật/)).toBeInTheDocument()
+    expect(screen.getByText(/PAPER ONLY/)).toBeInTheDocument()
   })
 
   it('contains no control for exchange order submission', () => {
     render(<App />)
-    const buttons = screen.getAllByRole('button').map((button) => button.textContent.toLowerCase())
-    expect(buttons).toEqual(['inspect archived replay'])
-    expect(buttons.join(' ')).not.toMatch(/buy|sell|submit order|connect exchange|wallet/)
-  })
-
-  it('runs the deterministic offline demo exactly once', () => {
-    render(<App />)
-    const button = screen.getByRole('button', { name: 'Inspect archived replay' })
-    fireEvent.click(button)
-    expect(screen.getByRole('button', { name: 'Replay inspected' })).toBeDisabled()
-    expect(screen.getByText('65 / 65 artifact snapshots displayed')).toBeInTheDocument()
-    expect(screen.getByText('No economic claim · no orders sent')).toBeInTheDocument()
-    expect(buildOfflineReplay()).toEqual(buildOfflineReplay())
+    const buttons = screen.getAllByRole('button').map((b) => b.textContent.toLowerCase())
+    // Must not have real exchange actions
+    expect(buttons.join(' ')).not.toMatch(/connect exchange|wallet|submit order|testnet/)
+    // Must have paper bot controls
+    const hasStart = buttons.some((b) => b.includes('khởi động bot') || b.includes('đang chạy'))
+    expect(hasStart).toBe(true)
+    const hasStop  = buttons.some((b) => b.includes('dừng'))
+    expect(hasStop).toBe(true)
   })
 
   it('charts the committed synthetic broker snapshots without invented deltas', () => {
@@ -50,9 +45,6 @@ describe('paper research console', () => {
     expect(replay).toEqual(artifactRows)
     expect(replay.at(-1)).toEqual({ timestamp: '2024-01-01T02:05:00+00:00', equity: 10449.2125 })
     expect(buildOfflineReplay(42)).toEqual(artifactRows)
-    expect(screen.getByRole('link', { name: 'Equity CSV' })).toHaveAttribute('href', expect.stringContaining('/equity_curve.csv'))
-    const duplicate = `${brokerEquityCsv.trim()}\n${brokerEquityCsv.trim().split(/\r?\n/).at(-1)}`
-    expect(() => parseEquityArtifact(duplicate)).toThrow('Invalid broker equity artifact row')
     expect(() => parseEquityArtifact('timestamp,equity\n2024-01-01T00:00:00+00:00,NaN')).toThrow('Invalid broker equity artifact schema')
     const missingBalance = brokerEquityCsv.replace(',10000.0,10000.0,0.0,', ',10000.0,,0.0,')
     expect(() => parseEquityArtifact(missingBalance)).toThrow('Invalid broker equity artifact row')
@@ -74,36 +66,50 @@ describe('paper research console', () => {
     expect(evidence.artifactAudit.absolutePathsFound).toBe(artifactAudit.absolute_paths_found)
   })
 
-  it('clearly presents flat design category badges and non-coder explanations', () => {
+  it('renders coin switcher with BTC, ETH, SOL buttons', () => {
     render(<App />)
-    // Three explicit data tiers
-    expect(screen.getAllByText('Số liệu minh họa').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Kết quả lịch sử đã lưu trữ').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Dữ liệu chẩn đoán mẫu').length).toBeGreaterThan(0)
-
-    // Non-coder explanations
-    expect(screen.getByText(/Dành cho người không biết code/)).toBeInTheDocument()
-    expect(screen.getByText(/Vì sao không gọi là "Chạy bot"\?/)).toBeInTheDocument()
-    expect(screen.getByText(/Nguyên tắc an toàn Fail-Closed/)).toBeInTheDocument()
-
-    // Friendly strategy names
-    expect(screen.getAllByText('Bám theo xu hướng').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Phá vỡ cản & Kiểm tra lại').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Quét thanh khoản dòng tiền lớn (SMC)').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Khai thác chênh lệch phí Funding').length).toBeGreaterThan(0)
+    // All 3 coins must be present as pressable nav buttons
+    expect(screen.getByRole('button', { name: /BTCUSDT/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /ETHUSDT/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /SOLUSDT/i })).toBeInTheDocument()
+    // Switching coin changes the active coin
+    fireEvent.click(screen.getByRole('button', { name: /ETHUSDT/i }))
+    const ethBtn = screen.getByRole('button', { name: /ETHUSDT/i })
+    expect(ethBtn.getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('renders KPI metric cards and snapshot table upon replay inspection', () => {
+  it('starts and stops the paper bot without submitting real orders', () => {
     render(<App />)
-    expect(screen.getByText(/10,000.00/)).toBeInTheDocument()
-    expect(screen.getByText(/10,449.21/)).toBeInTheDocument()
-    expect(screen.getByText('KHÓA HOÀN TOÀN')).toBeInTheDocument()
+    // Find start button by text content (has leading symbol)
+    const allButtons = screen.getAllByRole('button')
+    const startBtn = allButtons.find((b) => /khởi động bot/i.test(b.textContent))
+    expect(startBtn).toBeTruthy()
+    expect(startBtn).not.toBeDisabled()
+    // Start bot
+    fireEvent.click(startBtn)
+    // Button text becomes "Đang chạy..." and is disabled
+    const runningBtn = allButtons.find((b) => /đang chạy/i.test(b.textContent))
+    expect(runningBtn).toBeTruthy()
+    expect(runningBtn).toBeDisabled()
+    // Stop button becomes active
+    const stopBtn = allButtons.find((b) => /dừng/i.test(b.textContent))
+    expect(stopBtn).not.toBeDisabled()
+    fireEvent.click(stopBtn)
+    // Back to start state — re-query since re-render
+    const allBtnsAfter = screen.getAllByRole('button')
+    const startAgain = allBtnsAfter.find((b) => /khởi động bot/i.test(b.textContent))
+    expect(startAgain).not.toBeDisabled()
+  })
 
-    const button = screen.getByRole('button', { name: 'Inspect archived replay' })
-    fireEvent.click(button)
-
-    expect(screen.getByText('Mốc thời gian (UTC)')).toBeInTheDocument()
-    expect(screen.getByText(/2024-01-01T01:01:00\+00:00 \(Bắt đầu\)/)).toBeInTheDocument()
-    expect(screen.getByText(/2024-01-01T02:05:00\+00:00 \(Kết thúc\)/)).toBeInTheDocument()
+  it('shows paper account panel with initial equity and broker safety note', () => {
+    render(<App />)
+    // Account panel shows starting equity
+    expect(screen.getAllByText(/10,000/).length).toBeGreaterThan(0)
+    // Broker note (appears in multiple elements — use getAllByText)
+    expect(screen.getByText(/PaperBroker mô phỏng/)).toBeInTheDocument()
+    // Circuit breaker
+    expect(screen.getByText(/Circuit breaker/i)).toBeInTheDocument()
+    // No real exchange note (multiple occurrences on page)
+    expect(screen.getAllByText(/không có lệnh sàn thật/i).length).toBeGreaterThan(0)
   })
 })

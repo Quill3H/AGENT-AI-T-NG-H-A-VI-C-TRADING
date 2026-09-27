@@ -1,512 +1,977 @@
-import { useMemo, useState } from 'react'
+/**
+ * App.jsx — Binance Futures-style Paper Research Console
+ *
+ * PAPER / RESEARCH ONLY — NO LIVE ORDERS, NO EXCHANGE CONNECTION.
+ * All data is from committed public artifacts or browser-side simulation.
+ *
+ * Features:
+ *   • Dark theme mirroring Binance Futures UI
+ *   • Coin switcher: BTCUSDT / ETHUSDT / SOLUSDT
+ *   • Paper Bot: start/stop simulated EMA-crossover paper trading
+ *   • SVG equity chart with live price simulation
+ *   • Trade log, open positions, account panel
+ *   • All historical data from checked-in artifacts (evidence.js)
+ */
+
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
+import './styles.css'
 import { evidence } from './data/evidence'
 import { buildOfflineReplay, toPolyline } from './lib/replay'
+import {
+  SYMBOL_SEED, INITIAL_EQUITY,
+  simulatePriceWalk, generateSignal,
+  createPaperBroker, executePaperTrade, tickPositions,
+} from './lib/paperEngine'
 
-function Status({ children, tone = 'neutral' }) {
-  return <span className={`status status--${tone}`}>{children}</span>
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const COINS = [
+  { symbol: 'BTCUSDT', name: 'BTC', display: 'BTCUSDT', color: '#F7931A' },
+  { symbol: 'ETHUSDT', name: 'ETH', display: 'ETHUSDT', color: '#627EEA' },
+  { symbol: 'SOLUSDT', name: 'SOL', display: 'SOLUSDT', color: '#9945FF' },
+]
+
+const STRATEGIES = [
+  { id: 'ema_cross',     label: 'EMA Cross 9/21', timeframe: '1m',  selected: true },
+  { id: 'trend_follow',  label: 'Trend Follow',   timeframe: '15m', selected: false },
+  { id: 'breakout',      label: 'Breakout',        timeframe: '4h',  selected: false },
+]
+
+const BOT_TICK_MS = 1500  // Simulate one candle per 1.5s when running
+
+const money = (v, prec = 2) => Number(v).toLocaleString('en-US', {
+  minimumFractionDigits: prec,
+  maximumFractionDigits: prec,
+})
+
+// ─── State Reducer ───────────────────────────────────────────────────────────
+
+const initialState = {
+  activeCoin:     'BTCUSDT',
+  botRunning:     false,
+  botCycle:       0,
+  strategy:       'ema_cross',
+  broker:         createPaperBroker(INITIAL_EQUITY),
+  candles:        {},   // { symbol -> candle[] }
+  prices:         {},   // { symbol -> number }
+  priceDir:       {},   // { symbol -> 'up'|'down' }
+  toasts:         [],   // [{ id, symbol, side }]
+  tradeTab:       'closed',
 }
 
-function CategoryBadge({ category }) {
-  if (!category) return null
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_COIN':
+      return { ...state, activeCoin: action.coin }
+
+    case 'SET_STRATEGY':
+      return { ...state, strategy: action.strategy }
+
+    case 'BOT_START': {
+      // Initialize candles for all symbols from seed walks
+      const candles = {}
+      const prices  = {}
+      const priceDir = {}
+      for (const { symbol } of COINS) {
+        const seed = symbol.charCodeAt(0) + symbol.charCodeAt(1)
+        candles[symbol] = simulatePriceWalk(symbol, 120, seed)
+        const last = candles[symbol].at(-1)
+        prices[symbol]   = last.close
+        priceDir[symbol] = 'up'
+      }
+      return {
+        ...state,
+        botRunning: true,
+        broker: createPaperBroker(INITIAL_EQUITY),
+        candles,
+        prices,
+        priceDir,
+      }
+    }
+
+    case 'BOT_STOP':
+      return { ...state, botRunning: false }
+
+    case 'BOT_TICK': {
+      const { symbol, candle, newPrice, signal, closedTrades } = action
+      const prevPrice = state.prices[symbol] ?? newPrice
+
+      // Immutably update candles: append new candle, keep last 150
+      const prevCandles = state.candles[symbol] ?? []
+      const nextCandles = [...prevCandles, candle].slice(-150)
+
+      // Update prices
+      const prices  = { ...state.prices, [symbol]: newPrice }
+      const priceDir = { ...state.priceDir, [symbol]: newPrice >= prevPrice ? 'up' : 'down' }
+
+      // Merge closed trades into broker
+      const broker = { ...action.broker }
+
+      // Toast for new signal
+      let toasts = state.toasts
+      if (signal) {
+        const toast = { id: Date.now(), symbol, side: signal }
+        toasts = [...toasts.slice(-4), toast]
+        setTimeout(() => {}, 4000) // CSS animates it out
+      }
+
+      return {
+        ...state,
+        broker,
+        candles: { ...state.candles, [symbol]: nextCandles },
+        prices,
+        priceDir,
+        botCycle: state.botCycle + 1,
+        toasts,
+      }
+    }
+
+    case 'DISMISS_TOAST':
+      return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
+
+    case 'SET_TRADE_TAB':
+      return { ...state, tradeTab: action.tab }
+
+    default:
+      return state
+  }
+}
+
+// ─── App Component ───────────────────────────────────────────────────────────
+
+export function App() {
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const brokerRef = useRef(state.broker)
+  brokerRef.current = state.broker
+  const candlesRef = useRef(state.candles)
+  candlesRef.current = state.candles
+
+  // ── Load historical replay chart points (committed artifact)
+  const historicalPoints = useMemo(() => {
+    try { return buildOfflineReplay() } catch { return [] }
+  }, [])
+
+  // ── Bot tick simulation
+  const tickSymbolRef = useRef(0)
+  useEffect(() => {
+    if (!state.botRunning) return
+
+    const interval = setInterval(() => {
+      const coin   = COINS[tickSymbolRef.current % COINS.length]
+      tickSymbolRef.current++
+      const { symbol }  = coin
+      const candleList   = candlesRef.current[symbol] ?? []
+      if (candleList.length < 2) return
+
+      // Generate next synthetic 1-min candle
+      const config = SYMBOL_SEED[symbol]
+      const last   = candleList.at(-1)
+      const seed   = (Math.sin(Date.now()) * 0x7FFFFFFF) | 0
+      const rng    = () => {
+        let x = seed + tickSymbolRef.current * 1664525 + 1013904223
+        x = (x ^ (x >>> 13)); x = (x ^ (x << 17)); x = (x ^ (x >>> 5))
+        return ((x >>> 0) / 0xFFFFFFFF)
+      }
+      const change  = (rng() - 0.5) * 2 * config.volatility
+      const openP   = last.close
+      const closeP  = openP * (1 + change)
+      const highP   = Math.max(openP, closeP) * (1 + rng() * config.volatility * 0.3)
+      const lowP    = Math.min(openP, closeP) * (1 - rng() * config.volatility * 0.3)
+      const nowMs   = Date.now()
+
+      const candle  = { time: nowMs, open: openP, high: highP, low: lowP, close: closeP }
+      const newCandles = [...candleList, candle].slice(-150)
+
+      // Check signal
+      const signal = generateSignal(newCandles)
+
+      // Run paper broker
+      const broker = { ...brokerRef.current }
+      broker.positions = [...broker.positions]
+      broker.trades    = [...broker.trades]
+      broker.orders    = [...broker.orders]
+
+      // Execute signal if any open positions for this symbol < 1
+      const hasOpenForSymbol = broker.positions.some((p) => p.symbol === symbol)
+      if (signal && !hasOpenForSymbol && !broker.breaker) {
+        executePaperTrade(broker, symbol, signal, closeP, new Date(nowMs).toISOString())
+      }
+
+      // Tick all positions for this symbol
+      const closed = tickPositions(broker, symbol, closeP, new Date(nowMs).toISOString())
+
+      dispatch({
+        type: 'BOT_TICK',
+        symbol,
+        candle,
+        newPrice: closeP,
+        signal,
+        broker,
+        closedTrades: closed,
+      })
+    }, BOT_TICK_MS)
+
+    return () => clearInterval(interval)
+  }, [state.botRunning])
+
+  // ── Dismiss old toasts
+  useEffect(() => {
+    if (state.toasts.length === 0) return
+    const timer = setTimeout(() => {
+      dispatch({ type: 'DISMISS_TOAST', id: state.toasts[0].id })
+    }, 4500)
+    return () => clearTimeout(timer)
+  }, [state.toasts])
+
+  const activeCoin = COINS.find((c) => c.symbol === state.activeCoin) ?? COINS[0]
+  const currentPrice = state.prices[state.activeCoin]
+    ?? SYMBOL_SEED[state.activeCoin].price
+  const priceDir = state.priceDir[state.activeCoin] ?? 'up'
+  const broker   = state.broker
+
+  // Build SVG chart path for active coin
+  const activeCandles = state.candles[state.activeCoin] ?? []
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <span className={`flat-badge ${category.badgeClass}`} title={category.descVi}>
-      {category.labelVi}
-    </span>
+    <div className="app-shell">
+      {/* Safety Banner */}
+      <SafetyBanner />
+
+      {/* Top Header */}
+      <Header
+        coins={COINS}
+        activeCoin={state.activeCoin}
+        prices={state.prices}
+        priceDirs={state.priceDir}
+        currentPrice={currentPrice}
+        priceDir={priceDir}
+        onCoinChange={(symbol) => dispatch({ type: 'SET_COIN', coin: symbol })}
+        botRunning={state.botRunning}
+      />
+
+      {/* Main Trading Layout */}
+      <div className="trading-layout">
+
+        {/* LEFT: Market Info + Account */}
+        <LeftPanel
+          broker={broker}
+          strategies={evidence.strategies}
+          coins={COINS}
+          prices={state.prices}
+          priceDirs={state.priceDir}
+          activeCoin={state.activeCoin}
+          onCoinChange={(symbol) => dispatch({ type: 'SET_COIN', coin: symbol })}
+        />
+
+        {/* CENTER: Chart + Trade Log */}
+        <CenterPanel
+          historicalPoints={historicalPoints}
+          activeCandles={activeCandles}
+          activeCoin={activeCoin}
+          currentPrice={currentPrice}
+          botRunning={state.botRunning}
+          botCycle={state.botCycle}
+          broker={broker}
+          tradeTab={state.tradeTab}
+          onTabChange={(tab) => dispatch({ type: 'SET_TRADE_TAB', tab })}
+        />
+
+        {/* RIGHT: Bot Control + Positions */}
+        <RightPanel
+          botRunning={state.botRunning}
+          broker={broker}
+          strategy={state.strategy}
+          onStrategyChange={(s) => dispatch({ type: 'SET_STRATEGY', strategy: s })}
+          onStart={() => dispatch({ type: 'BOT_START' })}
+          onStop={() => dispatch({ type: 'BOT_STOP' })}
+          evidenceControls={evidence.controls}
+        />
+      </div>
+
+      {/* Signal Toasts */}
+      <div className="signal-toasts">
+        {state.toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`signal-toast ${toast.side === 'LONG' ? 'buy' : 'sell'}`}
+          >
+            <span>{toast.side === 'LONG' ? '▲' : '▼'}</span>
+            <span>{toast.symbol} {toast.side === 'LONG' ? 'LONG' : 'SHORT'} — Tín hiệu EMA Cross</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
-function Header() {
+// ─── SafetyBanner ────────────────────────────────────────────────────────────
+
+function SafetyBanner() {
   return (
-    <header className="header">
-      <div className="header-container">
-        <div className="brand-group">
-          <div className="brand-logo" aria-hidden="true">Q</div>
-          <div>
-            <h1 className="brand-title">Quill3H Paper Research Console</h1>
-            <p className="brand-subtitle">{evidence.mode} — NO LIVE ORDERS</p>
-          </div>
+    <div className="paper-safety-bar" role="alert" aria-live="polite">
+      <span className="pill">PAPER</span>
+      <span>Không có lệnh thật · Không kết nối sàn · Mọi số liệu là mô phỏng hoặc dữ liệu lịch sử công khai</span>
+      <span className="pill">RESEARCH</span>
+    </div>
+  )
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+
+function Header({ coins, activeCoin, prices, priceDirs, currentPrice, priceDir, onCoinChange, botRunning }) {
+  const fmt = (sym) => {
+    const p = prices[sym] ?? SYMBOL_SEED[sym].price
+    return p
+  }
+
+  return (
+    <header className="exchange-header" role="banner">
+      {/* Logo */}
+      <a className="header-logo" href="#" aria-label="Quill3H Paper Research">
+        <div className="header-logo-mark" aria-hidden="true">Q</div>
+        <div>
+          <div className="header-logo-text">Quill3H</div>
+          <div className="header-logo-sub">Futures Research</div>
         </div>
-        <dl className="header-meta">
-          <div className="header-meta-item">
-            <dt>2024 fold source</dt>
-            <dd>{evidence.source}</dd>
+      </a>
+
+      {/* Coin Switcher */}
+      <nav className="coin-switcher" aria-label="Chọn cặp giao dịch">
+        {coins.map((coin) => (
+          <button
+            key={coin.symbol}
+            className={`coin-tab ${activeCoin === coin.symbol ? 'active' : ''}`}
+            onClick={() => onCoinChange(coin.symbol)}
+            type="button"
+            aria-pressed={activeCoin === coin.symbol}
+          >
+            <span className="coin-dot" style={{ background: coin.color }} aria-hidden="true" />
+            {coin.display}
+          </button>
+        ))}
+      </nav>
+
+      {/* Ticker */}
+      <div className="header-ticker" aria-live="polite" aria-atomic="false">
+        <span
+          className={`ticker-price mono ${priceDir}`}
+          aria-label={`Giá hiện tại ${money(currentPrice, SYMBOL_SEED[coins.find(c=>c.symbol===activeCoin)?.symbol || 'BTCUSDT'].precision)}`}
+        >
+          {money(currentPrice, SYMBOL_SEED[coins.find(c=>c.symbol===activeCoin)?.symbol || 'BTCUSDT']?.precision ?? 2)}
+        </span>
+        <div className="ticker-stat" aria-label="Chế độ">
+          <span className="ticker-stat-label">Chế độ</span>
+          <span className="ticker-stat-value" style={{ color: '#F0B90B' }}>PAPER SIM</span>
+        </div>
+        <div className="ticker-stat">
+          <span className="ticker-stat-label">Nguồn dữ liệu</span>
+          <span className="ticker-stat-value">Dữ liệu lịch sử công khai</span>
+        </div>
+        <div className="ticker-stat">
+          <span className="ticker-stat-label">Bot</span>
+          <span className="ticker-stat-value" style={{ color: botRunning ? '#0ECB81' : '#848E9C' }}>
+            {botRunning ? '● Đang chạy' : '○ Đã dừng'}
+          </span>
+        </div>
+        {coins.filter(c => c.symbol !== activeCoin).map((coin) => (
+          <div className="ticker-stat" key={coin.symbol}>
+            <span className="ticker-stat-label">{coin.name}</span>
+            <span className="ticker-stat-value mono">{money(fmt(coin.symbol), SYMBOL_SEED[coin.symbol].precision)}</span>
           </div>
-          <div className="header-meta-item">
-            <dt>2024 fold cutoff</dt>
-            <dd>{evidence.historicalWindow.cutoff}</dd>
-          </div>
-          <div className="header-meta-item">
-            <dt>Evidence level</dt>
-            <dd><Status tone="neutral">{evidence.evidenceLevel}</Status></dd>
-          </div>
-        </dl>
+        ))}
+      </div>
+
+      <div className="header-right">
+        <span className="header-badge">PAPER ONLY</span>
       </div>
     </header>
   )
 }
 
-function NavigationStrip() {
+// ─── Left Panel ──────────────────────────────────────────────────────────────
+
+function LeftPanel({ broker, strategies, coins, prices, priceDirs, activeCoin, onCoinChange }) {
+  const pnlColor = (v) => v > 0 ? 'pos' : v < 0 ? 'neg' : ''
+
   return (
-    <nav className="nav-strip" aria-label="Điều hướng nhanh các mục">
-      <div className="nav-container">
-        <a href="#overview" className="nav-tab active">📋 Tổng quan (Overview)</a>
-        <a href="#replay" className="nav-tab">📈 Kết quả mô phỏng (Simulation Replay)</a>
-        <a href="#strategy" className="nav-tab">⚡ Chiến lược (Strategies)</a>
-        <a href="#funding" className="nav-tab">⏱️ Phí Funding (Funding Coverage)</a>
-        <a href="#risk" className="nav-tab">🛡️ Kiểm soát rủi ro (Risk Controls)</a>
-        <a href="#audit" className="nav-tab">🔍 Kiểm toán dữ liệu (Artifact Integrity)</a>
+    <aside className="market-info-panel" aria-label="Thông tin thị trường và tài khoản">
+      {/* Symbol list */}
+      <div className="panel-title">Cặp giao dịch</div>
+      <div className="symbol-list" role="list">
+        {coins.map((coin) => {
+          const p    = prices[coin.symbol] ?? SYMBOL_SEED[coin.symbol].price
+          const dir  = priceDirs[coin.symbol] ?? 'up'
+          return (
+            <div
+              key={coin.symbol}
+              className={`symbol-row ${activeCoin === coin.symbol ? 'active' : ''}`}
+              onClick={() => onCoinChange(coin.symbol)}
+              role="listitem"
+              aria-label={`${coin.display} giá ${money(p, SYMBOL_SEED[coin.symbol].precision)}`}
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && onCoinChange(coin.symbol)}
+            >
+              <div>
+                <div className="sym-name">{coin.display}</div>
+                <div className="sym-sub">USD-M PERP · PAPER</div>
+              </div>
+              <div className={`sym-price mono ${dir}`}>
+                {money(p, SYMBOL_SEED[coin.symbol].precision)}
+              </div>
+            </div>
+          )
+        })}
       </div>
-    </nav>
+
+      {/* Strategies */}
+      <div className="panel-title" style={{ marginTop: '1px' }}>Chiến lược lịch sử</div>
+      <div className="strategy-list" role="list">
+        {strategies.map((s) => (
+          <div className="strategy-item" key={s.id} role="listitem">
+            <div>
+              <div className="strategy-name">{s.nameVi || s.name}</div>
+              <div className="strategy-timeframe">{s.timeframe} · {s.stateVi}</div>
+            </div>
+            <div className={`strategy-pnl mono ${pnlColor(s.rawPnl)}`}>
+              {s.rawPnl > 0 ? '+' : ''}{money(s.rawPnl)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Account */}
+      <div className="account-panel" aria-label="Tài khoản mô phỏng">
+        <div className="account-title">Tài khoản PAPER</div>
+        <div className="account-row">
+          <span className="account-key">Equity</span>
+          <span className={`account-value mono ${broker.equity >= INITIAL_EQUITY ? 'green' : 'red'}`}>
+            {money(broker.equity)} USDT
+          </span>
+        </div>
+        <div className="account-row">
+          <span className="account-key">Wallet</span>
+          <span className="account-value mono">{money(broker.wallet)} USDT</span>
+        </div>
+        <div className="account-row">
+          <span className="account-key">Khả dụng</span>
+          <span className="account-value mono">{money(broker.available)} USDT</span>
+        </div>
+        <div className="account-row">
+          <span className="account-key">Lãi/lỗ chưa chốt</span>
+          <span className={`account-value mono ${broker.unrealized >= 0 ? 'green' : 'red'}`}>
+            {broker.unrealized >= 0 ? '+' : ''}{money(broker.unrealized)} USDT
+          </span>
+        </div>
+        <div className="account-row">
+          <span className="account-key">Circuit breaker</span>
+          <span className={`account-value ${broker.breaker ? 'red' : 'green'}`}>
+            {broker.breaker ? 'ĐÃ KHÓA' : 'Bình thường'}
+          </span>
+        </div>
+      </div>
+    </aside>
   )
 }
 
-function OverviewSection({ idlePoints }) {
-  const finalEquity = idlePoints.at(-1)?.equity || 10000
+// ─── Center Panel ─────────────────────────────────────────────────────────────
+
+function CenterPanel({
+  historicalPoints, activeCandles, activeCoin, currentPrice,
+  botRunning, botCycle, broker, tradeTab, onTabChange,
+}) {
+  const chartRef = useRef(null)
+
+  // Build SVG paths
+  const chartPaths = useMemo(() => {
+    // Historical equity path (from committed artifact)
+    const histPath = historicalPoints.length >= 2
+      ? toPolyline(historicalPoints, 800, 240)
+      : ''
+
+    // Live price path (from bot simulation candles)
+    const liveCloses = activeCandles.map((c) => ({ equity: c.close }))
+    const livePath = liveCloses.length >= 2
+      ? toPolyline(liveCloses, 800, 240)
+      : ''
+
+    // Separate fill area (close polygon for gradient)
+    let fillPath = ''
+    if (liveCloses.length >= 2) {
+      const pts = toPolyline(liveCloses, 800, 240).split(' ')
+      fillPath = `M ${pts[0]} L ${pts.join(' L ')} L 800,240 L 0,240 Z`
+    }
+
+    return { histPath, livePath, fillPath }
+  }, [historicalPoints, activeCandles, botCycle])
+
+  const allTrades  = broker.trades.slice().reverse()
+  const openPos    = broker.positions
 
   return (
-    <section id="overview" className="flat-card flat-card--highlight" aria-labelledby="overview-title">
-      <div className="card-header">
-        <div className="card-header-left">
-          <div className="card-badge-row">
-            <span className="section-num">Mục 01</span>
-            <CategoryBadge category={evidence.dataCategories.ILLUSTRATION} />
-          </div>
-          <h2 id="overview-title" className="card-title">Tổng quan dự án & Chỉ số an toàn</h2>
-          <p className="card-desc">Hệ thống nghiên cứu thuật toán giao dịch tiền mã hóa chạy hoàn toàn trên môi trường mô phỏng (Paper Trading Sandbox).</p>
-        </div>
-        <Status tone="good">Mô phỏng khép kín · Không rủi ro tài chính</Status>
+    <main className="center-panel" aria-label="Biểu đồ và nhật ký giao dịch">
+      {/* Toolbar */}
+      <div className="chart-toolbar" role="toolbar" aria-label="Tùy chọn biểu đồ">
+        <button type="button" className="toolbar-btn active">Equity</button>
+        <button type="button" className="toolbar-btn">Giá</button>
+        <div className="toolbar-divider" aria-hidden="true" />
+        <button type="button" className="toolbar-btn">1m</button>
+        <button type="button" className="toolbar-btn">5m</button>
+        <button type="button" className="toolbar-btn">15m</button>
+        <button type="button" className="toolbar-btn">1h</button>
+        <div className="toolbar-divider" aria-hidden="true" />
+        <span className="toolbar-btn" style={{ color: '#F0B90B', cursor: 'default' }}>
+          📊 Dữ liệu lịch sử công khai 2024 · EMA 9/21
+        </span>
+        <div className="toolbar-spacer" />
+        <span style={{ fontSize: '11px', color: '#848E9C' }}>
+          {activeCandles.length > 0
+            ? `${activeCandles.length} nến mô phỏng`
+            : 'Chờ bot khởi động'}
+        </span>
       </div>
 
-      <div className="explainer-box">
-        <strong>💡 Dành cho người không biết code / Nhà đầu tư:</strong>
-        <p>
-          Dự án này là môi trường phòng thí nghiệm (Sandbox). Bot hoạt động bằng cách đọc dữ liệu nến thật từ sàn Binance,
-          nhưng <strong>mọi lệnh mua/bán và số dư tài khoản đều là giả định trên giấy (Paper Trading)</strong>.
-          Mã nguồn được thiết kế biệt lập: không có quyền đặt lệnh ra sàn thật, không kết nối ví tiền mã hóa cá nhân,
-          giúp thử nghiệm độ ổn định và quản trị rủi ro một cách minh bạch 100%.
-        </p>
-      </div>
-
-      {/* 4 Flat KPI Metric Cards */}
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="kpi-label">Vốn giả định ban đầu</span>
-            <span className="flat-badge badge--illustration">Minh họa</span>
-          </div>
-          <div className="kpi-value mono">10,000.00 <small style={{ fontSize: '14px', fontWeight: 600 }}>USDT</small></div>
-          <div className="kpi-sub">Mức vốn khởi tạo trong cấu hình test</div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="kpi-label">Vốn chốt mẫu lưu trữ</span>
-            <span className="flat-badge badge--historical">Lịch sử G0</span>
-          </div>
-          <div className="kpi-value mono" style={{ color: 'var(--flat-green)' }}>
-            {finalEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <small style={{ fontSize: '14px', fontWeight: 600 }}>USDT</small>
-          </div>
-          <div className="kpi-sub">
-            Tăng trưởng mẫu: <strong>+4.49%</strong> (65 snapshots)
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="kpi-label">Mức sụt giảm tối đa</span>
-            <span className="flat-badge badge--historical">Lịch sử G0</span>
-          </div>
-          <div className="kpi-value mono">0.00%</div>
-          <div className="kpi-sub">Max Drawdown trong chuỗi mẫu Long</div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-top">
-            <span className="kpi-label">Khóa an toàn sàn & ví</span>
-            <span className="flat-badge badge--safe">Bảo vệ 100%</span>
-          </div>
-          <div className="kpi-value" style={{ color: 'var(--flat-green)', fontSize: '18px' }}>KHÓA HOÀN TOÀN</div>
-          <div className="kpi-sub">0 API Key · 0 Private Key · Read-Only</div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function ReplayChart({ points }) {
-  const line = useMemo(() => toPolyline(points), [points])
-  return (
-    <div className="chart-box">
-      <div className="chart-title-bar">
-        <span>Đồ thị số dư vốn PaperBroker (65 điểm UTC)</span>
-        <span className="flat-badge badge--historical">Mẫu lịch sử đã cam kết</span>
-      </div>
-      <div className="chart-wrap">
-        <svg className="chart" viewBox="0 0 680 230" role="img" aria-label="Archived synthetic PaperBroker equity chart">
+      {/* Chart Area */}
+      <div className="chart-area" ref={chartRef} aria-label="Biểu đồ equity và giá mô phỏng">
+        <svg
+          className="svg-chart-container"
+          viewBox="0 0 800 260"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`Biểu đồ equity ${activeCoin.display}`}
+        >
           <defs>
-            <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.01" />
+            <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#0ECB81" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#0ECB81" stopOpacity="0.02" />
+            </linearGradient>
+            <linearGradient id="histGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#F0B90B" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#F0B90B" stopOpacity="0.01" />
             </linearGradient>
           </defs>
-          {[0, 57.5, 115, 172.5, 230].map((y) => (
-            <line key={y} x1="0" y1={y} x2="680" y2={y} className="grid-line" />
+
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map((f) => (
+            <line
+              key={f}
+              x1="0" y1={260 * f}
+              x2="800" y2={260 * f}
+              className="chart-grid-line"
+            />
           ))}
-          <polygon points={`0,230 ${line} 680,230`} fill="url(#chartFill)" />
-          <polyline points={line} className="equity-line" />
+          {[0.2, 0.4, 0.6, 0.8].map((f) => (
+            <line
+              key={f}
+              x1={800 * f} y1="0"
+              x2={800 * f} y2="260"
+              className="chart-grid-line"
+            />
+          ))}
+
+          {/* Historical equity (artifact) */}
+          {chartPaths.histPath && (
+            <>
+              <polyline points={chartPaths.histPath} className="chart-price-line" />
+            </>
+          )}
+
+          {/* Live simulated price fill */}
+          {chartPaths.fillPath && (
+            <path d={chartPaths.fillPath} className="chart-equity-area" />
+          )}
+
+          {/* Live simulated price line */}
+          {chartPaths.livePath && (
+            <polyline points={chartPaths.livePath} className="chart-equity-line" />
+          )}
+
+          {/* No data placeholder */}
+          {!botRunning && activeCandles.length === 0 && (
+            <text
+              x="400" y="130"
+              textAnchor="middle"
+              fill="#474D57"
+              fontSize="14"
+              fontFamily="inherit"
+            >
+              Nhấn &quot;Khởi động Bot&quot; để bắt đầu mô phỏng
+            </text>
+          )}
         </svg>
-        <div className="axis">
-          <span>{points[0].timestamp}</span>
-          <span>Committed broker snapshots</span>
-          <span>{points.at(-1).timestamp}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
-function ReplaySection({ idlePoints, runState, setRunState, finalEquity }) {
-  function runReplay() {
-    setRunState('complete')
-  }
-
-  return (
-    <section id="replay" className="flat-card" aria-labelledby="replay-title">
-      <div className="card-header">
-        <div className="card-header-left">
-          <div className="card-badge-row">
-            <span className="section-num">Mục 02</span>
-            <CategoryBadge category={evidence.dataCategories.HISTORICAL} />
-          </div>
-          <h2 id="replay-title" className="card-title">Offline artifact viewer</h2>
-          <p className="card-desc">Kiểm tra chuỗi số dư tài khoản từ tệp bằng chứng PaperBroker đã được kiểm toán (không tạo số liệu ảo).</p>
-        </div>
-        <Status tone="good">Archived synthetic broker run</Status>
-      </div>
-
-      <div className="chart-container">
-        <ReplayChart points={idlePoints} />
-
-        <div className="replay-panel">
-          <div>
-            <p className="replay-panel-title">Archived artifact inspection</p>
-            <p className="replay-copy">
-              Displays {idlePoints.length} UTC equity snapshots from a committed synthetic PaperBroker run. The browser does not execute the engine or query a market API. <a href={evidence.replay.sourceUrl}>Equity CSV</a> · <a href={evidence.replay.reportUrl}>Accounting report</a> · code {evidence.replay.codeCommit.slice(0, 12)}.
-            </p>
-            <div style={{ marginBottom: '14px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.45' }}>
-              <strong>ℹ️ Vì sao không gọi là "Chạy bot"?</strong>
-              <div>Giao diện hiện tại là trang tĩnh nghiệm thu bằng chứng. Nút bên dưới phục vụ việc duyệt và xác minh 65 snapshot số dư đã ghi nhận từ tệp CSV gốc, không gửi lệnh ra sàn giao dịch.</div>
+        {/* Chart Labels */}
+        <div className="chart-overlay" aria-hidden="true">
+          {chartPaths.histPath && (
+            <div className="chart-label">
+              <span className="chart-label-dot" style={{ background: '#F0B90B' }} />
+              Equity lịch sử (Artifact G0 · 2024)
             </div>
-          </div>
+          )}
+          {chartPaths.livePath && (
+            <div className="chart-label">
+              <span className="chart-label-dot" style={{ background: '#0ECB81' }} />
+              Giá mô phỏng {activeCoin.name} (PAPER)
+            </div>
+          )}
+        </div>
+      </div>
 
-          <div>
-            <button type="button" onClick={runReplay} disabled={runState === 'complete'}>
-              {runState === 'complete' ? 'Replay inspected' : 'Inspect archived replay'}
+      {/* Bot Status Bar */}
+      <div className="bot-status-bar" aria-live="polite">
+        <span
+          className={`bot-status-indicator ${botRunning ? 'running' : 'idle'}`}
+          aria-hidden="true"
+        />
+        <span className="bot-status-text">
+          {botRunning ? (
+            <>
+              <strong>Bot đang mô phỏng</strong> · Tick #{botCycle} ·{' '}
+              {broker.positions.length} vị thế mở ·{' '}
+              {broker.trades.length} lệnh hoàn tất
+            </>
+          ) : (
+            <>Bot <strong>đã dừng</strong> · Nhấn &quot;Khởi động Bot&quot; để bắt đầu mô phỏng PAPER</>
+          )}
+        </span>
+        <span style={{ marginLeft: 'auto', color: '#474D57', fontFamily: 'var(--font-mono)' }}>
+          {evidence.mode} · Không có lệnh sàn thật
+        </span>
+      </div>
+
+      {/* Trade Log */}
+      <div className="trade-log">
+        <div className="trade-log-tabs" role="tablist">
+          {[
+            { id: 'closed', label: `Lệnh đã đóng (${broker.trades.length})` },
+            { id: 'open',   label: `Vị thế mở (${broker.positions.length})` },
+            { id: 'orders', label: `Lệnh gần đây (${broker.orders.length})` },
+            { id: 'audit',  label: 'Nguồn dữ liệu' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              className={`trade-log-tab ${tradeTab === tab.id ? 'active' : ''}`}
+              onClick={() => onTabChange(tab.id)}
+              aria-selected={tradeTab === tab.id}
+            >
+              {tab.label}
             </button>
-
-            <div className="result" aria-live="polite">
-              {runState === 'complete' ? (
-                <>
-                  <strong>{idlePoints.length} / {idlePoints.length} artifact snapshots displayed</strong>
-                  <span>End equity: {finalEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })} synthetic USDT</span>
-                  <span>No economic claim · no orders sent</span>
-                </>
-              ) : (
-                <span>Ready. No process is running.</span>
-              )}
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
 
-      {runState === 'complete' && (
-        <div className="replay-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Mốc thời gian (UTC)</th>
-                <th>Vốn tổng (Equity)</th>
-                <th>Tiền trong ví</th>
-                <th>Trạng thái đối chiếu</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="mono">{idlePoints[0].timestamp} (Bắt đầu)</td>
-                <td className="mono">10,000.00 USDT</td>
-                <td className="mono">10,000.00 USDT</td>
-                <td><Status tone="good">Khớp tệp gốc</Status></td>
-              </tr>
-              <tr>
-                <td className="mono">{idlePoints[Math.floor(idlePoints.length / 2)].timestamp} (Giữa kỳ)</td>
-                <td className="mono">{idlePoints[Math.floor(idlePoints.length / 2)].equity.toFixed(2)} USDT</td>
-                <td className="mono">10,000.00 USDT</td>
-                <td><Status tone="good">Khớp tệp gốc</Status></td>
-              </tr>
-              <tr>
-                <td className="mono">{idlePoints.at(-1).timestamp} (Kết thúc)</td>
-                <td className="mono" style={{ color: 'var(--flat-green)', fontWeight: 700 }}>{finalEquity.toFixed(4)} USDT</td>
-                <td className="mono">10,000.00 USDT</td>
-                <td><Status tone="good">Xác thực SHA-256</Status></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  )
-}
+        <div className="trade-log-body" role="tabpanel">
+          {tradeTab === 'closed' && (
+            allTrades.length === 0
+              ? <div className="trade-log-empty">Chưa có lệnh hoàn tất. Bot cần chạy để tạo lệnh mô phỏng.</div>
+              : (
+                <table aria-label="Lệnh đã đóng">
+                  <thead>
+                    <tr>
+                      <th>Thời gian đóng</th>
+                      <th>Mã</th>
+                      <th>Hướng</th>
+                      <th>Giá vào</th>
+                      <th>Giá ra</th>
+                      <th>Phí</th>
+                      <th>Net PnL</th>
+                      <th>Lý do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allTrades.map((t) => (
+                      <tr key={t.id}>
+                        <td className="mono">{t.exitTime?.slice(11, 19) ?? '—'}</td>
+                        <td>{t.symbol}</td>
+                        <td className={t.side === 'LONG' ? 'buy' : 'sell'}>{t.side}</td>
+                        <td className="mono">{money(t.entryPrice, SYMBOL_SEED[t.symbol]?.precision ?? 2)}</td>
+                        <td className="mono">{money(t.exitPrice, SYMBOL_SEED[t.symbol]?.precision ?? 2)}</td>
+                        <td className="mono">{money(t.feeUsd)}</td>
+                        <td className={`mono ${t.netPnl >= 0 ? 'pos' : 'neg'}`}>
+                          {t.netPnl >= 0 ? '+' : ''}{money(t.netPnl)}
+                        </td>
+                        <td style={{ color: '#848E9C' }}>{t.closeReason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+          )}
 
-function FundingCoverage() {
-  const readyPct = (evidence.fundingCoverage.exactReady / evidence.fundingCoverage.expected) * 100
+          {tradeTab === 'open' && (
+            broker.positions.length === 0
+              ? <div className="trade-log-empty">Không có vị thế mở.</div>
+              : (
+                <table aria-label="Vị thế đang mở">
+                  <thead>
+                    <tr>
+                      <th>Mã</th>
+                      <th>Hướng</th>
+                      <th>Số lượng</th>
+                      <th>Giá vào</th>
+                      <th>Stop-loss</th>
+                      <th>Đòn bẩy</th>
+                      <th>PnL chưa chốt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {broker.positions.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.symbol}</td>
+                        <td className={p.side === 'LONG' ? 'buy' : 'sell'}>{p.side}</td>
+                        <td className="mono">{p.quantity.toFixed(4)}</td>
+                        <td className="mono">{money(p.entryPrice, SYMBOL_SEED[p.symbol]?.precision ?? 2)}</td>
+                        <td className="mono">{money(p.stopLoss, SYMBOL_SEED[p.symbol]?.precision ?? 2)}</td>
+                        <td>{p.leverage}×</td>
+                        <td className={`mono ${(p.unrealizedPnl ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                          {(p.unrealizedPnl ?? 0) >= 0 ? '+' : ''}{money(p.unrealizedPnl ?? 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+          )}
 
-  return (
-    <section id="funding" className="flat-card" aria-labelledby="funding-title">
-      <div className="card-header">
-        <div className="card-header-left">
-          <div className="card-badge-row">
-            <span className="section-num">Mục 04</span>
-            <CategoryBadge category={evidence.dataCategories.DIAGNOSTIC} />
-          </div>
-          <h2 id="funding-title" className="card-title">Funding coverage</h2>
-          <p className="card-desc">Kiểm tra chất lượng và độ trễ nhận dữ liệu phí Funding Rate từ Binance Futures.</p>
-        </div>
-        <Status tone="blocked">{evidence.fundingCoverage.status}</Status>
-      </div>
+          {tradeTab === 'orders' && (
+            broker.orders.length === 0
+              ? <div className="trade-log-empty">Chưa có lệnh nào.</div>
+              : (
+                <table aria-label="Lệnh gần đây">
+                  <thead>
+                    <tr><th>Mã</th><th>Hướng</th><th>Giá</th><th>Trạng thái</th></tr>
+                  </thead>
+                  <tbody>
+                    {[...broker.orders].reverse().slice(0, 50).map((o) => (
+                      <tr key={o.id}>
+                        <td>{o.symbol}</td>
+                        <td className={o.side === 'LONG' ? 'buy' : 'sell'}>{o.side}</td>
+                        <td className="mono">{money(o.price, SYMBOL_SEED[o.symbol]?.precision ?? 2)}</td>
+                        <td style={{ color: '#0ECB81' }}>{o.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+          )}
 
-      <div className="explainer-box">
-        <strong>💡 Nguyên tắc an toàn Fail-Closed:</strong>
-        <p>
-          Phí Funding được tính chu kỳ mỗi 8 tiếng. Nếu dữ liệu gửi về từ sàn bị trễ dù chỉ 1 mili-giây (1–6 ms) hoặc chưa sẵn sàng,
-          thuật toán <strong>lập tức ngừng mở vị thế mới</strong> để bảo vệ tài khoản. Hệ thống tuyệt đối không làm tròn lùi mốc thời gian.
-        </p>
-      </div>
-
-      <div className="coverage-summary">
-        <strong>{evidence.fundingCoverage.expected} expected boundaries</strong>
-        <span>{evidence.fundingCoverage.start} → {evidence.fundingCoverage.end}</span>
-      </div>
-
-      <div
-        className="coverage-bar"
-        aria-label={`${evidence.fundingCoverage.exactReady} exact-ready and ${evidence.fundingCoverage.delayed} delayed or unready`}
-      >
-        <div className="coverage-ready" style={{ width: `${readyPct}%` }} />
-        <div className="coverage-delayed" style={{ width: `${100 - readyPct}%` }} />
-      </div>
-
-      <div className="coverage-legend">
-        <span><i className="dot dot--good" />{evidence.fundingCoverage.exactReady} exact-ready ({Math.round(readyPct)}%)</span>
-        <span><i className="dot dot--warn" />{evidence.fundingCoverage.delayed} delayed 1–{evidence.fundingCoverage.maxDelayMs} ms / unready</span>
-      </div>
-
-      <p className="note">Delayed funding is never rounded backward. The seven-day basket replay stops before mutation when readiness is false.</p>
-      <p className="note"><a href={evidence.fundingCoverage.sourceUrl}>G2 author diagnostic</a> · separate 2026 sample, not the 2024 fold below.</p>
-    </section>
-  )
-}
-
-function StrategySection() {
-  return (
-    <section id="strategy" className="flat-card" aria-labelledby="strategy-title">
-      <div className="card-header">
-        <div className="card-header-left">
-          <div className="card-badge-row">
-            <span className="section-num">Mục 03</span>
-            <CategoryBadge category={evidence.dataCategories.HISTORICAL} />
-          </div>
-          <h2 id="strategy-title" className="card-title">Strategy evidence</h2>
-          <p className="card-desc">Đánh giá 4 chiến lược giao dịch định lượng qua mẫu kiểm tra Walk-forward 2024.</p>
-        </div>
-        <Status>Independent review pending</Status>
-      </div>
-
-      {/* 4 Strategy Cards for Non-Coders */}
-      <div className="strategy-cards-grid">
-        {evidence.strategies.map((strat) => (
-          <div className="strategy-card" key={strat.id || strat.name}>
-            <div className="strategy-card-header">
-              <div>
-                <h3 className="strategy-card-name">{strat.name}</h3>
-                <span className="strategy-card-name-vi">{strat.nameVi}</span>
+          {tradeTab === 'audit' && (
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ fontSize: '11px', color: '#848E9C', marginBottom: '8px' }}>
+                Nguồn dữ liệu đã xác minh · Cam kết Git
               </div>
-              <span className="flat-badge badge--historical">{strat.timeframe}</span>
+              <table aria-label="Nguồn dữ liệu">
+                <thead>
+                  <tr><th>Tập dữ liệu</th><th>Loại</th><th>Trạng thái xác minh</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Equity curve G0 (BTC 2024)</td>
+                    <td>Lịch sử · Artifact commit</td>
+                    <td style={{ color: '#0ECB81' }}>AUTHOR_REPORTED</td>
+                  </tr>
+                  <tr>
+                    <td>Walk-forward fold report</td>
+                    <td>Lịch sử · {evidence.evidenceLevel}</td>
+                    <td style={{ color: '#0ECB81' }}>AUTHOR_REPORTED</td>
+                  </tr>
+                  <tr>
+                    <td>Giá mô phỏng bot (ETH/BTC/SOL)</td>
+                    <td>Minh họa · Trình duyệt</td>
+                    <td style={{ color: '#F0B90B' }}>ILLUSTRATIVE · Không phải backtest</td>
+                  </tr>
+                  <tr>
+                    <td>Dữ liệu Funding G2</td>
+                    <td>Chẩn đoán · {evidence.fundingCoverage.status}</td>
+                    <td style={{ color: '#F6465D' }}>FAIL_CLOSED · Xem tài liệu G2</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style={{ marginTop: '10px', fontSize: '10px', color: '#474D57', lineHeight: '1.7' }}>
+                Kết quả mô phỏng bot không phải backtest và không chứng minh khả năng sinh lời.
+                Dữ liệu lịch sử từ Binance Futures public (2024). Không có lệnh sàn thật hoặc testnet.
+              </div>
             </div>
-            <p className="strategy-card-desc">{strat.conceptVi}</p>
-            <div className="strategy-card-footer">
-              <span>Lệnh hoàn tất: <strong>{strat.trades}</strong></span>
-              <span className="mono" style={{ color: strat.rawPnl < 0 ? 'var(--flat-red)' : 'var(--text-main)' }}>
-                PnL: {strat.result}
-              </span>
-            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+}
+
+// ─── Right Panel ─────────────────────────────────────────────────────────────
+
+function RightPanel({ botRunning, broker, strategy, onStrategyChange, onStart, onStop, evidenceControls }) {
+  const pnlTotal = broker.trades.reduce((sum, t) => sum + (t.netPnl ?? 0), 0)
+
+  return (
+    <aside className="order-panel" aria-label="Điều khiển bot và vị thế">
+      {/* Bot Control */}
+      <div className="bot-control">
+        <div className="bot-control-title">Bot Mô Phỏng · PAPER</div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Chiến lược</span>
+          <span className="bot-config-value">EMA Cross 9/21</span>
+        </div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Rủi ro/lệnh</span>
+          <span className="bot-config-value">2% wallet</span>
+        </div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Đòn bẩy</span>
+          <span className="bot-config-value">2×</span>
+        </div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Stop-loss</span>
+          <span className="bot-config-value">3%</span>
+        </div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Vốn khởi đầu</span>
+          <span className="bot-config-value mono">10,000 USDT</span>
+        </div>
+        <div className="bot-config-row">
+          <span className="bot-config-key">Mã theo dõi</span>
+          <span className="bot-config-value">BTC · ETH · SOL</span>
+        </div>
+
+        {/* Buttons */}
+        <div className="bot-btn-group">
+          <button
+            type="button"
+            className="btn-start"
+            onClick={onStart}
+            disabled={botRunning}
+            aria-label="Khởi động bot mô phỏng paper trading"
+          >
+            {botRunning ? '▶ Đang chạy...' : '▶ Khởi động Bot'}
+          </button>
+          <button
+            type="button"
+            className="btn-stop"
+            onClick={onStop}
+            disabled={!botRunning}
+            aria-label="Dừng bot mô phỏng"
+          >
+            ■ Dừng
+          </button>
+        </div>
+
+        {broker.breaker && (
+          <div
+            role="alert"
+            style={{
+              marginTop: '8px',
+              padding: '8px 10px',
+              background: 'rgba(246,70,93,0.1)',
+              border: '1px solid #F6465D',
+              borderRadius: '3px',
+              fontSize: '11px',
+              color: '#F6465D',
+            }}
+          >
+            ⚠ Circuit breaker đã kích hoạt: 3 lệnh thua liên tiếp. Khởi động lại bot để reset.
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Main Walk-forward Table */}
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Strategy</th>
-              <th>Sample</th>
-              <th>Completed</th>
-              <th>Net result</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {evidence.strategies.map((row) => (
-              <tr key={row.name}>
-                <td>
-                  <strong>{row.name}</strong>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.nameVi}</div>
-                </td>
-                <td>{row.sample}</td>
-                <td className="mono">{row.trades}</td>
-                <td className="mono">{row.result}</td>
-                <td>
-                  <Status tone={row.level === 'blocked' ? 'blocked' : 'neutral'}>
-                    {row.state}
-                  </Status>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="note">
-        <a href={evidence.strategySourceUrl}>2024 walk-forward report</a> · four independent accounts, not a shared portfolio. Zero trades and one negative sample do not establish profitability.
-      </p>
-    </section>
-  )
-}
-
-function RiskSection() {
-  return (
-    <section id="risk" className="flat-card sidebar-section" aria-labelledby="risk-title">
-      <div className="card-header-left">
-        <div className="card-badge-row">
-          <span className="section-num">Mục 05</span>
-          <CategoryBadge category={evidence.dataCategories.ILLUSTRATION} />
+      {/* Strategy Selector */}
+      <div className="strategy-select-section">
+        <div className="select-label">Chiến lược tín hiệu</div>
+        <div className="select-group">
+          {STRATEGIES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`strategy-chip ${strategy === s.id ? 'active' : ''}`}
+              onClick={() => onStrategyChange(s.id)}
+              aria-pressed={strategy === s.id}
+              disabled={botRunning}
+              title={`${s.label} · Khung ${s.timeframe}`}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
-        <h2 id="risk-title" className="card-title">Risk & accounting</h2>
-        <p className="card-desc">Hàng rào kỷ luật rủi ro bắt buộc trước khi thực thi mọi hành động.</p>
       </div>
 
-      <div className="control-list">
-        {evidence.controls.map((control) => (
-          <div className="control-row" key={control.label}>
-            <div className="control-row-header">
-              <span className="control-label">{control.label}</span>
-              <Status tone={control.tone}>{control.value}</Status>
-            </div>
-            {control.descVi && <div className="control-desc">{control.descVi}</div>}
+      {/* Open Positions */}
+      <div className="positions-section" aria-label="Vị thế đang mở">
+        <div className="panel-title">Vị thế đang mở ({broker.positions.length})</div>
+        {broker.positions.length === 0 ? (
+          <div style={{ padding: '20px 14px', color: '#474D57', fontSize: '12px' }}>
+            Chưa có vị thế. Bot sẽ tạo lệnh khi phát hiện tín hiệu EMA Cross.
           </div>
-        ))}
+        ) : (
+          broker.positions.map((pos) => (
+            <div
+              key={pos.id}
+              className={`position-card ${pos.side === 'LONG' ? 'long' : 'short'}`}
+              aria-label={`Vị thế ${pos.side} ${pos.symbol}`}
+            >
+              <div className="position-header">
+                <span className="position-sym">{pos.symbol}</span>
+                <span className={`position-side ${pos.side === 'LONG' ? 'long' : 'short'}`}>
+                  {pos.side}
+                </span>
+              </div>
+              <div className="position-grid">
+                <div>
+                  <div className="position-stat-key">Giá vào</div>
+                  <div className="position-stat-val mono">{money(pos.entryPrice, SYMBOL_SEED[pos.symbol]?.precision ?? 2)}</div>
+                </div>
+                <div>
+                  <div className="position-stat-key">Đòn bẩy</div>
+                  <div className="position-stat-val">{pos.leverage}×</div>
+                </div>
+                <div>
+                  <div className="position-stat-key">Stop-loss</div>
+                  <div className="position-stat-val mono">{money(pos.stopLoss, SYMBOL_SEED[pos.symbol]?.precision ?? 2)}</div>
+                </div>
+                <div>
+                  <div className="position-stat-key">Số lượng</div>
+                  <div className="position-stat-val mono">{pos.quantity.toFixed(4)}</div>
+                </div>
+              </div>
+              <div className="position-pnl">
+                <span>PnL chưa chốt</span>
+                <strong className={(pos.unrealizedPnl ?? 0) >= 0 ? 'pos' : 'neg'}>
+                  {(pos.unrealizedPnl ?? 0) >= 0 ? '+' : ''}{money(pos.unrealizedPnl ?? 0)} USDT
+                </strong>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      <p className="note">
-        UI is read-only. No exchange client, wallet, API key, order endpoint or webhook is included.
-      </p>
-    </section>
-  )
-}
-
-function AuditSection() {
-  return (
-    <section id="audit" className="flat-card sidebar-section" aria-labelledby="audit-title">
-      <div className="card-header-left">
-        <div className="card-badge-row">
-          <span className="section-num">Mục 06</span>
-          <CategoryBadge category={evidence.dataCategories.HISTORICAL} />
-        </div>
-        <h2 id="audit-title" className="card-title">Artifact integrity</h2>
-        <p className="card-desc">Kiểm toán tự động tính toàn vẹn của dữ liệu và không rò rỉ đường dẫn tuyệt đối.</p>
-      </div>
-
-      <dl className="artifact-grid">
-        <div className="artifact-stat">
-          <dt>JSON checks</dt>
-          <dd>{evidence.artifactAudit.json}</dd>
-        </div>
-        <div className="artifact-stat">
-          <dt>SQLite reports</dt>
-          <dd>{evidence.artifactAudit.sqliteReports}</dd>
-        </div>
-        <div className="artifact-stat">
-          <dt>PNG checks</dt>
-          <dd>{evidence.artifactAudit.png}</dd>
-        </div>
-        <div className="artifact-stat">
-          <dt>Datasets</dt>
-          <dd>{evidence.artifactAudit.datasets}</dd>
-        </div>
-      </dl>
-
-      <div className="path-check">
-        <span>Absolute paths found</span>
-        <strong>{evidence.artifactAudit.absolutePathsFound}</strong>
-      </div>
-
-      <p className="hash">Evidence code: {evidence.artifactAudit.codeCommit}</p>
-      <p className="note">
-        <a href={evidence.artifactAudit.sourceUrl}>Source audit JSON</a> · {evidence.artifactAudit.level}
-      </p>
-    </section>
-  )
-}
-
-export function App() {
-  const idlePoints = useMemo(() => buildOfflineReplay(), [])
-  const [runState, setRunState] = useState('idle')
-  const finalEquity = idlePoints.at(-1)?.equity || 10000
-
-  return (
-    <div className="app-shell">
-      {/* Top Banner with Strict Safety Label */}
-      <div className="safety-bar" role="alert">
-        <div className="safety-bar-left">
-          <span className="safety-pill">CHẾ ĐỘ MÔ PHỎNG</span>
-          <span className="safety-bar-text">
-            <strong>PAPER / RESEARCH — NO LIVE ORDERS:</strong> Không kết nối sàn thật, không đặt lệnh, không rủi ro tài chính.
+      {/* Risk Summary */}
+      <div className="risk-audit-section" aria-label="Tóm tắt rủi ro">
+        <div className="account-title">Tóm tắt phiên</div>
+        <div className="risk-row">
+          <span className="risk-key">Tổng PnL</span>
+          <span className={`risk-val mono ${pnlTotal >= 0 ? 'green' : 'red'}`}>
+            {pnlTotal >= 0 ? '+' : ''}{money(pnlTotal)} USDT
           </span>
         </div>
-        <span className="safety-bar-tag">AUDIT PREVIEW</span>
-      </div>
-
-      <Header />
-      <NavigationStrip />
-
-      <main className="main-content">
-        <div className="primary-column">
-          <OverviewSection idlePoints={idlePoints} />
-          <ReplaySection
-            idlePoints={idlePoints}
-            runState={runState}
-            setRunState={setRunState}
-            finalEquity={finalEquity}
-          />
-          <StrategySection />
-          <FundingCoverage />
+        <div className="risk-row">
+          <span className="risk-key">Số lệnh đóng</span>
+          <span className="risk-val">{broker.trades.length}</span>
         </div>
-
-        <aside className="sidebar-column" aria-label="Risk, accounting and artifact status">
-          <RiskSection />
-          <AuditSection />
-        </aside>
-      </main>
-
-      <footer>
-        <div className="footer-container">
-          <span>Quill3H paper-bot research preview · Flat Design Edition</span>
-          <span>
-            <a href={evidence.historicalWindow.sourceUrl}>Historical dataset manifest</a>: {evidence.historicalWindow.rows.toLocaleString()} rows · {evidence.historicalWindow.gaps} gaps
+        <div className="risk-row">
+          <span className="risk-key">Thua liên tiếp</span>
+          <span className={`risk-val ${broker.breakerConsecutiveLosses >= 2 ? 'red' : 'green'}`}>
+            {broker.breakerConsecutiveLosses}/3
           </span>
-          <span className="mono">SHA-256 {evidence.historicalWindow.datasetHash.slice(0, 16)}…</span>
         </div>
-      </footer>
-    </div>
+        <div className="risk-row">
+          <span className="risk-key">Đòn bẩy tối đa</span>
+          <span className="risk-val yellow">5× (giới hạn cứng)</span>
+        </div>
+        <div className="risk-note">
+          Lệnh do PaperBroker mô phỏng. Phí taker 0.05%, stop-loss 3%, không có lệnh sàn thật hoặc testnet.
+          Không phải bằng chứng sinh lời.
+        </div>
+      </div>
+    </aside>
   )
 }
