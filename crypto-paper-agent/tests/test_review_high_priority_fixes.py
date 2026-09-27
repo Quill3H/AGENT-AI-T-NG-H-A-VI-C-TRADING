@@ -328,7 +328,9 @@ def test_comparison_cli_rejects_explicit_dates_before_loading_files(tmp_path):
 
 
 def test_ui_example_matches_synthetic_replay():
-    path = Path(__file__).resolve().parents[1] / "docs" / "reviews" / "evidence" / "review-high-priority-fixes" / "ui-example.json"
+    root_evidence = Path(__file__).resolve().parents[2] / "docs" / "history" / "evidence" / "review-high-priority-fixes" / "ui-example.json"
+    legacy_evidence = Path(__file__).resolve().parents[1] / "docs" / "reviews" / "evidence" / "review-high-priority-fixes" / "ui-example.json"
+    path = root_evidence if root_evidence.exists() else legacy_evidence
     example = json.loads(path.read_text(encoding="utf-8"))
     broker = PaperBroker(batch_config())
     broker.process_batch([candle(T, "BTCUSDT"), candle(T, "ETHUSDT")])

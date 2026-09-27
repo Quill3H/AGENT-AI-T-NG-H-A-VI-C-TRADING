@@ -143,7 +143,7 @@ def main():
     full_report = "\n".join(report_lines)
     
     target_dirs = [
-        project_root / "BÁO CÁO TÓM TẮT" / "GIAI ĐOẠN 2",
+        project_root.parent / "docs" / "history" / "reports" / "giai-doan-2",
     ]
     for d in target_dirs:
         d.mkdir(parents=True, exist_ok=True)

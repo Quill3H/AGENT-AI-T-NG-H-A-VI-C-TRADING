@@ -1,0 +1,77 @@
+# ==============================================================================
+# Repository Root Git Ignore - Crypto Paper Trading Research Agent
+# ==============================================================================
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Virtual environments
+.venv/
+venv/
+.venv-paper/
+env/
+ENV/
+*.venv
+
+# Node / Web preview
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tooling & Agent Local Workspaces
+.serena/
+.gitnexus/parse-cache/
+.gitnexus/parsedfile-cache/
+.gitnexus/lbug
+*.sublime-project
+*.sublime-workspace
+.vscode/
+.idea/
+
+# Data caches (Parquet binary files & downloads)
+*.parquet
+*.csv.gz
+*.zip
+data/raw/binance/
+data/processed/binance/
+!data/news_calendar.csv
+!crypto-paper-agent/data/news_calendar.csv
+!docs/history/evidence/**/*.parquet
+!docs/history/evidence/**/*.sqlite
+
+# Temporary & runtime outputs
+scratch/
+tmp/
+temp/
+*.tmp
+*.log
+data/paper_sessions/
+reports/
+*.sqlite
+*.sqlite3
+*.db
+
+# Operating System files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+.DS_Store

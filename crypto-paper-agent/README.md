@@ -5,7 +5,7 @@
 
 ## Tổng quan
 
-Sơ đồ luồng code và cây tác vụ có phụ thuộc/tiêu chí nghiệm thu: [Architecture and task tree](docs/architecture/architecture-and-task-tree.md). Bảng roadmap dưới đây phân biệt **đã triển khai** với **đã được nghiệm thu độc lập**; không thể suy trạng thái hiện tại từ ví dụ thư mục/CLI lịch sử ở phần dưới.
+Sơ đồ luồng code và cây tác vụ có phụ thuộc/tiêu chí nghiệm thu: [Architecture and task tree](../docs/architecture/architecture-and-task-tree.md) và kiến trúc chuẩn tại [SYSTEM_ARCHITECTURE.md](../docs/architecture/SYSTEM_ARCHITECTURE.md). Tài liệu tổng quan dự án xem tại [README gốc](../../README.md) và [docs/INDEX.md](../docs/INDEX.md).
 
 Hệ thống backtest chiến lược giao dịch BTC/USDT Futures trên Binance, bao gồm:
 - **Data Layer**: Fetch OHLCV + OI + Funding Rate từ Binance public API (không cần API key)
