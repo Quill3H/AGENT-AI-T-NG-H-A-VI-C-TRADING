@@ -20,7 +20,7 @@ Tài liệu này là bản đồ dẫn đường (Documentation Map) thống nh�
 
 Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệu trong repository:
 1. **Accepted ADR hiện hành ([docs/adr/](adr/))** có giá trị cao nhất: supersede Master Spec ở quyết định cụ thể mà ADR đó đã thay đổi hoặc chuẩn hóa.
-   *(Ví dụ thực tế: ADR 0002 quy định `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè mô tả cũ `after_5_wins` / `after_1_win` trong Master Spec).*
+   *(Ví dụ thực tế: ADR 0002 quy định `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè đề xuất gốc `after_1_win` trong Master Spec).*
 2. **[docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](planning/PRODUCT_CHARTER_AND_GATE_SPEC.md)** điều khiển ranh giới sản phẩm, tiêu chí nghiệm thu (acceptance criteria) và gate pass/fail.
 3. **[docs/PROJECT_STATE.md](PROJECT_STATE.md)** chỉ mô tả trạng thái hiện hành (current factual state), **không thay thế hay override** spec/ADR.
 4. **Mã nguồn (`crypto-paper-agent/src/`) + Executable Tests (`crypto-paper-agent/tests/`)** phải triển khai đúng hợp đồng canonical hiện hành.
@@ -32,7 +32,7 @@ Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệ
 
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
-| [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) | **CANONICAL** | Thiết kế kiến trúc tổng thể, luồng dữ liệu 5 pha, cơ chế isolated margin và WebSocket stream. |
+| [docs/architecture/SYSTEM_ARCHITECTURE.md](architecture/SYSTEM_ARCHITECTURE.md) | **CANONICAL** | Thiết kế kiến trúc tổng thể, luồng dữ liệu 5 pha, cơ chế isolated margin và HTTP loopback server. |
 | [docs/architecture/architecture-and-task-tree.md](architecture/architecture-and-task-tree.md) | **CANONICAL** | Sơ đồ Mermaid luồng code, ma trận đối chiếu 6 quan hệ cốt lõi và cây tác vụ phụ thuộc. |
 | [docs/adr/0001-oi-hybrid-fetch.md](adr/0001-oi-hybrid-fetch.md) | **CANONICAL** | ADR 0001: Cơ chế kéo Open Interest kết hợp Vision archive (>28 ngày) và REST API (gần). |
 | [docs/adr/0002-risk-recovery-mode.md](adr/0002-risk-recovery-mode.md) | **CANONICAL** | ADR 0002: Cơ chế phục hồi 100% risk budget sau đúng 3 lệnh thắng liên tiếp (`after_3_wins`). |

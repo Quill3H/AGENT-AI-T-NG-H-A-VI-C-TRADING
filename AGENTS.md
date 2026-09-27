@@ -27,7 +27,7 @@ Khi bắt đầu một phiên làm việc mới, hãy đọc theo thứ tự ưu
 
 ### Thứ bậc Hiệu lực khi có mâu thuẫn tài liệu (Documentation Precedence):
 - **Accepted ADR ([docs/adr/](docs/adr/))** có hiệu lực **ghi đè** Master Spec tại các điểm cụ thể mà ADR đó điều chỉnh.
-  *(Ví dụ thực tế đã xảy ra: ADR 0002 định nghĩa `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè mô tả cũ `after_5_wins` trong master spec).*
+  *(Ví dụ thực tế đã xảy ra: ADR 0002 định nghĩa `recovery_mode = after_3_wins` — cần đúng 3 lệnh thắng liên tiếp để phục hồi 100% risk budget, ghi đè đề xuất gốc `after_1_win` trong Master Spec).*
 - **[docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md)** có hiệu lực cao nhất về acceptance criteria và gate pass/fail.
 - **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)** chỉ mô tả trạng thái hiện hành, **không thay thế hay override** spec/ADR.
 - **Mã nguồn (`crypto-paper-agent/src/`) + Executable Tests (`crypto-paper-agent/tests/`)** là hiện thực hóa của các hợp đồng kỹ thuật.
