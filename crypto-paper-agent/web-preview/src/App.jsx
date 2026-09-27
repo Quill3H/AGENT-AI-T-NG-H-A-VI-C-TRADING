@@ -8,13 +8,13 @@
  *   • Public WebSocket stream for real-time 1m candlestick chart.
  *   • Trend Following strategy (4h/15m) executing via backend Codex PaperBroker.
  *   • Connected to local endpoints: /api/state, /api/start, /api/stop.
+ *   • Strict state confirmation: no optimistic running flags.
  *   • Real session persistence, automatic reconnection, and safe recovery.
- *   • Zero Math.random().
+ *   • Zero Math.random(), zero fake default prices.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './styles.css'
-import { evidence } from './data/evidence'
 import { CandlestickChart } from './CandlestickChart'
 
 // ─── Constants & Symbols ─────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ export const COINS = [
   { symbol: 'SOLUSDT', name: 'SOL', display: 'SOLUSDT', color: '#9945FF', precision: 2 },
 ]
 
-const STRATEGY_METADATA = [
+export const STRATEGY_METADATA = [
   {
     id: 'trend_following',
     nameVi: 'Bám theo xu hướng (Trend Following)',
@@ -60,7 +60,7 @@ const STRATEGY_METADATA = [
   },
 ]
 
-const money = (v, prec = 2) => {
+export const money = (v, prec = 2) => {
   if (v === null || v === undefined || Number.isNaN(Number(v))) return '—'
   return Number(v).toLocaleString('en-US', {
     minimumFractionDigits: prec,
@@ -82,63 +82,102 @@ function getInitialCoin() {
 
 export function App() {
   const [activeCoin, setActiveCoin] = useState(getInitialCoin())
-  const [connectionStatus, setConnectionStatus] = useState('CONNECTING') // 'CONNECTING' | 'ONLINE' | 'DATA_STALE' | 'SERVER_ERROR' | 'QUARANTINED'
+  const [connectionStatus, setConnectionStatus] = useState('CONNECTING')
+  // 'CONNECTING' | 'ONLINE' | 'WAITING_DATA' | 'WAITING_CONNECTION' | 'DATA_STALE' | 'SERVER_ERROR' | 'QUARANTINED' | 'RECOVERY_REQUIRED'
+
   const [backendState, setBackendState] = useState(null)
   const [liveCandle, setLiveCandle] = useState(null)
   const [tradeTab, setTradeTab] = useState('closed')
-  const [actionPending, setActionPending] = useState(false)
+  const [botActionState, setBotActionState] = useState(null) // 'STARTING' | 'STOPPING' | null
+  const [actionError, setActionError] = useState(null)
   const [lastSyncTime, setLastSyncTime] = useState(null)
 
   const activeCoinConfig = COINS.find((c) => c.symbol === activeCoin) || COINS[0]
   const precision = activeCoinConfig.precision
 
-  // ── 1. Fetch Backend State (/api/state) with non-blocking timeout ────────────
-  const fetchState = useCallback(async () => {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 3500)
+  // ── 1. Resilient Sequential Polling (/api/state) with out-of-order drop ──────
+  const pollSeqRef = useRef(0)
+  const latestCompletedSeqRef = useRef(0)
+  const isPollingRef = useRef(false)
+  const pollTimeoutRef = useRef(null)
 
-    try {
-      const resp = await fetch('/api/state', {
-        signal: controller.signal,
-        headers: { 'Cache-Control': 'no-cache' },
-      })
-      clearTimeout(timer)
+  useEffect(() => {
+    let isCancelled = false
 
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}`)
-      }
+    const pollState = async () => {
+      if (isPollingRef.current) return
+      isPollingRef.current = true
+      const thisSeq = ++pollSeqRef.current
 
-      const data = await resp.json()
-      setBackendState(data)
-      setLastSyncTime(Date.now())
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 4000)
 
-      if (data.status === 'QUARANTINED') {
-        setConnectionStatus('QUARANTINED')
-      } else {
-        // Check staleness of data (if source time older than 5 minutes)
-        if (data.source_time_utc) {
+        const resp = await fetch('/api/state', {
+          signal: controller.signal,
+          headers: { 'Cache-Control': 'no-cache' },
+        })
+        clearTimeout(timeout)
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`)
+        }
+
+        const data = await resp.json()
+
+        // Discard out-of-order stale response: older poll arriving after newer poll
+        if (thisSeq < latestCompletedSeqRef.current) {
+          return
+        }
+        latestCompletedSeqRef.current = thisSeq
+
+        if (isCancelled) return
+
+        setBackendState(data)
+        setLastSyncTime(Date.now())
+
+        // Classify connection & backend status
+        if (data.status === 'QUARANTINED') {
+          setConnectionStatus('QUARANTINED')
+        } else if (data.status === 'RECOVERY_REQUIRED') {
+          setConnectionStatus('RECOVERY_REQUIRED')
+        } else if (data.status === 'WAITING_CONNECTION') {
+          setConnectionStatus('WAITING_CONNECTION')
+        } else if (!data.source_time_utc) {
+          // Rule: source_time_utc = null must NEVER be considered ONLINE
+          setConnectionStatus('WAITING_DATA')
+        } else {
           const ageMs = Date.now() - new Date(data.source_time_utc).getTime()
-          if (ageMs > 300_000) {
+          const streamConnected = data.connection?.connected ?? true
+          if (ageMs > 180_000 || !streamConnected) {
             setConnectionStatus('DATA_STALE')
           } else {
             setConnectionStatus('ONLINE')
           }
-        } else {
-          setConnectionStatus('ONLINE')
+        }
+      } catch {
+        if (isCancelled) return
+        if (thisSeq >= latestCompletedSeqRef.current) {
+          latestCompletedSeqRef.current = thisSeq
+          setConnectionStatus('SERVER_ERROR')
+        }
+      } finally {
+        isPollingRef.current = false
+        if (!isCancelled) {
+          pollTimeoutRef.current = setTimeout(pollState, 2000)
         }
       }
-    } catch {
-      clearTimeout(timer)
-      setConnectionStatus((prev) => (prev === 'ONLINE' ? 'SERVER_ERROR' : prev))
+    }
+
+    pollState()
+
+    return () => {
+      isCancelled = true
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+      }
     }
   }, [])
-
-  // Poll state every 2 seconds
-  useEffect(() => {
-    fetchState()
-    const interval = setInterval(fetchState, 2000)
-    return () => clearInterval(interval)
-  }, [fetchState])
 
   // ── 2. Real Public WebSocket Stream for Live 1m Kline Chart ─────────────────
   useEffect(() => {
@@ -164,26 +203,20 @@ export function App() {
                 high: parseFloat(k.h),
                 low: parseFloat(k.l),
                 close: parseFloat(k.c),
-                provisional: !k.x, // k.x is boolean: true if bar is closed, false if provisional
+                provisional: !k.x, // true if bar is still forming, false if closed
               })
             }
-          } catch {
-            // Silently ignore malformed packet
-          }
+          } catch {}
         }
 
-        ws.onerror = () => {
-          // Fallback to backend polling if WebSocket drops
-        }
+        ws.onerror = () => {}
 
         ws.onclose = () => {
           if (!isCancelled) {
             reconnectTimer = setTimeout(connectWs, 3000)
           }
         }
-      } catch {
-        // WebSocket not available in this environment; fallback
-      }
+      } catch {}
     }
 
     connectWs()
@@ -198,8 +231,6 @@ export function App() {
     }
   }, [activeCoin])
 
-  const [localRunning, setLocalRunning] = useState(false)
-
   // ── 3. Handle Coin Change ───────────────────────────────────────────────────
   const handleCoinChange = (newSymbol) => {
     setActiveCoin(newSymbol)
@@ -212,123 +243,251 @@ export function App() {
   }
 
   // ── 4. Bot Start / Stop Actions (/api/start, /api/stop) ─────────────────────
+  // ZERO optimistic running state: status updates ONLY when backend confirms!
   const handleStart = async () => {
-    setActionPending(true)
-    setLocalRunning(true)
+    if (isBotRunning || botActionState !== null || isQuarantined || isRecoveryRequired) return
+    setBotActionState('STARTING')
+    setActionError(null)
+
     try {
-      const resp = await fetch('/api/start', { method: 'POST' })
+      const resp = await fetch('/api/start', {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+      })
+
+      if (!resp.ok) {
+        let errDetail = `HTTP ${resp.status}`
+        try {
+          const errJson = await resp.json()
+          if (errJson?.error) errDetail = errJson.error
+        } catch {}
+        setActionError(`Không thể khởi động bot: ${errDetail}`)
+        return
+      }
+
       const data = await resp.json()
       setBackendState(data)
-      setConnectionStatus(data.status === 'QUARANTINED' ? 'QUARANTINED' : 'ONLINE')
-      if (data.status === 'QUARANTINED' || data.status === 'STOPPED') {
-        setLocalRunning(false)
+
+      if (data.status === 'RECOVERY_REQUIRED') {
+        setActionError(`Yêu cầu đối soát: ${data.error || 'Tồn tại journal phiên trước chưa phục hồi.'}`)
+      } else if (data.status === 'QUARANTINED') {
+        setActionError(`Bot bị cách ly: ${data.error || 'Dữ liệu không an toàn.'}`)
+      } else if (data.status === 'STOPPED') {
+        setActionError(data.error || 'Server từ chối khởi động bot.')
+      } else if (data.error) {
+        setActionError(`Lỗi backend: ${data.error}`)
       }
-    } catch {
-      // In standalone UI mode or fetch error, remain running optimistically unless quarantined
+    } catch (err) {
+      const isTimeout = err?.name === 'TimeoutError' || err?.message?.includes('timeout')
+      setActionError(
+        isTimeout
+          ? 'Không thể khởi động bot: Hết thời gian chờ kết nối (Timeout)'
+          : `Không thể khởi động bot: ${err?.message || 'Mất kết nối server'}`
+      )
     } finally {
-      setActionPending(false)
+      setBotActionState(null)
     }
   }
 
   const handleStop = async () => {
-    setActionPending(true)
-    setLocalRunning(false)
+    if (!isBotRunning || botActionState !== null) return
+    setBotActionState('STOPPING')
+    setActionError(null)
+
     try {
-      const resp = await fetch('/api/stop', { method: 'POST' })
+      const resp = await fetch('/api/stop', {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+      })
+
+      if (!resp.ok) {
+        let errDetail = `HTTP ${resp.status}`
+        try {
+          const errJson = await resp.json()
+          if (errJson?.error) errDetail = errJson.error
+        } catch {}
+        setActionError(`Không thể dừng bot: ${errDetail}`)
+        return
+      }
+
       const data = await resp.json()
       setBackendState(data)
-    } catch {
-      // In standalone UI mode, stop was set locally
+      if (data.status !== 'STOPPED' && data.status !== 'IDLE') {
+        setActionError(data.error || 'Server chưa xác nhận trạng thái dừng.')
+      }
+    } catch (err) {
+      setActionError(`Lỗi kết nối khi dừng bot: ${err?.message || 'Mất kết nối server'}`)
     } finally {
-      setActionPending(false)
+      setBotActionState(null)
     }
   }
 
-  // ── Derived Data from Backend State ─────────────────────────────────────────
-  const isBotRunning =
-    localRunning || backendState?.status === 'SCANNING' || backendState?.status === 'WAITING_SYNC'
+  // ── Derived Data from Backend State (100% from backend, no client math) ─────
+  const isBotRunning = backendState?.status === 'SCANNING' || backendState?.status === 'WAITING_SYNC'
   const isQuarantined = backendState?.status === 'QUARANTINED' || connectionStatus === 'QUARANTINED'
+  const isRecoveryRequired = backendState?.status === 'RECOVERY_REQUIRED' || connectionStatus === 'RECOVERY_REQUIRED'
 
   const account = backendState?.account || {
     initial_equity_usd: 10000.0,
     wallet_usd: 10000.0,
     equity_usd: 10000.0,
     available_margin_usd: 10000.0,
+    reserved_collateral_usd: 0.0,
+    unrealized_pnl_usd: 0.0,
     breaker_locked: false,
   }
 
   const openPositions = backendState?.open_positions || []
+  const pendingOrders = backendState?.pending_orders || []
   const completedTrades = backendState?.trades || []
   const recentOrders = backendState?.orders || []
   const marketInfo = backendState?.markets?.[activeCoin]
+  const riskGate = backendState?.risk_gate
 
-  // Get symbol candles: check backendState.charts[activeCoin], then backendState.chart, then fallback
+  // Symbol Candles from backend
   const symbolCandles =
     backendState?.charts?.[activeCoin] ||
     (activeCoin === 'BTCUSDT' ? backendState?.chart : null) ||
     []
 
-  // Best current price: from liveCandle close, or backend markets, or last candle close
-  const currentPrice =
-    liveCandle?.close ||
-    marketInfo?.last_closed_15m_price ||
-    (symbolCandles.length > 0 ? symbolCandles[symbolCandles.length - 1].close : null) ||
-    (activeCoin === 'BTCUSDT' ? 64000 : activeCoin === 'ETHUSDT' ? 2500 : 150)
+  // Real current price: strictly real or null. ZERO fake numbers (64k/2.5k/150).
+  const marketPrice = typeof marketInfo?.last_closed_15m_price === 'number' ? marketInfo.last_closed_15m_price : null
+  const lastCandlePrice = symbolCandles.length > 0 && typeof symbolCandles[symbolCandles.length - 1].close === 'number'
+    ? symbolCandles[symbolCandles.length - 1].close
+    : null
+  const currentPrice = liveCandle?.close ?? marketPrice ?? lastCandlePrice ?? null
 
-  // Calculate 24h stats based on symbolCandles if available
-  const firstCandle = symbolCandles[0]
-  const lastCandle = symbolCandles[symbolCandles.length - 1]
-  const change24h = firstCandle && lastCandle ? lastCandle.close - firstCandle.open : 0
-  const changePct24h = firstCandle && lastCandle && firstCandle.open > 0 ? (change24h / firstCandle.open) * 100 : 0
-  const highs = symbolCandles.map((c) => c.high)
-  const lows = symbolCandles.map((c) => c.low)
-  const high24h = highs.length ? Math.max(...highs) : currentPrice
-  const low24h = lows.length ? Math.min(...lows) : currentPrice
+  // Function to get real price for any coin in the left list
+  const getCoinPrice = (symbol) => {
+    if (symbol === activeCoin && currentPrice !== null) return currentPrice
+    const symMarket = backendState?.markets?.[symbol]
+    if (typeof symMarket?.last_closed_15m_price === 'number') {
+      return symMarket.last_closed_15m_price
+    }
+    const symCandles = backendState?.charts?.[symbol] || (symbol === 'BTCUSDT' ? backendState?.chart : null) || []
+    if (symCandles.length > 0 && typeof symCandles[symCandles.length - 1].close === 'number') {
+      return symCandles[symCandles.length - 1].close
+    }
+    return null
+  }
+
+  // 24h stats based on real symbolCandles
+  const firstCandle = symbolCandles.length > 0 ? symbolCandles[0] : null
+  const lastCandle = symbolCandles.length > 0 ? symbolCandles[symbolCandles.length - 1] : null
+  const hasCandles = firstCandle && lastCandle && typeof firstCandle.open === 'number' && firstCandle.open > 0
+  const change24h = hasCandles && currentPrice !== null ? currentPrice - firstCandle.open : null
+  const changePct24h = hasCandles && currentPrice !== null ? (change24h / firstCandle.open) * 100 : null
+
+  const validHighs = symbolCandles.map((c) => Number(c.high)).filter((h) => !Number.isNaN(h))
+  const validLows = symbolCandles.map((c) => Number(c.low)).filter((l) => !Number.isNaN(l))
+  const high24h = validHighs.length > 0 ? Math.max(...validHighs) : currentPrice
+  const low24h = validLows.length > 0 ? Math.min(...validLows) : currentPrice
+
+  // Timestamp formatting
+  const priceUpdateUtc =
+    liveCandle
+      ? 'Vừa nhận (WebSocket)'
+      : marketInfo?.as_of_utc
+      ? new Date(marketInfo.as_of_utc).toLocaleTimeString('vi-VN', { hour12: false })
+      : backendState?.source_time_utc
+      ? new Date(backendState.source_time_utc).toLocaleTimeString('vi-VN', { hour12: false })
+      : null
+
+  // Market feed connection status
+  const marketFeedText =
+    liveCandle
+      ? '● WebSocket Trực tiếp'
+      : marketInfo
+      ? '● REST Nến đã đóng'
+      : connectionStatus === 'DATA_STALE'
+      ? '⚠ Nguồn nến gián đoạn'
+      : '○ Chờ dữ liệu nến'
+
+  const marketFeedColor =
+    liveCandle
+      ? '#0ECB81'
+      : marketInfo
+      ? '#2563EB'
+      : connectionStatus === 'DATA_STALE'
+      ? '#F0B90B'
+      : '#848E9C'
+
+  // Bot status text & color
+  const botStatusBadge = (() => {
+    switch (backendState?.status) {
+      case 'SCANNING':
+        return { label: '● Đang quét (Live Paper)', color: '#0ECB81', indicator: 'running' }
+      case 'WAITING_SYNC':
+        return { label: '● Chờ đồng bộ 3 cặp', color: '#2563EB', indicator: 'sync' }
+      case 'WAITING_CONNECTION':
+        return { label: '○ Chờ kết nối stream', color: '#F0B90B', indicator: 'recovery' }
+      case 'QUARANTINED':
+        return { label: '⚠ Bị cách ly (Quarantined)', color: '#F6465D', indicator: 'error' }
+      case 'RECOVERY_REQUIRED':
+        return { label: '⚠ Cần đối soát (Recovery Required)', color: '#F0B90B', indicator: 'recovery' }
+      case 'STOPPED':
+        return { label: '○ Đã dừng (Stopped)', color: '#848E9C', indicator: 'idle' }
+      case 'IDLE':
+      default:
+        return { label: '○ Chưa khởi động (Idle)', color: '#848E9C', indicator: 'idle' }
+    }
+  })()
 
   return (
     <div className="app-shell">
-      {/* Status Warning Alert Bar if disconnected or quarantined */}
-      {isQuarantined && (
-        <div
-          role="alert"
-          style={{
-            background: 'rgba(246, 70, 93, 0.2)',
-            borderBottom: '1px solid #F6465D',
-            padding: '6px 16px',
-            color: '#F6465D',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            fontWeight: 600,
-          }}
-        >
+      {/* ── Top Alert Banners ── */}
+
+      {/* 1. Action Error Banner (dismissible) */}
+      {actionError && (
+        <div role="alert" className="alert-action-error">
+          <span>⚠ LỖI THAO TÁC: {actionError}</span>
+          <button type="button" onClick={() => setActionError(null)}>
+            ✕ Đóng
+          </button>
+        </div>
+      )}
+
+      {/* 2. Recovery Required Safety Banner */}
+      {isRecoveryRequired && (
+        <div role="alert" className="alert-recovery">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px' }}>⚠</span>
+            <strong>CẢNH BÁO AN TOÀN: YÊU CẦU ĐỐI SOÁT PHỤC HỒI (RECOVERY REQUIRED)</strong>
+          </div>
+          <div style={{ fontSize: '11px', fontWeight: 400, color: '#EAECEF', lineHeight: '1.6' }}>
+            Phát hiện journal phiên trước {backendState?.session_id ? `(#${backendState.session_id})` : ''}. Backend đang ở chế độ <strong>Chỉ-Đọc (Read-only)</strong> để bảo vệ vốn và vị thế đã lưu, không tự ý reset về 10,000 USDT hay tạo phiên mới khi chưa đối soát. Cần quản trị viên kiểm tra file journal cục bộ trước khi mở lại giao dịch.
+          </div>
+          {backendState?.error && (
+            <div style={{ fontSize: '11px', color: '#F0B90B', marginTop: '2px' }}>
+              Chi tiết: {backendState.error}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Quarantine Safety Banner */}
+      {isQuarantined && !isRecoveryRequired && (
+        <div role="alert" className="alert-quarantine">
           <span>⚠ CẢNH BÁO AN TOÀN: Nguồn dữ liệu bị cách ly (Quarantined). Đã dừng nhận lệnh để bảo vệ vốn.</span>
           <span style={{ color: '#EAECEF', fontWeight: 400 }}>{backendState?.error || 'Lỗi đối soát dữ liệu'}</span>
         </div>
       )}
 
+      {/* 4. Server Disconnected Banner */}
       {connectionStatus === 'SERVER_ERROR' && (
-        <div
-          role="alert"
-          style={{
-            background: 'rgba(240, 185, 11, 0.15)',
-            borderBottom: '1px solid #F0B90B',
-            padding: '6px 16px',
-            color: '#F0B90B',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
+        <div role="alert" className="alert-server-error">
           <span>⚠ Mất kết nối tới server local (http://127.0.0.1:8765/). Đang tự động kết nối lại...</span>
         </div>
       )}
 
-      {/* Top Header */}
+      {/* 5. Stale Data Warning Banner */}
+      {connectionStatus === 'DATA_STALE' && (
+        <div role="alert" className="alert-stale">
+          <span>⚠ Nguồn dữ liệu thị trường gián đoạn hoặc quá cũ. Đang chờ khôi phục luồng dữ liệu...</span>
+        </div>
+      )}
+
+      {/* ── Top Header ── */}
       <header className="exchange-header" role="banner">
         <a className="header-logo" href="#" aria-label="Quill3H Futures Paper Console">
           <div className="header-logo-mark" aria-hidden="true">
@@ -358,46 +517,75 @@ export function App() {
 
         {/* Real-time Ticker */}
         <div className="header-ticker" aria-live="polite" aria-atomic="false">
-          <span
-            className={`ticker-price mono ${changePct24h >= 0 ? 'up' : 'down'}`}
-            aria-label={`Giá hiện tại ${money(currentPrice, precision)}`}
-          >
-            {money(currentPrice, precision)}
-          </span>
+          {currentPrice !== null ? (
+            <span
+              className={`ticker-price mono ${changePct24h !== null && changePct24h >= 0 ? 'up' : 'down'}`}
+              aria-label={`Giá hiện tại ${money(currentPrice, precision)}`}
+            >
+              {money(currentPrice, precision)}
+            </span>
+          ) : (
+            <span className="ticker-no-price" aria-label="Chưa có dữ liệu giá">
+              Chưa có dữ liệu
+            </span>
+          )}
 
           <div className="ticker-stat">
             <span className="ticker-stat-label">24h Thay đổi</span>
-            <span className={`ticker-stat-value mono ${changePct24h >= 0 ? 'text-buy' : 'text-sell'}`}>
-              {changePct24h >= 0 ? '+' : ''}
-              {money(change24h, precision)} ({changePct24h >= 0 ? '+' : ''}
-              {changePct24h.toFixed(2)}%)
-            </span>
+            {changePct24h !== null && change24h !== null ? (
+              <span className={`ticker-stat-value mono ${changePct24h >= 0 ? 'text-buy' : 'text-sell'}`}>
+                {changePct24h >= 0 ? '+' : ''}
+                {money(change24h, precision)} ({changePct24h >= 0 ? '+' : ''}
+                {changePct24h.toFixed(2)}%)
+              </span>
+            ) : (
+              <span className="ticker-stat-value mono text-muted">--</span>
+            )}
           </div>
 
           <div className="ticker-stat">
             <span className="ticker-stat-label">24h Cao nhất</span>
-            <span className="ticker-stat-value mono">{money(high24h, precision)}</span>
+            <span className="ticker-stat-value mono">
+              {high24h !== null ? money(high24h, precision) : '--'}
+            </span>
           </div>
 
           <div className="ticker-stat">
             <span className="ticker-stat-label">24h Thấp nhất</span>
-            <span className="ticker-stat-value mono">{money(low24h, precision)}</span>
+            <span className="ticker-stat-value mono">
+              {low24h !== null ? money(low24h, precision) : '--'}
+            </span>
           </div>
 
-          <div className="ticker-stat">
-            <span className="ticker-stat-label">Chế độ</span>
-            <span className="ticker-stat-value" style={{ color: '#F0B90B' }}>
-              PAPER SIM
+          {/* Separate Market Data Connection from Bot Status */}
+          <div className="ticker-stat" title="Nguồn nến công khai hiển thị — Không chứng minh bot nhận lệnh">
+            <span className="ticker-stat-label">Nguồn giá (Chart)</span>
+            <span className="ticker-stat-value" style={{ color: marketFeedColor }}>
+              {marketFeedText}
             </span>
           </div>
 
           <div className="ticker-stat">
             <span className="ticker-stat-label">Trạng thái Bot</span>
+            <span className="ticker-stat-value" style={{ color: botStatusBadge.color }}>
+              {botStatusBadge.label}
+            </span>
+          </div>
+
+          <div className="ticker-stat">
+            <span className="ticker-stat-label">Cổng lệnh</span>
             <span
               className="ticker-stat-value"
-              style={{ color: isBotRunning ? '#0ECB81' : isQuarantined ? '#F6465D' : '#848E9C' }}
+              style={{ color: riskGate?.admission_open ? '#0ECB81' : '#F6465D' }}
             >
-              {isBotRunning ? '● Đang chạy' : isQuarantined ? '⚠ Quarantined' : '○ Đã dừng'}
+              {riskGate?.admission_open ? '● MỞ (Sim)' : '○ ĐÓNG'}
+            </span>
+          </div>
+
+          <div className="ticker-stat">
+            <span className="ticker-stat-label">Thời điểm</span>
+            <span className="ticker-stat-value mono" style={{ fontSize: '11px', color: '#848E9C' }}>
+              {priceUpdateUtc || 'Chưa đồng bộ'}
             </span>
           </div>
         </div>
@@ -408,18 +596,14 @@ export function App() {
         </div>
       </header>
 
-      {/* Main Trading Layout */}
+      {/* ── Main Trading Layout ── */}
       <div className="trading-layout">
         {/* LEFT PANEL: Market List + Strategy Status + Paper Account */}
         <aside className="market-info-panel" aria-label="Thông tin thị trường và tài khoản">
           <div className="panel-title">Cặp giao dịch Futures</div>
           <div className="symbol-list" role="list">
             {COINS.map((coin) => {
-              const symMarket = backendState?.markets?.[coin.symbol]
-              const symPrice =
-                coin.symbol === activeCoin
-                  ? currentPrice
-                  : symMarket?.last_closed_15m_price || (coin.symbol === 'BTCUSDT' ? 64000 : coin.symbol === 'ETHUSDT' ? 2500 : 150)
+              const symPrice = getCoinPrice(coin.symbol)
               return (
                 <div
                   key={coin.symbol}
@@ -428,13 +612,15 @@ export function App() {
                   role="listitem"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && handleCoinChange(coin.symbol)}
-                  aria-label={`${coin.display} giá ${money(symPrice, coin.precision)}`}
+                  aria-label={`${coin.display} giá ${symPrice !== null ? money(symPrice, coin.precision) : 'Chưa có giá'}`}
                 >
                   <div>
                     <div className="sym-name">{coin.display}</div>
                     <div className="sym-sub">USD-M PERP · PAPER</div>
                   </div>
-                  <div className="sym-price mono up">{money(symPrice, coin.precision)}</div>
+                  <div className="sym-price mono up">
+                    {symPrice !== null ? money(symPrice, coin.precision) : 'Chưa có giá'}
+                  </div>
                 </div>
               )
             })}
@@ -456,7 +642,10 @@ export function App() {
                 }}
               >
                 <div>
-                  <div className="strategy-name" style={{ color: strat.status === 'ACTIVE_LIVE' ? '#0ECB81' : '#EAECEF' }}>
+                  <div
+                    className="strategy-name"
+                    style={{ color: strat.status === 'ACTIVE_LIVE' ? '#0ECB81' : '#EAECEF' }}
+                  >
                     {strat.nameVi}
                   </div>
                   <div className="strategy-timeframe">
@@ -475,7 +664,9 @@ export function App() {
             <div className="account-title">Tài khoản PAPER</div>
             <div className="account-row">
               <span className="account-key">Equity</span>
-              <span className={`account-value mono ${account.equity_usd >= account.initial_equity_usd ? 'green' : 'red'}`}>
+              <span
+                className={`account-value mono ${account.equity_usd >= account.initial_equity_usd ? 'green' : 'red'}`}
+              >
                 {money(account.equity_usd)} USDT
               </span>
             </div>
@@ -488,23 +679,33 @@ export function App() {
               <span className="account-value mono">{money(account.available_margin_usd)} USDT</span>
             </div>
             <div className="account-row">
+              <span className="account-key">Ký quỹ đang dùng</span>
+              <span className="account-value mono">{money(account.reserved_collateral_usd ?? 0.0)} USDT</span>
+            </div>
+            <div className="account-row">
+              <span className="account-key">PnL chưa thực hiện</span>
+              <span
+                className={`account-value mono ${(account.unrealized_pnl_usd ?? 0) >= 0 ? 'green' : 'red'}`}
+              >
+                {money(account.unrealized_pnl_usd ?? 0.0)} USDT
+              </span>
+            </div>
+            <div className="account-row">
               <span className="account-key">Circuit breaker</span>
               <span className={`account-value ${account.breaker_locked ? 'red' : 'green'}`}>
                 {account.breaker_locked ? 'ĐÃ KHÓA' : 'Bình thường'}
               </span>
             </div>
             <div style={{ marginTop: '6px', fontSize: '10px', color: '#848E9C' }}>
-              PaperBroker mô phỏng · Vốn được bảo toàn khi khởi động lại
+              PaperBroker mô phỏng · 100% số liệu từ backend · Không tự tính PnL trong trình duyệt
             </div>
           </div>
         </aside>
 
-        {/* CENTER PANEL: Candlestick Chart + Bot Status Bar + Trade Log Tabs */}
-        <main className="center-panel" aria-label="Biểu đồ và nhật ký giao dịch">
+        {/* CENTER PANEL: Chart Toolbar + Candlestick Chart + Bot Status Bar + Trade Log */}
+        <main className="chart-panel" aria-label="Biểu đồ giao dịch và lịch sử">
           {/* Chart Toolbar */}
-          <div className="chart-toolbar" role="toolbar" aria-label="Tùy chọn biểu đồ">
-            <span className="toolbar-btn active">{activeCoin}</span>
-            <div className="toolbar-divider" aria-hidden="true" />
+          <div className="chart-toolbar">
             <span className="toolbar-btn" style={{ color: activeCoinConfig.color, fontWeight: 700 }}>
               ● {activeCoinConfig.name}
             </span>
@@ -555,16 +756,24 @@ export function App() {
 
           {/* Bot Status Bar */}
           <div className="bot-status-bar" aria-live="polite">
-            <span className={`bot-status-indicator ${isBotRunning ? 'running' : 'idle'}`} aria-hidden="true" />
+            <span className={`bot-status-indicator ${botStatusBadge.indicator}`} aria-hidden="true" />
             <span className="bot-status-text">
               {isBotRunning ? (
                 <>
                   <strong>Bot đang tự động quét & giao dịch mô phỏng</strong> · Phiên #{backendState?.session_id || 'live'} ·{' '}
                   {openPositions.length} vị thế mở · {completedTrades.length} lệnh hoàn tất
                 </>
+              ) : isRecoveryRequired ? (
+                <>
+                  Bot đang ở chế độ <strong>Yêu cầu đối soát phục hồi (Recovery Required)</strong> · Đã dừng nhận lệnh · Cần kiểm tra journal
+                </>
+              ) : isQuarantined ? (
+                <>
+                  Bot <strong>bị cách ly an toàn (Quarantined)</strong> · Đã dừng nhận lệnh để bảo vệ vốn
+                </>
               ) : (
                 <>
-                  Bot <strong>{isQuarantined ? 'bị cách ly an toàn' : 'đã dừng'}</strong> · Nhấn &quot;Khởi động Bot&quot; để bot tự động tính toán & giao dịch thử
+                  Bot <strong>đã dừng</strong> · Nhấn &quot;Khởi động Bot&quot; để bot tự động tính toán & giao dịch thử
                 </>
               )}
             </span>
@@ -579,7 +788,7 @@ export function App() {
               {[
                 { id: 'closed', label: `Lệnh đã đóng (${completedTrades.length})` },
                 { id: 'open', label: `Vị thế mở (${openPositions.length})` },
-                { id: 'orders', label: `Lệnh gần đây (${recentOrders.length})` },
+                { id: 'orders', label: `Lệnh gần đây (${recentOrders.length + pendingOrders.length})` },
                 { id: 'audit', label: 'Nguồn dữ liệu & Giới hạn' },
               ].map((tab) => (
                 <button
@@ -606,29 +815,28 @@ export function App() {
                     <thead>
                       <tr>
                         <th>Thời gian đóng</th>
-                        <th>Mã</th>
-                        <th>Hướng</th>
+                        <th>Cặp</th>
+                        <th>Phe</th>
                         <th>Giá vào</th>
-                        <th>Giá ra</th>
-                        <th>Phí</th>
-                        <th>Net PnL</th>
-                        <th>Lý do đóng</th>
+                        <th>Giá đóng</th>
+                        <th>Số lượng</th>
+                        <th>PnL ròng</th>
+                        <th>Lý do</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {completedTrades.map((t) => (
-                        <tr key={t.id || t.trade_id}>
-                          <td className="mono">{t.exit_time_utc?.slice(11, 19) || '—'}</td>
+                      {completedTrades.map((t, idx) => (
+                        <tr key={idx}>
+                          <td className="mono">{t.exit_time || t.time || '--'}</td>
                           <td>{t.symbol}</td>
-                          <td className={t.side === 'LONG' ? 'buy' : 'sell'}>{t.side}</td>
+                          <td className={t.side === 'LONG' ? 'text-buy' : 'text-sell'}>{t.side}</td>
                           <td className="mono">{money(t.entry_price, precision)}</td>
                           <td className="mono">{money(t.exit_price, precision)}</td>
-                          <td className="mono">{money(t.fee_usd)}</td>
-                          <td className={`mono ${t.net_pnl_usd >= 0 ? 'pos' : 'neg'}`}>
-                            {t.net_pnl_usd >= 0 ? '+' : ''}
-                            {money(t.net_pnl_usd)} USDT
+                          <td className="mono">{Number(t.quantity).toFixed(4)}</td>
+                          <td className={`mono ${(t.pnl_net_usd ?? t.pnl ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}>
+                            {money(t.pnl_net_usd ?? t.pnl ?? 0)} USDT
                           </td>
-                          <td style={{ color: '#848E9C' }}>{t.exit_reason}</td>
+                          <td>{t.exit_reason || t.reason || '--'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -637,66 +845,94 @@ export function App() {
 
               {tradeTab === 'open' &&
                 (openPositions.length === 0 ? (
-                  <div className="trade-log-empty">Không có vị thế đang mở. Bot tự động mở khi có tín hiệu Trend Following.</div>
+                  <div className="trade-log-empty">
+                    Hiện tại không có vị thế mở nào. Bot quản lý vị thế tự động theo quy tắc rủi ro 2% vốn và đòn bẩy tối đa 5×.
+                  </div>
                 ) : (
-                  <table aria-label="Vị thế đang mở">
+                  <table aria-label="Vị thế mở">
                     <thead>
                       <tr>
-                        <th>Mã</th>
-                        <th>Hướng</th>
-                        <th>Số lượng</th>
+                        <th>Cặp</th>
+                        <th>Phe</th>
                         <th>Giá vào</th>
-                        <th>Stop-loss</th>
                         <th>Đòn bẩy</th>
-                        <th>Giá thanh lý</th>
+                        <th>Stop Loss</th>
+                        <th>Số lượng</th>
+                        <th>Ký quỹ</th>
+                        <th>PnL chưa chốt</th>
                       </tr>
                     </thead>
                     <tbody>
                       {openPositions.map((pos) => (
                         <tr key={pos.symbol}>
-                          <td>{pos.symbol}</td>
-                          <td className={pos.side === 'LONG' ? 'buy' : 'sell'}>{pos.side}</td>
-                          <td className="mono">{pos.quantity.toFixed(4)}</td>
+                          <td><strong>{pos.symbol}</strong></td>
+                          <td className={pos.side === 'LONG' ? 'text-buy' : 'text-sell'}>{pos.side}</td>
                           <td className="mono">{money(pos.entry_price, precision)}</td>
-                          <td className="mono">{money(pos.stop_loss_price, precision)}</td>
                           <td>{pos.leverage}×</td>
-                          <td className="mono">{money(pos.liquidation_price, precision)}</td>
+                          <td className="mono">{money(pos.stop_loss_price, precision)}</td>
+                          <td className="mono">{Number(pos.quantity).toFixed(4)}</td>
+                          <td className="mono">{money(pos.collateral_usd ?? pos.margin_usd)} USDT</td>
+                          <td className={`mono ${(pos.unrealized_pnl_usd ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}>
+                            {money(pos.unrealized_pnl_usd ?? 0.0)} USDT
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ))}
 
-              {tradeTab === 'orders' &&
-                (recentOrders.length === 0 ? (
-                  <div className="trade-log-empty">Chưa có lệnh nào được tạo.</div>
-                ) : (
-                  <table aria-label="Lệnh gần đây">
-                    <thead>
-                      <tr>
-                        <th>Mã</th>
-                        <th>Hướng</th>
-                        <th>Trạng thái</th>
-                        <th>Lý do từ chối (nếu có)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentOrders.map((o) => (
-                        <tr key={o.id}>
-                          <td>{o.symbol}</td>
-                          <td className={o.side === 'LONG' ? 'buy' : 'sell'}>{o.side}</td>
-                          <td style={{ color: o.status === 'FILLED' ? '#0ECB81' : '#F6465D' }}>{o.status}</td>
-                          <td style={{ color: '#848E9C' }}>{o.rejection_reasons?.join(', ') || '—'}</td>
+              {tradeTab === 'orders' && (
+                <div>
+                  {recentOrders.length === 0 && pendingOrders.length === 0 ? (
+                    <div className="trade-log-empty">Chưa có lệnh mô phỏng nào được tạo.</div>
+                  ) : (
+                    <table aria-label="Lệnh gần đây">
+                      <thead>
+                        <tr>
+                          <th>Thời gian</th>
+                          <th>Cặp</th>
+                          <th>Loại lệnh</th>
+                          <th>Phe</th>
+                          <th>Giá khớp/chờ</th>
+                          <th>Số lượng</th>
+                          <th>Trạng thái</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ))}
+                      </thead>
+                      <tbody>
+                        {pendingOrders.map((ord, idx) => (
+                          <tr key={`p-${idx}`} style={{ background: 'rgba(240, 185, 11, 0.06)' }}>
+                            <td className="mono">{ord.time_utc || '--'}</td>
+                            <td>{ord.symbol}</td>
+                            <td>{ord.order_type || 'PENDING'}</td>
+                            <td className={ord.side === 'LONG' ? 'text-buy' : 'text-sell'}>{ord.side}</td>
+                            <td className="mono">{money(ord.price, precision)}</td>
+                            <td className="mono">{Number(ord.quantity || 0).toFixed(4)}</td>
+                            <td style={{ color: '#F0B90B' }}>PENDING</td>
+                          </tr>
+                        ))}
+                        {recentOrders.map((ord, idx) => (
+                          <tr key={`o-${idx}`}>
+                            <td className="mono">{ord.time_utc || ord.time || '--'}</td>
+                            <td>{ord.symbol}</td>
+                            <td>{ord.order_type || 'MARKET'}</td>
+                            <td className={ord.side === 'LONG' ? 'text-buy' : 'text-sell'}>{ord.side}</td>
+                            <td className="mono">{money(ord.fill_price || ord.price, precision)}</td>
+                            <td className="mono">{Number(ord.quantity || 0).toFixed(4)}</td>
+                            <td style={{ color: ord.status === 'FILLED' ? '#0ECB81' : '#848E9C' }}>
+                              {ord.status || 'SUBMITTED'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
 
               {tradeTab === 'audit' && (
                 <div style={{ padding: '12px 14px' }}>
-                  <div style={{ fontSize: '11px', color: '#848E9C', marginBottom: '8px' }}>
-                    Nguồn dữ liệu & Cơ chế an toàn theo hợp đồng kiến trúc:
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#EAECEF', marginBottom: '8px' }}>
+                    Kiểm chứng dữ liệu & Cơ chế an toàn
                   </div>
                   <table aria-label="Nguồn dữ liệu">
                     <thead>
@@ -726,6 +962,13 @@ export function App() {
                         <td>Giới hạn rủi ro</td>
                         <td>Đòn bẩy tối đa 5×, Stop-loss 3%, Circuit Breaker 3 lệnh thua</td>
                         <td style={{ color: '#F0B90B' }}>STRICT RISK GATE</td>
+                      </tr>
+                      <tr>
+                        <td>Cổng nhận lệnh (Risk Gate)</td>
+                        <td>{riskGate?.reason || (riskGate?.admission_open ? 'Sẵn sàng nhận lệnh mô phỏng' : 'Đóng nhận lệnh')}</td>
+                        <td style={{ color: riskGate?.admission_open ? '#0ECB81' : '#F6465D' }}>
+                          {riskGate?.admission_open ? 'OPEN' : 'CLOSED'}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -764,29 +1007,69 @@ export function App() {
               <span className="bot-config-value">BTC · ETH · SOL</span>
             </div>
 
-            {/* Buttons */}
+            {/* Buttons: Strictly no optimistic state, locked on RECOVERY_REQUIRED */}
             <div className="bot-btn-group">
-              <button
-                type="button"
-                className="btn-start"
-                onClick={handleStart}
-                disabled={isBotRunning || isQuarantined}
-                aria-label="Khởi động bot mô phỏng paper trading"
-              >
-                {isBotRunning ? '▶ Đang chạy...' : '▶ Khởi động Bot'}
-              </button>
+              {isRecoveryRequired ? (
+                <button
+                  type="button"
+                  className="btn-start btn-recovery-locked"
+                  disabled
+                  aria-label="Khóa khởi động do cần đối soát journal"
+                >
+                  🔒 Khóa: Cần đối soát (Recovery Required)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-start"
+                  onClick={handleStart}
+                  disabled={
+                    isBotRunning ||
+                    botActionState !== null ||
+                    isQuarantined ||
+                    connectionStatus === 'SERVER_ERROR'
+                  }
+                  aria-label="Khởi động bot mô phỏng paper trading"
+                >
+                  {botActionState === 'STARTING'
+                    ? '⏳ Đang khởi động...'
+                    : isBotRunning
+                    ? '▶ Đang chạy...'
+                    : '▶ Khởi động Bot'}
+                </button>
+              )}
+
               <button
                 type="button"
                 className="btn-stop"
                 onClick={handleStop}
-                disabled={!isBotRunning}
+                disabled={!isBotRunning || botActionState !== null}
                 aria-label="Dừng bot mô phỏng"
               >
-                ■ Dừng
+                {botActionState === 'STOPPING' ? '⏳ Đang dừng...' : '■ Dừng'}
               </button>
             </div>
 
-            {isQuarantined && (
+            {/* Notice for RECOVERY_REQUIRED */}
+            {isRecoveryRequired && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 10px',
+                  background: 'rgba(240, 185, 11, 0.12)',
+                  border: '1px solid #F0B90B',
+                  borderRadius: '3px',
+                  fontSize: '11px',
+                  color: '#F0B90B',
+                }}
+              >
+                🔒 Trạng thái tài khoản: <strong>Chỉ-Đọc (Read-only)</strong>. Số dư và vị thế đã lưu từ phiên trước đang được bảo toàn. Không thể khởi động phiên mới khi chưa đối soát.
+              </div>
+            )}
+
+            {/* Notice for QUARANTINED */}
+            {isQuarantined && !isRecoveryRequired && (
               <div
                 role="alert"
                 style={{
@@ -799,7 +1082,7 @@ export function App() {
                   color: '#F6465D',
                 }}
               >
-                ⚠ Dừng nhận lệnh: Phiên trước bị gián đoạn và chưa thể khôi phục an toàn. Cần quản trị viên kiểm tra.
+                ⚠ Dừng nhận lệnh: Dữ liệu bị gián đoạn và chưa thể khôi phục an toàn. Cần quản trị viên kiểm tra.
               </div>
             )}
           </div>
@@ -839,7 +1122,19 @@ export function App() {
                     </div>
                     <div>
                       <div className="position-stat-key">Số lượng</div>
-                      <div className="position-stat-val mono">{pos.quantity.toFixed(4)}</div>
+                      <div className="position-stat-val mono">{Number(pos.quantity).toFixed(4)}</div>
+                    </div>
+                    <div>
+                      <div className="position-stat-key">Ký quỹ</div>
+                      <div className="position-stat-val mono">{money(pos.collateral_usd ?? pos.margin_usd)} USDT</div>
+                    </div>
+                    <div>
+                      <div className="position-stat-key">PnL chưa chốt</div>
+                      <div
+                        className={`position-stat-val mono ${(pos.unrealized_pnl_usd ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}
+                      >
+                        {money(pos.unrealized_pnl_usd ?? 0.0)} USDT
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -855,9 +1150,24 @@ export function App() {
               <span className="risk-val">{completedTrades.length}</span>
             </div>
             <div className="risk-row">
-              <span className="risk-key">Trạng thái kết nối</span>
-              <span className={`risk-val ${connectionStatus === 'ONLINE' ? 'green' : 'yellow'}`}>
-                {connectionStatus === 'ONLINE' ? 'Kết nối ổn định' : connectionStatus}
+              <span className="risk-key">Nguồn nến thị trường</span>
+              <span className="risk-val" style={{ color: marketFeedColor }}>
+                {liveCandle ? 'WebSocket Live' : marketInfo ? 'REST Public' : 'Chưa có'}
+              </span>
+            </div>
+            <div className="risk-row">
+              <span className="risk-key">Trạng thái Bot</span>
+              <span className="risk-val" style={{ color: botStatusBadge.color }}>
+                {backendState?.status || 'IDLE'}
+              </span>
+            </div>
+            <div className="risk-row">
+              <span className="risk-key">Cổng nhận lệnh</span>
+              <span
+                className="risk-val"
+                style={{ color: riskGate?.admission_open ? '#0ECB81' : '#F6465D' }}
+              >
+                {riskGate?.admission_open ? 'Mở (Simulated)' : 'Đóng'}
               </span>
             </div>
             <div className="risk-row">
@@ -865,7 +1175,8 @@ export function App() {
               <span className="risk-val yellow">5× (giới hạn cứng)</span>
             </div>
             <div className="risk-note">
-              PaperBroker mô phỏng độc lập. Phí taker 0.05%, stop-loss 3%, không có lệnh sàn thật hoặc testnet.
+              {backendState?.risk_note ||
+                'PaperBroker mô phỏng độc lập. Phí taker 0.05%, stop-loss 3%, không có lệnh sàn thật hoặc testnet.'}
             </div>
           </div>
         </aside>
