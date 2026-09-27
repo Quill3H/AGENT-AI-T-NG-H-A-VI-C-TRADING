@@ -18,6 +18,11 @@ import yaml
 from src.execution.paper_broker import PaperBroker
 from src.features import add_all_features
 from src.strategies.trend_following import TrendFollowingStrategy
+from src.paper.persistence import (
+    evaluate_recovery_safety,
+    load_persistent_state,
+    save_persistent_state,
+)
 
 
 UTC = timezone.utc
@@ -136,6 +141,7 @@ class LocalPaperSession:
         self.last_open = {}
         self.last_4h = {}
         self.chart = []
+        self.charts = {}
         self.markets = {}
         self.server_ms = None
         self.received_at = None
@@ -149,16 +155,22 @@ class LocalPaperSession:
             stream.flush()
 
     def _refresh_chart(self, server_ms):
-        bars, provisional = parse_klines(self.source.klines("BTCUSDT", "1m", 90), "1m", server_ms)
-        self.chart = [
-            {"time_utc": bar["open_time"].isoformat(), "open": bar["open"], "high": bar["high"],
-             "low": bar["low"], "close": bar["close"], "provisional": bar["provisional"]}
-            for bar in (bars + ([provisional] if provisional else []))
-        ]
+        self.charts = {}
+        for symbol in SYMBOLS:
+            try:
+                bars, provisional = parse_klines(self.source.klines(symbol, "1m", 90), "1m", server_ms)
+                self.charts[symbol] = [
+                    {"time_utc": bar["open_time"].isoformat(), "open": bar["open"], "high": bar["high"],
+                     "low": bar["low"], "close": bar["close"], "provisional": bar["provisional"]}
+                    for bar in (bars + ([provisional] if provisional else []))
+                ]
+            except Exception:
+                pass
+        self.chart = self.charts.get("BTCUSDT", [])
 
     def start(self):
         with self.lock:
-            if self.status != "IDLE":
+            if self.status not in ("IDLE", "STOPPED"):
                 return self.state()
             try:
                 return self._start_unlocked()
@@ -169,7 +181,32 @@ class LocalPaperSession:
 
     def _start_unlocked(self):
         server_ms = self.source.server_time_ms()
-        self.broker = PaperBroker(config=self.config)
+        saved_state = load_persistent_state(self.journal_dir)
+        is_safe, unsafe_reason = evaluate_recovery_safety(saved_state, server_ms, self.source)
+        if not is_safe:
+            self.status = "QUARANTINED"
+            self.error = unsafe_reason
+            if self.session_id is None:
+                self.session_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + "-quarantine"
+            self._journal({
+                "type": "RECOVERY_SAFETY_FAILURE",
+                "error": unsafe_reason,
+                "saved_at": saved_state.get("saved_at_utc") if saved_state else None,
+            })
+            return self.state()
+
+        if saved_state and "account" in saved_state:
+            acc = saved_state["account"]
+            init_bal = acc.get("initial_balance", 10000.0)
+            self.broker = PaperBroker(config=self.config, initial_balance=init_bal)
+            self.broker.wallet_balance = float(acc.get("wallet_balance", init_bal))
+            if "circuit_breaker" in acc:
+                cb = acc["circuit_breaker"]
+                self.broker.circuit_breaker.is_locked = bool(cb.get("is_locked", False))
+                self.broker.circuit_breaker.consecutive_losses = int(cb.get("consecutive_losses", 0))
+        else:
+            self.broker = PaperBroker(config=self.config)
+
         raw_warmup, raw_baseline = {}, {}
         for symbol in SYMBOLS:
             raw_warmup[symbol] = self.source.klines(symbol, "4h", 250)
@@ -203,6 +240,7 @@ class LocalPaperSession:
                        "input_sha256": sha256(json.dumps({"warmup": raw_warmup, "baseline": raw_baseline}, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
                        "raw_warmup_4h": raw_warmup, "raw_baseline_15m": raw_baseline,
                        "symbols": SYMBOLS, "mode": "PAPER_RESEARCH"})
+        save_persistent_state(self.journal_dir, self.session_id, self.broker, self.last_processed, self.last_open, self.last_4h)
         return self.state()
 
     def _funding_metadata(self, symbol, opened, observed_ms=None):
@@ -283,6 +321,7 @@ class LocalPaperSession:
                                "source_time_utc": _utc(server_ms).isoformat(), "raw_sha256": raw_hash,
                                "candles": next_bars, "equity_usd": self.broker.equity,
                                "orders": len(self.broker.order_history), "realizations": len(self.broker.trade_history)})
+                save_persistent_state(self.journal_dir, self.session_id, self.broker, self.last_processed, self.last_open, self.last_4h)
                 return self.state()
             except Exception as exc:
                 self.status = "QUARANTINED"
@@ -322,6 +361,7 @@ class LocalPaperSession:
                 if self.session_id:
                     self._journal({"type": "SESSION_STOP", "received_at_utc": datetime.now(UTC).isoformat(),
                                    "open_positions_retained": len(self.broker.positions) if self.broker else 0})
+                save_persistent_state(self.journal_dir, self.session_id, self.broker, self.last_processed, self.last_open, self.last_4h)
             return self.state()
 
     def state(self):
@@ -347,6 +387,7 @@ class LocalPaperSession:
             "last_processed_open_utc": self.last_processed.isoformat() if self.last_processed else None,
             "config_sha256": self.config_hash,
             "chart": self.chart,
+            "charts": getattr(self, "charts", {}),
             "markets": self.markets,
             "account": {"initial_equity_usd": broker.initial_balance if broker else 10000.0,
                         "wallet_usd": broker.wallet_balance if broker else 10000.0,

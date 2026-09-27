@@ -80,18 +80,17 @@ describe('paper research console — Binance dark UI', () => {
   it('starts and stops the paper bot without submitting real orders', () => {
     render(<App />)
     // Find start button by text content (has leading symbol)
-    const allButtons = screen.getAllByRole('button')
-    const startBtn = allButtons.find((b) => /khởi động bot/i.test(b.textContent))
+    const startBtn = screen.getAllByRole('button').find((b) => /khởi động bot/i.test(b.textContent))
     expect(startBtn).toBeTruthy()
     expect(startBtn).not.toBeDisabled()
     // Start bot
     fireEvent.click(startBtn)
-    // Button text becomes "Đang chạy..." and is disabled
-    const runningBtn = allButtons.find((b) => /đang chạy/i.test(b.textContent))
+    // Button text becomes "Đang chạy..." and is disabled (re-query from screen)
+    const runningBtn = screen.getAllByRole('button').find((b) => /đang chạy/i.test(b.textContent))
     expect(runningBtn).toBeTruthy()
     expect(runningBtn).toBeDisabled()
-    // Stop button becomes active
-    const stopBtn = allButtons.find((b) => /dừng/i.test(b.textContent))
+    // Stop button becomes active (re-query from screen)
+    const stopBtn = screen.getAllByRole('button').find((b) => /dừng/i.test(b.textContent))
     expect(stopBtn).not.toBeDisabled()
     fireEvent.click(stopBtn)
     // Back to start state — re-query since re-render
@@ -105,7 +104,7 @@ describe('paper research console — Binance dark UI', () => {
     // Account panel shows starting equity
     expect(screen.getAllByText(/10,000/).length).toBeGreaterThan(0)
     // Broker note (appears in multiple elements — use getAllByText)
-    expect(screen.getByText(/PaperBroker mô phỏng/)).toBeInTheDocument()
+    expect(screen.getAllByText(/PaperBroker mô phỏng/).length).toBeGreaterThan(0)
     // Circuit breaker
     expect(screen.getByText(/Circuit breaker/i)).toBeInTheDocument()
     // No real exchange note (multiple occurrences on page)

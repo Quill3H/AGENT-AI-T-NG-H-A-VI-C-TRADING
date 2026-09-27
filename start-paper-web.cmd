@@ -25,7 +25,7 @@ if not exist "node_modules" (
 call npm run build
 if errorlevel 1 goto failed
 cd ..
-.venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser --port %PAPER_PORT%
+.venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser --port %PAPER_PORT% --watchdog
 if errorlevel 1 goto failed
 exit /b 0
 

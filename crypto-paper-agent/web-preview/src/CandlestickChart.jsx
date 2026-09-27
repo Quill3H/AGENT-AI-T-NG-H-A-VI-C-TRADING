@@ -1,10 +1,11 @@
 /**
- * CandlestickChart.jsx — TradingView-style candlestick chart using lightweight-charts v5
+ * CandlestickChart.jsx — Real-time TradingView candlestick chart using lightweight-charts v5
  *
- * Designed to look and feel like Binance Futures (BTCUSDT, ETHUSDT, SOLUSDT).
- * Smoothly re-initialises on coin change and updates in real-time with incoming ticks.
+ * Visualises public Binance USD-M Futures klines (BTCUSDT, ETHUSDT, SOLUSDT).
+ * Supports public WebSocket live candle updates and backend /api/state klines.
+ * Zero Math.random(). Real public market data only.
  *
- * PAPER / RESEARCH — Simulated price feeds, no live exchange orders.
+ * PAPER / RESEARCH ONLY — No live orders.
  */
 
 import { useEffect, useRef } from 'react'
@@ -12,7 +13,7 @@ import { createChart, CandlestickSeries } from 'lightweight-charts'
 
 const CHART_THEME = {
   bg: '#181A20',
-  grid: 'rgba(43, 49, 57, 0.5)',
+  grid: 'rgba(43, 49, 57, 0.45)',
   border: '#2B3139',
   text: '#848E9C',
   crosshair: '#707A8A',
@@ -20,26 +21,36 @@ const CHART_THEME = {
   downColor: '#F6465D',
 }
 
+const parseBarTime = (t) => {
+  if (typeof t === 'number') return t
+  if (typeof t === 'string') {
+    const ms = Date.parse(t)
+    if (!Number.isNaN(ms)) return Math.floor(ms / 1000)
+  }
+  return Math.floor(Date.now() / 1000)
+}
+
 /**
  * @param {{
  *   symbol: string,
- *   candles: { time: number, open: number, high: number, low: number, close: number }[],
+ *   candles: { time?: number, time_utc?: string, open: number, high: number, low: number, close: number, provisional?: boolean }[],
  *   precision?: number,
+ *   liveCandle?: { time?: number, time_utc?: string, open: number, high: number, low: number, close: number } | null,
  * }} props
  */
-export function CandlestickChart({ symbol, candles, precision = 2 }) {
+export function CandlestickChart({ symbol, candles = [], precision = 2, liveCandle = null }) {
   const containerRef = useRef(null)
   const chartRef = useRef(null)
   const seriesRef = useRef(null)
   const lastTimeRef = useRef(null)
 
+  // ── Initialize chart instance ──────────────────────────────────────────────
   useEffect(() => {
-    // In headless / jsdom test environments, ResizeObserver may not exist
     if (!containerRef.current || typeof ResizeObserver === 'undefined') return undefined
 
     const container = containerRef.current
     const initialWidth = container.clientWidth || 800
-    const initialHeight = container.clientHeight || 360
+    const initialHeight = container.clientHeight || 380
 
     const chart = createChart(container, {
       width: initialWidth,
@@ -68,10 +79,10 @@ export function CandlestickChart({ symbol, candles, precision = 2 }) {
         secondsVisible: false,
         rightOffset: 6,
         barSpacing: 8,
-        minBarSpacing: 4,
+        minBarSpacing: 3,
       },
       crosshair: {
-        mode: 1, // Magnet
+        mode: 1, // Normal magnet
         vertLine: {
           color: CHART_THEME.crosshair,
           width: 1,
@@ -114,18 +125,30 @@ export function CandlestickChart({ symbol, candles, precision = 2 }) {
     chartRef.current = chart
     seriesRef.current = candlestickSeries
 
-    // Load initial data
+    // Load initial candles if available
     if (candles && candles.length > 0) {
       try {
-        candlestickSeries.setData(candles)
-        chart.timeScale().fitContent()
-        lastTimeRef.current = candles[candles.length - 1].time
+        const sorted = candles
+          .map((c) => ({
+            time: parseBarTime(c.time || c.time_utc),
+            open: Number(c.open),
+            high: Number(c.high),
+            low: Number(c.low),
+            close: Number(c.close),
+          }))
+          .filter((c, idx, arr) => idx === 0 || c.time > arr[idx - 1].time)
+
+        if (sorted.length > 0) {
+          candlestickSeries.setData(sorted)
+          chart.timeScale().fitContent()
+          lastTimeRef.current = sorted[sorted.length - 1].time
+        }
       } catch (err) {
         console.warn('Initial chart setData error:', err)
       }
     }
 
-    // Responsive resize
+    // Observer for responsive width/height
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect
@@ -143,27 +166,50 @@ export function CandlestickChart({ symbol, candles, precision = 2 }) {
       seriesRef.current = null
       lastTimeRef.current = null
     }
-  }, [symbol, precision]) // Re-run whenever symbol changes
+  }, [symbol, precision])
 
-  // Update latest candle on price tick
+  // ── Sync candles array updates from backend ─────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || !candles || candles.length === 0) return
-    const last = candles[candles.length - 1]
-    if (!last) return
 
     try {
-      // If time matches or is after the last candle, update
-      seriesRef.current.update(last)
-      lastTimeRef.current = last.time
-    } catch {
-      // If updating fails (e.g. sequence re-ordered), re-set all data
-      try {
-        seriesRef.current.setData(candles)
-      } catch {
-        // Ignore fallback error
+      const sorted = candles
+        .map((c) => ({
+          time: parseBarTime(c.time || c.time_utc),
+          open: Number(c.open),
+          high: Number(c.high),
+          low: Number(c.low),
+          close: Number(c.close),
+        }))
+        .filter((c, idx, arr) => idx === 0 || c.time > arr[idx - 1].time)
+
+      if (sorted.length > 0) {
+        seriesRef.current.setData(sorted)
+        lastTimeRef.current = sorted[sorted.length - 1].time
       }
+    } catch {
+      // Fallback
     }
   }, [candles])
+
+  // ── Live WebSocket or polling tick update ───────────────────────────────────
+  useEffect(() => {
+    if (!seriesRef.current || !liveCandle) return
+
+    try {
+      const barTime = parseBarTime(liveCandle.time || liveCandle.time_utc)
+      seriesRef.current.update({
+        time: barTime,
+        open: Number(liveCandle.open),
+        high: Number(liveCandle.high),
+        low: Number(liveCandle.low),
+        close: Number(liveCandle.close),
+      })
+      lastTimeRef.current = barTime
+    } catch {
+      // Silently ignore minor ordering hiccups during stream reconnect
+    }
+  }, [liveCandle])
 
   return (
     <div
@@ -175,7 +221,7 @@ export function CandlestickChart({ symbol, candles, precision = 2 }) {
         inset: 0,
       }}
       role="img"
-      aria-label={`Biểu đồ nến ${symbol} — dữ liệu mô phỏng PAPER`}
+      aria-label={`Biểu đồ nến ${symbol} — Dữ liệu công khai Binance USD-M Futures`}
     />
   )
 }

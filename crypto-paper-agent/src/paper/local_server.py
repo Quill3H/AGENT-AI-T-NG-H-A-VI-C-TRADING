@@ -34,6 +34,29 @@ def public_path(root, requested):
     return candidate
 
 
+import socket
+import urllib.request
+
+
+def is_port_in_use(port, host="127.0.0.1"):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex((host, port)) == 0
+
+
+def is_existing_paper_server(port, host="127.0.0.1"):
+    try:
+        req = urllib.request.Request(
+            f"http://{host}:{port}/api/state",
+            headers={"Host": f"{host}:{port}"},
+        )
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("mode") == "PAPER_RESEARCH"
+    except Exception:
+        return False
+
+
 def serve(port=8765, source=None, journal_dir=None, open_browser=False):
     root = PROJECT_ROOT / "web-preview/dist"
     if not (root / "index.html").is_file():
@@ -110,6 +133,14 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
             except Exception as exc:
                 self._json(503, {"error": str(exc), "status": "UNAVAILABLE", "mode": "PAPER_RESEARCH"})
 
+    if is_port_in_use(port):
+        if is_existing_paper_server(port):
+            print(f"[Paper Server] Server is already running on http://127.0.0.1:{port}/ (duplicate instance prevented).", flush=True)
+            if open_browser:
+                webbrowser.open(f"http://127.0.0.1:{port}/")
+            return
+        raise OSError(f"Port {port} is already in use by another process. Please free the port or specify another port.")
+
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     print(f"PAPER/RESEARCH local web: http://127.0.0.1:{port}/", flush=True)
     if open_browser:
@@ -120,3 +151,4 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
         stopped.set()
         session.stop()
         server.server_close()
+
