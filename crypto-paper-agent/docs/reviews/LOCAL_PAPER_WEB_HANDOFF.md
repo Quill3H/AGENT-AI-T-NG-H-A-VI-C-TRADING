@@ -8,7 +8,10 @@ paper/research UI candidate, not G5 acceptance or economic validation.
 - Branch: `codex/local-paper-scanner`; base `main`:
   `fe1c1330d913e78239db575ff8433cf069fe1b01`.
 - Code-under-test commit:
-  `d8fd92815bd389c5fa792220f434009e8aac9921`.
+  `e4de532a0871dce0869dd3924e195b69ad067c37`.
+  Core Python/web code and tests were committed at
+  `d8fd92815bd389c5fa792220f434009e8aac9921`; the later code commit
+  only corrects Windows batch control flow after `npm.cmd`.
 - Documentation commit: see the next commit in Git history and the final
   handoff. Do not substitute a guessed self-SHA.
 - Changed code: `src/paper/`, `scripts/run_local_paper_web.py`, local
@@ -36,6 +39,7 @@ paper/research UI candidate, not G5 acceptance or economic validation.
 | `npm test` in `web-preview/` | 9 passed in 2 files |
 | `npm run build` in `web-preview/` | Vite build passed |
 | `git diff --cached --check` on code A | No whitespace errors |
+| `cmd /c .\start-paper-web.cmd` without a port argument | Build passed, local server listened on 127.0.0.1:8765, browser opened, `/api/state` returned SCANNING |
 
 Chromium local QA at `http://127.0.0.1:8765/`: desktop 1440x900 and mobile
 390x844 displayed a nonblank BTC candle chart, all three 15m watch prices,
@@ -53,7 +57,8 @@ browser QA by the author, not an independent review.
   No new exchange order endpoint, testnet, key or wallet code exists. The
   public source allowlists only time, kline and funding GET endpoints; HTTP
   service binds to `127.0.0.1` and rejects non-loopback Host/Origin.
-- Fixed author-found issues: double-click launcher empty port, non-loopback
+- Fixed author-found issues: double-click launcher empty port and missing
+  Windows `call` after npm, non-loopback
   Host acceptance, late-observed funding backdating, transient startup error
   disappearing from UI, narrow desktop chart, wrong active nav and favicon 404.
   Regression tests cover the data/risk failures.

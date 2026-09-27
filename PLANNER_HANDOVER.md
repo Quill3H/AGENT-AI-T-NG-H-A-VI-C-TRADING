@@ -3,7 +3,7 @@
 ## Local prospective paper UI candidate — 2026-09-27
 
 Branch `codex/local-paper-scanner`, code A
-`d8fd92815bd389c5fa792220f434009e8aac9921`, base `main`
+`e4de532a0871dce0869dd3924e195b69ad067c37`, base `main`
 `fe1c1330d913e78239db575ff8433cf069fe1b01`. Documentation B is
 the following Git commit. The loopback web app auto-starts a public-data
 BTC/ETH/SOL paper session and displays a BTC chart, broker account and ledger;

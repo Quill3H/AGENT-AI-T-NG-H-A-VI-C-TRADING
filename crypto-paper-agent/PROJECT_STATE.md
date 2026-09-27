@@ -4,7 +4,7 @@
 
 **AUTHOR_SELF_REVIEWED / REVIEWER_NOT_VERIFIED; NOT A GATE ACCEPTANCE.**
 Branch `codex/local-paper-scanner`, code-under-test
-`d8fd92815bd389c5fa792220f434009e8aac9921`; documentation commit is
+`e4de532a0871dce0869dd3924e195b69ad067c37`; documentation commit is
 the subsequent commit in Git history. Base `main`
 `fe1c1330d913e78239db575ff8433cf069fe1b01` remains unmodified.
 The local-only web console uses public Binance USD-M BTC 1m chart data and
