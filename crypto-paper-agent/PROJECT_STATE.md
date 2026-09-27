@@ -1,5 +1,22 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Paper recovery review repair / integration candidate — 2026-09-27
+
+AUTHOR_SELF_REVIEWED / INDEPENDENT_REVIEWER_NOT_VERIFIED. Integration branch
+`codex/paper-futures-integration`, code-under-test
+`a2b49c0500de2c1675fe35a34305114b007d3fb2`; backend branch
+`codex/paper-stream-backend` at `37bf75796ade54c18827811dbd58a0b629539f25`.
+Only reviewed UI files from `bab1f92371a520151a5dbfe04349dc9e3265ae01` were
+imported; the web branch's persistence.py/backend was excluded. Main remains
+`fe1c1330d913e78239db575ff8433cf069fe1b01` by the current owner instruction.
+Corrupt/missing/torn/inconsistent account evidence is read-only recovery with
+unknown balances; valid durable views never imply restored broker state.
+API/reconnect/Windows tests pass. Exact integrated code: 503 Python passed,
+2 skipped (includes 5 network); 18 web passed; build and browser restart passed.
+Public WebSocket received no frame: BLOCKED, 0 orders/trades, no realtime trading
+validation claim. Details: `docs/reviews/PAPER_RECOVERY_INTEGRATION_REVIEW_HANDOFF.md`.
+Documentation commit follows code-under-test; see Git history and final handoff.
+
 ## Local BTC/ETH/SOL paper scanner candidate — 2026-09-27
 
 **AUTHOR_SELF_REVIEWED / REVIEWER_NOT_VERIFIED; NOT A GATE ACCEPTANCE.**

@@ -1,5 +1,20 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Recovery repair and UI-only integration — 2026-09-27
+
+Candidate `codex/paper-futures-integration`, code-under-test
+`a2b49c0500de2c1675fe35a34305114b007d3fb2`, backend
+`37bf75796ade54c18827811dbd58a0b629539f25`, UI source
+`bab1f92371a520151a5dbfe04349dc9e3265ae01`. No whole web/backend branch merge,
+no imported persistence.py, no main merge. Full Python 503 passed/2 skipped,
+web 18 passed/build passed; Windows HTTP/restart and browser recovery verified
+by the author. Public stream BLOCKED (no frame), no realtime trading validation.
+Independent review remains pending. API v2 reports unknown account values as
+null and all persisted sessions as read-only until exact recovery is reviewed.
+Handoff: `crypto-paper-agent/docs/reviews/PAPER_RECOVERY_INTEGRATION_REVIEW_HANDOFF.md`.
+Docs commit is the subsequent history entry; current owner instruction to keep
+main unmodified supersedes historical single-main workflow notes below.
+
 ## Local prospective paper UI candidate — 2026-09-27
 
 Branch `codex/local-paper-scanner`, code A
