@@ -1,0 +1,45 @@
+{
+  "schema_version": "paper-research-ui-evidence/v1",
+  "evidence_status": "SYNTHETIC_OFFLINE_DEMO",
+  "as_of_utc": "2024-01-01T01:03:00+00:00",
+  "source": {
+    "venue": "SYNTHETIC",
+    "market_type": "simulated_USDT_margined_perpetual",
+    "symbols": ["BTCUSDT", "ETHUSDT"],
+    "timeframe": "1m",
+    "market_data_sha256": null,
+    "market_observation": false
+  },
+  "input_quality": {
+    "open_interest": {"available": false, "source_time_utc": null},
+    "cvd": {"available": false, "source_time_utc": null},
+    "funding": {"available": false, "source_time_utc": null}
+  },
+  "account": {
+    "initial_equity_usd": 10000.0,
+    "wallet_balance_usd": 9995.0,
+    "equity_usd": 9995.0,
+    "realized_net_pnl_usd": -5.0,
+    "completed_trades": 1,
+    "open_positions": ["ETHUSDT"],
+    "accounting_verified": true
+  },
+  "execution": {
+    "orders_filled": 2,
+    "exit_events": 1,
+    "entry_fee_usd": 0.0,
+    "exit_fee_usd": 0.0,
+    "funding_cashflow_usd": 0.0,
+    "slippage_pct": 0.0
+  },
+  "risk": {
+    "breaker_locked": false,
+    "directional_stop_required": true,
+    "max_leverage": 5.0
+  },
+  "replay": {
+    "kind": "synthetic_test_fixture",
+    "test": "tests/test_review_high_priority_fixes.py::test_ui_example_matches_synthetic_replay"
+  },
+  "disclaimer": "PAPER/RESEARCH synthetic fixture only; not a market return, live fill, profitability claim, or independent acceptance."
+}

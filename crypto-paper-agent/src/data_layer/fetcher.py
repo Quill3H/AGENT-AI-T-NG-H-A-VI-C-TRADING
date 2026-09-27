@@ -206,8 +206,8 @@ def _candles_to_dataframe(candles: list) -> pd.DataFrame:
     else:
         cols = ["timestamp", "open", "high", "low", "close", "volume"]
         df = pd.DataFrame(candles, columns=cols)
-        df["taker_buy_base_volume"] = df["volume"] * 0.5
-        logger.debug("[Fetcher] taker_buy_base_volume không có trong API response, dùng ước tính 50%.")
+        df["taker_buy_base_volume"] = float("nan")
+        logger.warning("[Fetcher] taker_buy_base_volume không có trong API response; giữ NaN, không suy diễn CVD.")
 
     # Chuyển timestamp từ ms sang DatetimeIndex UTC
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
@@ -614,22 +614,31 @@ def merge_ohlcv_with_oi_and_funding(
     # - Nếu OI là NaN (do thiếu dữ liệu hoặc ngày lỗi) -> cơ chế fallback_when_nan
     #   trong chiến lược sẽ bỏ qua kiểm tra OI và ghi chú 'OI_BYPASSED_HISTORICAL'.
     if not oi_df.empty:
-        oi_to_merge = oi_df[["open_interest"]].sort_index()
+        oi_to_merge = oi_df[["open_interest"]].copy().sort_index()
         if hasattr(oi_to_merge.index, "as_unit"):
             oi_to_merge.index = oi_to_merge.index.as_unit("ms")
+        oi_to_merge["oi_source_time"] = oi_to_merge.index
+        oi_age_limit = timeframe_to_timedelta(_map_to_oi_timeframe(timeframe))
         df = pd.merge_asof(
             df.sort_index(),
             oi_to_merge,
             left_index=True,
             right_index=True,
             direction="backward",  # QUAN TRỌNG: không dùng giá trị tương lai
+            tolerance=oi_age_limit,
         )
+        age = df.index - df["oi_source_time"]
+        stale = age >= oi_age_limit
+        df.loc[stale, ["open_interest", "oi_source_time"]] = [float("nan"), pd.NaT]
     else:
         df["open_interest"] = float("nan")
+        df["oi_source_time"] = pd.NaT
         logger.warning("[Fetcher] OI data rỗng, open_interest sẽ là NaN (kích hoạt fallback_when_nan).")
 
     # Đảm bảo cột open_interest luôn có kiểu float
     df["open_interest"] = pd.to_numeric(df["open_interest"], errors="coerce")
+    df.loc[~np.isfinite(df["open_interest"]), "open_interest"] = float("nan")
+    df["oi_available"] = df["open_interest"].notna() & df["oi_source_time"].notna()
 
     # --- Merge Funding Rate & Provenance Metadata (Stage 5 / Section 4.5) ---
     if not funding_df.empty:

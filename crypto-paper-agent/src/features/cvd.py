@@ -44,24 +44,24 @@ def calculate_cvd(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
     if "taker_buy_base_volume" in out.columns:
-        nan_taker_count = out["taker_buy_base_volume"].isna().sum()
+        taker_buy = pd.to_numeric(out["taker_buy_base_volume"], errors="coerce")
+        volume = pd.to_numeric(out["volume"], errors="coerce")
+        valid = np.isfinite(taker_buy) & np.isfinite(volume) & (volume >= 0) & (taker_buy >= 0) & (taker_buy <= volume)
+        nan_taker_count = int((~valid).sum())
         if nan_taker_count > 0:
             logger.warning(
-                f"[CVD] Cột 'taker_buy_base_volume' có {nan_taker_count}/{len(out)} giá trị NaN "
-                "(ước tính 50% volume -> delta = 0). CVD sẽ đi ngang tại các nến này. "
-                "Cần lưu ý nếu phát hiện cvd_divergence bất thường."
+                f"[CVD] Cột 'taker_buy_base_volume' có {nan_taker_count}/{len(out)} giá trị thiếu hoặc không hợp lệ; "
+                "CVD từ nến đầu tiên thiếu dữ liệu trở đi là NaN."
             )
-        taker_buy = out["taker_buy_base_volume"].fillna(out["volume"] * 0.5)
-        volume = out["volume"].fillna(0.0)
-        delta = 2.0 * taker_buy - volume
+        delta = (2.0 * taker_buy - volume).where(valid)
     else:
         logger.warning(
             "[CVD] Cột 'taker_buy_base_volume' không có trong DataFrame. "
-            "Ước tính taker buy = 50% volume (delta = 0). CVD sẽ hoàn toàn đi ngang."
+            "CVD không thể quan sát và sẽ là NaN."
         )
-        delta = pd.Series(0.0, index=out.index)
+        delta = pd.Series(float("nan"), index=out.index)
 
-    out["cvd"] = delta.cumsum()
+    out["cvd"] = delta.cumsum(skipna=False)
     return out
 
 
