@@ -1,0 +1,114 @@
+{
+  "status": "AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED",
+  "synthetic": false,
+  "sources": [
+    {
+      "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-01.zip",
+      "zip_sha256": "4ec2915e610ab4e9a4d5e86a5ada1c15bbf6b5db343cdb385681d6ac97166a4e",
+      "csv_sha256": "eb9a1b452184ea664e86e87f9cba783639163578d0bed9ff2073d25d897dbe1b"
+    },
+    {
+      "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-02.zip",
+      "zip_sha256": "a62e80cef21a363510afbdd3c0f4e2cedf2ba08546969b5f1e39abb30152e26f",
+      "csv_sha256": "31bde14cb09a3f5d1e64860c8d476d0a5881691bc545bd281e523a8a4979acdc"
+    },
+    {
+      "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-03.zip",
+      "zip_sha256": "c61aa8a6012d7d9805e8e8f80b34b5d77e581a83993dd457ae12573f0cc1f73b",
+      "csv_sha256": "9c1f53c15298b1f30a79bc1222df645ea1b2871dd689156c9e17cbdc5fd70a58"
+    },
+    {
+      "url": "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-01.zip",
+      "zip_sha256": "19bb9f0d6b88db48e787ae2aaec04f19295c366fadb2e02abaa000529ac93d89",
+      "csv_sha256": "b56f7a0763427c9315da6e713bd39869fc74cbfbea91f632c85b3ed580999810"
+    },
+    {
+      "url": "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-02.zip",
+      "zip_sha256": "1c7d3727f692eaed26149de0d16fd20842879b369e21e1aa3547cba642228595",
+      "csv_sha256": "c51f99655b876a558cdf1d13080081118cb9365971542b287382e0396413551d"
+    },
+    {
+      "url": "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2024-01-03.zip",
+      "zip_sha256": "1d3924b7174d39d97793020f4ea10ec009a7483a4dc997204a645f5675c697d0",
+      "csv_sha256": "04077b23f590a2bc82301dc2d1ecbe375411f2cb6fbac6dfd6dcd0809ff37a48"
+    },
+    {
+      "url": "https://data.binance.vision/data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2023-12.zip",
+      "zip_sha256": "8f02fdd2a2da261bbf13ab301c74bdb57fae005f19d5088e9ece5f8824c1a2a7",
+      "csv_sha256": "00a808892d8c0bfcd2dfaa8c182b26da4445cbe4895f18c1893349808fe39f33"
+    },
+    {
+      "url": "https://data.binance.vision/data/futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2024-01.zip",
+      "zip_sha256": "3e0d30870672aa8f0f937881056e3cfd55913ae5c780cd50b33f2763aa0ba58e",
+      "csv_sha256": "232a13d92487efef8ce0d645301abe611f56eacb70023194b97c038d7a8a2c9b"
+    }
+  ],
+  "datasets": {
+    "1m": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "perpetual",
+      "timeframe": "1m",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T23:59:00+00:00",
+      "rows": 4320,
+      "gaps": 0,
+      "sha256": "b99069942ceff4a1666a4e168beff3f51c7d3419693823afdf351622e616eef1"
+    },
+    "basket": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "spot_and_perpetual",
+      "timeframe": "1m",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T23:59:00+00:00",
+      "rows": 4320,
+      "gaps": 0,
+      "sha256": "8677f3da2fcfc9a295cab3fcaa2da0e89dc35e57347eaa2e86f51ee9504db58f"
+    },
+    "5m": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "perpetual",
+      "timeframe": "5m",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T23:55:00+00:00",
+      "rows": 864,
+      "gaps": 0,
+      "sha256": "6721895f10d401d851c2b9e45c4f2f7ec8c3a92421a765feeff2543b5717cffe"
+    },
+    "15m": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "perpetual",
+      "timeframe": "15m",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T23:45:00+00:00",
+      "rows": 288,
+      "gaps": 0,
+      "sha256": "59453f7f680faf3c92360571472b912b5ea1aab554d99fa3b33cbf63c0c8c9be"
+    },
+    "4h": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "perpetual",
+      "timeframe": "4h",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T20:00:00+00:00",
+      "rows": 18,
+      "gaps": 0,
+      "sha256": "085d54054ca5934962b8ba2f18bd9f037b7ad1aa6950f1aaca1d713757601fb8"
+    },
+    "spot_1m": {
+      "source": "Binance Vision public archives",
+      "symbol": "BTCUSDT",
+      "market_type": "spot",
+      "timeframe": "1m",
+      "start": "2024-01-01T00:00:00+00:00",
+      "end": "2024-01-03T23:59:00+00:00",
+      "rows": 4320,
+      "gaps": 0,
+      "sha256": "7956d87eb2fc470577679fd3cf1baa22b2c0b26b22233b22e9ce798c6b944bc3"
+    }
+  }
+}

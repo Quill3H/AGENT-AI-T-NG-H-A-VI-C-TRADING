@@ -5,6 +5,8 @@
 
 ## Tổng quan
 
+Sơ đồ luồng code và cây tác vụ có phụ thuộc/tiêu chí nghiệm thu: [Architecture and task tree](docs/architecture/architecture-and-task-tree.md). Bảng roadmap dưới đây phân biệt **đã triển khai** với **đã được nghiệm thu độc lập**; không thể suy trạng thái hiện tại từ ví dụ thư mục/CLI lịch sử ở phần dưới.
+
 Hệ thống backtest chiến lược giao dịch BTC/USDT Futures trên Binance, bao gồm:
 - **Data Layer**: Fetch OHLCV + OI + Funding Rate từ Binance public API (không cần API key)
 - **Feature Engine**: EMA, RSI, MACD, ATR, CVD, OI Delta, SMC features
@@ -84,17 +86,10 @@ python run_backtest.py --strategy trend_following
 | Giai đoạn | Nội dung | Status |
 |-----------|----------|--------|
 | 0 | Khởi tạo dự án | ✅ Done |
-| 1 | Data Layer (fetcher + cache) | ⬜ Todo |
-| 2 | Feature Engine | ⬜ Todo |
-| 3 | Risk Manager | ⬜ Todo |
-| 4 | Paper Execution Engine | ⬜ Todo |
-| 5 | Strategy: Trend Following | ⬜ Todo |
-| 6 | Trade Logger + Report | ⬜ Todo |
-| 7 | Strategy: Breakout & Retest | ⬜ Todo |
-| 8 | Strategy: Funding Arbitrage | ⬜ Todo |
-| 9 | Strategy: SMC Liquidity Sweep | ⬜ Todo |
-| 10 | Tổng hợp & So sánh đa chiến lược | ⬜ Todo |
-| 11 | Reinforcement Learning (Optional) | ⬜ Todo |
+| 1–5 | Data, features, risk, paper broker, Trend | Đã nghiệm thu tại checkpoint lịch sử; xem `PROJECT_STATE.md` và ADR |
+| 6–11 | Logger/report, Breakout, Funding basket, SMC, so sánh walk-forward, Gymnasium/PPO | Có implementation và author tests; **chờ Tester/Independent Reviewer**, không tự chấp nhận |
+| G2 | Public-data contract/diagnostic | Một lát cắt đã chạy; G2 tổng thể chưa được nghiệm thu |
+| G3–G5 | Research workflow hoàn chỉnh, historical validation, prospective paper | Gate tiếp theo; không suy hoàn thành từ web preview |
 
 ## Các quyết định đã chốt
 
@@ -103,4 +98,4 @@ python run_backtest.py --strategy trend_following
 | 1 | News filter | Placeholder CSV, `enabled: false` cho giai đoạn đầu |
 | 2 | Khoảng backtest | 2021-01-01 → 2026-09-01 |
 | 3 | Circuit breaker recovery | `after_3_wins` (3 lệnh thắng liên tiếp) |
-| 4 | Reinforcement Learning | Chưa ưu tiên, tập trung rule-based |
+| 4 | Reinforcement Learning | Quyết định “optional/chưa ưu tiên” cũ đã được ADR 0010 cập nhật: Gymnasium/PPO có implementation và author tests, còn nghiệm thu độc lập/khả năng tổng quát hóa chưa xác minh |

@@ -17,8 +17,8 @@ function Header() {
         </div>
       </div>
       <dl className="header-meta">
-        <div><dt>Source</dt><dd>{evidence.source}</dd></div>
-        <div><dt>Data cutoff</dt><dd>{evidence.historicalWindow.cutoff}</dd></div>
+        <div><dt>2024 fold source</dt><dd>{evidence.source}</dd></div>
+        <div><dt>2024 fold cutoff</dt><dd>{evidence.historicalWindow.cutoff}</dd></div>
         <div><dt>Evidence</dt><dd>{evidence.evidenceLevel}</dd></div>
       </dl>
     </header>
@@ -29,7 +29,7 @@ function ReplayChart({ points }) {
   const line = useMemo(() => toPolyline(points), [points])
   return (
     <div className="chart-wrap">
-      <svg className="chart" viewBox="0 0 680 230" role="img" aria-label="Synthetic offline replay equity chart">
+      <svg className="chart" viewBox="0 0 680 230" role="img" aria-label="Archived synthetic PaperBroker equity chart">
         <defs>
           <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#1687d9" stopOpacity="0.2" />
@@ -40,7 +40,7 @@ function ReplayChart({ points }) {
         <polygon points={`0,230 ${line} 680,230`} fill="url(#chartFill)" />
         <polyline points={line} className="equity-line" />
       </svg>
-      <div className="axis"><span>Step 1</span><span>Deterministic seed: fixed</span><span>Step 12</span></div>
+      <div className="axis"><span>{points[0].timestamp}</span><span>Committed broker snapshots</span><span>{points.at(-1).timestamp}</span></div>
     </div>
   )
 }
@@ -66,6 +66,7 @@ function FundingCoverage() {
         <span><i className="dot dot--warn" />{evidence.fundingCoverage.delayed} delayed 1–{evidence.fundingCoverage.maxDelayMs} ms / unready</span>
       </div>
       <p className="note">Delayed funding is never rounded backward. The seven-day basket replay stops before mutation when readiness is false.</p>
+      <p className="note"><a href={evidence.fundingCoverage.sourceUrl}>G2 author diagnostic</a> · separate 2026 sample, not the 2024 fold below.</p>
     </section>
   )
 }
@@ -85,7 +86,7 @@ function StrategyTable() {
           ))}</tbody>
         </table>
       </div>
-      <p className="note">Results are separate diagnostics, not a shared portfolio. Zero trades and one negative sample do not establish profitability.</p>
+      <p className="note"><a href={evidence.strategySourceUrl}>2024 walk-forward report</a> · four independent accounts, not a shared portfolio. Zero trades and one negative sample do not establish profitability.</p>
     </section>
   )
 }
@@ -110,14 +111,14 @@ function AuditRail() {
         </dl>
         <div className="path-check"><span>Absolute paths found</span><strong>{evidence.artifactAudit.absolutePathsFound}</strong></div>
         <p className="hash">Evidence code: {evidence.artifactAudit.codeCommit}</p>
-        <p className="note">{evidence.evidenceLevel}</p>
+        <p className="note"><a href={evidence.artifactAudit.sourceUrl}>Source audit JSON</a> · {evidence.artifactAudit.level}</p>
       </section>
     </aside>
   )
 }
 
 export function App() {
-  const idlePoints = useMemo(() => buildOfflineReplay(10000), [])
+  const idlePoints = useMemo(() => buildOfflineReplay(), [])
   const [runState, setRunState] = useState('idle')
   const finalEquity = idlePoints.at(-1).equity
 
@@ -133,20 +134,20 @@ export function App() {
         <div className="primary">
           <section className="section replay" aria-labelledby="replay-title">
             <div className="section-heading">
-              <div><p className="section-index">01</p><h1 id="replay-title">Offline replay workspace</h1></div>
-              <Status tone="good">Synthetic · deterministic</Status>
+              <div><p className="section-index">01</p><h1 id="replay-title">Offline artifact viewer</h1></div>
+              <Status tone="good">Archived synthetic broker run</Status>
             </div>
             <div className="replay-grid">
               <ReplayChart points={idlePoints} />
               <div className="replay-actions">
-                <p className="eyeline">Local demonstration</p>
-                <p className="replay-copy">Exercises a fixed, browser-only series. It does not call the trading engine or a market API.</p>
+                <p className="eyeline">Archived artifact inspection</p>
+                <p className="replay-copy">Displays {idlePoints.length} UTC equity snapshots from a committed synthetic PaperBroker run. The browser does not execute the engine or query a market API. <a href={evidence.replay.sourceUrl}>Equity CSV</a> · <a href={evidence.replay.reportUrl}>Accounting report</a> · code {evidence.replay.codeCommit.slice(0, 12)}.</p>
                 <button type="button" onClick={runReplay} disabled={runState === 'complete'}>
-                  {runState === 'complete' ? 'Replay complete' : 'Run offline demo replay'}
+                  {runState === 'complete' ? 'Replay inspected' : 'Inspect archived replay'}
                 </button>
                 <div className="result" aria-live="polite">
                   {runState === 'complete' ? (
-                    <><strong>12 / 12 steps processed</strong><span>End equity: {finalEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })} synthetic units</span><span>No economic claim · no orders sent</span></>
+                    <><strong>{idlePoints.length} / {idlePoints.length} artifact snapshots displayed</strong><span>End equity: {finalEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })} synthetic USDT</span><span>No economic claim · no orders sent</span></>
                   ) : <span>Ready. No process is running.</span>}
                 </div>
               </div>
@@ -159,7 +160,7 @@ export function App() {
       </main>
       <footer>
         <span>Quill3H paper-bot research preview</span>
-        <span>Historical dataset: {evidence.historicalWindow.rows.toLocaleString()} rows · {evidence.historicalWindow.gaps} gaps</span>
+        <span><a href={evidence.historicalWindow.sourceUrl}>Historical dataset manifest</a>: {evidence.historicalWindow.rows.toLocaleString()} rows · {evidence.historicalWindow.gaps} gaps</span>
         <span className="mono">SHA-256 {evidence.historicalWindow.datasetHash.slice(0, 16)}…</span>
       </footer>
     </div>

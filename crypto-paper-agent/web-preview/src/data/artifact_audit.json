@@ -1,0 +1,13 @@
+{
+  "code_commit_sha": "23f94376215a7fca69c8a7606e34139bc21d090c",
+  "status": "AUTHOR_VERIFIED_ARTIFACT_INTEGRITY / REVIEWER_NOT_VERIFIED",
+  "checks": {
+    "json": 76,
+    "portable_text": 128,
+    "research_manifests": 13,
+    "sqlite_reports": 17,
+    "png": 21,
+    "datasets": 6
+  },
+  "absolute_paths_found": 0
+}
