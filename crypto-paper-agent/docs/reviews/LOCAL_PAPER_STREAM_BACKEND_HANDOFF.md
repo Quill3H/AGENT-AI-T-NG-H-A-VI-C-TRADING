@@ -83,7 +83,8 @@ WebSocket are used. There is no Binance order/testnet endpoint, API key,
 wallet/private key, signing or withdrawal operation. The system remains
 PAPER/RESEARCH only.
 
-Code-under-test commit: `d06216195821231a60bf1dd9ee6b5e5129333bfc`.
+Code-under-test commits: `d06216195821231a60bf1dd9ee6b5e5129333bfc` plus
+dependency-lock fix `0127869` (full SHA visible in Git history).
 Documentation commits: `087dbede515e9e9ca09f101c3f54fd63db493801` plus the
 final docs-only evidence update visible in Git history; do not replace its SHA
 with a guessed value.
