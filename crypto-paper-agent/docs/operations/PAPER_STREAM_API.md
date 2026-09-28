@@ -43,6 +43,16 @@ body. Cross-origin browser access is restricted to loopback port 5173 or the
 same server port. An Antigravity dev server on another port needs a same-origin
 proxy or an explicit backend allowlist review.
 
+`GET /api/chart?symbol=BTCUSDT&interval=15m` is a read-only public-data route.
+The only accepted query keys are `symbol` and `interval`; symbols are exactly
+`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, and intervals are exactly `1m`, `15m`, `4h`.
+The response is `{symbol, interval, source_time_utc, candles}` where each
+candle is `{time_utc, open, high, low, close}`. It is bounded to at most 200
+closed Binance USD-M candles, excludes the currently forming candle, and is
+cached briefly per symbol/interval to avoid request bursts. Invalid parameters
+return HTTP 400. A Binance/public parsing failure returns HTTP 502 and does not
+change session status, broker/account state, or journal files.
+
 `status` values: `IDLE`, `SCANNING`, `WAITING_SYNC`, `WAITING_CONNECTION`,
 `QUARANTINED`, `STOPPED`, `RECOVERY_REQUIRED`. Only `SCANNING` plus
 `risk_gate.admission_open=true` may receive new simulated orders. Even then,
@@ -72,6 +82,22 @@ quantity, fee, slippage and rejection reasons. `pending_orders[]`,
 full for the UI and journal, including full batch states and raw
 decision inputs. The UI should show `risk_note` about simulated ETH/SOL
 maintenance brackets.
+
+`strategy_contract` is fixed by the backend: only `TREND_FOLLOWING` is active,
+signals use a closed `4h` candle, and the existing PaperBroker processes a
+request at the next `15m` open. `strategy_contract.chart_does_not_control_strategy`
+is always true: selecting `1m`, `15m`, or `4h` in `/api/chart` changes display
+data only. Breakout, SMC, and Funding Arbitrage remain historical/dormant.
+
+`strategy_decisions[symbol]` is backend-owned and journal-correlated. Its
+`state` is one of `SCANNING`, `NO_SIGNAL`, `SIGNAL_PENDING`,
+`ORDER_REJECTED`, `POSITION_OPEN`, or `TRADE_COMPLETED`; `time_utc`, `order_id`,
+`trade_id`, and `reason` are populated from the actual strategy/broker decision.
+`SIGNAL_PENDING` means a request is queued for the next 15m open. `ORDER_REJECTED`
+includes the broker rejection reason. A `PAPER_BATCH` journal record includes
+the decision snapshot that produced the corresponding state. The frontend must
+render these fields as-is and must not synthesize signals, orders, fills, or
+strategy changes.
 
 See `paper_stream_state.schema.json` for the machine-readable state contract
 and `paper_stream_api_examples.json` for five full **synthetic** responses:

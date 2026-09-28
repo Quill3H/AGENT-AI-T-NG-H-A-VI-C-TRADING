@@ -17,6 +17,13 @@
 | **Nguồn dữ liệu thị trường** | Backend dùng public Binance USD-M Futures `/market` WebSocket và xác minh nến đóng qua REST; trình duyệt hiển thị stream riêng. Không có endpoint đặt lệnh sàn. |
 | **Kết quả kiểm thử ứng viên**| Python offline: **507 passed, 4 skipped, 5 deselected** sau khi cài phụ thuộc RL/Torch CPU; nhóm paper: **76 passed, 2 skipped** (Windows trên Linux); web: **23 passed**, build đạt. Chưa chạy thực tế Windows hoặc stream Binance lâu dài. |
 
+Candidate backend contract work is prepared on `codex/paper-futures-api-contract`
+from base `codex/local-paper-futures-app` at
+`d1cd95a726e12245ede22326e05b09990975ccd6`. It adds the read-only closed-candle
+chart contract and backend-owned Trend Following decision states for review; it
+is not merged into `main` or the base branch. The current host's offline run is
+reported separately in the handoff because PPO dependencies remain unavailable.
+
 ---
 
 ## 2. Tình trạng các Phân hệ (Subsystem Status)

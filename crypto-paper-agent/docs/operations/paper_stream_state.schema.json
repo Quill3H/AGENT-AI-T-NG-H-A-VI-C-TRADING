@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Local paper stream GET /api/state",
   "type": "object",
-  "required": ["api_version", "api_time_utc", "mode", "status", "connection", "account", "risk_gate", "recovery", "session_id", "orders", "pending_orders", "open_positions", "trades", "funding_events"],
+  "required": ["api_version", "api_time_utc", "mode", "status", "connection", "account", "risk_gate", "recovery", "session_id", "orders", "pending_orders", "open_positions", "trades", "funding_events", "strategy_contract", "strategy_decisions"],
   "properties": {
     "api_version": {"const": 2},
     "api_time_utc": {"type": "string", "format": "date-time"},
@@ -21,6 +21,18 @@
     "symbols": {"type": "array", "items": {"enum": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]}},
     "venue": {"type": "string"},
     "strategy": {"type": "string"},
+    "strategy_contract": {"type": "object", "required": ["active_strategy", "signal_timeframe", "execution_timeframe", "chart_timeframes", "chart_does_not_control_strategy"], "properties": {
+      "active_strategy": {"const": "TREND_FOLLOWING"},
+      "signal_timeframe": {"const": "4h_closed"},
+      "execution_timeframe": {"const": "15m_next_open"},
+      "chart_timeframes": {"type": "array", "items": {"enum": ["1m", "15m", "4h"]}},
+      "chart_does_not_control_strategy": {"const": true}
+    }},
+    "strategy_decisions": {"type": "object", "properties": {
+      "BTCUSDT": {"$ref": "#/$defs/strategyDecision"},
+      "ETHUSDT": {"$ref": "#/$defs/strategyDecision"},
+      "SOLUSDT": {"$ref": "#/$defs/strategyDecision"}
+    }},
     "source_time_utc": {"type": ["string", "null"], "format": "date-time"},
     "received_at_utc": {"type": ["string", "null"], "format": "date-time"},
     "last_processed_open_utc": {"type": ["string", "null"], "format": "date-time"},
@@ -70,6 +82,14 @@
     },
     "risk_note": {"type": "string"}
   },
+  "$defs": {"strategyDecision": {"type": "object", "required": ["state", "symbol", "time_utc", "order_id", "trade_id", "reason"], "properties": {
+    "state": {"enum": ["SCANNING", "NO_SIGNAL", "SIGNAL_PENDING", "ORDER_REJECTED", "POSITION_OPEN", "TRADE_COMPLETED"]},
+    "symbol": {"enum": ["BTCUSDT", "ETHUSDT", "SOLUSDT"]},
+    "time_utc": {"type": ["string", "null"], "format": "date-time"},
+    "order_id": {"type": ["string", "null"]},
+    "trade_id": {"type": ["string", "null"]},
+    "reason": {"type": ["string", "null"]}
+  }}},
   "allOf": [{"if": {"properties": {"status": {"const": "RECOVERY_REQUIRED"}}},
              "then": {"properties": {"risk_gate": {"properties": {"admission_open": {"const": false}}}}}}]
 }
