@@ -10,7 +10,7 @@ Chào mừng AI Agent! Đây là cẩm nang vận hành chính thức giúp bạ
 - **Ranh giới an toàn tối cao (SAFETY BOUNDARY):**
   - **PAPER TRADING ONLY:** Hệ thống chỉ chạy mô phỏng trên bộ nhớ và database nội bộ.
   - **KHÔNG** kết nối API key thật, private key, seed phrase, chữ ký ví hay lệnh testnet/live.
-  - **KHÔNG** merge nhánh `main`, không force-push, không rebase, không squash lịch sử Git.
+  - Nhánh nền phát triển là `codex/local-paper-futures-app`; **không merge vào `main`** trừ khi chủ dự án yêu cầu rõ. Không force-push, rebase hay squash lịch sử Git.
   - **KHÔNG** thay đổi các nguyên tắc rủi ro hay logic giao dịch trừ khi có yêu cầu cụ thể từ chủ dự án.
 
 ---
@@ -99,5 +99,11 @@ Trước khi bàn giao hoặc tạo commit mới:
 1. [ ] **Tests pass:** Chạy `pytest -q -m "not network"` đảm bảo không có regression so với kết quả Linux trên nhánh ứng viên 2026-09-28 (507 passed, 4 skipped, 5 deselected). Kiểm tra lý do skip theo nền tảng.
 2. [ ] **Web tests pass:** Nếu có chỉnh sửa frontend, chạy `npm test` (ứng viên 2026-09-28: 23 passed).
 3. [ ] **Không leak secret:** Không commit file cấu hình chứa API key hay dữ liệu nhạy cảm.
-4. [ ] **Git history:** Không force-push hay xóa branch; commit có prefix chuẩn (`feat`, `fix`, `docs`, `refactor`, `chore`).
+4. [ ] **Git history:** Không force-push/rebase/squash; commit có prefix chuẩn (`feat`, `fix`, `docs`, `refactor`, `chore`). Khi dọn nhánh theo quyền chủ dự án đã cấp ngày 2026-09-28, chỉ xóa nhánh remote nếu đã xác minh tip của nó là tổ tiên của nhánh nền, không còn PR mở dùng nhánh đó, đã ghi tên và SHA vào kế hoạch; không xóa `main`, nhánh nền hoặc nhánh còn commit riêng.
 5. [ ] **Cập nhật trạng thái:** Nếu hoàn thành một milestone kỹ thuật, cập nhật [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md).
+
+## 7. Nhánh GitHub và bàn giao
+
+- Dùng `codex/local-paper-futures-app` làm base cho PR web/backend; `main` là mốc cũ cho đến khi chủ dự án quyết định cập nhật.
+- Trước khi hợp nhất: fetch, đối chiếu SHA của base/head và diff, chạy kiểm thử phù hợp, ghi giới hạn chưa xác minh (đặc biệt Windows và luồng dữ liệu public). Merge vào nhánh nền không đồng nghĩa nghiệm thu vận hành hay hiệu quả giao dịch.
+- Đọc [kế hoạch nhánh](docs/planning/2026-09-28-branch-consolidation.md) để biết nhánh nào đã được chứa trọn và nhánh nào còn phân kỳ. Không hợp nhất hoặc xóa nhánh phân kỳ chỉ vì tên của nó cũ.

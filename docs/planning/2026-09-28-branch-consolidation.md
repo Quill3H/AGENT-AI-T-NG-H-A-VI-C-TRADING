@@ -12,6 +12,10 @@ Four branches diverge and must be examined by diff before any merge: `codex/pape
 
 1. Review and verify the safety/recovery integration PR into `codex/local-paper-futures-app`, including a real Windows restart and market stream observation. Keep `main` untouched.
 2. Compare the remaining divergent branches file by file against the updated base; record unique changes, tests, and whether they are superseded. Port only verified work through separate PRs when needed.
-3. Mark ancestor branches as historical in the handover. After a separately authorized archival decision, use GitHub's branch management to reduce the visible branch count. This pass makes **no branch deletion, force push, history rewrite, or main merge** (per `AGENTS.md`).
+3. Owner authorized synchronization and safe branch deletion on 2026-09-28. Verify each tip SHA is an ancestor of the development base and has no open PR before deletion. Record names and SHAs below. Keep `main`, the development base, open PR heads and all divergent branches. Do not force push, rewrite history or merge into `main`.
+
+## Archive record
+
+Pending remote deletion after the development base absorbs PR #4 and tip/open-PR checks: `codex/architecture-task-tree-alignment` (`3133fa9`), `codex/final-project-completion` (`4b26525`), `codex/g0-market-validation` (`b174f54`), `codex/g2-binance-funding-coverage` (`5c19185`), `codex/local-paper-scanner` (`46ce69a`), `codex/pm-product-roadmap` (`1903dc2`), `codex/repository-information-architecture-cleanup` (`3a9a6df`), `codex/stage-06-completion` (`b04613a`), `codex/stage-06-review-12-fixes` (`2236e83`), `codex/stage-06-to-11-completion` (`c81dc4e`), `codex/web-preview-binance-dark-ui` (`866448c`). These are branch pointers to commits already retained in the development branch history; branch deletion does not remove the commits from that history.
 
 For a nontechnical owner: work from the one base branch above. Treat the four divergent branches as candidates awaiting review; an older branch name does not indicate a newer version of the app.

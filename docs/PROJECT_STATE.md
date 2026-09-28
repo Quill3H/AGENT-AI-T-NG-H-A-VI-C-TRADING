@@ -69,5 +69,5 @@
 
 1. Xem xét PR ứng viên vào `codex/local-paper-futures-app`; xác minh trên Windows với journal cũ/mới, tự khởi động và tái kết nối.
 2. Theo dõi dữ liệu public dài hạn và kiểm định độc lập G2–G5; hiệu quả kinh tế chưa được chứng minh.
-3. Theo [kế hoạch gọn nhánh](planning/2026-09-28-branch-consolidation.md); không xóa nhánh hay merge `main` trong lượt này.
+3. Theo [kế hoạch gọn nhánh](planning/2026-09-28-branch-consolidation.md): chủ dự án đã cho phép xóa nhánh cũ được chứa trọn sau khi kiểm tra SHA và PR; không merge vào `main` trong lượt này.
 4. Không nạp/rút tiền thật hoặc kết nối API key trading.
