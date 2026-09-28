@@ -6,7 +6,7 @@ import mimetypes
 import socket
 from pathlib import Path
 from threading import Event, Lock, Thread
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
 from src.paper.live_session import LocalPaperSession, PROJECT_ROOT
@@ -116,6 +116,23 @@ def create_server(port=8765, source=None, journal_dir=None):
                                  "api_time_utc": state["api_time_utc"], "recovery": state["recovery"],
                                  "risk_gate": state["risk_gate"], "error": state["error"],
                                  "source_time_utc": state["source_time_utc"]})
+                return
+            if urlparse(self.path).path == "/api/chart":
+                parsed = urlparse(self.path)
+                params = parse_qs(parsed.query)
+                symbol = params.get("symbol", ["BTCUSDT"])[0].upper()
+                interval = params.get("interval", ["1m"])[0]
+                try:
+                    limit = int(params.get("limit", ["90"])[0])
+                except (ValueError, TypeError):
+                    limit = 90
+                try:
+                    chart_payload = session.chart_data(symbol=symbol, interval=interval, limit=limit)
+                    self._json(200, chart_payload)
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                except Exception as exc:
+                    self._json(503, {"error": str(exc)})
                 return
             target = public_path(root, self.path)
             if target is None:

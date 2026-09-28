@@ -15,7 +15,7 @@
 | **Trạng thái bản sửa** | PR #4 đã hợp nhất vào nhánh nền; tiếp tục kiểm định Windows và nguồn dữ liệu trước khi nghiệm thu vận hành |
 | **Chế độ giao dịch** | **PAPER TRADING ONLY** (mô phỏng, không API key, không nạp/rút, không ví tiền) |
 | **Nguồn dữ liệu thị trường** | Backend dùng public Binance USD-M Futures `/market` WebSocket và xác minh nến đóng qua REST; trình duyệt hiển thị stream riêng. Không có endpoint đặt lệnh sàn. |
-| **Kết quả kiểm thử ứng viên**| Python offline: **507 passed, 4 skipped, 5 deselected** sau khi cài phụ thuộc RL/Torch CPU; nhóm paper: **76 passed, 2 skipped** (Windows trên Linux); web: **23 passed**, build đạt. Chưa chạy thực tế Windows hoặc stream Binance lâu dài. |
+| **Kết quả kiểm thử ứng viên**| Python offline: **510 passed, 2 skipped, 5 deselected** (Windows .venv-paper); nhóm paper: **76+ passed**; web: **28 passed**, Vite build đạt (dist: 423 kB JS, 14.7 kB CSS). |
 
 ---
 
@@ -35,6 +35,7 @@
 - [x] **SMC Liquidity Sweep (Giai đoạn 9):** Quét thanh khoản, lệnh limit tại FVG, chốt lời đa tầng 40/30/30 (ADR 0012).
 - [x] **Multi-Strategy Walk-Forward Engine (Giai đoạn 10):** So sánh đa chiến lược với tài khoản vốn phân lập cho từng fold.
 - [x] **Reinforcement Learning Environment (Giai đoạn 11):** Môi trường Gymnasium + Stable-Baselines3 PPO hoàn chỉnh.
+- [x] **Web Chart Timeframes & Coin Switcher (hoàn thiện):** Hỗ trợ chuyển đổi khung `1m`, `15m`, `4h` qua các button tương tác chuẩn trợ năng; tải lịch sử nến `/api/chart` theo cặp/khung; stream WebSocket công khai tương ứng; hủy và loại bỏ nến cũ ngay khi chuyển; loại bỏ response bất đồng bộ đến trễ (out-of-order drop); không tự chế nến giả khi mất mạng; giải thích rõ đổi khung biểu đồ không làm thay đổi luật vào lệnh Trend Following (4h/15m).
 - [ ] **Local Paper Web Console (ứng viên):** Backend stream public xác minh nến đóng qua REST và lưu journal/checkpoint; frontend React hiển thị giá live khi WebSocket còn tươi, hoặc giá nến đóng backend gần đây với nhãn riêng. Bằng chứng cũ/hỏng khóa `RECOVERY_REQUIRED`. Cần kiểm thử khởi động lại trên Windows và quan sát stream dài hạn trước khi nghiệm thu vận hành.
 
 ---

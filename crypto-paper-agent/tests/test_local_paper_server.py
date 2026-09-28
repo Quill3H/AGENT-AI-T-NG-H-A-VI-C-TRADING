@@ -98,3 +98,32 @@ def test_server_startup_attempts_exact_resume_before_accepting_stream(tmp_path):
         assert second.session.state()["risk_gate"]["admission_open"] is False
     finally:
         second.server_close()
+
+
+def test_chart_endpoint_and_validation(api):
+    url, server = api
+    # 1m BTC
+    resp = requests.get(f"{url}/api/chart?symbol=BTCUSDT&interval=1m", timeout=3)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["interval"] == "1m"
+    assert len(data["candles"]) > 0
+    assert "open" in data["candles"][0]
+
+    # 15m ETH
+    resp = requests.get(f"{url}/api/chart?symbol=ETHUSDT&interval=15m", timeout=3)
+    assert resp.status_code == 200
+    assert resp.json()["symbol"] == "ETHUSDT"
+    assert resp.json()["interval"] == "15m"
+
+    # 4h SOL
+    resp = requests.get(f"{url}/api/chart?symbol=SOLUSDT&interval=4h", timeout=3)
+    assert resp.status_code == 200
+    assert resp.json()["symbol"] == "SOLUSDT"
+    assert resp.json()["interval"] == "4h"
+
+    # Invalid symbol or interval returns 400
+    assert requests.get(f"{url}/api/chart?symbol=DOGEUSDT&interval=1m", timeout=3).status_code == 400
+    assert requests.get(f"{url}/api/chart?symbol=BTCUSDT&interval=1d", timeout=3).status_code == 400
+

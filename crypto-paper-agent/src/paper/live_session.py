@@ -547,6 +547,32 @@ class LocalPaperSession:
             self.reconnect_required = False
             return self.state()
 
+    def chart_data(self, symbol: str, interval: str = "1m", limit: int = 90):
+        if symbol not in SYMBOLS or interval not in INTERVAL_MS or not 1 <= limit <= 500:
+            raise ValueError("unsupported symbol, interval, or limit")
+        with self.lock:
+            if interval == "1m" and self.charts.get(symbol):
+                return {
+                    "symbol": symbol,
+                    "interval": interval,
+                    "candles": list(self.charts[symbol]),
+                    "server_time_utc": _utc(self.server_ms).isoformat() if self.server_ms else None,
+                }
+            server_ms = self.server_ms or self.source.server_time_ms()
+            raw = self.source.klines(symbol, interval, limit)
+            bars, provisional = parse_klines(raw, interval, server_ms)
+            candles = [
+                {"time_utc": bar["open_time"].isoformat(), "open": bar["open"], "high": bar["high"],
+                 "low": bar["low"], "close": bar["close"], "provisional": bar["provisional"]}
+                for bar in (bars + ([provisional] if provisional else []))
+            ]
+            return {
+                "symbol": symbol,
+                "interval": interval,
+                "candles": candles,
+                "server_time_utc": _utc(server_ms).isoformat() if server_ms else None,
+            }
+
     def state(self):
         with self.lock:
             return self._state_unlocked()
