@@ -11,10 +11,10 @@
 | Thông số | Trạng thái Hiện tại |
 | :--- | :--- |
 | **Giai đoạn dự án** | Stage 06–11 nghiên cứu/backtest; Local Paper Web đang kiểm định tích hợp |
-| **Nhánh nền phát triển** | `codex/local-paper-futures-app` (`4dcb271`); `main` (`fe1c133`) chưa cập nhật theo nhánh này |
-| **Nhánh ứng viên sửa lỗi** | `codex/local-paper-safety-recovery-integration`, đề xuất PR vào nhánh nền |
+| **Nhánh nền phát triển** | `codex/local-paper-futures-app` (`9fd81e7`, đã merge PR #4); `main` (`fe1c133`) chưa cập nhật theo nhánh này |
+| **Trạng thái bản sửa** | PR #4 đã hợp nhất vào nhánh nền; tiếp tục kiểm định Windows và nguồn dữ liệu trước khi nghiệm thu vận hành |
 | **Chế độ giao dịch** | **PAPER TRADING ONLY** (mô phỏng, không API key, không nạp/rút, không ví tiền) |
-| **Nguồn dữ liệu thị trường** | Ứng viên: backend dùng public Binance USD-M Futures `/market` WebSocket và xác minh nến đóng qua REST; trình duyệt hiển thị stream riêng. Không có endpoint đặt lệnh sàn. |
+| **Nguồn dữ liệu thị trường** | Backend dùng public Binance USD-M Futures `/market` WebSocket và xác minh nến đóng qua REST; trình duyệt hiển thị stream riêng. Không có endpoint đặt lệnh sàn. |
 | **Kết quả kiểm thử ứng viên**| Python offline: **507 passed, 4 skipped, 5 deselected** sau khi cài phụ thuộc RL/Torch CPU; nhóm paper: **76 passed, 2 skipped** (Windows trên Linux); web: **23 passed**, build đạt. Chưa chạy thực tế Windows hoặc stream Binance lâu dài. |
 
 ---
@@ -67,7 +67,7 @@
 
 ## 5. Kế hoạch Được phê duyệt Tiếp theo (Next Approved Work)
 
-1. Xem xét PR ứng viên vào `codex/local-paper-futures-app`; xác minh trên Windows với journal cũ/mới, tự khởi động và tái kết nối.
+1. PR #4 đã merge vào `codex/local-paper-futures-app`; xác minh trên Windows với journal cũ/mới, tự khởi động và tái kết nối trước khi nghiệm thu vận hành.
 2. Theo dõi dữ liệu public dài hạn và kiểm định độc lập G2–G5; hiệu quả kinh tế chưa được chứng minh.
 3. Theo [kế hoạch gọn nhánh](planning/2026-09-28-branch-consolidation.md): chủ dự án đã cho phép xóa nhánh cũ được chứa trọn sau khi kiểm tra SHA và PR; không merge vào `main` trong lượt này.
 4. Không nạp/rút tiền thật hoặc kết nối API key trading.
