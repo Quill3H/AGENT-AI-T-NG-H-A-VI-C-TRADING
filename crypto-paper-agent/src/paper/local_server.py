@@ -6,7 +6,7 @@ import mimetypes
 import socket
 from pathlib import Path
 from threading import Event, Lock, Thread
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
 from src.paper.live_session import LocalPaperSession, PROJECT_ROOT
@@ -106,16 +106,31 @@ def create_server(port=8765, source=None, journal_dir=None):
         def do_GET(self):
             if not self._local_host():
                 return
-            if urlparse(self.path).path == "/api/state":
+            parsed = urlparse(self.path)
+            if parsed.path == "/api/state":
                 self._json(200, session.state())
                 return
-            if urlparse(self.path).path == "/api/health":
+            if parsed.path == "/api/health":
                 state = session.state()
                 self._json(200, {"mode": "PAPER_RESEARCH", "status": state["status"],
                                  "connection": state["connection"], "session_id": state["session_id"],
                                  "api_time_utc": state["api_time_utc"], "recovery": state["recovery"],
                                  "risk_gate": state["risk_gate"], "error": state["error"],
                                  "source_time_utc": state["source_time_utc"]})
+                return
+            if parsed.path == "/api/chart":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                if set(query) != {"symbol", "interval"} or any(len(values) != 1 for values in query.values()):
+                    self._json(400, {"error": "chart requires exactly one symbol and interval parameter"})
+                    return
+                symbol, interval = query["symbol"][0], query["interval"][0]
+                if symbol not in ("BTCUSDT", "ETHUSDT", "SOLUSDT") or interval not in ("1m", "15m", "4h"):
+                    self._json(400, {"error": "unsupported chart symbol or interval"})
+                    return
+                try:
+                    self._json(200, session.get_chart(symbol, interval))
+                except Exception as exc:
+                    self._json(502, {"error": f"public chart source unavailable: {exc}"})
                 return
             target = public_path(root, self.path)
             if target is None:

@@ -130,6 +130,7 @@ def capture_session(session):
         "markets": pack(session.markets),
         "chart": pack(session.chart),
         "charts": pack(session.charts),
+        "strategy_decisions": pack(session.strategy_decisions),
     }
 
 
@@ -139,7 +140,9 @@ def restore_session(session, payload, saved_view):
         "strategies", "last_open", "last_4h", "last_processed", "server_ms",
         "received_at", "markets", "chart",
     }
-    if (not isinstance(payload, dict) or set(payload) not in (required, required | {"charts"})
+    allowed_keys = (required, required | {"charts"}, required | {"strategy_decisions"},
+                    required | {"charts", "strategy_decisions"})
+    if (not isinstance(payload, dict) or set(payload) not in allowed_keys
             or payload["version"] != 2 or payload["config_sha256"] != session.config_hash):
         raise ValueError("checkpoint version or configuration mismatch")
     if payload["status"] not in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "STOPPED"):
@@ -211,12 +214,24 @@ def restore_session(session, payload, saved_view):
             or any(type(chart) is not list for chart in session.charts.values())
             or session.chart != session.charts["BTCUSDT"]):
         raise ValueError("invalid chart checkpoint")
+    session.strategy_decisions = unpack(payload["strategy_decisions"]) if "strategy_decisions" in payload else {
+        symbol: {"state": "SCANNING", "symbol": symbol, "time_utc": None,
+                 "order_id": None, "trade_id": None, "reason": None}
+        for symbol in session_symbols()
+    }
+    if (type(session.strategy_decisions) is not dict or
+            set(session.strategy_decisions) != set(session_symbols()) or
+            any(type(item) is not dict or item.get("symbol") != symbol
+                for symbol, item in session.strategy_decisions.items())):
+        raise ValueError("invalid strategy decision checkpoint")
     session.status = payload["status"]
     rendered = session._state_unlocked()
     for key in ("account", "open_positions", "pending_orders", "orders", "trades",
                 "funding_events", "last_processed_open_utc", "completed_trades"):
         if rendered[key] != saved_view[key]:
             raise ValueError(f"restored broker does not match saved {key}")
+    if "strategy_decisions" in saved_view and rendered["strategy_decisions"] != saved_view["strategy_decisions"]:
+        raise ValueError("restored strategy decisions do not match saved view")
 
 
 def session_symbols():

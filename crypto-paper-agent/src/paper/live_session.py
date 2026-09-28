@@ -27,6 +27,12 @@ from src.paper.recovery_state import capture_session, restore_session
 UTC = timezone.utc
 PUBLIC_BASE = "https://fapi.binance.com"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CHART_LIMIT = 200
+CHART_CACHE_TTL_SECONDS = 10.0
+DECISION_STATES = {
+    "SCANNING", "NO_SIGNAL", "SIGNAL_PENDING", "ORDER_REJECTED",
+    "POSITION_OPEN", "TRADE_COMPLETED",
+}
 
 
 def _utc(ms: int) -> datetime:
@@ -154,6 +160,13 @@ class LocalPaperSession:
         self.recovery_snapshot = None
         self.recovery_machine = None
         self.reconnect_required = False
+        self._chart_cache = {}
+        self.strategy_decisions = {
+            symbol: {"state": "SCANNING", "symbol": symbol, "time_utc": None,
+                     "order_id": None, "trade_id": None, "reason": None}
+            for symbol in SYMBOLS
+        }
+        self._batch_decisions = {}
         self.storage = DurableJournal(self.journal_dir)
         self._load_existing_journal()
 
@@ -307,6 +320,93 @@ class LocalPaperSession:
             ]
         self.chart = self.charts["BTCUSDT"]
 
+    def get_chart(self, symbol: str, interval: str):
+        """Return a bounded, closed-only public chart without touching bot state."""
+        if symbol not in SYMBOLS or interval not in INTERVAL_MS:
+            raise ValueError("unsupported chart symbol or interval")
+        key = (symbol, interval)
+        now = time.monotonic()
+        cached = self._chart_cache.get(key)
+        if cached is not None and now - cached["cached_at"] < CHART_CACHE_TTL_SECONDS:
+            return deepcopy(cached["payload"])
+        with self.lock:
+            now = time.monotonic()
+            cached = self._chart_cache.get(key)
+            if cached is not None and now - cached["cached_at"] < CHART_CACHE_TTL_SECONDS:
+                return deepcopy(cached["payload"])
+            server_ms = self.source.server_time_ms()
+            raw = self.source.klines(symbol, interval, CHART_LIMIT)
+            closed, _ = parse_klines(raw, interval, server_ms)
+            if not closed:
+                raise ValueError("public chart source returned no closed candles")
+            payload = {
+                "symbol": symbol,
+                "interval": interval,
+                "source_time_utc": _utc(server_ms).isoformat(),
+                "candles": [
+                    {"time_utc": bar["open_time"].isoformat(), "open": bar["open"],
+                     "high": bar["high"], "low": bar["low"], "close": bar["close"]}
+                    for bar in closed[-CHART_LIMIT:]
+                ],
+            }
+            self._chart_cache[key] = {"cached_at": time.monotonic(), "payload": deepcopy(payload)}
+            return payload
+
+    def _set_decision(self, symbol, state, timestamp=None, order_id=None,
+                      trade_id=None, reason=None):
+        if symbol not in SYMBOLS or state not in DECISION_STATES:
+            raise ValueError("invalid strategy decision")
+        if timestamp is not None:
+            timestamp = timestamp.astimezone(UTC).isoformat()
+        self.strategy_decisions[symbol] = {
+            "state": state, "symbol": symbol, "time_utc": timestamp,
+            "order_id": order_id, "trade_id": trade_id, "reason": reason,
+        }
+
+    def _sync_batch_decisions(self, open_time):
+        """Project actual broker outcomes into the per-symbol API state."""
+        for order in self.broker.order_history:
+            if order.processed_at != open_time:
+                continue
+            if order.status.value == "FILLED":
+                self._batch_decisions[order.symbol] = {
+                    "state": "POSITION_OPEN", "symbol": order.symbol,
+                    "time_utc": open_time.isoformat(), "order_id": order.order_id,
+                    "trade_id": None, "reason": None,
+                }
+            elif order.status.value in ("REJECTED", "CANCELLED"):
+                self._batch_decisions[order.symbol] = {
+                    "state": "ORDER_REJECTED", "symbol": order.symbol,
+                    "time_utc": open_time.isoformat(), "order_id": order.order_id,
+                    "trade_id": None,
+                    "reason": "; ".join(order.rejection_reasons or [order.status.value]),
+                }
+        for trade in self.broker.trade_history:
+            if trade.exit_time == open_time:
+                self._batch_decisions[trade.symbol] = {
+                    "state": "TRADE_COMPLETED", "symbol": trade.symbol,
+                    "time_utc": trade.exit_time.isoformat(), "order_id": None,
+                    "trade_id": trade.trade_id, "reason": trade.exit_reason.value,
+                }
+        for symbol, position in self.broker.positions.items():
+            self._batch_decisions[symbol] = {
+                "state": "POSITION_OPEN", "symbol": symbol,
+                "time_utc": position.opened_at.isoformat(), "order_id": None,
+                "trade_id": None, "reason": None,
+            }
+        for order in self.broker.pending_orders:
+            record = next((item for item in reversed(self.broker.order_history)
+                           if item.symbol == order.symbol and item.status.value == "PENDING"
+                           and item.requested_at == order.signal_time), None)
+            self._batch_decisions[order.symbol] = {
+                "state": "SIGNAL_PENDING", "symbol": order.symbol,
+                "time_utc": order.signal_time.isoformat(),
+                "order_id": record.order_id if record is not None else None,
+                "trade_id": None, "reason": None,
+            }
+        for symbol, decision in self._batch_decisions.items():
+            self.strategy_decisions[symbol] = decision
+
     def start(self):
         with self.lock:
             if self.status != "IDLE":
@@ -325,6 +425,12 @@ class LocalPaperSession:
     def _start_unlocked(self):
         server_ms = self.source.server_time_ms()
         self.broker = PaperBroker(config=self.config)
+        self._batch_decisions = {}
+        self.strategy_decisions = {
+            symbol: {"state": "SCANNING", "symbol": symbol, "time_utc": _utc(server_ms).isoformat(),
+                     "order_id": None, "trade_id": None, "reason": None}
+            for symbol in SYMBOLS
+        }
         raw_warmup, raw_baseline = {}, {}
         for symbol in SYMBOLS:
             raw_warmup[symbol] = self.source.klines(symbol, "4h", 250)
@@ -426,6 +532,7 @@ class LocalPaperSession:
             if self.status not in ("SCANNING", "WAITING_SYNC"):
                 return self.state()
             try:
+                self._batch_decisions = {}
                 server_ms = self.source.server_time_ms()
                 self._refresh_chart(server_ms)
                 next_bars = {}
@@ -474,13 +581,15 @@ class LocalPaperSession:
                                "funding_metadata": {symbol: {key: bar[key] for key in ("funding_rate", "funding_time", "funding_readiness") if key in bar}
                                                     for symbol, bar in next_bars.items()}})
                 self.broker.process_batch(list(next_bars.values()))
+                self._sync_batch_decisions(next_bars["BTCUSDT"]["open_time"])
                 for symbol, bar in next_bars.items():
                     self.last_open[symbol] = bar["open_time"]
                     self.markets[symbol] = {"last_closed_15m_price": bar["close"],
                                             "as_of_utc": bar["close_time"].isoformat()}
                 self.last_processed = next_bars["BTCUSDT"]["open_time"]
+                signal_decisions = []
                 if signal_frames is not None:
-                    self._on_signal_close(batch_close, signal_frames)
+                    signal_decisions = self._on_signal_close(batch_close, signal_frames)
                 self.broker.verify_accounting_invariants()
                 self.status = "SCANNING"
                 self.server_ms, self.received_at = server_ms, receipt
@@ -488,6 +597,7 @@ class LocalPaperSession:
                                "source_time_utc": _utc(server_ms).isoformat(), "raw_sha256": raw_hash,
                                "candles": next_bars, "equity_usd": self.broker.equity,
                                "orders": len(self.broker.order_history), "realizations": len(self.broker.trade_history),
+                               "strategy_decisions": signal_decisions or list(self._batch_decisions.values()),
                                "state": self._state_unlocked()})
                 return self.state()
             except Exception as exc:
@@ -511,6 +621,7 @@ class LocalPaperSession:
 
     def _on_signal_close(self, close_time, candidates):
         expected_open = close_time - timedelta(hours=4)
+        decisions = []
         for symbol, features in candidates.items():
             candle = features.iloc[-1].to_dict()
             candle.update(symbol=symbol, open_time=features.index[-1].to_pydatetime(), close_time=close_time)
@@ -518,8 +629,27 @@ class LocalPaperSession:
             strategy.update_trailing_stop(candle, self.broker)
             request = strategy.on_candle_close(candle, features, self.broker)
             if request is not None:
-                self.broker.submit_order(request)
+                record = self.broker.submit_order(request)
+                if record.status.value == "PENDING":
+                    self._set_decision(symbol, "SIGNAL_PENDING", close_time,
+                                       order_id=record.order_id)
+                else:
+                    self._set_decision(
+                        symbol, "ORDER_REJECTED", close_time, order_id=record.order_id,
+                        reason="; ".join(record.rejection_reasons or [record.status.value]),
+                    )
+            elif symbol in self.broker.positions:
+                self._set_decision(symbol, "POSITION_OPEN", close_time)
+            elif symbol in self._batch_decisions:
+                self.strategy_decisions[symbol] = self._batch_decisions[symbol]
+            elif any(order.symbol == symbol for order in self.broker.pending_orders):
+                self._set_decision(symbol, "SIGNAL_PENDING", close_time)
+            else:
+                self._set_decision(symbol, "NO_SIGNAL", close_time,
+                                   reason="Trend Following produced no valid order request")
+            decisions.append(deepcopy(self.strategy_decisions[symbol]))
             self.last_4h[symbol] = expected_open
+        return decisions
 
     def stop(self):
         with self.lock:
@@ -576,6 +706,14 @@ class LocalPaperSession:
             "mode": "PAPER_RESEARCH", "status": self.status, "error": self.error,
             "session_id": self.session_id, "symbols": list(SYMBOLS),
             "venue": "Binance USD-M perpetual public data", "strategy": "Trend Following 4h/15m fixed rules",
+            "strategy_contract": {
+                "active_strategy": "TREND_FOLLOWING",
+                "signal_timeframe": "4h_closed",
+                "execution_timeframe": "15m_next_open",
+                "chart_timeframes": ["1m", "15m", "4h"],
+                "chart_does_not_control_strategy": True,
+            },
+            "strategy_decisions": deepcopy(self.strategy_decisions),
             "source_time_utc": _utc(self.server_ms).isoformat() if self.server_ms else None,
             "received_at_utc": self.received_at,
             "connection": {"connected": self.stream_connected, "error": self.stream_error,

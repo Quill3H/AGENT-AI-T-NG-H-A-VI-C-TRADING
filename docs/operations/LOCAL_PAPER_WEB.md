@@ -64,8 +64,27 @@ The scheduled launcher does not install packages or rebuild the UI.
   old evidence, or an unprovable exposure gap, fails closed in
   `RECOVERY_REQUIRED` without an automatic account reset.
 
+The backend also exposes `GET /api/chart?symbol=BTCUSDT&interval=15m` for
+read-only chart data. The allowlist is BTCUSDT/ETHUSDT/SOLUSDT and 1m/15m/4h;
+responses contain at most 200 REST-verified closed candles. Forming candles are
+excluded from the response, invalid query keys return 400, and public-source
+failures return 502 without changing the paper account or journal. Chart
+selection is display-only. The running bot keeps the fixed Trend Following
+contract: closed 4h signal, next-open 15m simulated execution.
+
+Use `/api/state.strategy_decisions` to distinguish backend decisions per symbol:
+`SCANNING`, `NO_SIGNAL`, `SIGNAL_PENDING`, `ORDER_REJECTED`, `POSITION_OPEN`,
+and `TRADE_COMPLETED`. These values are derived from the real strategy and
+PaperBroker and are persisted with the journal batch; the browser must not
+create signals or fills.
+
 See [stream API](../../crypto-paper-agent/docs/operations/PAPER_STREAM_API.md)
 and [recovery limits](../../crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md).
 This build is a candidate pending real Windows restart and long-running stream
 observation. A visible price or passing test does not establish trading
 returns or 24/7 availability.
+
+The repository tests use deterministic fake public responses on this host. A
+real Windows reboot/login task, long-running Binance WebSocket, firewall/proxy
+behavior, and multi-hour process recovery on the owner's computer remain
+`NOT_VERIFIED` until observed there.

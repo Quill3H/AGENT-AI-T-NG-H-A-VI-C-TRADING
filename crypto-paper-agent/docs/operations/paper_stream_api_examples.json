@@ -1,11 +1,11 @@
 {
   "normal": {
     "api_version": 2,
-    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "api_time_utc": "2026-09-28T11:38:10.793287+00:00",
     "mode": "PAPER_RESEARCH",
     "status": "SCANNING",
     "error": null,
-    "session_id": "20260927T162904-82c1d345",
+    "session_id": "20260928T113810-734b6aee",
     "symbols": [
       "BTCUSDT",
       "ETHUSDT",
@@ -13,8 +13,45 @@
     ],
     "venue": "Binance USD-M perpetual public data",
     "strategy": "Trend Following 4h/15m fixed rules",
+    "strategy_contract": {
+      "active_strategy": "TREND_FOLLOWING",
+      "signal_timeframe": "4h_closed",
+      "execution_timeframe": "15m_next_open",
+      "chart_timeframes": [
+        "1m",
+        "15m",
+        "4h"
+      ],
+      "chart_does_not_control_strategy": true
+    },
+    "strategy_decisions": {
+      "BTCUSDT": {
+        "state": "SCANNING",
+        "symbol": "BTCUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "ETHUSDT": {
+        "state": "SCANNING",
+        "symbol": "ETHUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "SOLUSDT": {
+        "state": "SCANNING",
+        "symbol": "SOLUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      }
+    },
     "source_time_utc": "2026-09-27T04:16:00+00:00",
-    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "received_at_utc": "2026-09-28T11:38:10.728873+00:00",
     "connection": {
       "connected": true,
       "error": null,
@@ -58,6 +95,110 @@
         "provisional": false
       }
     ],
+    "charts": {
+      "BTCUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "ETHUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "SOLUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ]
+    },
     "markets": {
       "BTCUSDT": {
         "last_closed_15m_price": 100.0,
@@ -102,11 +243,11 @@
   },
   "disconnected": {
     "api_version": 2,
-    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "api_time_utc": "2026-09-28T11:38:10.793395+00:00",
     "mode": "PAPER_RESEARCH",
     "status": "WAITING_CONNECTION",
     "error": null,
-    "session_id": "20260927T162904-82c1d345",
+    "session_id": "20260928T113810-734b6aee",
     "symbols": [
       "BTCUSDT",
       "ETHUSDT",
@@ -114,8 +255,45 @@
     ],
     "venue": "Binance USD-M perpetual public data",
     "strategy": "Trend Following 4h/15m fixed rules",
+    "strategy_contract": {
+      "active_strategy": "TREND_FOLLOWING",
+      "signal_timeframe": "4h_closed",
+      "execution_timeframe": "15m_next_open",
+      "chart_timeframes": [
+        "1m",
+        "15m",
+        "4h"
+      ],
+      "chart_does_not_control_strategy": true
+    },
+    "strategy_decisions": {
+      "BTCUSDT": {
+        "state": "SCANNING",
+        "symbol": "BTCUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "ETHUSDT": {
+        "state": "SCANNING",
+        "symbol": "ETHUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "SOLUSDT": {
+        "state": "SCANNING",
+        "symbol": "SOLUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      }
+    },
     "source_time_utc": "2026-09-27T04:16:00+00:00",
-    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "received_at_utc": "2026-09-28T11:38:10.728873+00:00",
     "connection": {
       "connected": false,
       "error": "synthetic disconnect",
@@ -159,6 +337,110 @@
         "provisional": false
       }
     ],
+    "charts": {
+      "BTCUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "ETHUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "SOLUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ]
+    },
     "markets": {
       "BTCUSDT": {
         "last_closed_15m_price": 100.0,
@@ -203,11 +485,11 @@
   },
   "blocked_data": {
     "api_version": 2,
-    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "api_time_utc": "2026-09-28T11:38:10.793479+00:00",
     "mode": "PAPER_RESEARCH",
     "status": "QUARANTINED",
     "error": "synthetic funding provenance unavailable",
-    "session_id": "20260927T162904-82c1d345",
+    "session_id": "20260928T113810-734b6aee",
     "symbols": [
       "BTCUSDT",
       "ETHUSDT",
@@ -215,8 +497,45 @@
     ],
     "venue": "Binance USD-M perpetual public data",
     "strategy": "Trend Following 4h/15m fixed rules",
+    "strategy_contract": {
+      "active_strategy": "TREND_FOLLOWING",
+      "signal_timeframe": "4h_closed",
+      "execution_timeframe": "15m_next_open",
+      "chart_timeframes": [
+        "1m",
+        "15m",
+        "4h"
+      ],
+      "chart_does_not_control_strategy": true
+    },
+    "strategy_decisions": {
+      "BTCUSDT": {
+        "state": "SCANNING",
+        "symbol": "BTCUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "ETHUSDT": {
+        "state": "SCANNING",
+        "symbol": "ETHUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "SOLUSDT": {
+        "state": "SCANNING",
+        "symbol": "SOLUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      }
+    },
     "source_time_utc": "2026-09-27T04:16:00+00:00",
-    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "received_at_utc": "2026-09-28T11:38:10.728873+00:00",
     "connection": {
       "connected": true,
       "error": "awaiting fresh market events after reconnect",
@@ -260,6 +579,110 @@
         "provisional": false
       }
     ],
+    "charts": {
+      "BTCUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "ETHUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ],
+      "SOLUSDT": [
+        {
+          "time_utc": "2026-09-27T03:58:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T03:59:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:00:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        },
+        {
+          "time_utc": "2026-09-27T04:01:00+00:00",
+          "open": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "close": 100.0,
+          "provisional": false
+        }
+      ]
+    },
     "markets": {
       "BTCUSDT": {
         "last_closed_15m_price": 100.0,
@@ -312,7 +735,7 @@
       "unrealized_pnl_usd": 0,
       "wallet_usd": 10000.0
     },
-    "api_time_utc": "2026-09-27T16:29:04.938955+00:00",
+    "api_time_utc": "2026-09-28T11:38:10.831812+00:00",
     "api_version": 2,
     "chart": [
       {
@@ -348,6 +771,110 @@
         "time_utc": "2026-09-27T04:01:00+00:00"
       }
     ],
+    "charts": {
+      "BTCUSDT": [
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:58:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:59:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:00:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:01:00+00:00"
+        }
+      ],
+      "ETHUSDT": [
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:58:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:59:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:00:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:01:00+00:00"
+        }
+      ],
+      "SOLUSDT": [
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:58:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T03:59:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:00:00+00:00"
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "low": 99.0,
+          "open": 100.0,
+          "provisional": false,
+          "time_utc": "2026-09-27T04:01:00+00:00"
+        }
+      ]
+    },
     "completed_trades": 0,
     "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
     "connection": {
@@ -356,7 +883,7 @@
       "last_event_received_at_utc": null,
       "reconnect_required": false
     },
-    "error": "Saved account is read-only; exact broker/risk/funding recovery is required.",
+    "error": "Saved account is read-only until exact broker/risk/funding recovery is verified.",
     "funding_events": [],
     "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
     "markets": {
@@ -377,7 +904,7 @@
     "open_positions": [],
     "orders": [],
     "pending_orders": [],
-    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "received_at_utc": "2026-09-28T11:38:10.728873+00:00",
     "recovery": {
       "required": true,
       "account_known": true,
@@ -386,14 +913,51 @@
     },
     "risk_gate": {
       "admission_open": false,
-      "reason": "Saved account is read-only; exact broker/risk/funding recovery is required.",
+      "reason": "Saved account is read-only until exact broker/risk/funding recovery is verified.",
       "halted": true
     },
     "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
-    "session_id": "20260927T162904-82c1d345",
+    "session_id": "20260928T113810-734b6aee",
     "source_time_utc": "2026-09-27T04:16:00+00:00",
     "status": "RECOVERY_REQUIRED",
     "strategy": "Trend Following 4h/15m fixed rules",
+    "strategy_contract": {
+      "active_strategy": "TREND_FOLLOWING",
+      "chart_does_not_control_strategy": true,
+      "chart_timeframes": [
+        "1m",
+        "15m",
+        "4h"
+      ],
+      "execution_timeframe": "15m_next_open",
+      "signal_timeframe": "4h_closed"
+    },
+    "strategy_decisions": {
+      "BTCUSDT": {
+        "order_id": null,
+        "reason": null,
+        "state": "SCANNING",
+        "symbol": "BTCUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "trade_id": null
+      },
+      "ETHUSDT": {
+        "order_id": null,
+        "reason": null,
+        "state": "SCANNING",
+        "symbol": "ETHUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "trade_id": null
+      },
+      "SOLUSDT": {
+        "order_id": null,
+        "reason": null,
+        "state": "SCANNING",
+        "symbol": "SOLUSDT",
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "trade_id": null
+      }
+    },
     "symbols": [
       "BTCUSDT",
       "ETHUSDT",
@@ -404,7 +968,7 @@
   },
   "unknown_account": {
     "api_version": 2,
-    "api_time_utc": "2026-09-27T16:29:04.956906+00:00",
+    "api_time_utc": "2026-09-28T11:38:10.854558+00:00",
     "mode": "PAPER_RESEARCH",
     "status": "RECOVERY_REQUIRED",
     "error": "Account evidence is incomplete or inconsistent: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
@@ -416,6 +980,43 @@
     ],
     "venue": "Binance USD-M perpetual public data",
     "strategy": "Trend Following 4h/15m fixed rules",
+    "strategy_contract": {
+      "active_strategy": "TREND_FOLLOWING",
+      "signal_timeframe": "4h_closed",
+      "execution_timeframe": "15m_next_open",
+      "chart_timeframes": [
+        "1m",
+        "15m",
+        "4h"
+      ],
+      "chart_does_not_control_strategy": true
+    },
+    "strategy_decisions": {
+      "BTCUSDT": {
+        "state": "SCANNING",
+        "symbol": "BTCUSDT",
+        "time_utc": null,
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "ETHUSDT": {
+        "state": "SCANNING",
+        "symbol": "ETHUSDT",
+        "time_utc": null,
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      },
+      "SOLUSDT": {
+        "state": "SCANNING",
+        "symbol": "SOLUSDT",
+        "time_utc": null,
+        "order_id": null,
+        "trade_id": null,
+        "reason": null
+      }
+    },
     "source_time_utc": null,
     "received_at_utc": null,
     "connection": {
@@ -428,6 +1029,11 @@
     "last_processed_open_utc": null,
     "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
     "chart": [],
+    "charts": {
+      "BTCUSDT": [],
+      "ETHUSDT": [],
+      "SOLUSDT": []
+    },
     "markets": {},
     "account": {
       "initial_equity_usd": null,
