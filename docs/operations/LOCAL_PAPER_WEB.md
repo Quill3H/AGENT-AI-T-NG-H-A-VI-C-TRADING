@@ -1,68 +1,71 @@
-# Local Paper Web
+# Local Futures Paper Web — Windows
 
-This is a local, prospective **PAPER/RESEARCH** observation tool. It does not
-connect a trading account, use exchange credentials, place live/testnet orders,
-or imply that any strategy is profitable. The hosted static preview remains an
-archived evidence viewer and does not run this scanner.
+This is a local BTC/ETH/SOL USD-M Futures **simulation** using public Binance
+market data. The initial account is 10,000 imaginary USDT. It has no trading
+credentials or exchange order endpoint. Closing the browser tab does not stop
+the backend. The Windows computer must remain on, awake and connected for
+continuous observation.
 
-## Start on Windows
+## First run
 
-From the repository root, run `start-paper-web.cmd 8765` (or double-click it
-with the default port described below). It builds the web app, starts a
-loopback-only server, and opens `http://127.0.0.1:8765/`. Opening that local
-page starts one idempotent paper session. The terminal shows a public BTCUSDT
-1m candlestick chart, BTC/ETH/SOL 15m closed prices, account state, open
-positions, recent order statuses, completed realization rows, and timestamps.
+Run `start-paper-web.cmd` from the repository root, optionally with a port
+(`start-paper-web.cmd 8765`). It prepares a local Python environment, installs
+the public WebSocket client if needed, builds the web bundle if missing, starts
+the loopback server and opens `http://127.0.0.1:8765/`. On a genuinely new
+journal, press **Khởi động bot** once. The backend then runs independently of
+the browser tab.
 
-For a different port, pass the port as the argument. Stop admission with the
-**Dừng mô phỏng** button; close the server window with Ctrl+C to stop the
-service. Closing the browser tab alone does **not** stop the server. Restarting
-the service creates a new session; earlier journals remain under
-`data/paper_sessions/` and are intentionally excluded from Git.
+The journal defaults to `crypto-paper-agent/data/paper_sessions`. Use the
+**same** directory on every manual and scheduled launch. Existing
+`persistent_state.json` and old JSONL evidence are deliberately locked as
+`RECOVERY_REQUIRED`; preserve them for a separately reviewed migration.
+Never remove or rename them merely to get another 10,000 USDT account.
 
-If launching manually, from `crypto-paper-agent/`:
+## Start at Windows logon
+
+After first-run dependencies and web build are present, run these commands
+from `crypto-paper-agent` in PowerShell:
 
 ```powershell
-uv venv .venv-paper --python 3.12
-uv pip install --python .venv-paper\Scripts\python.exe pandas numpy requests loguru pyyaml
-cd web-preview
-npm ci
-npm run build
-cd ..
-.\.venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser
+.\scripts\windows\install-paper-task.ps1 -PythonPath '.venv-paper\Scripts\python.exe'
+Start-ScheduledTask -TaskName CryptoPaperResearchBackend
+Get-ScheduledTaskInfo -TaskName CryptoPaperResearchBackend
+Get-Content data\paper_sessions\logs\paper-server.log -Wait
 ```
 
-## Execution contract
+If the first run used a custom journal directory, pass the same
+`-JournalDir 'D:\paper-data\session'` to the installer. A task starts when
+that Windows user logs on. Actual logout/reboot and retry behavior on the
+owner's Windows machine is not yet verified. The scripts do not disable sleep;
+configure Windows to stay awake when plugged in for continuous observation.
+`Stop-ScheduledTask` stops the service; `POST /api/stop` stops the simulated
+bot but leaves HTTP running. Uninstall with
+`.\scripts\windows\uninstall-paper-task.ps1` without deleting the journal.
 
-- Backend decision/execution source: Binance public USD-M perpetual `/fapi/v1/time`, `/fapi/v1/klines` and `/fapi/v1/fundingRate` only. No exchange order endpoint exists in this service.
-- Frontend display source: the browser may open Binance public WebSocket `@kline_1m` for live chart/price display. This stream is display-only and never enters strategy, risk-gate, sizing, or PaperBroker decisions; stale/disconnected WebSocket data falls back to backend REST closed-candle prices.
-- BTC chart may show a **provisional** 1m candle. It is display-only.
-  Signals use fully closed 4h candles, with the existing fixed Trend Following
-  rulebook; execution is simulated by PaperBroker on the next closed 15m bar.
-- Startup 4h/15m data is warm-up/baseline, **not** retrospectively traded.
-  New BTC/ETH/SOL 15m bars are accepted together in event-time order. Missing,
-  duplicate, gapped, stale, malformed or mismatched data stops or delays
-  admission. Source receipt, exchange server time, event time, config hash,
-  raw warm-up and each raw input batch are recorded in the JSONL journal.
-- A startup source failure remains visible as QUARANTINED until the local
-  service is restarted. No order is admitted from a partially initialized
-  session.
-- PaperBroker owns sizing, stop-loss, max-5x leverage, margin, fee, slippage,
-  funding and circuit-breaker accounting. ETH/SOL use an explicitly
-  **simulated conservative** maintenance bracket (2% MMR, max $5,000 notional),
-  not an exchange-verified venue bracket. This limits fill/liquidation fidelity.
-  Exact funding source provenance is mandatory; a missing or millisecond-late
-  settlement event quarantines the session rather than backdating it. The
-  scanner observes fully closed 15m bars. If a paper position spans a funding
-  boundary, a settlement record first retrieved after that boundary is also
-  rejected as unavailable at event time. This can end a session with an open
-  paper position; the local REST scanner does not yet provide event-time
-  funding capture and must not invent an on-time settlement.
-- Stop ends observation and cancels pending orders. Any open paper position is
-  retained in the terminal state without pretending to fill a market exit at
-  an unobserved price. No position or trade is carried into a new session.
+Do not launch a second process with the same journal. The listener rejects
+a duplicate port; a different port does not protect from duplicate writers.
+The scheduled launcher does not install packages or rebuild the UI.
 
-The local status is author-tested, not independently reviewed. Zero trades are
-normal if the fixed rulebook has no fresh valid signal. Historical replay,
-near-current candles, and prospective observations are displayed separately;
-none of them establishes future returns or economic validation.
+## Market, recovery and display
+
+- The backend receives public Binance Futures `/market` WebSocket BTC/ETH/SOL
+  1m and 15m klines. Only synchronized and REST-validated closed 15m events
+  feed its paper broker; public REST also supplies 4h strategy data and funding
+  provenance. Browser events cannot submit paper or exchange orders.
+- The browser separately uses public `/market/ws/...@kline_1m` for display.
+  It shows a live quote only while that socket receives fresh events. When the
+  socket stops, a recent backend closed-candle price is labeled **REST nến
+  đóng**. If stale/unreachable, the current price is unavailable. Chart
+  history never becomes a current quote by itself.
+- A v2 journal/checkpoint preserves the account, positions, orders, funding
+  markers and risk state. A clean restart attempts exact restore and starts
+  the stream worker automatically; order admission waits for fresh synchronized
+  data. The stop button is terminal for that account. Incomplete, corrupt or
+  old evidence, or an unprovable exposure gap, fails closed in
+  `RECOVERY_REQUIRED` without an automatic account reset.
+
+See [stream API](../../crypto-paper-agent/docs/operations/PAPER_STREAM_API.md)
+and [recovery limits](../../crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md).
+This build is a candidate pending real Windows restart and long-running stream
+observation. A visible price or passing test does not establish trading
+returns or 24/7 availability.

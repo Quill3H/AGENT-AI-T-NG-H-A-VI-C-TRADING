@@ -1,7 +1,7 @@
 # Crypto Futures Paper-Trading Research Engine
 
 [![Paper Only](https://img.shields.io/badge/Mode-PAPER%20TRADING%20ONLY-green.svg)](#ranh-gi%E1%BB%9Bi-an-to%C3%A0n)
-[![Tests Passing](https://img.shields.io/badge/Tests-450%20passed-brightgreen.svg)](#ch%E1%BA%A1y-tests)
+[![Tests Passing](https://img.shields.io/badge/Tests-507%20passed-brightgreen.svg)](#ch%E1%BA%A1y-tests)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](#c%C3%A0i-%C4%91%E1%BA%B7t)
 [![Architecture Docs](https://img.shields.io/badge/Docs-docs%2FINDEX.md-blueviolet.svg)](docs/INDEX.md)
 
@@ -27,14 +27,14 @@ Hệ thống mã nguồn mở nghiên cứu định lượng, kiểm thử hồi
    - *SMC Liquidity Sweep:* Săn thanh khoản với lệnh Limit tại FVG và chốt lời 3 phần 40/30/30.
    - *Funding Arbitrage:* Khai thác chênh lệch lãi suất funding giữa Spot và Perpetual.
    - *Reinforcement Learning (PPO):* Môi trường huấn luyện tác tử AI dựa trên Gymnasium.
-6. **Ứng dụng Web Console thời gian thực:** Backend paper-trading dùng Binance public REST polling cho dữ liệu quyết định/khớp lệnh; frontend React có thêm Binance public WebSocket `kline_1m` chỉ để hiển thị giá/nến 1m trực tiếp, với fallback về giá REST nến đóng khi stream gián đoạn.
+6. **Ứng dụng Web Console thời gian thực:** Backend paper-trading dùng Binance public `/market` WebSocket, xác minh nến đóng qua REST trước khi mô phỏng lệnh. Frontend React mở WebSocket 1m riêng để hiển thị, có nhãn giá nến đóng backend khi nguồn còn mới. [Hướng dẫn Windows và phục hồi](docs/operations/LOCAL_PAPER_WEB.md).
 
 ---
 
 ## 2. Kiến trúc Tổng quát (Architecture Overview)
 
 ```
-Binance Public Data (REST / Vision + display-only browser WebSocket)
+Binance Public Data (REST / Vision + backend and display-only browser WebSockets)
        ↓
 1. Data Layer (Fetcher / Parquet Cache / Vision Downloader)
        ↓
@@ -83,7 +83,7 @@ AGENT-AI-T-NG-H-A-VI-C-TRADING/
     ├── data/                  # Dữ liệu tĩnh (lịch tin tức CSV)
     ├── scripts/               # Các script thực thi CLI, huấn luyện PPO
     ├── src/                   # Mã nguồn Python phân tầng
-    ├── tests/                 # 450+ unit/integration test cases (Pytest)
+    ├── tests/                 # 500+ unit/integration test cases (Pytest)
     ├── web-preview/           # Ứng dụng web React + Vite (Binance Dark UI)
     └── pytest.ini             # Cấu hình chạy test Pytest
 ```
@@ -130,7 +130,7 @@ Script sẽ tự động:
 Dự án sở hữu bộ test suite tự động bảo vệ toàn bộ các bất biến tài chính:
 
 ```powershell
-# Chạy toàn bộ 450+ tests Python
+# Chạy toàn bộ 500+ tests Python
 cd crypto-paper-agent
 .\.venv-paper\Scripts\python.exe -m pytest -q -m "not network"
 

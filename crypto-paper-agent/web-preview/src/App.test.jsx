@@ -475,6 +475,7 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
     render(<App />)
 
     // Initially open WS and emit kline
+    expect(wsInstance.url).toBe('wss://fstream.binance.com/market/ws/btcusdt@kline_1m')
     await act(async () => {
       if (wsInstance?.onopen) wsInstance.onopen()
       if (wsInstance?.onmessage) {
@@ -511,6 +512,7 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
 
     // Must fall back to REST closed price (63,800.00), NOT keep stale 64,050.00
     expect(screen.getAllByText(/63,800.00/).length).toBeGreaterThan(0)
+    expect(screen.queryByText('WebSocket Live')).toBeNull()
     expect(screen.getAllByText(/REST nến đóng/i).length).toBeGreaterThan(0)
   })
 
@@ -582,9 +584,30 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
       // Must show stale warning and fallback to REST closed price (63,500.00)
       expect(screen.getAllByText(/gián đoạn|Giá cũ/i).length).toBeGreaterThan(0)
       expect(screen.getAllByText(/63,500.00/).length).toBeGreaterThan(0)
+      expect(screen.queryByText('WebSocket Live')).toBeNull()
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('hides a stale backend price even when a historical chart still exists', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        mode: 'PAPER_RESEARCH',
+        status: 'WAITING_CONNECTION',
+        source_time_utc: new Date(Date.now() - 20 * 60_000).toISOString(),
+        markets: { BTCUSDT: { last_closed_15m_price: 63800,
+          as_of_utc: new Date(Date.now() - 20 * 60_000).toISOString() } },
+        chart: [{ time_utc: new Date().toISOString(), open: 64000, high: 64010, low: 63900, close: 64000 }],
+        connection: { connected: false },
+      }),
+    })
+    render(<App />)
+    await waitFor(() => expect(screen.getByText('Chưa có dữ liệu')).toBeInTheDocument())
+    expect(screen.queryByLabelText(/Giá nến đóng gần nhất/)).toBeNull()
+    expect(screen.queryByText('WebSocket Live')).toBeNull()
   })
 
   it('truthfully reports bot status: distinguishes permitted simulated orders from closed risk gates', async () => {

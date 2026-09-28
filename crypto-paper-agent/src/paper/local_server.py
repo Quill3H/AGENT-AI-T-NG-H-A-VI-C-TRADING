@@ -3,12 +3,14 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import socket
 from pathlib import Path
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 from urllib.parse import unquote, urlparse
 import webbrowser
 
 from src.paper.live_session import LocalPaperSession, PROJECT_ROOT
+from src.paper.public_stream import PublicKlineStream
 
 
 def host_allowed(host, server_port=8765):
@@ -18,8 +20,13 @@ def host_allowed(host, server_port=8765):
 def origin_allowed(origin, server_port=8765):
     if origin is None:
         return True
-    parsed = urlparse(origin)
-    return parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost") and parsed.port in (server_port, 5173)
+    try:
+        parsed = urlparse(origin)
+        return (parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost")
+                and parsed.port in (server_port, 5173) and parsed.username is None
+                and parsed.password is None and not parsed.path and not parsed.query and not parsed.fragment)
+    except (TypeError, ValueError):
+        return False
 
 
 def public_path(root, requested):
@@ -34,42 +41,32 @@ def public_path(root, requested):
     return candidate
 
 
-import socket
-import urllib.request
+class ExclusiveHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = False
+
+    def server_bind(self):
+        if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
-def is_port_in_use(port, host="127.0.0.1"):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.5)
-        return s.connect_ex((host, port)) == 0
-
-
-def is_existing_paper_server(port, host="127.0.0.1"):
-    try:
-        req = urllib.request.Request(
-            f"http://{host}:{port}/api/state",
-            headers={"Host": f"{host}:{port}"},
-        )
-        with urllib.request.urlopen(req, timeout=1.5) as resp:
-            data = json.loads(resp.read().decode())
-            return data.get("mode") == "PAPER_RESEARCH"
-    except Exception:
-        return False
-
-
-def serve(port=8765, source=None, journal_dir=None, open_browser=False):
+def create_server(port=8765, source=None, journal_dir=None):
     root = PROJECT_ROOT / "web-preview/dist"
-    if not (root / "index.html").is_file():
-        raise FileNotFoundError("Build web-preview first: npm run build")
-    session = LocalPaperSession(source=source, journal_dir=journal_dir)
     stopped = Event()
     worker = None
+    stream = None
+    worker_lock = Lock()
 
-    def scan():
-        while not stopped.wait(20):
-            state = session.poll()
-            if state["status"] not in ("SCANNING", "WAITING_SYNC"):
-                break
+    def start_market_worker_if_needed(state):
+        nonlocal worker, stream
+        if state["status"] not in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION"):
+            return
+        if worker is not None and worker.is_alive():
+            return
+        stopped.clear()
+        stream = PublicKlineStream(session.on_stream_event, session.on_connection, stopped)
+        worker = Thread(target=stream.run, name="binance-public-kline", daemon=True)
+        worker.start()
 
     class Handler(BaseHTTPRequestHandler):
         def _local_host(self):
@@ -82,17 +79,43 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
             body = json.dumps(payload, allow_nan=False).encode("utf-8")
             self.send_response(code)
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            origin = self.headers.get("Origin")
+            if origin and origin_allowed(origin, server_port=port):
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Vary", "Origin")
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(body)
 
+        def do_OPTIONS(self):
+            if not self._local_host():
+                return
+            origin = self.headers.get("Origin")
+            if not origin or not origin_allowed(origin, server_port=port):
+                self._json(403, {"error": "cross-site origin rejected"})
+                return
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
         def do_GET(self):
             if not self._local_host():
                 return
             if urlparse(self.path).path == "/api/state":
                 self._json(200, session.state())
+                return
+            if urlparse(self.path).path == "/api/health":
+                state = session.state()
+                self._json(200, {"mode": "PAPER_RESEARCH", "status": state["status"],
+                                 "connection": state["connection"], "session_id": state["session_id"],
+                                 "api_time_utc": state["api_time_utc"], "recovery": state["recovery"],
+                                 "risk_gate": state["risk_gate"], "error": state["error"],
+                                 "source_time_utc": state["source_time_utc"]})
                 return
             target = public_path(root, self.path)
             if target is None:
@@ -115,40 +138,59 @@ def serve(port=8765, source=None, journal_dir=None, open_browser=False):
             if self.path not in ("/api/start", "/api/stop"):
                 self._json(404, {"error": "not found"})
                 return
-            if self.headers.get("Content-Length", "0") != "0":
+            if self.headers.get("Content-Length", "0") != "0" or self.headers.get("Transfer-Encoding"):
                 self._json(400, {"error": "request body not accepted"})
                 return
-            nonlocal worker
+            nonlocal worker, stream
             try:
                 if self.path == "/api/start":
-                    result = session.start()
-                    if result["status"] == "SCANNING" and (worker is None or not worker.is_alive()):
-                        stopped.clear()
-                        worker = Thread(target=scan, daemon=True)
-                        worker.start()
+                    with worker_lock:
+                        result = session.start()
+                        start_market_worker_if_needed(result)
                 else:
-                    stopped.set()
-                    result = session.stop()
+                    with worker_lock:
+                        stopped.set()
+                        if stream is not None:
+                            stream.close()
+                        result = session.stop()
                 self._json(200, result)
             except Exception as exc:
-                self._json(503, {"error": str(exc), "status": "UNAVAILABLE", "mode": "PAPER_RESEARCH"})
+                result = session.state()
+                result["error"] = result.get("error") or str(exc)
+                self._json(503, result)
 
-    if is_port_in_use(port):
-        if is_existing_paper_server(port):
-            print(f"[Paper Server] Server is already running on http://127.0.0.1:{port}/ (duplicate instance prevented).", flush=True)
-            if open_browser:
-                webbrowser.open(f"http://127.0.0.1:{port}/")
-            return
-        raise OSError(f"Port {port} is already in use by another process. Please free the port or specify another port.")
+    class PaperServer(ExclusiveHTTPServer):
+        def server_close(self):
+            stopped.set()
+            if stream is not None:
+                stream.close()
+            try:
+                if hasattr(self, 'session'):
+                    self.session.shutdown()
+            finally:
+                super().server_close()
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = PaperServer(("127.0.0.1", port), Handler)
+    port = server.server_port
+    try:
+        session = LocalPaperSession(source=source, journal_dir=journal_dir, auto_resume=True)
+        server.session = session
+        with worker_lock:
+            start_market_worker_if_needed(session.state())
+    except Exception:
+        server.server_close()
+        raise
+    return server
+
+
+def serve(port=8765, source=None, journal_dir=None, open_browser=False):
+    server = create_server(port=port, source=source, journal_dir=journal_dir)
     print(f"PAPER/RESEARCH local web: http://127.0.0.1:{port}/", flush=True)
     if open_browser:
         webbrowser.open(f"http://127.0.0.1:{port}/")
     try:
         server.serve_forever()
+    except KeyboardInterrupt:
+        pass
     finally:
-        stopped.set()
-        session.stop()
         server.server_close()
-

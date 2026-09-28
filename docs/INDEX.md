@@ -64,6 +64,7 @@ Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệ
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
 | [docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](planning/PRODUCT_CHARTER_AND_GATE_SPEC.md) | **CANONICAL** | Điều lệ sản phẩm, chuỗi nghiệm thu kỹ thuật G0–G5 và quy tắc cấm nhìn trước. |
+| [docs/planning/2026-09-28-branch-consolidation.md](planning/2026-09-28-branch-consolidation.md) | **SUPPORTING** | Một nhánh nền phát triển, nhánh đã nằm trong lịch sử và những nhánh còn cần so sánh. |
 | [docs/planning/PM_SKILL_MCP_ROUTING.md](planning/PM_SKILL_MCP_ROUTING.md) | **CANONICAL** | Ma trận điều phối kỹ năng và MCP server tương ứng cho từng tác vụ chuyên biệt. |
 | [docs/planning/2026-09-23-main-sync-decision.md](planning/2026-09-23-main-sync-decision.md) | **CANONICAL** | Quyết định hợp nhất quy trình tích hợp nhánh `main` duy nhất của chủ dự án. |
 | [docs/planning/2026-09-25-two-hour-web-preview.md](planning/2026-09-25-two-hour-web-preview.md) | **CANONICAL** | Hợp đồng timebox xây dựng bản preview web dashboard an toàn không API key. |

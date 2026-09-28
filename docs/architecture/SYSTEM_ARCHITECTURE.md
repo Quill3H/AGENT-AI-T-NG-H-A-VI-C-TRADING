@@ -77,7 +77,7 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 
 | Đặc tính | A. Backtest / Research Replay | B. Realtime Paper Web Stream |
 | :--- | :--- | :--- |
-| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | **Decision/execution path:** Binance Futures public REST polling (`/fapi/v1/klines`, `/fapi/v1/fundingRate`) qua `requests.Session()`. **Display path:** frontend browser mở Binance public WebSocket `@kline_1m` cho giá/nến trực tiếp; stream này không được dùng để sinh tín hiệu hay khớp lệnh. |
+| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | Backend nhận public Binance Futures `/market` WebSocket 1m/15m, xác minh nến đóng qua REST và dùng REST 4h/funding. Frontend mở socket 1m riêng chỉ để hiển thị. |
 | **Đồng hồ thời gian** | Đồng hồ mô phỏng đơn điệu duyệt qua từng nến đóng. | Đồng hồ thực tế UTC chạy theo event stream nến đóng 15m/4h. |
 | **Thực thi lệnh** | Khớp tại `Open` nến tiếp theo kèm trượt giá (slippage). | Khớp tại giá nến tiếp theo khi nến hiện tại xác nhận đóng. |
 | **Phân hệ điều phối**| `crypto-paper-agent/src/backtest/engine.py` | `crypto-paper-agent/src/paper/live_session.py` |
@@ -127,9 +127,9 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 
 ### 3.7 Web Preview & Realtime Stream (`crypto-paper-agent/src/paper/` & `web-preview/`)
 - `local_server.py`: HTTP loopback server (`ThreadingHTTPServer` + `BaseHTTPRequestHandler`) cung cấp REST endpoints (`/api/state`, `/api/start`, `/api/stop`). Không dùng FastAPI và không host WebSocket server.
-- `live_session.py`: Quản lý phiên paper-trading và **decision/execution data path** bằng Binance public REST polling; chỉ nến đóng/provenance hợp lệ mới được đưa vào strategy/risk/PaperBroker.
-- `persistence.py`: Tự động lưu và khôi phục trạng thái vị thế/số dư vào file JSON khi restart server.
-- `web-preview/`: Frontend React/Vite. Trình duyệt mở trực tiếp Binance public WebSocket `wss://fstream.binance.com/...@kline_1m` để hiển thị giá/nến 1m realtime. Đây là **display-only path**; khi WebSocket stale/disconnected UI fallback về giá REST nến đóng từ backend. Dữ liệu WebSocket frontend không được dùng để tạo tín hiệu, sizing hay khớp lệnh.
+- `live_session.py` + `public_stream.py`: Backend nhận stream public, kiểm tra nến đóng 15m đồng bộ với REST trước khi chuyển vào strategy/risk/PaperBroker. 4h và funding dùng REST public.
+- `durable_journal.py` + `recovery_state.py`: Journal và checkpoint máy v2; bằng chứng cũ/hỏng hoặc khoảng trống không thể chứng minh bị khóa. `local_server.py` khởi động lại worker stream sau khi khôi phục được phiên.
+- `web-preview/`: Frontend React/Vite mở WebSocket Binance `/market/ws/...@kline_1m` riêng chỉ để hiển thị. Giá nến đóng backend chỉ được trình bày khi còn mới; dữ liệu từ trình duyệt không tạo tín hiệu, sizing hay khớp lệnh.
 
 ---
 
