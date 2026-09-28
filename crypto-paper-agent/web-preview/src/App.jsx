@@ -210,7 +210,7 @@ export function App() {
     const connectWs = () => {
       if (typeof WebSocket === 'undefined') return
       try {
-        const streamUrl = `wss://fstream.binance.com/ws/${activeCoin.toLowerCase()}@kline_1m`
+        const streamUrl = `wss://fstream.binance.com/market/ws/${activeCoin.toLowerCase()}@kline_1m`
         ws = new WebSocket(streamUrl)
 
         ws.onopen = () => {
@@ -395,10 +395,14 @@ export function App() {
     []
 
   // Real current price: strictly real or null. ZERO fake numbers (64k/2.5k/150).
-  const marketPrice = typeof marketInfo?.last_closed_15m_price === 'number' ? marketInfo.last_closed_15m_price : null
-  const lastCandlePrice = symbolCandles.length > 0 && typeof symbolCandles[symbolCandles.length - 1].close === 'number'
-    ? symbolCandles[symbolCandles.length - 1].close
-    : null
+  const backendQuoteCurrent = connectionStatus === 'ONLINE' && lastSyncTime !== null && nowTime - lastSyncTime < 10_000
+  const recentClosedPrice = (market) => {
+    const age = nowTime - new Date(market?.as_of_utc).getTime()
+    return backendQuoteCurrent && Number.isFinite(age) && age >= -60_000 && age < 17 * 60_000 &&
+      typeof market?.last_closed_15m_price === 'number' && Number.isFinite(market.last_closed_15m_price)
+      ? market.last_closed_15m_price : null
+  }
+  const marketPrice = recentClosedPrice(marketInfo)
 
   // WebSocket freshness check:
   // When disconnected or no new tick received for >15s, do NOT prioritize stale liveCandle price over fresh REST
@@ -407,20 +411,12 @@ export function App() {
 
   // Only use liveCandle.close if WebSocket stream is actively connected and receiving fresh ticks (<15s).
   // If WebSocket is disconnected or stale, strictly fall back to closed REST price from backend.
-  const currentPrice = isWsLive ? (liveCandle.close ?? null) : (marketPrice ?? lastCandlePrice ?? null)
+  const currentPrice = isWsLive ? (liveCandle.close ?? null) : marketPrice
 
   // Function to get real price for any coin in the left list
   const getCoinPrice = (symbol) => {
     if (symbol === activeCoin && currentPrice !== null) return currentPrice
-    const symMarket = backendState?.markets?.[symbol]
-    if (typeof symMarket?.last_closed_15m_price === 'number') {
-      return symMarket.last_closed_15m_price
-    }
-    const symCandles = backendState?.charts?.[symbol] || (symbol === 'BTCUSDT' ? backendState?.chart : null) || []
-    if (symCandles.length > 0 && typeof symCandles[symCandles.length - 1].close === 'number') {
-      return symCandles[symCandles.length - 1].close
-    }
-    return null
+    return recentClosedPrice(backendState?.markets?.[symbol])
   }
 
   // 24h stats based on real symbolCandles
@@ -440,14 +436,11 @@ export function App() {
     if (isWsLive && lastWsEventTime) {
       return `${new Date(lastWsEventTime).toLocaleTimeString('vi-VN', { hour12: false })} (Live WS)`
     }
-    if (isWsStale && lastWsEventTime) {
+    if (isWsStale && lastWsEventTime && marketPrice === null) {
       return `${new Date(lastWsEventTime).toLocaleTimeString('vi-VN', { hour12: false })} (Mất kết nối/Giá cũ)`
     }
-    if (marketInfo?.as_of_utc) {
+    if (marketPrice !== null) {
       return `${new Date(marketInfo.as_of_utc).toLocaleTimeString('vi-VN', { hour12: false })} (REST nến đóng)`
-    }
-    if (backendState?.source_time_utc) {
-      return `${new Date(backendState.source_time_utc).toLocaleTimeString('vi-VN', { hour12: false })} (REST)`
     }
     return null
   })()
@@ -459,7 +452,7 @@ export function App() {
     if (wsStatus === 'DISCONNECTED') {
       return marketPrice !== null ? '○ REST nến đóng (WS ngắt)' : '○ WS mất kết nối'
     }
-    if (marketInfo) return '● REST Nến đã đóng'
+    if (marketPrice !== null) return '● REST Nến đã đóng'
     if (connectionStatus === 'DATA_STALE') return '⚠ Nguồn nến gián đoạn'
     return '○ Chờ dữ liệu nến'
   })()
@@ -468,7 +461,7 @@ export function App() {
     if (isWsLive) return '#0ECB81'
     if (isWsStale && lastWsEventTime) return '#F0B90B'
     if (wsStatus === 'DISCONNECTED') return marketPrice !== null ? '#2563EB' : '#F6465D'
-    if (marketInfo) return '#2563EB'
+    if (marketPrice !== null) return '#2563EB'
     if (connectionStatus === 'DATA_STALE') return '#F0B90B'
     return '#848E9C'
   })()
@@ -616,7 +609,7 @@ export function App() {
           {currentPrice !== null ? (
             <span
               className={`ticker-price mono ${changePct24h !== null && changePct24h >= 0 ? 'up' : 'down'}`}
-              aria-label={`Giá hiện tại ${money(currentPrice, precision)}`}
+              aria-label={`${isWsLive ? 'Giá trực tiếp' : 'Giá nến đóng gần nhất'} ${money(currentPrice, precision)}`}
             >
               {money(currentPrice, precision)}
             </span>
@@ -1304,7 +1297,7 @@ export function App() {
             <div className="risk-row">
               <span className="risk-key">Nguồn nến thị trường</span>
               <span className="risk-val" style={{ color: marketFeedColor }}>
-                {liveCandle ? 'WebSocket Live' : marketInfo ? 'REST Public' : 'Chưa có'}
+                {isWsLive ? 'WebSocket Live' : marketFeedText}
               </span>
             </div>
             <div className="risk-row">
