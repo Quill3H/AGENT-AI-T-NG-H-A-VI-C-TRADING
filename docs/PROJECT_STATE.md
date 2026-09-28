@@ -11,7 +11,7 @@
 | Thông số | Trạng thái Hiện tại |
 | :--- | :--- |
 | **Giai đoạn dự án** | Stage 06–11 nghiên cứu/backtest; Local Paper Web đang kiểm định tích hợp |
-| **Nhánh nền phát triển** | `codex/local-paper-futures-app` (`9fd81e7`, đã merge PR #4); `main` (`fe1c133`) chưa cập nhật theo nhánh này |
+| **Nhánh nền phát triển** | `codex/local-paper-futures-app` (PR #4 đã merge tại `9fd81e7`); `main` (`fe1c133`) chưa cập nhật theo nhánh này |
 | **Trạng thái bản sửa** | PR #4 đã hợp nhất vào nhánh nền; tiếp tục kiểm định Windows và nguồn dữ liệu trước khi nghiệm thu vận hành |
 | **Chế độ giao dịch** | **PAPER TRADING ONLY** (mô phỏng, không API key, không nạp/rút, không ví tiền) |
 | **Nguồn dữ liệu thị trường** | Backend dùng public Binance USD-M Futures `/market` WebSocket và xác minh nến đóng qua REST; trình duyệt hiển thị stream riêng. Không có endpoint đặt lệnh sàn. |
@@ -69,5 +69,5 @@
 
 1. PR #4 đã merge vào `codex/local-paper-futures-app`; xác minh trên Windows với journal cũ/mới, tự khởi động và tái kết nối trước khi nghiệm thu vận hành.
 2. Theo dõi dữ liệu public dài hạn và kiểm định độc lập G2–G5; hiệu quả kinh tế chưa được chứng minh.
-3. Theo [kế hoạch gọn nhánh](planning/2026-09-28-branch-consolidation.md): chủ dự án đã cho phép xóa nhánh cũ được chứa trọn sau khi kiểm tra SHA và PR; không merge vào `main` trong lượt này.
+3. [Dọn nhánh](planning/2026-09-28-branch-consolidation.md) đã hoàn tất: còn sáu nhánh trên GitHub gồm `main`, nhánh nền và bốn nhánh phân kỳ cần xem xét riêng; không merge vào `main` trong lượt này.
 4. Không nạp/rút tiền thật hoặc kết nối API key trading.
