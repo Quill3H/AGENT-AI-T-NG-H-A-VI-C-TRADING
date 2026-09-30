@@ -2,8 +2,9 @@
 
 Date: 2026-10-01. Design author: Codex. Review: AUTHOR_SELF_REVIEWED.
 Owner approved the product direction in this conversation, including the final
-funding schedule. This written specification awaits owner review before the
-writing-plans/implementation phase. Nothing below claims implemented behavior,
+funding schedule. The owner approved this written specification and its research
+defaults on 2026-10-01 ("Tôi đồng ý"). Implementation proceeds in bounded slices.
+Nothing below claims implemented behavior,
 independent acceptance, profitable trading or demonstrated continuous operation.
 
 ## 1. Goal and verified baseline
@@ -259,7 +260,7 @@ Never silently replace an existing indicator implementation because another
 library has a different seed. A proven fix/new convention needs a version,
 regression evidence and explicit effect on historical/recovery compatibility.
 
-Engineering-selected promotion defaults, submitted for written-spec review:
+Engineering-selected promotion defaults, approved in the written-spec review:
 
 1. Freeze the catalog, formula versions, risk/cost model, candidate identities,
    sample criteria and windows before inspecting results. No unrestricted code

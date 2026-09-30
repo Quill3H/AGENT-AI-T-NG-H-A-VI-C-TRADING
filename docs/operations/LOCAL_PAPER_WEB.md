@@ -43,8 +43,16 @@ bot but leaves HTTP running. Uninstall with
 `.\scripts\windows\uninstall-paper-task.ps1` without deleting the journal.
 
 Do not launch a second process with the same journal. The listener rejects
-a duplicate port; a different port does not protect from duplicate writers.
+a duplicate port; an OS-backed account ownership lock also rejects a second
+writer on a different port or through directory aliases. `.paper-owner.lock`
+is a reserved operational marker, not financial evidence. Do not delete it to
+bypass ownership. Process death releases the OS lock; the marker remains.
 The scheduled launcher does not install packages or rebuild the UI.
+
+This branch implements the S0 input/ownership repair from the approved
+[Windows replay design](../superpowers/specs/2026-10-01-windows-paper-replay-design.md).
+Fixed simulated funding, compact SQLite storage, full causal outage replay and
+automatic strategy trials are approved work, not behavior shipped by S0.
 
 ## Market, recovery and display
 

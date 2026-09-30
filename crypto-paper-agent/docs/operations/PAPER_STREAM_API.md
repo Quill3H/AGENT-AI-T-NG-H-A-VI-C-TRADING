@@ -126,6 +126,21 @@ engineering gate.
 
 ## Recovery v2 and Windows process lifecycle
 
+Account ownership is independent of the HTTP port. Before auto-resume, the
+server acquires a nonblocking OS lifetime lock on `.paper-owner.lock` in the
+resolved account directory. A duplicate writer fails startup without creating
+an account or rewriting its checkpoint/journal. Read-only LocalPaperSession
+inspection grants no writer rights; explicit start/resume must claim ownership
+and reread evidence. Different accounts can run independently.
+Shutdown stops/joins transport before releasing ownership, denies concurrent
+Start/Stop, and ignores late callbacks on the retired session. If the worker
+does not terminate within 15 seconds, ownership is retained and teardown fails
+closed. Killing the process releases the OS lock, not account data. This is not
+proof of power-loss durability or Windows scheduled-task/reboot availability.
+
+S0 preserves API v2 and existing funding/recovery/stop behavior below. The
+approved new replay/fixed-funding/trial/control contract is not implemented yet.
+
 See `PAPER_STREAM_RECOVERY_V2.md` for the exact restart contract. Version-2
 machine checkpoints can be restored only after broker/risk/strategy/accounting
 and the current closed-bar REST boundary agree. A legacy or unprovable session

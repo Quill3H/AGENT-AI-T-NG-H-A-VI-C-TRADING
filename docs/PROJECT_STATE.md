@@ -1,12 +1,38 @@
 # PROJECT_STATE — Trạng thái Hiện tại của Dự án
 
 > **Tài liệu trạng thái sống (Living Project State)**  
-> Cập nhật lần cuối: 2026-09-28  
+> Cập nhật lần cuối: 2026-10-01
 > Quy tắc: Tài liệu này **chỉ mô tả trạng thái hiện tại**. Toàn bộ nhật ký kiểm định, walkthrough và lịch sử phát triển chi tiết được lưu trữ tại [docs/history/](history/) và [docs/handover/](handover/).
 
 ---
 
 ## 1. Tóm tắt Trạng thái Hiện tại (Current Snapshot)
+
+### Mốc đang triển khai: Windows paper replay — S0
+
+Chủ dự án đã duyệt [thiết kế Windows replay và strategy trials](superpowers/specs/2026-10-01-windows-paper-replay-design.md)
+ngày 2026-10-01, gồm funding **mô phỏng** cố định 0.01% tại 07/15/23 UTC+7
+(00/08/16 UTC), replay toàn bộ nhân quả và không reset vốn khi restart.
+Những thay đổi này là yêu cầu đã duyệt, **chưa phải toàn bộ hành vi hiện có**.
+
+- Nhánh triển khai riêng: `codex/windows-paper-replay`; nguồn code
+  `1876b134684be6e925d954c4bd3635b61d33fcdc`.
+- Code-under-test S0: `d021857731752f8d8fe34d6bde032358f5d946d7`.
+- Trên chính commit này: offline **556 passed, 2 skipped, 5 deselected** trong
+  136.51 giây; historical probes Review05/06/07: **26/11/3 passed**.
+- S0 sửa volume không hợp lệ, completeness/cache miss, quyền ghi tài khoản
+  độc lập cổng HTTP và race Start/shutdown; historical probes được sửa đường dẫn
+  sau di chuyển, không đổi assertion tài chính.
+- Đây là **AUTHOR_SELF_REVIEWED**, chưa nghiệm thu độc lập. Chi tiết lệnh/kết quả
+  và phạm vi còn mở ở [báo cáo S0](reviews/2026-10-01-paper-s0-repair.md).
+- **Chưa triển khai S1–S5:** fixed funding/versioned recipe, SQLite compact/migration,
+  full outage replay, trial/research promotion và controls/Windows/API mới.
+  Không chạy tài khoản của chủ dự án hoặc tự cài Scheduled Task trong lượt này.
+- `main`/`origin/main` vẫn ở `fe1c1330d913e78239db575ff8433cf069fe1b01`.
+  Không merge, force-push, rebase hay squash.
+
+Các bảng subsystem bên dưới mô tả nền trước S0; không phải tuyên bố đã hoàn tất
+thiết kế mới. Khôi phục gap có exposure vẫn có thể `RECOVERY_REQUIRED` cho tới S3.
 
 | Thông số | Trạng thái Hiện tại |
 | :--- | :--- |
@@ -55,6 +81,11 @@
 
 ## 4. Vấn đề Tồn đọng & Nợ Kỹ thuật (Known Blockers & Technical Debt)
 
+S0 đã đóng các blocker kiểm tra volume/completeness/duplicate account writer.
+Parquet write vẫn chưa atomic và revision policy chưa hoàn chỉnh; journal vẫn
+lặp full state, gap replay/seed ổn định và legacy migration thuộc S2–S3.
+Public funding fail-closed được giữ nguyên; fixed funding mới chưa nối vào runner.
+
 1. **Millisecond-late Funding Source Timestamps (G2 Diagnostic):**
    - *Bối cảnh:* Một số sự kiện funding của sàn Binance đến trễ từ 1–6 ms so với mốc tròn giờ (00:00, 08:00, 16:00 UTC).
    - *Hành vi hiện tại:* Hệ thống tuân thủ nghiêm ngặt nguyên tắc **fail-closed** theo ADR 0011 (từ chối khớp lệnh nếu dữ liệu nguồn chưa đạt trạng thái sẵn sàng).
@@ -67,6 +98,12 @@
 ---
 
 ## 5. Kế hoạch Được phê duyệt Tiếp theo (Next Approved Work)
+
+Ưu tiên mới: tiếp tục lần lượt S1 → S2 → S3 → S4 → S5 theo thiết kế đã duyệt,
+không mở rộng PPO hoặc quảng bá hiệu quả kinh tế trong milestone Windows này.
+[Kế hoạch S0](superpowers/plans/2026-10-01-paper-input-ownership-repair.md)
+ghi cụ thể các file, test gates và giới hạn; từng subsystem sau có kế hoạch
+triển khai riêng với test red/green trước khi thay đổi production code.
 
 1. PR #4 đã merge vào `codex/local-paper-futures-app`; xác minh trên Windows với journal cũ/mới, tự khởi động và tái kết nối trước khi nghiệm thu vận hành.
 2. Theo dõi dữ liệu public dài hạn và kiểm định độc lập G2–G5; hiệu quả kinh tế chưa được chứng minh.
