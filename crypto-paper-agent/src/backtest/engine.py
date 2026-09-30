@@ -15,6 +15,7 @@ Tuân thủ nghiêm ngặt ANTIGRAVITY_STAGE_05_TASK.md:
 """
 from datetime import datetime, timedelta, timezone
 import math
+from numbers import Real
 import random
 from typing import Any, Dict, List, Optional, Tuple
 from loguru import logger
@@ -130,17 +131,20 @@ class BacktestEngine:
                 raise ValueError(f"Dataset {name} missing required column '{c}'")
 
         # Thẩm định số học hữu hạn và dương
-        for c in ["open", "high", "low", "close"]:
+        for c in req_cols:
             col_data = df[c]
             if col_data.isna().any():
                 raise ValueError(f"Dataset {name} column '{c}' contains NaN values.")
             # Kiểm tra kiểu không phải boolean
-            if (col_data.apply(lambda x: type(x) is bool)).any():
-                raise TypeError(f"Dataset {name} column '{c}' contains boolean values.")
+            if col_data.map(lambda x: isinstance(x, (bool, np.bool_)) or not isinstance(x, Real)).any():
+                raise TypeError(f"Dataset {name} column '{c}' contains non-numeric or boolean values.")
             arr = col_data.to_numpy(dtype=float)
             if not np.all(np.isfinite(arr)):
                 raise ValueError(f"Dataset {name} column '{c}' contains non-finite values (Inf/-Inf).")
-            if not np.all(arr > 0):
+            if c == "volume":
+                if np.any(arr < 0):
+                    raise ValueError(f"Dataset {name} column '{c}' contains negative values.")
+            elif not np.all(arr > 0):
                 raise ValueError(f"Dataset {name} column '{c}' contains non-positive values (<= 0).")
 
         # Thẩm định quan hệ hình học nến: High >= max(Open, Close), Low <= min(Open, Close), High >= Low

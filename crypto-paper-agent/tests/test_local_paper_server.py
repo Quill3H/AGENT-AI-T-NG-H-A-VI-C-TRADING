@@ -68,7 +68,7 @@ def test_second_server_cannot_bind_same_port(api, tmp_path):
     from src.paper.local_server import create_server
     _, first = api
     with pytest.raises(OSError):
-        duplicate = create_server(port=first.server_port, source=FakeSource(), journal_dir=tmp_path)
+        duplicate = create_server(port=first.server_port, source=FakeSource(), journal_dir=tmp_path / "other-account")
         duplicate.server_close()
 
 

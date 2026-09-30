@@ -61,4 +61,5 @@ def test_windows_server_restart_preserves_corrupt_evidence_and_no_new_account(tm
                 process.terminate()
                 process.wait(timeout=10)
         assert (journal / 'state.json').read_bytes() == evidence
-        assert sorted(p.name for p in journal.iterdir()) == ['state.json']
+        assert sorted(p.name for p in journal.iterdir()) == ['.paper-owner.lock', 'state.json']
+        assert (journal / '.paper-owner.lock').stat().st_size == 0

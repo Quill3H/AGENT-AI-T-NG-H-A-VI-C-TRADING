@@ -46,13 +46,13 @@ def test_checkpoint_and_journal_must_agree(tmp_path, damage):
         checkpoint.unlink(missing_ok=True)
     else:
         checkpoint.write_text('{', encoding='utf-8')
-    before = {p.name: p.read_bytes() for p in tmp_path.iterdir() if p.is_file()}
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir() if p.is_file() and p.name != '.paper-owner.lock'}
     restarted = LocalPaperSession(source=FakeSource(), journal_dir=tmp_path)
     assert restarted.start()['status'] == 'RECOVERY_REQUIRED'
     assert restarted.state()['account']['wallet_usd'] is None
     assert restarted.broker is None
     restarted.stop()
-    assert {p.name: p.read_bytes() for p in tmp_path.iterdir() if p.is_file()} == before
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir() if p.is_file() and p.name != '.paper-owner.lock'} == before
 
 
 def test_misaligned_closed_events_request_transport_reconnect(tmp_path):

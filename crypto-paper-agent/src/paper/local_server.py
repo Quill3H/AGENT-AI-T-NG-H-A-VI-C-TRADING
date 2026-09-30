@@ -11,6 +11,7 @@ import webbrowser
 
 from src.paper.live_session import LocalPaperSession, PROJECT_ROOT
 from src.paper.public_stream import PublicKlineStream
+from src.paper.account_lock import AccountOwnershipLock
 
 
 def host_allowed(host, server_port=8765):
@@ -53,12 +54,17 @@ class ExclusiveHTTPServer(ThreadingHTTPServer):
 def create_server(port=8765, source=None, journal_dir=None):
     root = PROJECT_ROOT / "web-preview/dist"
     stopped = Event()
+    closing = Event()
     worker = None
     stream = None
     worker_lock = Lock()
+    ownership = AccountOwnershipLock(journal_dir or PROJECT_ROOT / "data/paper_sessions")
+    ownership.acquire()
 
     def start_market_worker_if_needed(state):
         nonlocal worker, stream
+        if closing.is_set():
+            return
         if state["status"] not in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION"):
             return
         if worker is not None and worker.is_alive():
@@ -160,12 +166,18 @@ def create_server(port=8765, source=None, journal_dir=None):
                 return
             nonlocal worker, stream
             try:
+                if closing.is_set():
+                    raise RuntimeError("backend is shutting down")
                 if self.path == "/api/start":
                     with worker_lock:
+                        if closing.is_set():
+                            raise RuntimeError("backend is shutting down")
                         result = session.start()
                         start_market_worker_if_needed(result)
                 else:
                     with worker_lock:
+                        if closing.is_set():
+                            raise RuntimeError("backend is shutting down")
                         stopped.set()
                         if stream is not None:
                             stream.close()
@@ -178,19 +190,32 @@ def create_server(port=8765, source=None, journal_dir=None):
 
     class PaperServer(ExclusiveHTTPServer):
         def server_close(self):
-            stopped.set()
-            if stream is not None:
-                stream.close()
+            closing.set()
             try:
-                if hasattr(self, 'session'):
-                    self.session.shutdown()
+                with worker_lock:
+                    stopped.set()
+                    if hasattr(self, 'session'):
+                        self.session.on_connection(False, "backend is shutting down")
+                    if stream is not None:
+                        stream.close()
+                    if worker is not None:
+                        worker.join(timeout=15)
+                        if worker.is_alive():
+                            raise RuntimeError("market worker has not stopped; paper account ownership retained")
+                    if hasattr(self, 'session'):
+                        self.session.shutdown()
+                    ownership.release()
             finally:
                 super().server_close()
 
-    server = PaperServer(("127.0.0.1", port), Handler)
+    try:
+        server = PaperServer(("127.0.0.1", port), Handler)
+    except Exception:
+        ownership.release()
+        raise
     port = server.server_port
     try:
-        session = LocalPaperSession(source=source, journal_dir=journal_dir, auto_resume=True)
+        session = LocalPaperSession(source=source, journal_dir=journal_dir, auto_resume=True, ownership=ownership)
         server.session = session
         with worker_lock:
             start_market_worker_if_needed(session.state())

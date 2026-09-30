@@ -9,7 +9,7 @@ import yaml
 from src.execution.paper_broker import PaperBroker
 from src.execution.order_models import OrderDirection, OrderRequest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3] / "crypto-paper-agent"
 T = datetime(2026, 9, 1, 7, 58, tzinfo=timezone.utc)
 
 

@@ -21,6 +21,7 @@ from src.features import add_all_features
 from src.strategies.trend_following import TrendFollowingStrategy
 from src.paper.public_stream import INTERVAL_MS, SYMBOLS
 from src.paper.durable_journal import DurableJournal
+from src.paper.account_lock import AccountOwnershipLock
 from src.paper.recovery_state import capture_session, restore_session
 
 
@@ -127,12 +128,18 @@ def _frame(bars):
 
 
 class LocalPaperSession:
-    def __init__(self, source=None, journal_dir=None, auto_resume=False):
+    def __init__(self, source=None, journal_dir=None, auto_resume=False, ownership=None):
         self.source = source or BinancePublicSource()
         self.auto_resume = auto_resume
         self.config = _config()
         self.config_hash = sha256(json.dumps(self.config, sort_keys=True, default=str).encode()).hexdigest()
         self.journal_dir = Path(journal_dir or PROJECT_ROOT / "data/paper_sessions")
+        self.ownership = ownership
+        self._closed = False
+        if ownership is not None:
+            if ownership.directory != self.journal_dir.resolve():
+                raise ValueError("ownership directory does not match paper account")
+            ownership.assert_owned()
         self.lock = RLock()
         self.session_id = None
         self.status = "IDLE"
@@ -155,7 +162,18 @@ class LocalPaperSession:
         self.recovery_machine = None
         self.reconnect_required = False
         self.storage = DurableJournal(self.journal_dir)
+        if auto_resume:
+            self._claim_account()
         self._load_existing_journal()
+
+    def _claim_account(self):
+        if self._closed:
+            raise RuntimeError("paper session has been shut down")
+        if self.ownership is None:
+            owner = AccountOwnershipLock(self.journal_dir)
+            owner.acquire()
+            self.ownership = owner
+        self.ownership.assert_owned()
 
     def _load_existing_journal(self):
         existing, snapshot, reason = self.storage.inspect()
@@ -169,6 +187,9 @@ class LocalPaperSession:
                 self.reconcile_resume()
 
     def _journal(self, record):
+        if self._closed or self.ownership is None:
+            raise RuntimeError("paper session has no writer ownership or has been shut down")
+        self.ownership.assert_owned()
         try:
             machine = None
             if self.broker is not None and self.session_id:
@@ -196,10 +217,19 @@ class LocalPaperSession:
         component and the public market boundary have passed validation.
         """
         with self.lock:
+            if self._closed:
+                raise RuntimeError("paper session has been shut down")
             if self.status != "RECOVERY_REQUIRED":
                 return self.state()
             if self.recovery_machine is None or self.recovery_snapshot is None:
                 self.error = self.error or "Legacy account evidence has no exact machine checkpoint"
+                return self.state()
+            self._claim_account()
+            # Re-read after claiming: a previously inspected view may be stale.
+            existing, snapshot, reason = self.storage.inspect()
+            self.recovery_snapshot, self.recovery_machine = snapshot, self.storage.machine
+            if not existing or snapshot is None or self.recovery_machine is None:
+                self.error = reason or "account evidence changed before recovery"
                 return self.state()
             try:
                 restore_session(self, self.recovery_machine, self.recovery_snapshot)
@@ -239,6 +269,8 @@ class LocalPaperSession:
 
     def on_connection(self, connected: bool, reason: str | None):
         with self.lock:
+            if self._closed:
+                return self.state()
             if self.status in ("STOPPED", "RECOVERY_REQUIRED", "QUARANTINED", "IDLE"):
                 self.stream_connected = False
                 return self.state()
@@ -255,6 +287,8 @@ class LocalPaperSession:
     def on_stream_event(self, event: dict):
         """Only a three-symbol closed 15m notification may trigger paper processing."""
         with self.lock:
+            if self._closed:
+                return self.state()
             if not self.stream_connected or self.status not in ("SCANNING", "WAITING_SYNC"):
                 return self.state()
             if event["symbol"] not in SYMBOLS or event["interval"] not in ("1m", "15m"):
@@ -309,8 +343,11 @@ class LocalPaperSession:
 
     def start(self):
         with self.lock:
+            if self._closed:
+                raise RuntimeError("paper session has been shut down")
             if self.status != "IDLE":
                 return self.state()
+            self._claim_account()
             self._load_existing_journal()
             if self.status == "RECOVERY_REQUIRED":
                 return self.state()
@@ -423,6 +460,8 @@ class LocalPaperSession:
 
     def poll(self, expected=None):
         with self.lock:
+            if self._closed:
+                return self.state()
             if self.status not in ("SCANNING", "WAITING_SYNC"):
                 return self.state()
             try:
@@ -540,11 +579,19 @@ class LocalPaperSession:
     def shutdown(self):
         """Stop transport ownership while preserving a resumable paper machine."""
         with self.lock:
-            if self.session_id and self.broker is not None and self.status not in ("STOPPED", "RECOVERY_REQUIRED"):
-                self._journal({"type": "PROCESS_STOP", "received_at_utc": datetime.now(UTC).isoformat(),
-                               "state": self._state_unlocked()})
-            self.stream_connected = False
-            self.reconnect_required = False
+            if self._closed:
+                return self.state()
+            try:
+                if (self.ownership is not None and self.session_id and self.broker is not None
+                        and self.status not in ("STOPPED", "RECOVERY_REQUIRED")):
+                    self._journal({"type": "PROCESS_STOP", "received_at_utc": datetime.now(UTC).isoformat(),
+                                   "state": self._state_unlocked()})
+            finally:
+                self._closed = True
+                self.stream_connected = False
+                self.reconnect_required = False
+                if self.ownership is not None:
+                    self.ownership.release()
             return self.state()
 
     def chart_data(self, symbol: str, interval: str = "1m", limit: int = 90):

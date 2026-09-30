@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3] / "crypto-paper-agent"
 sys.path.insert(0, str(ROOT))
 from src.execution.paper_broker import PaperBroker
 from src.execution.order_models import OrderRequest, OrderDirection, OrderStatus, ExitReason

@@ -123,6 +123,8 @@ def load_from_cache(
         return None
 
     df = ensure_utc_index(df)
+    if not _valid_cache_index(df.index):
+        return None
     df_slice = df.loc[since:until]
 
     if not _is_cache_sufficient(df_slice, since, until, timeframe):
@@ -158,7 +160,10 @@ def has_complete_cache(
 
     try:
         schema = pq.read_schema(path)
-        if "timestamp" in schema.names:
+        index_columns = (schema.pandas_metadata or {}).get("index_columns", [])
+        if len(index_columns) == 1 and isinstance(index_columns[0], str):
+            cols_to_read = index_columns
+        elif "timestamp" in schema.names:
             cols_to_read = ["timestamp"]
         elif "__index_level_0__" in schema.names:
             cols_to_read = ["__index_level_0__"]
@@ -166,12 +171,9 @@ def has_complete_cache(
             cols_to_read = []
         df_index = pq.read_table(path, columns=cols_to_read).to_pandas()
         df_index = ensure_utc_index(df_index)
-        if len(df_index) == 0 or not isinstance(df_index.index, pd.DatetimeIndex):
+        if not _valid_cache_index(df_index.index):
             return False
-        cached_min = df_index.index.min()
-        cached_max = df_index.index.max()
-        coverage_end = cached_max + timeframe_to_timedelta(timeframe)
-        return bool(cached_min <= since and (cached_max >= until or coverage_end >= until))
+        return _is_cache_sufficient(df_index.loc[since:until], since, until, timeframe)
     except Exception as e:
         logger.warning("[Cache] Không thể đọc metadata từ {}: {}", path, e)
         return False
@@ -262,18 +264,17 @@ def _is_cache_sufficient(
     timeframe: str,
 ) -> bool:
     """
-    Kiểm tra df_slice có đủ dữ liệu cho khoảng [since, until] không.
-    Cho phép tối đa 1% candles bị thiếu (tolerance cho các gap nhỏ trên Binance).
+    Require every inclusive bar-open slot in [since, until], without gap tolerance.
     """
-    if df_slice.empty:
+    if not _valid_cache_index(df_slice.index) or len(df_slice) == 0:
         return False
+    expected = pd.date_range(since, until, freq=timeframe_to_timedelta(timeframe))
+    return len(expected) > 0 and df_slice.index.equals(expected)
 
-    freq = timeframe_to_timedelta(timeframe)
-    expected_count = int((until - since) / freq) + 1
-    actual_count = len(df_slice)
 
-    # 99% coverage là đủ (Binance đôi khi thiếu 1-2 nến trong gap maintenance)
-    return actual_count >= expected_count * 0.99
+def _valid_cache_index(index) -> bool:
+    return (isinstance(index, pd.DatetimeIndex) and index.tz is not None
+            and not index.hasnans and not index.has_duplicates and index.is_monotonic_increasing)
 
 
 def timeframe_to_timedelta(timeframe: str) -> pd.Timedelta:
