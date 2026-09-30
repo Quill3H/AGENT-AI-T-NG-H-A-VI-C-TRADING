@@ -48,12 +48,14 @@ from src.risk.invariant_checks import (
     parse_simulation_timestamp,
 )
 from src.risk.position_sizing import calculate_position_size
+from src.execution.funding_model import FixedFundingModel, settlement_terms
 
 
 def _validate_config(config: dict) -> None:
     """Xác thực định dạng và miền giá trị hữu hạn của cấu hình hệ thống (E8, H4)."""
     if not isinstance(config, dict):
         raise TypeError(f"config must be dict, got {type(config).__name__}")
+    FixedFundingModel.from_config(config)
 
     # 1. account
     if "account" in config:
@@ -170,6 +172,8 @@ class PaperBroker:
             self.funding_hours = set(self.config["funding_rate"]["settlement_hours_utc"])
         else:
             self.funding_hours = {0, 8, 16}
+        if FixedFundingModel.from_config(self.config) is not None and self.funding_hours != {0, 8, 16}:
+            raise ValueError('fixed funding schedule cannot be overridden')
 
         # 3. Quản lý rủi ro & Ngắt mạch
         if circuit_breaker is not None:
@@ -540,42 +544,7 @@ class PaperBroker:
                         will_gap_exit = True
 
                 if not will_gap_exit:
-                    raw_rate = candle.get("funding_rate")
-                    if raw_rate is None or type(raw_rate) is bool or not isinstance(raw_rate, (int, float)):
-                        raise ValueError(f"Missing or invalid funding rate at settlement boundary {open_time.isoformat()}: {raw_rate!r}")
-                    f_rate = float(raw_rate)
-                    if not math.isfinite(f_rate):
-                        raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
-
-                    # J1 & K1: Bắt buộc funding_readiness is True (kiểu bool) vô điều kiện
-                    if "funding_readiness" not in candle:
-                        raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
-                    raw_readiness = candle.get("funding_readiness")
-                    if type(raw_readiness) is not bool:
-                        raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
-                    if raw_readiness is False:
-                        raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
-                    if raw_readiness is not True:
-                        raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
-
-                    # J1 & K1: Bắt buộc source timestamp hợp lệ vô điều kiện
-                    f_time = candle.get("funding_time")
-                    if f_time is None:
-                        f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
-                    if f_time is None:
-                        raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
-                    if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
-                        raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
-                    f_dt = _ensure_utc(f_time)
-                    if f_dt > open_time:
-                        raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
-                    if f_dt < open_time - timedelta(hours=24):
-                        raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
-                    if f_dt != open_time:
-                        raise ValueError(
-                            f"FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary {open_time.isoformat()}; "
-                            f"received {f_dt.isoformat()} (observation is not a settlement event)"
-                        )
+                    f_rate, f_dt = settlement_terms(self.config, candle, symbol, open_time, _ensure_utc)
 
                     # J2: Pre-check liquidation solver với candidate collateral (zero mutation if solver fails)
                     direction_sign = 1.0 if pos.direction == OrderDirection.LONG else -1.0
@@ -685,9 +654,10 @@ class PaperBroker:
             pos = self.positions[symbol]
             if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
                 f_key = (symbol, f_dt)  # exact source event validated in preflight
+                fixed_model = FixedFundingModel.from_config(self.config)
+                if fixed_model is not None:
+                    f_key = (fixed_model.event_id(pos.position_id, symbol, open_time), open_time)
                 if f_key not in self._settled_funding_keys:
-                    raw_rate = candle.get("funding_rate", 0.0)
-                    f_rate = float(raw_rate)
                     funding_evt = self._apply_funding_settlement(
                         position=pos,
                         timestamp=open_time,
@@ -1370,8 +1340,12 @@ class PaperBroker:
         position.cumulative_funding += cashflow
         position.liquidation_price = new_liq
 
+        model = FixedFundingModel.from_config(self.config)
+        event_id = self._next_funding_id(position.symbol, timestamp)
+        if model is not None:
+            event_id = model.event_id(position.position_id, position.symbol, timestamp)
         event = FundingEvent(
-            event_id=self._next_funding_id(position.symbol, timestamp),
+            event_id=event_id,
             timestamp=timestamp,
             symbol=position.symbol,
             position_id=position.position_id,
