@@ -3,13 +3,16 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import os
 import socket
 from pathlib import Path
 from threading import Event, Lock, Thread
 from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
-from src.paper.live_session import LocalPaperSession, PROJECT_ROOT
+from src.paper.live_session import PROJECT_ROOT
+from src.paper.replay_session import DEFAULT_ACCOUNT_DIR, PaperReplaySession
+from src.paper.commands import PaperCommands
 from src.paper.public_stream import PublicKlineStream
 from src.paper.account_lock import AccountOwnershipLock
 
@@ -51,21 +54,21 @@ class ExclusiveHTTPServer(ThreadingHTTPServer):
         super().server_bind()
 
 
-def create_server(port=8765, source=None, journal_dir=None):
+def create_server(port=8765, source=None, journal_dir=None, clock=None, auto_start=False):
     root = PROJECT_ROOT / "web-preview/dist"
     stopped = Event()
     closing = Event()
     worker = None
     stream = None
     worker_lock = Lock()
-    ownership = AccountOwnershipLock(journal_dir or PROJECT_ROOT / "data/paper_sessions")
+    ownership = AccountOwnershipLock(journal_dir or DEFAULT_ACCOUNT_DIR)
     ownership.acquire()
 
     def start_market_worker_if_needed(state):
         nonlocal worker, stream
         if closing.is_set():
             return
-        if state["status"] not in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION"):
+        if state["status"] not in ("SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "STOPPING"):
             return
         if worker is not None and worker.is_alive():
             return
@@ -73,6 +76,25 @@ def create_server(port=8765, source=None, journal_dir=None):
         stream = PublicKlineStream(session.on_stream_event, session.on_connection, stopped)
         worker = Thread(target=stream.run, name="binance-public-kline", daemon=True)
         worker.start()
+
+    def apply_command(name):
+        if closing.is_set():
+            raise RuntimeError('backend is shutting down')
+        result = session.reconcile_resume() if name == 'restore' else getattr(session, name)()
+        if result['status'] == 'RECOVERY_REQUIRED' or result.get('error') and name in ('start', 'restore'):
+            raise RuntimeError(result.get('error') or 'paper account recovery required')
+        with worker_lock:
+            if result['status'] == 'STOPPED':
+                stopped.set()
+                if stream is not None:
+                    stream.close()
+            else:
+                start_market_worker_if_needed(result)
+
+    def api_state():
+        result = session.state()
+        result['operation'] = commands.state()
+        return result
 
     class Handler(BaseHTTPRequestHandler):
         def _local_host(self):
@@ -93,7 +115,10 @@ def create_server(port=8765, source=None, journal_dir=None):
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                self.close_connection = True
 
         def do_OPTIONS(self):
             if not self._local_host():
@@ -113,15 +138,30 @@ def create_server(port=8765, source=None, journal_dir=None):
             if not self._local_host():
                 return
             if urlparse(self.path).path == "/api/state":
-                self._json(200, session.state())
+                self._json(200, api_state())
                 return
             if urlparse(self.path).path == "/api/health":
-                state = session.state()
-                self._json(200, {"mode": "PAPER_RESEARCH", "status": state["status"],
+                state = api_state()
+                self._json(200, {"api_version": 3, "mode": "PAPER_RESEARCH", "status": state["status"], "server_pid": os.getpid(),
+                                 "operation": state['operation'], "backend_busy": state['backend_busy'],
+                                 "operator_intent": state['operator_intent'], "execution_mode": state['execution_mode'],
                                  "connection": state["connection"], "session_id": state["session_id"],
                                  "api_time_utc": state["api_time_utc"], "recovery": state["recovery"],
                                  "risk_gate": state["risk_gate"], "error": state["error"],
                                  "source_time_utc": state["source_time_utc"]})
+                return
+            if urlparse(self.path).path == '/api/history':
+                params = parse_qs(urlparse(self.path).query)
+                try:
+                    cursor, limit = int(params.get('cursor', ['0'])[0]), int(params.get('limit', ['100'])[0])
+                    if session.state()['backend_busy']:
+                        self._json(503, {'error': 'account writer busy; retry history after reconciliation'})
+                    else:
+                        self._json(200, session.history(cursor, limit))
+                except (ValueError, TypeError) as exc:
+                    self._json(400, {'error': str(exc)})
+                except BlockingIOError as exc:
+                    self._json(503, {'error': str(exc)})
                 return
             if urlparse(self.path).path == "/api/chart":
                 parsed = urlparse(self.path)
@@ -158,33 +198,29 @@ def create_server(port=8765, source=None, journal_dir=None):
             if not origin_allowed(self.headers.get("Origin"), server_port=port):
                 self._json(403, {"error": "cross-site origin rejected"})
                 return
-            if self.path not in ("/api/start", "/api/stop"):
+            if self.path not in ("/api/start", "/api/stop", '/api/pause', '/api/resume'):
                 self._json(404, {"error": "not found"})
                 return
             if self.headers.get("Content-Length", "0") != "0" or self.headers.get("Transfer-Encoding"):
+                raw_length = self.headers.get('Content-Length', '0')
+                if not self.headers.get('Transfer-Encoding') and raw_length.isdecimal() and 0 < int(raw_length) <= 4096:
+                    self.connection.settimeout(1)
+                    try:
+                        self.rfile.read(int(raw_length))
+                    except (OSError, TimeoutError):
+                        pass
                 self._json(400, {"error": "request body not accepted"})
                 return
             nonlocal worker, stream
             try:
                 if closing.is_set():
                     raise RuntimeError("backend is shutting down")
-                if self.path == "/api/start":
-                    with worker_lock:
-                        if closing.is_set():
-                            raise RuntimeError("backend is shutting down")
-                        result = session.start()
-                        start_market_worker_if_needed(result)
-                else:
-                    with worker_lock:
-                        if closing.is_set():
-                            raise RuntimeError("backend is shutting down")
-                        stopped.set()
-                        if stream is not None:
-                            stream.close()
-                        result = session.stop()
-                self._json(200, result)
+                command = commands.submit(self.path.removeprefix('/api/'))
+                result = api_state()
+                result['operation'] = command
+                self._json(202, result)
             except Exception as exc:
-                result = session.state()
+                result = api_state()
                 result["error"] = result.get("error") or str(exc)
                 self._json(503, result)
 
@@ -192,6 +228,10 @@ def create_server(port=8765, source=None, journal_dir=None):
         def server_close(self):
             closing.set()
             try:
+                if hasattr(self, 'session'):
+                    self.session.request_shutdown()
+                if hasattr(self, 'commands'):
+                    self.commands.close()
                 with worker_lock:
                     stopped.set()
                     if hasattr(self, 'session'):
@@ -215,18 +255,22 @@ def create_server(port=8765, source=None, journal_dir=None):
         raise
     port = server.server_port
     try:
-        session = LocalPaperSession(source=source, journal_dir=journal_dir, auto_resume=True, ownership=ownership)
+        session = PaperReplaySession(source=source, journal_dir=journal_dir, auto_resume=False, ownership=ownership, clock=clock)
         server.session = session
-        with worker_lock:
-            start_market_worker_if_needed(session.state())
+        commands = PaperCommands(apply_command)
+        server.commands = commands
+        if session._saved is not None or (session.journal_dir / 'account.json').exists():
+            commands.submit('restore')
+        elif auto_start and session.status == 'IDLE':
+            commands.submit('start')
     except Exception:
         server.server_close()
         raise
     return server
 
 
-def serve(port=8765, source=None, journal_dir=None, open_browser=False):
-    server = create_server(port=port, source=source, journal_dir=journal_dir)
+def serve(port=8765, source=None, journal_dir=None, open_browser=False, auto_start=False):
+    server = create_server(port=port, source=source, journal_dir=journal_dir, auto_start=auto_start)
     print(f"PAPER/RESEARCH local web: http://127.0.0.1:{port}/", flush=True)
     if open_browser:
         webbrowser.open(f"http://127.0.0.1:{port}/")

@@ -30,14 +30,14 @@ export const STRATEGY_METADATA = [
     id: 'trend_following',
     nameVi: 'Bám theo xu hướng (Trend Following)',
     timeframe: '4h / 15m',
-    status: 'ACTIVE_LIVE',
-    statusLabel: '🟢 Đang quét & có thể đặt lệnh PAPER',
-    desc: 'Chiến lược duy nhất hiện đang quét và tính toán lệnh mô phỏng PAPER trên luồng dữ liệu Binance mới.',
+    status: 'DORMANT',
+    statusLabel: 'Chưa được chọn',
+    desc: '',
   },
   {
-    id: 'breakout',
+    id: 'breakout_retest',
     nameVi: 'Phá vỡ cản & Kiểm tra lại (Breakout)',
-    timeframe: '15m / 1m',
+    timeframe: '4h / 15m',
     status: 'DORMANT',
     statusLabel: '⚪ Ứng viên nghiên cứu (Chưa kích hoạt)',
     desc: 'Ứng viên nghiên cứu độc lập. Không chạy quét hay đặt lệnh trong phiên chạy thực tế.',
@@ -56,7 +56,7 @@ export const STRATEGY_METADATA = [
     timeframe: '8h settlement',
     status: 'DORMANT',
     statusLabel: '⚪ Ứng viên nghiên cứu (Chưa kích hoạt)',
-    desc: 'Thiếu dữ liệu settlement tại mốc nến. Tạm khóa bảo vệ vốn trong phiên chạy thực tế.',
+    desc: 'Không đủ điều kiện trong thí nghiệm funding cố định.',
   },
 ]
 
@@ -160,6 +160,7 @@ export function App() {
 
         setBackendState(data)
         setLastSyncTime(Date.now())
+        if (data.operation?.status === 'FAILED') setActionError(data.operation.error || 'Thao tác backend thất bại')
 
         // Classify connection & backend status
         if (data.status === 'QUARANTINED') {
@@ -168,6 +169,10 @@ export function App() {
           setConnectionStatus('RECOVERY_REQUIRED')
         } else if (data.status === 'WAITING_CONNECTION') {
           setConnectionStatus('WAITING_CONNECTION')
+        } else if (data.api_version >= 3) {
+          setConnectionStatus(data.backend_busy ? 'WAITING_DATA' :
+            data.connection?.connected && COINS.every(c => data.current_prices?.[c.symbol]?.valid)
+              ? 'ONLINE' : 'DATA_STALE')
         } else if (!data.source_time_utc) {
           // Rule: source_time_utc = null must NEVER be considered ONLINE
           setConnectionStatus('WAITING_DATA')
@@ -377,7 +382,7 @@ export function App() {
       isCancelled = true
       controller.abort()
     }
-  }, [activeCoin, activeTimeframe, backendState?.charts, backendState?.chart])
+  }, [activeCoin, activeTimeframe])
 
   // ── 4. Handlers for Coin & Timeframe Changes ────────────────────────────────
   const handleTimeframeChange = (newTf) => {
@@ -465,7 +470,7 @@ export function App() {
 
       const data = await resp.json()
       setBackendState(data)
-      if (data.status !== 'STOPPED' && data.status !== 'IDLE') {
+      if (resp.status !== 202 && data.status !== 'STOPPED' && data.status !== 'IDLE' && data.status !== 'STOPPING') {
         setActionError(data.error || 'Server chưa xác nhận trạng thái dừng.')
       }
     } catch (err) {
@@ -475,10 +480,33 @@ export function App() {
     }
   }
 
+  const handlePauseResume = async () => {
+    if (commandBusy || isRecoveryRequired) return
+    setBotActionState('CONTROL')
+    setActionError(null)
+    try {
+      const resp = await fetch(backendState?.operator_intent === 'PAUSED' ? '/api/resume' : '/api/pause',
+        { method: 'POST', signal: AbortSignal.timeout(8000) })
+      const result = await resp.json()
+      if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`)
+      setBackendState(result)
+    } catch (err) {
+      setActionError(err.message || 'Không thể thay đổi trạng thái bot')
+    } finally { setBotActionState(null) }
+  }
+
   // ── Derived Data from Backend State (100% from backend, no client math) ─────
-  const isBotRunning = ['SCANNING', 'WAITING_SYNC', 'WAITING_CONNECTION'].includes(backendState?.status)
+  const isBotRunning = ['SCANNING', 'WAITING_SYNC', 'WAITING_CONNECTION', 'STOPPING'].includes(backendState?.status)
+  const isStopping = backendState?.operator_intent === 'STOPPING' || backendState?.status === 'STOPPING'
+  const commandBusy = botActionState !== null || ['PENDING', 'RUNNING'].includes(backendState?.operation?.status)
   const isQuarantined = backendState?.status === 'QUARANTINED' || connectionStatus === 'QUARANTINED'
   const isRecoveryRequired = backendState?.status === 'RECOVERY_REQUIRED' || connectionStatus === 'RECOVERY_REQUIRED'
+  const selectedStrategy = backendState?.recipe?.strategy_id ||
+    (backendState?.strategy?.startsWith('Trend Following') ? 'trend_following' : backendState?.strategy)
+  const strategyRows = STRATEGY_METADATA.map(row => ({ ...row,
+    status: row.id === selectedStrategy ? 'SELECTED_PAPER' : 'DORMANT',
+    statusLabel: row.id === selectedStrategy ? 'Đã chọn · PAPER' : 'Không hoạt động' }))
+  const strategyLabel = STRATEGY_METADATA.find(row => row.id === selectedStrategy)?.nameVi || 'Chưa xác định'
 
   const account = backendState?.account || {
     initial_equity_usd: null,
@@ -519,7 +547,10 @@ export function App() {
       typeof market?.last_closed_15m_price === 'number' && Number.isFinite(market.last_closed_15m_price)
       ? market.last_closed_15m_price : null
   }
-  const marketPrice = recentClosedPrice(marketInfo)
+  const authoritativePrice = backendState?.current_prices?.[activeCoin]
+  const marketPrice = backendState?.api_version >= 3
+    ? backendQuoteCurrent && authoritativePrice?.valid ? authoritativePrice.price : null
+    : recentClosedPrice(marketInfo)
 
   // WebSocket freshness check:
   // When disconnected or no new tick received for >15s, do NOT prioritize stale liveCandle price over fresh REST
@@ -528,11 +559,13 @@ export function App() {
 
   // Only use liveCandle.close if WebSocket stream is actively connected and receiving fresh ticks (<15s).
   // If WebSocket is disconnected or stale, strictly fall back to closed REST price from backend.
-  const currentPrice = isWsLive ? (liveCandle.close ?? null) : marketPrice
+  const currentPrice = backendState?.api_version >= 3 ? marketPrice : isWsLive ? (liveCandle.close ?? null) : marketPrice
 
   // Function to get real price for any coin in the left list
   const getCoinPrice = (symbol) => {
     if (symbol === activeCoin && currentPrice !== null) return currentPrice
+    if (backendState?.api_version >= 3) return backendQuoteCurrent && backendState.current_prices?.[symbol]?.valid
+      ? backendState.current_prices[symbol].price : null
     return recentClosedPrice(backendState?.markets?.[symbol])
   }
 
@@ -585,6 +618,9 @@ export function App() {
 
   // Bot status text & color
   const botStatusBadge = (() => {
+    if (isStopping) return { label: 'STOPPING · Chờ đóng vị thế và đối soát', color: '#F0B90B', indicator: 'sync' }
+    if (backendState?.operator_intent === 'PAUSED') return { label: 'PAUSED · Tạm dừng lệnh vào', color: '#F0B90B', indicator: 'sync' }
+    if (backendState?.backend_busy) return { label: 'Đang đối soát backend', color: '#F0B90B', indicator: 'sync' }
     switch (backendState?.status) {
       case 'SCANNING':
         if (isAdmissionOpen) {
@@ -737,7 +773,7 @@ export function App() {
           )}
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thay đổi</span>
+            <span className="ticker-stat-label">Thay đổi cửa sổ</span>
             {changePct24h !== null && change24h !== null ? (
               <span className={`ticker-stat-value mono ${changePct24h >= 0 ? 'text-buy' : 'text-sell'}`}>
                 {changePct24h >= 0 ? '+' : ''}
@@ -750,14 +786,14 @@ export function App() {
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Cao nhất</span>
+            <span className="ticker-stat-label">Cao cửa sổ</span>
             <span className="ticker-stat-value mono">
               {high24h !== null ? money(high24h, precision) : '--'}
             </span>
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thấp nhất</span>
+            <span className="ticker-stat-label">Thấp cửa sổ</span>
             <span className="ticker-stat-value mono">
               {low24h !== null ? money(low24h, precision) : '--'}
             </span>
@@ -837,20 +873,20 @@ export function App() {
             Chiến lược hệ thống
           </div>
           <div className="strategy-list" role="list">
-            {STRATEGY_METADATA.map((strat) => (
+            {strategyRows.map((strat) => (
               <div
                 key={strat.id}
                 className="strategy-item"
                 role="listitem"
                 style={{
-                  opacity: strat.status === 'ACTIVE_LIVE' ? 1 : 0.65,
-                  borderLeft: strat.status === 'ACTIVE_LIVE' ? '3px solid #0ECB81' : '3px solid transparent',
+                  opacity: strat.status === 'SELECTED_PAPER' ? 1 : 0.65,
+                  borderLeft: strat.status === 'SELECTED_PAPER' ? '3px solid #0ECB81' : '3px solid transparent',
                 }}
               >
                 <div>
                   <div
                     className="strategy-name"
-                    style={{ color: strat.status === 'ACTIVE_LIVE' ? '#0ECB81' : '#EAECEF' }}
+                    style={{ color: strat.status === 'SELECTED_PAPER' ? '#0ECB81' : '#EAECEF' }}
                   >
                     {strat.nameVi}
                   </div>
@@ -1215,12 +1251,12 @@ export function App() {
                       </tr>
                       <tr>
                         <td>Bảo toàn vốn qua restart</td>
-                        <td>persistent_state.json tự động khôi phục số dư</td>
+                        <td>SQLite checkpoint · Broker, vị thế, lệnh, phí và risk gate</td>
                         <td style={{ color: '#0ECB81' }}>PERSISTENT</td>
                       </tr>
                       <tr>
                         <td>Giới hạn rủi ro</td>
-                        <td>Đòn bẩy tối đa 5×, Stop-loss 3%, Circuit Breaker 3 lệnh thua</td>
+                        <td>Đòn bẩy tối đa 5×, Stop-loss bắt buộc, Circuit Breaker</td>
                         <td style={{ color: '#F0B90B' }}>STRICT RISK GATE</td>
                       </tr>
                       <tr>
@@ -1248,7 +1284,7 @@ export function App() {
             <div className="bot-control-title">Bot Mô Phỏng · PAPER</div>
             <div className="bot-config-row">
               <span className="bot-config-key">Chiến lược</span>
-              <span className="bot-config-value">Trend Following (4h/15m)</span>
+              <span className="bot-config-value">{strategyLabel}</span>
             </div>
             <div className="bot-config-row">
               <span className="bot-config-key">Rủi ro/lệnh</span>
@@ -1266,6 +1302,16 @@ export function App() {
               <span className="bot-config-key">Cặp theo dõi</span>
               <span className="bot-config-value">BTC · ETH · SOL</span>
             </div>
+            {backendState?.api_version >= 3 && <>
+              <div className="bot-config-row"><span className="bot-config-key">Trial</span><span className="bot-config-value">{backendState.trial_id || 'Chưa có'}</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Funding</span><span className="bot-config-value">{backendState.funding_model?.kind === 'FIXED_SIMULATED' ? 'MÔ PHỎNG 0.01% · 07 / 15 / 23 UTC+7' : 'Nguồn public theo hợp đồng'}</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Thực thi</span><span className="bot-config-value">{backendState.execution_mode || 'Chưa chạy'} · {backendState.replay?.remaining_batches ?? 0} nến chờ</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Tổng vốn ảo đã cấp</span><span className="bot-config-value">{formatMoneyOrUnknown(backendState.trials?.total_capital_injected_usd)}</span></div>
+              {(backendState.trials?.trials || []).map(trial => <div className="bot-config-row" key={trial.trial_id}>
+                <span className="bot-config-value">{trial.trial_id} · {trial.status} · {formatMoneyOrUnknown(trial.final_equity_usd ?? trial.current_equity_usd)}{trial.target_reached ? ' · TARGET_REACHED (PAPER)' : ''}</span>
+              </div>)}
+              <div className="bot-config-row"><span className="bot-config-key">Research</span><span className="bot-config-value">{backendState.research?.status || 'NOT_REQUIRED'}</span></div>
+            </>}
 
             {/* Buttons: Strictly no optimistic state, locked on RECOVERY_REQUIRED */}
             <div className="bot-btn-group">
@@ -1285,7 +1331,8 @@ export function App() {
                   onClick={handleStart}
                   disabled={
                     isBotRunning ||
-                    botActionState !== null ||
+                    commandBusy ||
+                    (backendState?.api_version >= 3 && backendState?.status === 'STOPPED') ||
                     isQuarantined ||
                     connectionStatus === 'SERVER_ERROR'
                   }
@@ -1303,12 +1350,17 @@ export function App() {
                 type="button"
                 className="btn-stop"
                 onClick={handleStop}
-                disabled={!isBotRunning || botActionState !== null}
+                disabled={!isBotRunning || commandBusy || isStopping}
                 aria-label="Dừng bot mô phỏng"
               >
                 {botActionState === 'STOPPING' ? '⏳ Đang dừng...' : '■ Dừng'}
               </button>
+              {backendState?.api_version >= 3 && <button type="button" className="btn-stop" onClick={handlePauseResume}
+                disabled={!isBotRunning || commandBusy || isStopping || isRecoveryRequired}>
+                {backendState.operator_intent === 'PAUSED' ? 'Tiếp tục' : 'Tạm dừng'}
+              </button>}
             </div>
+            {backendState?.operation && <div className="bot-config-row" role="status"><span className="bot-config-value">{backendState.operation.id} · {backendState.operation.name} · {backendState.operation.status}</span></div>}
 
             {/* Notice for RECOVERY_REQUIRED */}
             {isRecoveryRequired && (

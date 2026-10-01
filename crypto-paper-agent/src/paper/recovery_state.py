@@ -15,11 +15,12 @@ from src.execution.order_models import (
 from src.execution.paper_broker import PaperBroker
 from src.risk.circuit_breakers import CircuitBreakerState
 from src.strategies.trend_following import SetupContext, SetupState, TrendFollowingStrategy
+from src.strategies.breakout_retest import BreakoutSetup
 
 
 CLASSES = {cls.__name__: cls for cls in (
     AccountSnapshot, FundingEvent, OrderExecutionRecord, OrderRequest,
-    Position, TradeRecord, SetupContext,
+    Position, TradeRecord, SetupContext, BreakoutSetup,
 )}
 ENUMS = {cls.__name__: cls for cls in (
     ExitReason, OrderDirection, OrderSide, OrderStatus, OrderType,

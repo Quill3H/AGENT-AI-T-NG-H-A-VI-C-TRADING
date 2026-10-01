@@ -1,8 +1,19 @@
 from src.paper.local_server import host_allowed, origin_allowed, public_path
 import threading
+import time
 import requests
 import pytest
 from test_local_paper_session import FakeSource
+
+
+def await_operation(server):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        result = server.commands.state()
+        if result and result['status'] not in ('PENDING', 'RUNNING'):
+            return result
+        time.sleep(.01)
+    pytest.fail('paper command did not finish within five seconds')
 
 
 def test_local_api_rejects_cross_site_origins():
@@ -58,9 +69,13 @@ def test_http_health_recovery_start_stop_and_errors(api, tmp_path):
     (tmp_path / 'state.json').write_text('{', encoding='utf-8')
     for endpoint in ('start', 'start', 'stop', 'stop'):
         reply = requests.post(url + '/api/' + endpoint, timeout=3)
-        assert reply.status_code == 200
-        assert reply.json()['status'] == 'RECOVERY_REQUIRED'
-        assert reply.json()['account']['wallet_usd'] is None
+        assert reply.status_code == 202
+        assert await_operation(server)['status'] == 'FAILED'
+        state = requests.get(url + '/api/state', timeout=2).json()
+        assert state['status'] == 'RECOVERY_REQUIRED'
+        assert state['account']['wallet_usd'] is None
+        assert (tmp_path / 'state.json').read_bytes() == b'{'
+        assert not (tmp_path / 'paper.sqlite3').exists()
     assert requests.get(url + '/api/missing', timeout=2).status_code == 404
 
 
@@ -78,11 +93,15 @@ def test_api_source_failure_keeps_state_contract(api):
         raise ValueError('public data unavailable')
     server.session.source.server_time_ms = unavailable
     response = requests.post(url + '/api/start', timeout=3)
-    assert response.status_code == 503
-    assert response.json()['status'] == 'QUARANTINED'
-    assert response.json()['account']['equity_usd'] == 10000
-    assert response.json()['risk_gate']['admission_open'] is False
-    assert response.json()['api_time_utc']
+    assert response.status_code == 202
+    operation = await_operation(server)
+    assert operation['status'] == 'FAILED'
+    assert 'public data unavailable' in operation['error']
+    state = requests.get(url + '/api/state', timeout=2).json()
+    assert state['status'] == 'WAITING_CONNECTION'
+    assert state['account']['equity_usd'] is None
+    assert state['risk_gate']['admission_open'] is False
+    assert state['api_time_utc']
 
 
 def test_server_startup_attempts_exact_resume_before_accepting_stream(tmp_path):
@@ -93,6 +112,7 @@ def test_server_startup_attempts_exact_resume_before_accepting_stream(tmp_path):
 
     second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
     try:
+        assert await_operation(second)['status'] == 'APPLIED'
         assert second.session.status == "WAITING_CONNECTION"
         assert second.session.broker is not None
         assert second.session.state()["risk_gate"]["admission_open"] is False

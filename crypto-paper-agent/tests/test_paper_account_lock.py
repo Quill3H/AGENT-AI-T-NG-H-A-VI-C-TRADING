@@ -8,6 +8,7 @@ import pytest
 from src.paper.live_session import LocalPaperSession
 from src.paper.local_server import create_server
 from test_local_paper_session import FakeSource
+from test_local_paper_server import await_operation
 
 
 @pytest.mark.parametrize("alias", ["plain", "dot", "parent", "case"])
@@ -67,6 +68,7 @@ def test_shutdown_releases_owner_but_cannot_reactivate_old_session(tmp_path):
     assert (tmp_path / "account.json").read_bytes() == before
     second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
     try:
+        assert await_operation(second)['status'] == 'APPLIED'
         assert second.session.state()["session_id"] == first.session_id
         assert second.session.state()["status"] == "WAITING_CONNECTION"
     finally:
@@ -131,6 +133,7 @@ server.server_close()
     try:
         assert successor.session.state()["status"] == "IDLE"
         assert not (tmp_path / "account.json").exists()
+        assert not (tmp_path / 'paper.sqlite3').exists()
     finally:
         successor.server_close()
 

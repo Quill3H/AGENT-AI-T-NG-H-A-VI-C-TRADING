@@ -1,0 +1,2060 @@
+{
+  "label": "SYNTHETIC_API_EXAMPLES_NOT_MARKET_RESULTS",
+  "api_version": 3,
+  "examples": {
+    "empty_unallocated": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:13.030290+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "IDLE",
+      "error": null,
+      "session_id": null,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": null,
+      "source_time_utc": null,
+      "received_at_utc": null,
+      "connection": {
+        "connected": false,
+        "error": "public stream not connected",
+        "reconnect_required": false,
+        "last_event_received_at_utc": null,
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": null,
+      "config_sha256": "6d2bfb114312427c9f5fd5f5281c4ccaf13eededb86207b89e5a94596d8ad178",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {},
+      "account": {
+        "initial_equity_usd": null,
+        "wallet_usd": null,
+        "equity_usd": null,
+        "available_margin_usd": null,
+        "reserved_collateral_usd": null,
+        "unrealized_pnl_usd": null,
+        "breaker_locked": null
+      },
+      "open_positions": [],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [],
+      "pending_orders": [],
+      "funding_events": [],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": "waiting for fresh public prices for BTC/ETH/SOL",
+        "halted": false
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": false,
+        "account_known": false,
+        "reconciled": false,
+        "view": "UNKNOWN"
+      },
+      "account_as_of_utc": null,
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": null,
+      "execution_mode": null,
+      "replay": {
+        "target_close_utc": null,
+        "processed_batches": 0,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "NOT_CONFIGURED"
+      },
+      "recipe": null,
+      "trial_id": null,
+      "trials": null,
+      "research": {
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "next_attempt_after_utc": null,
+        "last_verdict": null,
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "ETHUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "SOLUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    },
+    "normal_public_fixture": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:13.497475+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "WAITING_SYNC",
+      "error": null,
+      "session_id": "20261001T162413-f01ac105",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": "trend_following",
+      "source_time_utc": "2026-09-27T04:16:00+00:00",
+      "received_at_utc": "2026-10-01T16:24:13.453124+00:00",
+      "connection": {
+        "connected": true,
+        "error": null,
+        "reconnect_required": false,
+        "last_event_received_at_utc": "2026-09-27T04:15:01+00:00",
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+      "config_sha256": "8ff83711ad90c33a7ab4b6bac9768fc7796e7a358d6cb3e4713365f47bc3dafa",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {
+        "BTCUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        },
+        "ETHUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        },
+        "SOLUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        }
+      },
+      "account": {
+        "initial_equity_usd": 10000.0,
+        "wallet_usd": 9999.950015,
+        "equity_usd": 9999.920015,
+        "available_margin_usd": 9899.980015000001,
+        "reserved_collateral_usd": 99.97,
+        "unrealized_pnl_usd": -0.030000000000001137,
+        "breaker_locked": false
+      },
+      "open_positions": [
+        {
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "quantity": 1.0,
+          "entry_price": 99.97,
+          "stop_loss_price": 150.0,
+          "liquidation_price": 199.14342629482073,
+          "leverage": 1.0,
+          "opened_at_utc": "2026-09-27T04:00:00+00:00",
+          "isolated_collateral_usd": 99.97,
+          "entry_fee_usd": 0.049985,
+          "cumulative_funding_usd": 0.0
+        }
+      ],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [
+        {
+          "id": "ORD_BTCUSDT_20260927_0001",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "status": "FILLED",
+          "rejection_reasons": [],
+          "requested_at_utc": "2026-09-27T04:00:00+00:00",
+          "processed_at_utc": "2026-09-27T04:00:00+00:00",
+          "fill_price": 99.97,
+          "quantity": 1.0,
+          "fee_usd": 0.049985,
+          "slippage_usd": 0.030000000000001137
+        }
+      ],
+      "pending_orders": [],
+      "funding_events": [],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": null,
+        "halted": false
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": false,
+        "account_known": true,
+        "reconciled": true,
+        "view": "CURRENT_PROCESS"
+      },
+      "account_as_of_utc": "2026-09-27T04:15:00+00:00",
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": "RUNNING",
+      "execution_mode": "REPLAY",
+      "replay": {
+        "target_close_utc": "2026-09-27T04:15:00+00:00",
+        "processed_batches": 1,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "FIXED_SIMULATED",
+        "version": "fixed-001",
+        "rate": 0.0001,
+        "effective_at_utc": "2026-09-27T04:00:00+00:00",
+        "settlement_hours_utc": [
+          0,
+          8,
+          16
+        ],
+        "price_proxy": "CANDLE_OPEN",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "display_timezone": "UTC+07:00",
+        "settlement_hours_local": [
+          7,
+          15,
+          23
+        ]
+      },
+      "recipe": {
+        "strategy_id": "trend_following",
+        "recipe_version": "paper-recipe-v2",
+        "formula_version": "pandas-fallback-v1",
+        "available_at_utc": "2026-09-27T04:00:00+00:00",
+        "source_sha256": {
+          "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+          "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+          "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+          "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+          "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+          "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+          "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+          "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+          "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+          "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+          "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+          "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+          "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+          "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+          "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+          "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+        },
+        "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+      },
+      "trial_id": "trial-0001",
+      "trials": {
+        "version": 1,
+        "trials": [
+          {
+            "trial_id": "trial-0001",
+            "recipe": {
+              "strategy_id": "trend_following",
+              "recipe_version": "paper-recipe-v2",
+              "formula_version": "pandas-fallback-v1",
+              "available_at_utc": "2026-09-27T04:00:00+00:00",
+              "config": {
+                "account": {
+                  "initial_equity_usd": 10000,
+                  "base_currency": "USDT"
+                },
+                "risk": {
+                  "conviction_tiers": {
+                    "low": 0.01,
+                    "normal": 0.02,
+                    "high": 0.05,
+                    "ultra_high": 0.1
+                  },
+                  "max_leverage": 5,
+                  "min_liquidation_buffer_pct": 0.3
+                },
+                "circuit_breakers": {
+                  "daily_loss_limit_pct": 0.05,
+                  "consecutive_losses_threshold": 3,
+                  "risk_reduction_on_streak": 0.5,
+                  "recovery_mode": "after_3_wins",
+                  "consecutive_wins_to_recover": 3
+                },
+                "fees": {
+                  "taker_pct": 0.0005,
+                  "maker_pct": 0.0002,
+                  "slippage_pct": 0.0003
+                },
+                "data": {
+                  "symbol": "BTC/USDT",
+                  "timeframes": [
+                    "4h",
+                    "15m",
+                    "1m"
+                  ],
+                  "exchange": "binance",
+                  "start_date": "2021-01-01",
+                  "end_date": "2026-09-01",
+                  "raw_data_dir": "data/raw",
+                  "processed_data_dir": "data/processed",
+                  "futures_symbol": "BTCUSDT"
+                },
+                "open_interest": {
+                  "lookback_periods": 500,
+                  "use_binance_vision_historical": true
+                },
+                "oi_confluence": {
+                  "mode": "optional",
+                  "fallback_when_nan": true,
+                  "nan_log_note": "OI_BYPASSED_HISTORICAL"
+                },
+                "funding_rate": {
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "max_forward_fill_candles": 480
+                },
+                "features": {
+                  "ema_periods": [
+                    20,
+                    50,
+                    200
+                  ],
+                  "rsi_period": 14,
+                  "macd_fast": 12,
+                  "macd_slow": 26,
+                  "macd_signal": 9,
+                  "atr_period": 14,
+                  "oi_delta_lookback": 20,
+                  "cvd_divergence_lookback": 50
+                },
+                "smc": {
+                  "swing_n": 3,
+                  "min_bos_pct": 0.001
+                },
+                "news_filter": {
+                  "enabled": false,
+                  "blackout_minutes_before": 15,
+                  "blackout_minutes_after": 15,
+                  "calendar_source": "manual_csv",
+                  "calendar_file": "data/news_calendar.csv"
+                },
+                "logging": {
+                  "trade_log_db": "data/trades.db",
+                  "trade_log_json_dir": "data/trade_logs",
+                  "log_level": "INFO"
+                },
+                "backtest": {
+                  "random_seed": 42,
+                  "signal_on_close": true,
+                  "execute_on_next_open": true
+                },
+                "leverage_brackets": {
+                  "BTCUSDT": [
+                    [
+                      50000,
+                      0.004,
+                      0
+                    ],
+                    [
+                      250000,
+                      0.005,
+                      50
+                    ],
+                    [
+                      1000000,
+                      0.01,
+                      1300
+                    ],
+                    [
+                      10000000,
+                      0.025,
+                      16300
+                    ],
+                    [
+                      20000000,
+                      0.05,
+                      266300
+                    ],
+                    [
+                      50000000,
+                      0.1,
+                      1266300
+                    ],
+                    [
+                      100000000,
+                      0.125,
+                      2516300
+                    ],
+                    [
+                      200000000,
+                      0.15,
+                      5016300
+                    ],
+                    [
+                      300000000,
+                      0.25,
+                      25016300
+                    ],
+                    [
+                      500000000,
+                      0.5,
+                      100016300
+                    ]
+                  ],
+                  "ETHUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ],
+                  "SOLUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ]
+                },
+                "strategy": {
+                  "name": "TREND_FOLLOWING",
+                  "enabled": true,
+                  "timeframe_signal": "4h",
+                  "timeframe_execution": "15m"
+                },
+                "default_conviction": "normal",
+                "leverage": 2.0,
+                "base_risk_percent": 0.02,
+                "rules": {
+                  "crossover_fast_ema": 20,
+                  "crossover_slow_ema": 50,
+                  "regime_ema": 200,
+                  "rsi_period": 14,
+                  "rsi_threshold": 50.0,
+                  "max_setup_age_bars": 12,
+                  "swing_lookback_bars": 5
+                },
+                "stop_loss": {
+                  "method": "swing_causal",
+                  "trailing_method": "ema50_tightening_only"
+                },
+                "take_profit": {
+                  "enabled": false
+                },
+                "paper_funding_model": {
+                  "kind": "FIXED_SIMULATED",
+                  "version": "fixed-001",
+                  "rate": 0.0001,
+                  "effective_at_utc": "2026-09-27T04:00:00+00:00",
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "price_proxy": "CANDLE_OPEN",
+                  "symbols": [
+                    "BTCUSDT",
+                    "ETHUSDT",
+                    "SOLUSDT"
+                  ]
+                }
+              },
+              "source_sha256": {
+                "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+                "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+                "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+                "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+                "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+                "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+                "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+                "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+                "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+                "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+                "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+                "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+                "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+                "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+                "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+                "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+              },
+              "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+            },
+            "started_at_utc": "2026-09-27T04:00:00+00:00",
+            "initial_capital_usd": 10000.0,
+            "current_equity_usd": 9999.920015,
+            "final_equity_usd": null,
+            "status": "ACTIVE",
+            "target_reached": false,
+            "target_at_utc": null,
+            "failed_at_utc": null,
+            "last_observed_at_utc": "2026-09-27T04:15:00+00:00"
+          }
+        ],
+        "allocations": {},
+        "total_capital_injected_usd": 10000.0,
+        "checksum": "dc95c148a07003f789ff979301a9cca07e1c9395d3735edb43c46c45d980bf97"
+      },
+      "research": {
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "next_attempt_after_utc": null,
+        "last_verdict": null,
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": 100.0,
+          "valid": true,
+          "kind": "PUBLIC_FUTURES",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        },
+        "ETHUSDT": {
+          "price": 100.0,
+          "valid": true,
+          "kind": "PUBLIC_FUTURES",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        },
+        "SOLUSDT": {
+          "price": 100.0,
+          "valid": true,
+          "kind": "PUBLIC_FUTURES",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    },
+    "disconnected": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:13.501461+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "WAITING_CONNECTION",
+      "error": null,
+      "session_id": "20261001T162413-f01ac105",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": "trend_following",
+      "source_time_utc": "2026-09-27T04:16:00+00:00",
+      "received_at_utc": "2026-10-01T16:24:13.453124+00:00",
+      "connection": {
+        "connected": false,
+        "error": "synthetic fixture disconnect",
+        "reconnect_required": true,
+        "last_event_received_at_utc": "2026-09-27T04:15:01+00:00",
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+      "config_sha256": "8ff83711ad90c33a7ab4b6bac9768fc7796e7a358d6cb3e4713365f47bc3dafa",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {
+        "BTCUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        },
+        "ETHUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        },
+        "SOLUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00",
+          "forming_15m": {
+            "price": 100.0,
+            "open_time_utc": "2026-09-27T04:15:00+00:00",
+            "event_time_utc": "2026-09-27T04:15:01+00:00",
+            "received_at_utc": "2026-09-27T04:15:01+00:00",
+            "source": "Binance USD-M WebSocket",
+            "closed": false,
+            "interval": "15m"
+          }
+        }
+      },
+      "account": {
+        "initial_equity_usd": 10000.0,
+        "wallet_usd": 9999.950015,
+        "equity_usd": 9999.920015,
+        "available_margin_usd": 9899.980015000001,
+        "reserved_collateral_usd": 99.97,
+        "unrealized_pnl_usd": -0.030000000000001137,
+        "breaker_locked": false
+      },
+      "open_positions": [
+        {
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "quantity": 1.0,
+          "entry_price": 99.97,
+          "stop_loss_price": 150.0,
+          "liquidation_price": 199.14342629482073,
+          "leverage": 1.0,
+          "opened_at_utc": "2026-09-27T04:00:00+00:00",
+          "isolated_collateral_usd": 99.97,
+          "entry_fee_usd": 0.049985,
+          "cumulative_funding_usd": 0.0
+        }
+      ],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [
+        {
+          "id": "ORD_BTCUSDT_20260927_0001",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "status": "FILLED",
+          "rejection_reasons": [],
+          "requested_at_utc": "2026-09-27T04:00:00+00:00",
+          "processed_at_utc": "2026-09-27T04:00:00+00:00",
+          "fill_price": 99.97,
+          "quantity": 1.0,
+          "fee_usd": 0.049985,
+          "slippage_usd": 0.030000000000001137
+        }
+      ],
+      "pending_orders": [],
+      "funding_events": [],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": "waiting for fresh public prices for BTC/ETH/SOL",
+        "halted": false
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": false,
+        "account_known": true,
+        "reconciled": true,
+        "view": "CURRENT_PROCESS"
+      },
+      "account_as_of_utc": "2026-09-27T04:15:00+00:00",
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": "RUNNING",
+      "execution_mode": "REPLAY",
+      "replay": {
+        "target_close_utc": "2026-09-27T04:15:00+00:00",
+        "processed_batches": 1,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "FIXED_SIMULATED",
+        "version": "fixed-001",
+        "rate": 0.0001,
+        "effective_at_utc": "2026-09-27T04:00:00+00:00",
+        "settlement_hours_utc": [
+          0,
+          8,
+          16
+        ],
+        "price_proxy": "CANDLE_OPEN",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "display_timezone": "UTC+07:00",
+        "settlement_hours_local": [
+          7,
+          15,
+          23
+        ]
+      },
+      "recipe": {
+        "strategy_id": "trend_following",
+        "recipe_version": "paper-recipe-v2",
+        "formula_version": "pandas-fallback-v1",
+        "available_at_utc": "2026-09-27T04:00:00+00:00",
+        "source_sha256": {
+          "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+          "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+          "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+          "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+          "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+          "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+          "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+          "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+          "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+          "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+          "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+          "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+          "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+          "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+          "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+          "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+        },
+        "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+      },
+      "trial_id": "trial-0001",
+      "trials": {
+        "version": 1,
+        "trials": [
+          {
+            "trial_id": "trial-0001",
+            "recipe": {
+              "strategy_id": "trend_following",
+              "recipe_version": "paper-recipe-v2",
+              "formula_version": "pandas-fallback-v1",
+              "available_at_utc": "2026-09-27T04:00:00+00:00",
+              "config": {
+                "account": {
+                  "initial_equity_usd": 10000,
+                  "base_currency": "USDT"
+                },
+                "risk": {
+                  "conviction_tiers": {
+                    "low": 0.01,
+                    "normal": 0.02,
+                    "high": 0.05,
+                    "ultra_high": 0.1
+                  },
+                  "max_leverage": 5,
+                  "min_liquidation_buffer_pct": 0.3
+                },
+                "circuit_breakers": {
+                  "daily_loss_limit_pct": 0.05,
+                  "consecutive_losses_threshold": 3,
+                  "risk_reduction_on_streak": 0.5,
+                  "recovery_mode": "after_3_wins",
+                  "consecutive_wins_to_recover": 3
+                },
+                "fees": {
+                  "taker_pct": 0.0005,
+                  "maker_pct": 0.0002,
+                  "slippage_pct": 0.0003
+                },
+                "data": {
+                  "symbol": "BTC/USDT",
+                  "timeframes": [
+                    "4h",
+                    "15m",
+                    "1m"
+                  ],
+                  "exchange": "binance",
+                  "start_date": "2021-01-01",
+                  "end_date": "2026-09-01",
+                  "raw_data_dir": "data/raw",
+                  "processed_data_dir": "data/processed",
+                  "futures_symbol": "BTCUSDT"
+                },
+                "open_interest": {
+                  "lookback_periods": 500,
+                  "use_binance_vision_historical": true
+                },
+                "oi_confluence": {
+                  "mode": "optional",
+                  "fallback_when_nan": true,
+                  "nan_log_note": "OI_BYPASSED_HISTORICAL"
+                },
+                "funding_rate": {
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "max_forward_fill_candles": 480
+                },
+                "features": {
+                  "ema_periods": [
+                    20,
+                    50,
+                    200
+                  ],
+                  "rsi_period": 14,
+                  "macd_fast": 12,
+                  "macd_slow": 26,
+                  "macd_signal": 9,
+                  "atr_period": 14,
+                  "oi_delta_lookback": 20,
+                  "cvd_divergence_lookback": 50
+                },
+                "smc": {
+                  "swing_n": 3,
+                  "min_bos_pct": 0.001
+                },
+                "news_filter": {
+                  "enabled": false,
+                  "blackout_minutes_before": 15,
+                  "blackout_minutes_after": 15,
+                  "calendar_source": "manual_csv",
+                  "calendar_file": "data/news_calendar.csv"
+                },
+                "logging": {
+                  "trade_log_db": "data/trades.db",
+                  "trade_log_json_dir": "data/trade_logs",
+                  "log_level": "INFO"
+                },
+                "backtest": {
+                  "random_seed": 42,
+                  "signal_on_close": true,
+                  "execute_on_next_open": true
+                },
+                "leverage_brackets": {
+                  "BTCUSDT": [
+                    [
+                      50000,
+                      0.004,
+                      0
+                    ],
+                    [
+                      250000,
+                      0.005,
+                      50
+                    ],
+                    [
+                      1000000,
+                      0.01,
+                      1300
+                    ],
+                    [
+                      10000000,
+                      0.025,
+                      16300
+                    ],
+                    [
+                      20000000,
+                      0.05,
+                      266300
+                    ],
+                    [
+                      50000000,
+                      0.1,
+                      1266300
+                    ],
+                    [
+                      100000000,
+                      0.125,
+                      2516300
+                    ],
+                    [
+                      200000000,
+                      0.15,
+                      5016300
+                    ],
+                    [
+                      300000000,
+                      0.25,
+                      25016300
+                    ],
+                    [
+                      500000000,
+                      0.5,
+                      100016300
+                    ]
+                  ],
+                  "ETHUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ],
+                  "SOLUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ]
+                },
+                "strategy": {
+                  "name": "TREND_FOLLOWING",
+                  "enabled": true,
+                  "timeframe_signal": "4h",
+                  "timeframe_execution": "15m"
+                },
+                "default_conviction": "normal",
+                "leverage": 2.0,
+                "base_risk_percent": 0.02,
+                "rules": {
+                  "crossover_fast_ema": 20,
+                  "crossover_slow_ema": 50,
+                  "regime_ema": 200,
+                  "rsi_period": 14,
+                  "rsi_threshold": 50.0,
+                  "max_setup_age_bars": 12,
+                  "swing_lookback_bars": 5
+                },
+                "stop_loss": {
+                  "method": "swing_causal",
+                  "trailing_method": "ema50_tightening_only"
+                },
+                "take_profit": {
+                  "enabled": false
+                },
+                "paper_funding_model": {
+                  "kind": "FIXED_SIMULATED",
+                  "version": "fixed-001",
+                  "rate": 0.0001,
+                  "effective_at_utc": "2026-09-27T04:00:00+00:00",
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "price_proxy": "CANDLE_OPEN",
+                  "symbols": [
+                    "BTCUSDT",
+                    "ETHUSDT",
+                    "SOLUSDT"
+                  ]
+                }
+              },
+              "source_sha256": {
+                "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+                "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+                "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+                "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+                "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+                "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+                "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+                "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+                "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+                "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+                "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+                "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+                "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+                "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+                "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+                "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+              },
+              "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+            },
+            "started_at_utc": "2026-09-27T04:00:00+00:00",
+            "initial_capital_usd": 10000.0,
+            "current_equity_usd": 9999.920015,
+            "final_equity_usd": null,
+            "status": "ACTIVE",
+            "target_reached": false,
+            "target_at_utc": null,
+            "failed_at_utc": null,
+            "last_observed_at_utc": "2026-09-27T04:15:00+00:00"
+          }
+        ],
+        "allocations": {},
+        "total_capital_injected_usd": 10000.0,
+        "checksum": "dc95c148a07003f789ff979301a9cca07e1c9395d3735edb43c46c45d980bf97"
+      },
+      "research": {
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "next_attempt_after_utc": null,
+        "last_verdict": null,
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        },
+        "ETHUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        },
+        "SOLUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": "2026-09-27T04:15:01+00:00"
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    },
+    "paused": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:13.553324+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "WAITING_CONNECTION",
+      "error": null,
+      "session_id": "20261001T162413-f01ac105",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": "trend_following",
+      "source_time_utc": "2026-09-27T04:16:00+00:00",
+      "received_at_utc": "2026-10-01T16:24:13.453124+00:00",
+      "connection": {
+        "connected": false,
+        "error": "synthetic fixture disconnect",
+        "reconnect_required": true,
+        "last_event_received_at_utc": "2026-09-27T04:15:01+00:00",
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+      "config_sha256": "8ff83711ad90c33a7ab4b6bac9768fc7796e7a358d6cb3e4713365f47bc3dafa",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {
+        "BTCUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00"
+        },
+        "ETHUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00"
+        },
+        "SOLUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T04:15:00+00:00"
+        }
+      },
+      "account": {
+        "initial_equity_usd": 10000.0,
+        "wallet_usd": 9999.950015,
+        "equity_usd": 9999.920015,
+        "available_margin_usd": 9899.980015000001,
+        "reserved_collateral_usd": 99.97,
+        "unrealized_pnl_usd": -0.030000000000001137,
+        "breaker_locked": false
+      },
+      "open_positions": [
+        {
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "quantity": 1.0,
+          "entry_price": 99.97,
+          "stop_loss_price": 150.0,
+          "liquidation_price": 199.14342629482073,
+          "leverage": 1.0,
+          "opened_at_utc": "2026-09-27T04:00:00+00:00",
+          "isolated_collateral_usd": 99.97,
+          "entry_fee_usd": 0.049985,
+          "cumulative_funding_usd": 0.0
+        }
+      ],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [
+        {
+          "id": "ORD_BTCUSDT_20260927_0001",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "status": "FILLED",
+          "rejection_reasons": [],
+          "requested_at_utc": "2026-09-27T04:00:00+00:00",
+          "processed_at_utc": "2026-09-27T04:00:00+00:00",
+          "fill_price": 99.97,
+          "quantity": 1.0,
+          "fee_usd": 0.049985,
+          "slippage_usd": 0.030000000000001137
+        }
+      ],
+      "pending_orders": [],
+      "funding_events": [],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": "waiting for fresh public prices for BTC/ETH/SOL",
+        "halted": false
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": false,
+        "account_known": true,
+        "reconciled": true,
+        "view": "CURRENT_PROCESS"
+      },
+      "account_as_of_utc": "2026-09-27T04:15:00+00:00",
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": "PAUSED",
+      "execution_mode": "REPLAY",
+      "replay": {
+        "target_close_utc": "2026-09-27T04:15:00+00:00",
+        "processed_batches": 1,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "FIXED_SIMULATED",
+        "version": "fixed-001",
+        "rate": 0.0001,
+        "effective_at_utc": "2026-09-27T04:00:00+00:00",
+        "settlement_hours_utc": [
+          0,
+          8,
+          16
+        ],
+        "price_proxy": "CANDLE_OPEN",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "display_timezone": "UTC+07:00",
+        "settlement_hours_local": [
+          7,
+          15,
+          23
+        ]
+      },
+      "recipe": {
+        "strategy_id": "trend_following",
+        "recipe_version": "paper-recipe-v2",
+        "formula_version": "pandas-fallback-v1",
+        "available_at_utc": "2026-09-27T04:00:00+00:00",
+        "source_sha256": {
+          "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+          "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+          "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+          "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+          "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+          "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+          "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+          "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+          "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+          "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+          "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+          "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+          "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+          "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+          "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+          "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+        },
+        "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+      },
+      "trial_id": "trial-0001",
+      "trials": {
+        "version": 1,
+        "trials": [
+          {
+            "trial_id": "trial-0001",
+            "recipe": {
+              "strategy_id": "trend_following",
+              "recipe_version": "paper-recipe-v2",
+              "formula_version": "pandas-fallback-v1",
+              "available_at_utc": "2026-09-27T04:00:00+00:00",
+              "config": {
+                "account": {
+                  "initial_equity_usd": 10000,
+                  "base_currency": "USDT"
+                },
+                "risk": {
+                  "conviction_tiers": {
+                    "low": 0.01,
+                    "normal": 0.02,
+                    "high": 0.05,
+                    "ultra_high": 0.1
+                  },
+                  "max_leverage": 5,
+                  "min_liquidation_buffer_pct": 0.3
+                },
+                "circuit_breakers": {
+                  "daily_loss_limit_pct": 0.05,
+                  "consecutive_losses_threshold": 3,
+                  "risk_reduction_on_streak": 0.5,
+                  "recovery_mode": "after_3_wins",
+                  "consecutive_wins_to_recover": 3
+                },
+                "fees": {
+                  "taker_pct": 0.0005,
+                  "maker_pct": 0.0002,
+                  "slippage_pct": 0.0003
+                },
+                "data": {
+                  "symbol": "BTC/USDT",
+                  "timeframes": [
+                    "4h",
+                    "15m",
+                    "1m"
+                  ],
+                  "exchange": "binance",
+                  "start_date": "2021-01-01",
+                  "end_date": "2026-09-01",
+                  "raw_data_dir": "data/raw",
+                  "processed_data_dir": "data/processed",
+                  "futures_symbol": "BTCUSDT"
+                },
+                "open_interest": {
+                  "lookback_periods": 500,
+                  "use_binance_vision_historical": true
+                },
+                "oi_confluence": {
+                  "mode": "optional",
+                  "fallback_when_nan": true,
+                  "nan_log_note": "OI_BYPASSED_HISTORICAL"
+                },
+                "funding_rate": {
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "max_forward_fill_candles": 480
+                },
+                "features": {
+                  "ema_periods": [
+                    20,
+                    50,
+                    200
+                  ],
+                  "rsi_period": 14,
+                  "macd_fast": 12,
+                  "macd_slow": 26,
+                  "macd_signal": 9,
+                  "atr_period": 14,
+                  "oi_delta_lookback": 20,
+                  "cvd_divergence_lookback": 50
+                },
+                "smc": {
+                  "swing_n": 3,
+                  "min_bos_pct": 0.001
+                },
+                "news_filter": {
+                  "enabled": false,
+                  "blackout_minutes_before": 15,
+                  "blackout_minutes_after": 15,
+                  "calendar_source": "manual_csv",
+                  "calendar_file": "data/news_calendar.csv"
+                },
+                "logging": {
+                  "trade_log_db": "data/trades.db",
+                  "trade_log_json_dir": "data/trade_logs",
+                  "log_level": "INFO"
+                },
+                "backtest": {
+                  "random_seed": 42,
+                  "signal_on_close": true,
+                  "execute_on_next_open": true
+                },
+                "leverage_brackets": {
+                  "BTCUSDT": [
+                    [
+                      50000,
+                      0.004,
+                      0
+                    ],
+                    [
+                      250000,
+                      0.005,
+                      50
+                    ],
+                    [
+                      1000000,
+                      0.01,
+                      1300
+                    ],
+                    [
+                      10000000,
+                      0.025,
+                      16300
+                    ],
+                    [
+                      20000000,
+                      0.05,
+                      266300
+                    ],
+                    [
+                      50000000,
+                      0.1,
+                      1266300
+                    ],
+                    [
+                      100000000,
+                      0.125,
+                      2516300
+                    ],
+                    [
+                      200000000,
+                      0.15,
+                      5016300
+                    ],
+                    [
+                      300000000,
+                      0.25,
+                      25016300
+                    ],
+                    [
+                      500000000,
+                      0.5,
+                      100016300
+                    ]
+                  ],
+                  "ETHUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ],
+                  "SOLUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ]
+                },
+                "strategy": {
+                  "name": "TREND_FOLLOWING",
+                  "enabled": true,
+                  "timeframe_signal": "4h",
+                  "timeframe_execution": "15m"
+                },
+                "default_conviction": "normal",
+                "leverage": 2.0,
+                "base_risk_percent": 0.02,
+                "rules": {
+                  "crossover_fast_ema": 20,
+                  "crossover_slow_ema": 50,
+                  "regime_ema": 200,
+                  "rsi_period": 14,
+                  "rsi_threshold": 50.0,
+                  "max_setup_age_bars": 12,
+                  "swing_lookback_bars": 5
+                },
+                "stop_loss": {
+                  "method": "swing_causal",
+                  "trailing_method": "ema50_tightening_only"
+                },
+                "take_profit": {
+                  "enabled": false
+                },
+                "paper_funding_model": {
+                  "kind": "FIXED_SIMULATED",
+                  "version": "fixed-001",
+                  "rate": 0.0001,
+                  "effective_at_utc": "2026-09-27T04:00:00+00:00",
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "price_proxy": "CANDLE_OPEN",
+                  "symbols": [
+                    "BTCUSDT",
+                    "ETHUSDT",
+                    "SOLUSDT"
+                  ]
+                }
+              },
+              "source_sha256": {
+                "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+                "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+                "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+                "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+                "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+                "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+                "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+                "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+                "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+                "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+                "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+                "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+                "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+                "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+                "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+                "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+              },
+              "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+            },
+            "started_at_utc": "2026-09-27T04:00:00+00:00",
+            "initial_capital_usd": 10000.0,
+            "current_equity_usd": 9999.920015,
+            "final_equity_usd": null,
+            "status": "ACTIVE",
+            "target_reached": false,
+            "target_at_utc": null,
+            "failed_at_utc": null,
+            "last_observed_at_utc": "2026-09-27T04:15:00+00:00"
+          }
+        ],
+        "allocations": {},
+        "total_capital_injected_usd": 10000.0,
+        "checksum": "dc95c148a07003f789ff979301a9cca07e1c9395d3735edb43c46c45d980bf97"
+      },
+      "research": {
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "next_attempt_after_utc": null,
+        "last_verdict": null,
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "ETHUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "SOLUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    },
+    "restart_replayed_paused": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:14.583890+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "WAITING_CONNECTION",
+      "error": null,
+      "session_id": "20261001T162413-f01ac105",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": "trend_following",
+      "source_time_utc": "2026-09-27T09:01:00+00:00",
+      "received_at_utc": "2026-10-01T16:24:14.537016+00:00",
+      "connection": {
+        "connected": false,
+        "error": "checkpoint restored; waiting for fresh verified WebSocket",
+        "reconnect_required": true,
+        "last_event_received_at_utc": null,
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": "2026-09-27T08:45:00+00:00",
+      "config_sha256": "8ff83711ad90c33a7ab4b6bac9768fc7796e7a358d6cb3e4713365f47bc3dafa",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {
+        "BTCUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T09:00:00+00:00"
+        },
+        "ETHUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T09:00:00+00:00"
+        },
+        "SOLUSDT": {
+          "last_closed_15m_price": 100.0,
+          "as_of_utc": "2026-09-27T09:00:00+00:00"
+        }
+      },
+      "account": {
+        "initial_equity_usd": 10000.0,
+        "wallet_usd": 9999.960015,
+        "equity_usd": 9999.930015,
+        "available_margin_usd": 9899.980015000001,
+        "reserved_collateral_usd": 99.98,
+        "unrealized_pnl_usd": -0.030000000000001137,
+        "breaker_locked": false
+      },
+      "open_positions": [
+        {
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "quantity": 1.0,
+          "entry_price": 99.97,
+          "stop_loss_price": 150.0,
+          "liquidation_price": 199.15338645418325,
+          "leverage": 1.0,
+          "opened_at_utc": "2026-09-27T04:00:00+00:00",
+          "isolated_collateral_usd": 99.98,
+          "entry_fee_usd": 0.049985,
+          "cumulative_funding_usd": 0.01
+        }
+      ],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [
+        {
+          "id": "ORD_BTCUSDT_20260927_0001",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "status": "FILLED",
+          "rejection_reasons": [],
+          "requested_at_utc": "2026-09-27T04:00:00+00:00",
+          "processed_at_utc": "2026-09-27T04:00:00+00:00",
+          "fill_price": 99.97,
+          "quantity": 1.0,
+          "fee_usd": 0.049985,
+          "slippage_usd": 0.030000000000001137
+        }
+      ],
+      "pending_orders": [],
+      "funding_events": [
+        {
+          "id": "FIXED_412d847168fc2b6b6cee50c04667f6af",
+          "symbol": "BTCUSDT",
+          "timestamp_utc": "2026-09-27T08:00:00+00:00",
+          "rate": 0.0001,
+          "cashflow_usd": 0.01
+        }
+      ],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": "waiting for fresh public prices for BTC/ETH/SOL",
+        "halted": false
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": false,
+        "account_known": true,
+        "reconciled": true,
+        "view": "CURRENT_PROCESS"
+      },
+      "account_as_of_utc": "2026-09-27T09:00:00+00:00",
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": "PAUSED",
+      "execution_mode": "REPLAY",
+      "replay": {
+        "target_close_utc": "2026-09-27T09:00:00+00:00",
+        "processed_batches": 19,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "FIXED_SIMULATED",
+        "version": "fixed-001",
+        "rate": 0.0001,
+        "effective_at_utc": "2026-09-27T04:00:00+00:00",
+        "settlement_hours_utc": [
+          0,
+          8,
+          16
+        ],
+        "price_proxy": "CANDLE_OPEN",
+        "symbols": [
+          "BTCUSDT",
+          "ETHUSDT",
+          "SOLUSDT"
+        ],
+        "display_timezone": "UTC+07:00",
+        "settlement_hours_local": [
+          7,
+          15,
+          23
+        ]
+      },
+      "recipe": {
+        "strategy_id": "trend_following",
+        "recipe_version": "paper-recipe-v2",
+        "formula_version": "pandas-fallback-v1",
+        "available_at_utc": "2026-09-27T04:00:00+00:00",
+        "source_sha256": {
+          "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e",
+          "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+          "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+          "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+          "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+          "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+          "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+          "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+          "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+          "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+          "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+          "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+          "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+          "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+          "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+          "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e"
+        },
+        "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1"
+      },
+      "trial_id": "trial-0001",
+      "trials": {
+        "version": 1,
+        "trials": [
+          {
+            "current_equity_usd": 9999.930015,
+            "failed_at_utc": null,
+            "final_equity_usd": null,
+            "initial_capital_usd": 10000.0,
+            "last_observed_at_utc": "2026-09-27T09:00:00+00:00",
+            "recipe": {
+              "available_at_utc": "2026-09-27T04:00:00+00:00",
+              "config": {
+                "account": {
+                  "base_currency": "USDT",
+                  "initial_equity_usd": 10000
+                },
+                "backtest": {
+                  "execute_on_next_open": true,
+                  "random_seed": 42,
+                  "signal_on_close": true
+                },
+                "base_risk_percent": 0.02,
+                "circuit_breakers": {
+                  "consecutive_losses_threshold": 3,
+                  "consecutive_wins_to_recover": 3,
+                  "daily_loss_limit_pct": 0.05,
+                  "recovery_mode": "after_3_wins",
+                  "risk_reduction_on_streak": 0.5
+                },
+                "data": {
+                  "end_date": "2026-09-01",
+                  "exchange": "binance",
+                  "futures_symbol": "BTCUSDT",
+                  "processed_data_dir": "data/processed",
+                  "raw_data_dir": "data/raw",
+                  "start_date": "2021-01-01",
+                  "symbol": "BTC/USDT",
+                  "timeframes": [
+                    "4h",
+                    "15m",
+                    "1m"
+                  ]
+                },
+                "default_conviction": "normal",
+                "features": {
+                  "atr_period": 14,
+                  "cvd_divergence_lookback": 50,
+                  "ema_periods": [
+                    20,
+                    50,
+                    200
+                  ],
+                  "macd_fast": 12,
+                  "macd_signal": 9,
+                  "macd_slow": 26,
+                  "oi_delta_lookback": 20,
+                  "rsi_period": 14
+                },
+                "fees": {
+                  "maker_pct": 0.0002,
+                  "slippage_pct": 0.0003,
+                  "taker_pct": 0.0005
+                },
+                "funding_rate": {
+                  "max_forward_fill_candles": 480,
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ]
+                },
+                "leverage": 2.0,
+                "leverage_brackets": {
+                  "BTCUSDT": [
+                    [
+                      50000,
+                      0.004,
+                      0
+                    ],
+                    [
+                      250000,
+                      0.005,
+                      50
+                    ],
+                    [
+                      1000000,
+                      0.01,
+                      1300
+                    ],
+                    [
+                      10000000,
+                      0.025,
+                      16300
+                    ],
+                    [
+                      20000000,
+                      0.05,
+                      266300
+                    ],
+                    [
+                      50000000,
+                      0.1,
+                      1266300
+                    ],
+                    [
+                      100000000,
+                      0.125,
+                      2516300
+                    ],
+                    [
+                      200000000,
+                      0.15,
+                      5016300
+                    ],
+                    [
+                      300000000,
+                      0.25,
+                      25016300
+                    ],
+                    [
+                      500000000,
+                      0.5,
+                      100016300
+                    ]
+                  ],
+                  "ETHUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ],
+                  "SOLUSDT": [
+                    [
+                      5000,
+                      0.02,
+                      0
+                    ]
+                  ]
+                },
+                "logging": {
+                  "log_level": "INFO",
+                  "trade_log_db": "data/trades.db",
+                  "trade_log_json_dir": "data/trade_logs"
+                },
+                "news_filter": {
+                  "blackout_minutes_after": 15,
+                  "blackout_minutes_before": 15,
+                  "calendar_file": "data/news_calendar.csv",
+                  "calendar_source": "manual_csv",
+                  "enabled": false
+                },
+                "oi_confluence": {
+                  "fallback_when_nan": true,
+                  "mode": "optional",
+                  "nan_log_note": "OI_BYPASSED_HISTORICAL"
+                },
+                "open_interest": {
+                  "lookback_periods": 500,
+                  "use_binance_vision_historical": true
+                },
+                "paper_funding_model": {
+                  "effective_at_utc": "2026-09-27T04:00:00+00:00",
+                  "kind": "FIXED_SIMULATED",
+                  "price_proxy": "CANDLE_OPEN",
+                  "rate": 0.0001,
+                  "settlement_hours_utc": [
+                    0,
+                    8,
+                    16
+                  ],
+                  "symbols": [
+                    "BTCUSDT",
+                    "ETHUSDT",
+                    "SOLUSDT"
+                  ],
+                  "version": "fixed-001"
+                },
+                "risk": {
+                  "conviction_tiers": {
+                    "high": 0.05,
+                    "low": 0.01,
+                    "normal": 0.02,
+                    "ultra_high": 0.1
+                  },
+                  "max_leverage": 5,
+                  "min_liquidation_buffer_pct": 0.3
+                },
+                "rules": {
+                  "crossover_fast_ema": 20,
+                  "crossover_slow_ema": 50,
+                  "max_setup_age_bars": 12,
+                  "regime_ema": 200,
+                  "rsi_period": 14,
+                  "rsi_threshold": 50.0,
+                  "swing_lookback_bars": 5
+                },
+                "smc": {
+                  "min_bos_pct": 0.001,
+                  "swing_n": 3
+                },
+                "stop_loss": {
+                  "method": "swing_causal",
+                  "trailing_method": "ema50_tightening_only"
+                },
+                "strategy": {
+                  "enabled": true,
+                  "name": "TREND_FOLLOWING",
+                  "timeframe_execution": "15m",
+                  "timeframe_signal": "4h"
+                },
+                "take_profit": {
+                  "enabled": false
+                }
+              },
+              "formula_version": "pandas-fallback-v1",
+              "identity": "2d82a521332ff2b1aa3f7874470cbe9597fa6f4db4b96ec69873c2cda0cedba1",
+              "recipe_version": "paper-recipe-v2",
+              "source_sha256": {
+                "execution/funding_model.py": "3621fd7866d11c6f8cac42af297463f94d4b417517f0f40c09c10bae74ccba1b",
+                "execution/order_models.py": "7b8bc8992301aaae0a2b9290c1415e1d427c1b7e0d590b6c23294f3f8825a638",
+                "execution/paper_broker.py": "e99150464210151b8308b8b5ad9c925980ef3d535cbcf6c38cb1589ad07ead4b",
+                "features/__init__.py": "af6a7a8b92f1fad8d1ea070a985cd508034b19470aae9fbee64154eda3e9d1b4",
+                "features/cvd.py": "490c7039621088cb1f4baf59ce4b9bc8511a9b558915a35a9fd33016abca97c4",
+                "features/indicators.py": "060fc4d412cdf89f8bcb021f88cea3fb725f685080a86ab19eb2b6c62bc5b8bf",
+                "features/news_calendar.py": "74ba382756122c412fc708db98415057ddb144096f3568d90a825a57e03c75d9",
+                "features/oi_features.py": "eda85e46a9562166e83e5818f00a4a4528f33269253452083bd1775d5858e79a",
+                "paper/causal_runner.py": "a8569120d42a0bf7b5af9b90b35cab38fd003b1493af289482a545cec31ee152",
+                "paper/recipes.py": "d7c573b75e39fae91a4161507116aee4bf1fda528bc89e890ac79b23af01781e",
+                "paper/trials.py": "dd4b72e76086e98972186b95044bd7202b00e2ebe45941fd710dc63d80eeb795",
+                "risk/circuit_breakers.py": "c8db68e97f1c5c5c662e61c3c3b0965f9d123c1ee27d771e87806da39098f9cd",
+                "risk/invariant_checks.py": "460902acbb6c04db734137f26695a66d32113f4a58ca0d6f29fe407ae4ba1a41",
+                "risk/position_sizing.py": "4defb9667471584528d6ffb63b442561c55e30ca31d0af17378f6d4dc6e2d80d",
+                "strategies/base_strategy.py": "cb03f8a395e1034efe693c8f997568982a19996a9fe8bd2b592e057dbf9255a7",
+                "strategies/trend_following.py": "ac3c5db3b7af6004a776ed80a8e3979484ab0aa8ac4f3e6263bd895ae9611b8e"
+              },
+              "strategy_id": "trend_following"
+            },
+            "started_at_utc": "2026-09-27T04:00:00+00:00",
+            "status": "ACTIVE",
+            "target_at_utc": null,
+            "target_reached": false,
+            "trial_id": "trial-0001"
+          }
+        ],
+        "allocations": {},
+        "total_capital_injected_usd": 10000.0,
+        "checksum": "09cae3114c69cd66883372e0c615ebf47f915eae0a6f36ede29da5eaeacef318"
+      },
+      "research": {
+        "last_verdict": null,
+        "next_attempt_after_utc": null,
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "ETHUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "SOLUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    },
+    "recovery_required": {
+      "api_version": 3,
+      "api_time_utc": "2026-10-01T16:24:14.679635+00:00",
+      "mode": "PAPER_RESEARCH",
+      "status": "RECOVERY_REQUIRED",
+      "error": "exact paper recovery blocked: paper store integrity/recovery required: file is not a database",
+      "session_id": null,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "venue": "Binance USD-M perpetual public data",
+      "strategy": null,
+      "source_time_utc": null,
+      "received_at_utc": null,
+      "connection": {
+        "connected": false,
+        "error": "public stream not connected",
+        "reconnect_required": false,
+        "last_event_received_at_utc": null,
+        "source": "Binance USD-M public kline WebSocket"
+      },
+      "last_processed_open_utc": null,
+      "config_sha256": "6d2bfb114312427c9f5fd5f5281c4ccaf13eededb86207b89e5a94596d8ad178",
+      "chart": [],
+      "charts": {
+        "BTCUSDT": [],
+        "ETHUSDT": [],
+        "SOLUSDT": []
+      },
+      "markets": {},
+      "account": {
+        "initial_equity_usd": null,
+        "wallet_usd": null,
+        "equity_usd": null,
+        "available_margin_usd": null,
+        "reserved_collateral_usd": null,
+        "unrealized_pnl_usd": null,
+        "breaker_locked": null
+      },
+      "open_positions": [],
+      "completed_trades": 0,
+      "trades": [],
+      "orders": [],
+      "pending_orders": [],
+      "funding_events": [],
+      "risk_gate": {
+        "admission_open": false,
+        "reason": "exact paper recovery blocked: paper store integrity/recovery required: file is not a database",
+        "halted": true
+      },
+      "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+      "recovery": {
+        "required": true,
+        "account_known": false,
+        "reconciled": false,
+        "view": "UNKNOWN"
+      },
+      "account_as_of_utc": null,
+      "valuation_kind": "LAST_RECONCILED_CLOSED_15M",
+      "account_profile": "<CUSTOM_ACCOUNT>",
+      "operation": null,
+      "operator_intent": null,
+      "execution_mode": null,
+      "replay": {
+        "target_close_utc": null,
+        "processed_batches": 0,
+        "remaining_batches": 0
+      },
+      "funding_model": {
+        "kind": "NOT_CONFIGURED"
+      },
+      "recipe": null,
+      "trial_id": null,
+      "trials": null,
+      "research": {
+        "status": "NOT_REQUIRED",
+        "used_holdouts": [],
+        "next_attempt_after_utc": null,
+        "last_verdict": null,
+        "automatic_promotion_connected": true
+      },
+      "current_prices": {
+        "BTCUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "ETHUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        },
+        "SOLUSDT": {
+          "price": null,
+          "valid": false,
+          "kind": "STALE_OR_UNAVAILABLE",
+          "as_of_utc": null
+        }
+      },
+      "history": {
+        "endpoint": "/api/history",
+        "page_size": 100,
+        "sample_unit": "whole_position"
+      },
+      "backend_busy": false
+    }
+  }
+}

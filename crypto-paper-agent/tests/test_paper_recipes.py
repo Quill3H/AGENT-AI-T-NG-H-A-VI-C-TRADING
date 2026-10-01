@@ -31,3 +31,15 @@ def test_registered_adapter_returns_actual_breakout_rulebook(config):
     strategy = make_strategy('breakout_retest', config, 'ETHUSDT')
     assert isinstance(strategy, BreakoutRetestStrategy)
     assert strategy.symbol == 'ETHUSDT'
+
+
+def test_recipe_source_identity_survives_checkout_line_endings(config, monkeypatch):
+    from pathlib import Path
+    from datetime import datetime, timezone
+    from src.paper.recipes import recipe_snapshot
+    read = Path.read_bytes
+    at = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    monkeypatch.setattr(Path, 'read_bytes', lambda p: read(p).replace(b'\r\n', b'\n'))
+    unix = recipe_snapshot('trend_following', config, at)
+    monkeypatch.setattr(Path, 'read_bytes', lambda p: read(p).replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+    assert recipe_snapshot('trend_following', config, at) == unix

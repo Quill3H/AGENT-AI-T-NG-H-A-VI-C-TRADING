@@ -344,6 +344,19 @@ class PaperBroker:
         self.order_history.append(rec)
         return rec
 
+    def fork(self):
+        """Copy mutable execution state, sharing only already published records.
+
+        Completed orders, trades, funding events and snapshots are append-only.
+        Pending order records remain mutable and must be private to the shadow.
+        """
+        memo = {id(self.trade_history): list(self.trade_history),
+                id(self.funding_history): list(self.funding_history),
+                id(self.account_snapshots): list(self.account_snapshots),
+                id(self.order_history): [deepcopy(r) if r.status == OrderStatus.PENDING else r
+                                         for r in self.order_history]}
+        return deepcopy(self, memo)
+
     def process_batch(self, candles: List[dict]) -> List[Dict[str, Any]]:
         """Process simultaneous symbols with all open phases before any close phase.
 
@@ -369,7 +382,7 @@ class PaperBroker:
                    for c in candles]
         if len(set(symbols)) != len(symbols):
             raise ValueError("process_batch contains duplicate symbol")
-        shadow = deepcopy(self)
+        shadow = self.fork()
         ordered = sorted(zip(symbols, candles), key=lambda pair: pair[0])
         # Every simultaneous open quote is known at this timestamp. Make it
         # available before a gap exit can lock the breaker and unwind peers.

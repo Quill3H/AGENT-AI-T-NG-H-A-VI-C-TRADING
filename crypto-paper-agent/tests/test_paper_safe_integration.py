@@ -5,7 +5,8 @@ from threading import Event
 from src.paper.live_session import LocalPaperSession
 from src.paper.local_server import create_server
 from src.paper.public_stream import STREAM_URL
-from test_local_paper_session import FakeSource
+from test_local_paper_session import BASE, FakeSource
+from test_local_paper_server import await_operation
 
 
 def test_corrupt_legacy_account_never_resets_balance_or_rewrites_evidence(tmp_path):
@@ -36,11 +37,12 @@ def test_restarted_server_starts_transport_without_browser_request(tmp_path, mon
             pass
 
     monkeypatch.setattr("src.paper.local_server.PublicKlineStream", ObservedStream)
-    first = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    first = create_server(port=0, source=FakeSource(), journal_dir=tmp_path, clock=lambda: BASE)
     assert first.session.start()["status"] == "SCANNING"
     first.server_close()
-    second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path, clock=lambda: BASE)
     try:
+        assert await_operation(second)['status'] == 'APPLIED'
         assert second.session.state()["status"] == "WAITING_CONNECTION"
         assert started.wait(1)
         assert second.session.stop()["status"] == "STOPPED"
@@ -49,6 +51,7 @@ def test_restarted_server_starts_transport_without_browser_request(tmp_path, mon
     started.clear()
     third = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
     try:
+        assert await_operation(third)['status'] == 'APPLIED'
         assert third.session.status == "STOPPED"
         assert not started.wait(.1)
     finally:
