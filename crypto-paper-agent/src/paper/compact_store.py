@@ -3,7 +3,9 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
+from threading import RLock
 
 from src.paper.account_lock import LOCK_FILENAME
 
@@ -37,6 +39,8 @@ class PaperStore:
         self.db = None
         self._writable = False
         self.last = None
+        self.lock = RLock()
+        self._commits = {}
 
     def _connect(self, create=False):
         if self.db is not None:
@@ -65,6 +69,10 @@ class PaperStore:
         return self.db
 
     def inspect(self):
+        with self.lock:
+            return self._inspect()
+
+    def _inspect(self):
         if not self.path.exists():
             evidence = [p for p in self.directory.iterdir()
                         if p.name not in ('logs', LOCK_FILENAME)] if self.directory.exists() else []
@@ -104,14 +112,27 @@ class PaperStore:
                 if payload[table + '_root'] != root or payload[table + '_count'] != count:
                     raise ValueError(f'{table} committed integrity mismatch')
                 roots[table] = (root, count)
-            if db.execute('SELECT count(*) FROM commits').fetchone()[0] != payload['generation']:
-                raise ValueError('commit generation integrity mismatch')
+            root, count, commits = EMPTY_ROOT, 0, {}
+            for row in db.execute('SELECT generation,batch_id,intent_sha256,previous_root,checksum FROM commits ORDER BY generation'):
+                generation, batch_id, intent, previous, checksum = row
+                metadata = dict(generation=generation, batch_id=batch_id, intent_sha256=intent, previous_root=previous)
+                if (generation != count + 1 or type(batch_id) is not str or not batch_id
+                        or type(intent) is not str or re.fullmatch('[0-9a-f]{64}', intent) is None
+                        or previous != root or digest(metadata) != checksum):
+                    raise ValueError('commit metadata integrity mismatch')
+                root = chained(root, checksum)
+                count += 1
+                commits[batch_id] = tuple(row)
+            if count != payload['generation'] or root != payload['commits_root']:
+                raise ValueError('commit generation/root integrity mismatch')
             if digest(payload['config']) != payload['config_sha256']:
                 raise ValueError('config integrity mismatch')
             for name, checksum in payload['machine'].get('legacy_fingerprints', {}).items():
                 if Path(name).name != name or sha256((self.directory / name).read_bytes()).hexdigest() != checksum:
                     raise ValueError('legacy migration evidence changed')
             self.last = payload
+            self._commits = commits
+            self._control_records()
             return json.loads(canonical(payload))
         except (sqlite3.Error, OSError, ValueError, TypeError, KeyError) as exc:
             raise ValueError(f'paper store integrity/recovery required: {exc}') from exc
@@ -144,11 +165,16 @@ class PaperStore:
                 payload TEXT NOT NULL, checksum TEXT NOT NULL);
             CREATE TABLE checkpoint(id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL,
                 checksum TEXT NOT NULL);
-            CREATE TABLE commits(batch_id TEXT PRIMARY KEY, intent_sha256 TEXT NOT NULL);
+            CREATE TABLE commits(generation INTEGER PRIMARY KEY, batch_id TEXT NOT NULL UNIQUE,
+                intent_sha256 TEXT NOT NULL, previous_root TEXT NOT NULL, checksum TEXT NOT NULL);
             PRAGMA user_version=3;
         ''')
 
     def commit(self, account_id, config, inputs, events, machine, batch_id, *, migration=False):
+        with self.lock:
+            return self._commit(account_id, config, inputs, events, machine, batch_id, migration=migration)
+
+    def _commit(self, account_id, config, inputs, events, machine, batch_id, *, migration=False):
         if self.ownership is None:
             raise RuntimeError('paper store requires lifetime owner')
         self.ownership.assert_owned()
@@ -176,9 +202,19 @@ class PaperStore:
                 if (digest(prior) != prior_row[1] or self.last is None or prior != self.last
                         or account_id != prior['account_id'] or config != prior['config']):
                     raise ValueError('account checkpoint/config conflict')
-            used = db.execute('SELECT intent_sha256 FROM commits WHERE batch_id=?', (batch_id,)).fetchone()
+            if prior is not None:
+                count = db.execute('SELECT count(*) FROM commits').fetchone()[0]
+                head = db.execute('SELECT generation,batch_id,intent_sha256,previous_root,checksum FROM commits ORDER BY generation DESC LIMIT 1').fetchone()
+                if (count != prior['generation'] or count != len(self._commits) or head is None
+                        or tuple(head) != self._commits.get(head[1])
+                        or head[0] != prior['generation'] or chained(head[3], head[4]) != prior['commits_root']):
+                    raise ValueError('commit metadata integrity mismatch')
+            used = db.execute('SELECT generation,batch_id,intent_sha256,previous_root,checksum FROM commits WHERE batch_id=?', (batch_id,)).fetchone()
+            known = self._commits.get(batch_id)
+            if known is not None and used != known or used is not None and known != used:
+                raise ValueError('commit retry metadata integrity mismatch')
             if used:
-                if used[0] != intent:
+                if used[2] != intent:
                     raise ValueError('batch identity conflict')
                 db.rollback()
                 return json.loads(canonical(prior))
@@ -211,40 +247,118 @@ class PaperStore:
                 roots['events'][1] += 1
                 db.execute('INSERT INTO events VALUES(?,?,?,?)', (roots['events'][1], key, canonical(event), checksum))
                 roots['events'][0] = chained(roots['events'][0], checksum)
+            generation = prior['generation'] + 1 if prior else 1
+            commit_meta = {'generation': generation, 'batch_id': batch_id, 'intent_sha256': intent,
+                           'previous_root': prior['commits_root'] if prior else EMPTY_ROOT}
+            checksum = digest(commit_meta)
             payload = {'version': VERSION, 'account_id': account_id, 'config': config,
                        'config_sha256': digest(config), 'machine': machine,
-                       'generation': prior['generation'] + 1 if prior else 1,
+                       'generation': generation, 'commits_root': chained(commit_meta['previous_root'], checksum),
                        **{table + '_root': roots[table][0] for table in roots},
                        **{table + '_count': roots[table][1] for table in roots}}
             db.execute('INSERT OR REPLACE INTO checkpoint VALUES(1,?,?)', (canonical(payload), digest(payload)))
-            db.execute('INSERT INTO commits VALUES(?,?)', (batch_id, intent))
+            metadata_row = (generation, batch_id, intent, commit_meta['previous_root'], checksum)
+            db.execute('INSERT INTO commits VALUES(?,?,?,?,?)', metadata_row)
             db.commit()
             self.last = payload
+            self._commits[batch_id] = metadata_row
             return json.loads(canonical(payload))
         except BaseException:
             db.rollback()
             raise
 
     def inputs(self, symbol, interval):
-        if not self.path.exists():
-            return []
-        return [json.loads(row[0]) for row in self._connect().execute(
-            'SELECT payload FROM inputs WHERE symbol=? AND interval=? ORDER BY open_time', (symbol, interval))]
+        with self.lock:
+            if not self.path.exists():
+                return []
+            return [json.loads(row[0]) for row in self._connect().execute(
+                'SELECT payload FROM inputs WHERE symbol=? AND interval=? ORDER BY open_time', (symbol, interval))]
 
     def input_at(self, symbol, interval, opened):
-        row = self._connect().execute('SELECT payload FROM inputs WHERE symbol=? AND interval=? AND open_time=?',
-                                     (symbol, interval, opened)).fetchone()
-        return json.loads(row[0]) if row else None
+        with self.lock:
+            row = self._connect().execute('SELECT payload FROM inputs WHERE symbol=? AND interval=? AND open_time=?',
+                                         (symbol, interval, opened)).fetchone()
+            return json.loads(row[0]) if row else None
 
     def events(self, after=0, limit=100):
-        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 500:
-            raise ValueError('invalid event cursor/limit')
-        rows = [] if not self.path.exists() else self._connect().execute(
-            'SELECT seq,payload FROM events WHERE seq>? ORDER BY seq LIMIT ?', (after, limit + 1)).fetchall()
-        return {'items': [dict(json.loads(raw), cursor=seq) for seq, raw in rows[:limit]],
-                'next_cursor': rows[limit - 1][0] if len(rows) > limit else None}
+        with self.lock:
+            if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 500:
+                raise ValueError('invalid event cursor/limit')
+            rows = [] if not self.path.exists() else self._connect().execute(
+                'SELECT seq,payload FROM events WHERE seq>? ORDER BY seq LIMIT ?', (after, limit + 1)).fetchall()
+            return {'items': [dict(json.loads(raw), cursor=seq) for seq, raw in rows[:limit]],
+                    'next_cursor': rows[limit - 1][0] if len(rows) > limit else None}
+
+    def record_control(self, request_id, name, requested_at):
+        """Commit a receipt without waiting on the longer financial writer lock."""
+        from src.paper.trials import utc
+        stamp = utc(requested_at).isoformat()
+        if type(request_id) is not str or not request_id or name not in ('pause', 'resume', 'stop'):
+            raise ValueError('invalid durable paper control')
+        event = {'key': 'operator-request:' + request_id, 'kind': 'OPERATOR_REQUEST',
+                 'request_id': request_id, 'name': name, 'requested_at_utc': stamp}
+        with self.lock:
+            if self.last is None or not self.path.exists():
+                raise ValueError('verified account required before accepting durable controls')
+            previous = self._connect().execute('SELECT payload FROM events WHERE event_key=?', (event['key'],)).fetchone()
+            if previous is not None:
+                if json.loads(previous[0]) != event:
+                    raise ValueError('operator request identity conflict')
+                return dict(event)
+            saved = self.last
+            self.commit(saved['account_id'], saved['config'], [], [event], saved['machine'], event['key'])
+            return dict(event)
+
+    def _control_records(self):
+        from src.paper.trials import utc
+        receipts, applied = {}, {}
+        if not self.path.exists():
+            return receipts, applied
+        for raw, checksum, key in self._connect().execute(
+                "SELECT payload,checksum,event_key FROM events WHERE event_key LIKE 'operator-request:%' OR event_key LIKE 'operator-applied:%' ORDER BY seq"):
+            value = json.loads(raw)
+            if digest(value) != checksum or value['key'] != key:
+                raise ValueError('operator receipt integrity mismatch')
+            request_id = value['request_id']
+            if key == 'operator-request:' + request_id:
+                if value['kind'] != 'OPERATOR_REQUEST' or value['name'] not in ('pause', 'resume', 'stop'):
+                    raise ValueError('invalid operator receipt')
+                utc(value['requested_at_utc'])
+                receipts[request_id] = value
+            elif key == 'operator-applied:' + request_id:
+                request = receipts.get(request_id)
+                if (request is None or value['kind'] not in ('OPERATOR_INTENT', 'OPERATOR_REJECTED')
+                        or value['name'] != request['name']
+                        or value['effective_at_utc'] != request['requested_at_utc']):
+                    raise ValueError('operator application disagrees with durable receipt')
+                if value['kind'] == 'OPERATOR_REJECTED' and not value.get('reason'):
+                    raise ValueError('operator rejection reason missing')
+                applied[request_id] = value
+            else:
+                raise ValueError('operator receipt identity mismatch')
+        return receipts, applied
+
+    def pending_controls(self):
+        with self.lock:
+            receipts, applied = self._control_records()
+            return [r for key, r in receipts.items() if key not in applied]
+
+    def control_application(self, request_id):
+        with self.lock:
+            row = self._connect().execute('SELECT payload,checksum FROM events WHERE event_key=?',
+                                         ('operator-applied:' + request_id,)).fetchone() if self.path.exists() else None
+            if row is None:
+                return None
+            value = json.loads(row[0])
+            if digest(value) != row[1] or value.get('request_id') != request_id:
+                raise ValueError('operator application integrity mismatch')
+            return value
 
     def close(self):
+        with self.lock:
+            self._close()
+
+    def _close(self):
         if self.db is not None:
             try:
                 if self.ownership is not None and self._writable and self.last is not None:

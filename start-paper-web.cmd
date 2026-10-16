@@ -34,7 +34,7 @@ if not exist "dist\index.html" (
   if errorlevel 1 goto failed
 )
 cd ..
-.venv-paper\Scripts\python.exe scripts\run_local_paper_web.py --open-browser --port %PAPER_PORT%
+"%~dp0crypto-paper-agent\.venv-paper\Scripts\python.exe" "%~dp0crypto-paper-agent\scripts\run_local_paper_web.py" --open-browser --port %PAPER_PORT%
 if errorlevel 1 goto failed
 exit /b 0
 

@@ -63,6 +63,7 @@ temp/
 *.log
 data/paper_sessions/
 data/paper_accounts/
+/crypto-paper-agent/data/paper_accounts/
 reports/
 *.sqlite
 *.sqlite3

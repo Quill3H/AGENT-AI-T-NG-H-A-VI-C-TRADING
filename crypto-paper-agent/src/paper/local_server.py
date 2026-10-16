@@ -77,10 +77,14 @@ def create_server(port=8765, source=None, journal_dir=None, clock=None, auto_sta
         worker = Thread(target=stream.run, name="binance-public-kline", daemon=True)
         worker.start()
 
-    def apply_command(name):
+    def apply_command(command):
         if closing.is_set():
             raise RuntimeError('backend is shutting down')
-        result = session.reconcile_resume() if name == 'restore' else getattr(session, name)()
+        name = command['name']
+        if name in ('pause', 'resume', 'stop'):
+            result = session.apply_control_request(command)
+        else:
+            result = session.reconcile_resume() if name == 'restore' else getattr(session, name)()
         if result['status'] == 'RECOVERY_REQUIRED' or result.get('error') and name in ('start', 'restore'):
             raise RuntimeError(result.get('error') or 'paper account recovery required')
         with worker_lock:
@@ -257,7 +261,8 @@ def create_server(port=8765, source=None, journal_dir=None, clock=None, auto_sta
     try:
         session = PaperReplaySession(source=source, journal_dir=journal_dir, auto_resume=False, ownership=ownership, clock=clock)
         server.session = session
-        commands = PaperCommands(apply_command)
+        commands = PaperCommands(apply_command, accept=session.accept_control_request,
+                                 application=session.storage.control_application, clock=session.clock)
         server.commands = commands
         if session._saved is not None or (session.journal_dir / 'account.json').exists():
             commands.submit('restore')

@@ -340,6 +340,9 @@ class PaperBroker:
             reference_price=request.signal_price,
             metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
         )
+        rec.metadata['broker_request'] = {
+            name: deepcopy(value) for name, value in vars(request).items() if name != 'metadata'
+        }
         self.pending_orders.append(request)
         self.order_history.append(rec)
         return rec
@@ -915,6 +918,15 @@ class PaperBroker:
                     filled_quantity=calc_quantity,
                     notional_usd=calc_notional,
                     fee_usd=entry_fee,
+                    entry_terms={
+                        'lifecycle_id': new_pos.position_id,
+                        'leverage': new_pos.leverage,
+                        'initial_stop_loss_price': new_pos.initial_stop_loss_price,
+                        'initial_liquidation_price': new_pos.initial_liquidation_price,
+                        'take_profit_price': new_pos.take_profit_price,
+                        'conviction_tier': new_pos.conviction_tier,
+                        'partial_targets': deepcopy(new_pos.metadata.get('partial_targets', [])),
+                    },
                 )
                 candle_events.append({"type": "ORDER_FILLED", "position": new_pos})
 
@@ -1396,6 +1408,7 @@ class PaperBroker:
         notional_usd: float = 0.0,
         fee_usd: float = 0.0,
         reasons: Optional[List[str]] = None,
+        entry_terms: Optional[dict] = None,
     ) -> None:
         """Cập nhật bản ghi đơn hàng trong order_history."""
         for rec in reversed(self.order_history):
@@ -1409,7 +1422,11 @@ class PaperBroker:
                 rec.notional_usd = notional_usd
                 rec.fee_usd = fee_usd
                 if getattr(req, "metadata", None):
+                    request_terms = rec.metadata.get('broker_request')
                     rec.metadata.update(req.metadata)
+                    rec.metadata['broker_request'] = request_terms
+                if entry_terms is not None:
+                    rec.metadata['broker_entry'] = deepcopy(entry_terms)
                 if reasons:
                     rec.rejection_reasons = list(reasons)
                 break

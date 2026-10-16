@@ -98,7 +98,11 @@ def unpack(value):
         extras = {"_last_unrealized_pnl"} if cls is Position else set()
         if not isinstance(raw, dict) or set(raw) != names | extras:
             raise ValueError("checkpoint record fields do not match")
-        record = cls(**{key: unpack(raw[key]) for key in names})
+        decoded = {key: unpack(raw[key]) for key in names}
+        record = cls(**decoded)
+        # Constructors must not repair inconsistent persisted evidence.
+        if any(getattr(record, key) != decoded[key] for key in names):
+            raise ValueError('checkpoint record normalization changed persisted fields')
         if cls is Position:
             record._last_unrealized_pnl = unpack(raw["_last_unrealized_pnl"])
         return record

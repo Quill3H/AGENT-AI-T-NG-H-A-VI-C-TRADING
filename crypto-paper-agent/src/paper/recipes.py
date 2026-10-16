@@ -31,7 +31,8 @@ def recipe_snapshot(name, config, available_at):
         'features/oi_features.py', 'features/cvd.py', 'features/news_calendar.py',
         'execution/order_models.py', 'execution/paper_broker.py', 'execution/funding_model.py',
         'risk/position_sizing.py', 'risk/invariant_checks.py', 'risk/circuit_breakers.py',
-        'paper/causal_runner.py', 'paper/trials.py', 'paper/recipes.py'))
+        'paper/causal_runner.py', 'paper/trials.py', 'paper/recipes.py',
+        'paper/recovery_state.py', 'paper/exposure_reconciliation.py'))
     payload = {'strategy_id': name, 'recipe_version': 'paper-recipe-v2',
                'formula_version': 'pandas-fallback-v1',
                'available_at_utc': available_at.astimezone(timezone.utc).isoformat(),

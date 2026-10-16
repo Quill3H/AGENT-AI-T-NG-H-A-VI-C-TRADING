@@ -6,7 +6,8 @@ import math
 import pandas as pd
 
 from src.execution.paper_broker import PaperBroker
-from src.execution.order_models import OrderStatus, Position, OrderRequest, OrderExecutionRecord, TradeRecord, FundingEvent, AccountSnapshot
+from src.execution.order_models import (OrderStatus, OrderDirection, OrderType, PositionStatus, ExitReason,
+    Position, OrderRequest, OrderExecutionRecord, TradeRecord, FundingEvent, AccountSnapshot)
 from src.execution.funding_model import FixedFundingModel
 from src.features import add_all_features
 from src.paper.compact_store import digest, input_identity
@@ -14,6 +15,7 @@ from src.paper.public_stream import SYMBOLS, INTERVAL_MS
 from src.paper.recipes import recipe_snapshot, make_strategy
 from src.paper.recovery_state import pack, unpack, BROKER_STATIC
 from src.paper.trials import TrialBook, utc, finite
+from src.paper.exposure_reconciliation import verify_execution_reconciliation
 from src.risk.circuit_breakers import CircuitBreakerState
 
 
@@ -100,7 +102,8 @@ def decode_broker(config, packed, ledgers, news_sha256):
             or any(type(state[k]) is not bool for k in ('is_locked', 'is_halted'))
             or any(type(state[k]) is not int or state[k] < 0
                    for k in ('consecutive_losses', 'consecutive_wins', 'lock_count'))
-            or state['is_locked'] and state['locked_until'] is None):
+            or state['is_locked'] and not state['is_halted'] and state['locked_until'] is None
+            or state['is_halted'] and not state['is_locked']):
         raise ValueError('invalid compact breaker lifecycle')
     for key in ('last_event_time', 'locked_until'):
         if state[key] is not None:
@@ -122,6 +125,24 @@ def decode_broker(config, packed, ledgers, news_sha256):
             raise ValueError('compact ledger type/sequence identity mismatch')
     if any(type(r) is not AccountSnapshot for r in broker.account_snapshots):
         raise ValueError('invalid compact account snapshots')
+    for record in [*broker.order_history, *broker.trade_history, *broker.funding_history,
+                   *broker.positions.values(), *broker.pending_orders]:
+        if type(record.direction) is not OrderDirection:
+            raise ValueError('invalid execution direction type')
+        if isinstance(record, OrderExecutionRecord) and (
+                type(record.status) is not OrderStatus or type(record.order_type) is not OrderType):
+            raise ValueError('invalid execution order status/type')
+        if isinstance(record, TradeRecord) and type(record.exit_reason) is not ExitReason:
+            raise ValueError('invalid execution realization exit reason')
+        if isinstance(record, Position) and type(record.status) is not PositionStatus:
+            raise ValueError('invalid execution position status')
+    finite(broker.wallet_balance)
+    if any(type(getattr(broker, flag)) is not bool for flag in ('is_halted', 'is_finalized')):
+        raise ValueError('invalid execution account flags')
+    if (type(broker.pending_closes) is not dict or any(s not in SYMBOLS
+            or broker.current_time is None or utc(t) > utc(broker.current_time)
+            for s, t in broker.pending_closes.items())):
+        raise ValueError('invalid execution pending close decision')
     if type(broker.positions) is not dict or type(broker.pending_orders) is not list:
         raise ValueError('invalid compact exposure containers')
     for symbol, position in broker.positions.items():
@@ -136,11 +157,13 @@ def decode_broker(config, packed, ledgers, news_sha256):
     if len(set(pending)) != len(pending) or set(pending) != set(recorded) or len(recorded) != len(pending):
         raise ValueError('pending requests disagree with order ledger')
     model = FixedFundingModel.from_config(config)
-    settled = {(e.event_id if model else e.symbol, e.timestamp) for e in broker.funding_history}
+    settled = {(e.event_id if model and e.timestamp >= model.effective_at else e.symbol, e.timestamp)
+               for e in broker.funding_history}
     if settled != broker._settled_funding_keys:
         raise ValueError('funding ledger disagrees with exactly-once watermarks')
     if broker._is_handling_cb_lock or broker._defer_cb_lock_for_batch:
         raise ValueError('checkpoint captured inside unfinished broker batch')
+    verify_execution_reconciliation(broker)
     broker.verify_accounting_invariants()
     return broker
 
@@ -289,8 +312,8 @@ class CausalRunner:
                 current.update(symbol=symbol, open_time=signal_bars[symbol]['open_time'], close_time=closed)
                 strategy = candidate.strategies[symbol]
                 strategy.update_trailing_stop(current, candidate.broker)
+                request = strategy.on_candle_close(current, features, candidate.broker)
                 if not failed and close_intent == 'RUNNING' and closed >= datetime.fromisoformat(candidate.recipe['available_at_utc']):
-                    request = strategy.on_candle_close(current, features, candidate.broker)
                     if request is not None:
                         request.metadata.update(recipe_identity=candidate.recipe['identity'], trial_id=candidate.trial_id)
                         candidate.broker.submit_order(request)
@@ -398,6 +421,8 @@ class CausalRunner:
         if any(len(ledgers[k]) != checkpoint['ledger_counts'][k] for k in LEDGERS):
             raise ValueError('compact financial history count mismatch')
         result.broker = decode_broker(config, checkpoint['broker'], ledgers, checkpoint['news_source_sha256'])
+        if not math.isclose(result.trials.current['current_equity_usd'], result.broker.equity, abs_tol=1e-8):
+            raise ValueError('trial equity disagrees with broker execution ledger')
         boundary = utc(result.last_open['BTCUSDT']) + timedelta(minutes=15)
         broker = result.broker
         if broker.last_candle_open_time_per_symbol and (

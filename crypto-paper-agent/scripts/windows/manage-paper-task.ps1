@@ -37,8 +37,15 @@ if ($listener) {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$serverProcessId"
     $script = Join-Path $project 'scripts\run_local_paper_web.py'
     $health = Invoke-RestMethod -Uri "$base/api/health" -TimeoutSec 3
+    # Both supported launchers place an absolute script immediately after Python.
+    # A path appearing in a later argument (-c, log path, etc.) proves no ownership.
+    $invocation = [regex]::Match([string]$process.CommandLine,
+        '^\s*(?:"[^"]+"|[^\s"]+)\s+(?:"(?<script>[^"]+)"|(?<script>[^\s"]+))(?:\s|$)')
+    $entrypoint = $invocation.Groups['script'].Value
+    $verifiedScript = $invocation.Success -and [System.IO.Path]::IsPathRooted($entrypoint) -and
+        [string]::Equals([System.IO.Path]::GetFullPath($entrypoint), $script, [System.StringComparison]::OrdinalIgnoreCase)
     if ($health.mode -ne 'PAPER_RESEARCH' -or $health.server_pid -ne $serverProcessId -or
-            -not $process.CommandLine.Contains($script)) {
+            -not $verifiedScript) {
         throw 'Port belongs to an unverified process. Task is disabled; no process was terminated.'
     }
     Stop-Process -Id $serverProcessId

@@ -214,7 +214,8 @@ class PaperReplaySession(LocalPaperSession):
                 self._saved, self._event_keys = saved, {e['key'] for e in events}
                 self._adopt(candidate)
                 self.error = None
-                if candidate.intent == 'STOPPED':
+                self._consume_controls()
+                if self.runner.intent == 'STOPPED':
                     self.status = 'STOPPED'
                     return self.state()
                 self.status = 'WAITING_CONNECTION'
@@ -275,6 +276,8 @@ class PaperReplaySession(LocalPaperSession):
             candidate.strategies[symbol].setup_count = legacy.strategies[symbol].setup_count
             candidate.strategies[symbol].candidate_count = legacy.strategies[symbol].candidate_count
         candidate.intent = 'STOPPED' if legacy.status == 'STOPPED' else 'RUNNING'
+        if candidate.intent == 'STOPPED':
+            candidate.controls.append({'intent': 'STOPPING', 'effective_at_utc': boundary.isoformat()})
         self.session_id = legacy.session_id
         self.legacy_fingerprints = {journal.name: sha256(raw).hexdigest(),
                                     'account.json': sha256((self.journal_dir / 'account.json').read_bytes()).hexdigest()}
@@ -283,6 +286,7 @@ class PaperReplaySession(LocalPaperSession):
                  'original_evidence_sha256': dict(self.legacy_fingerprints),
                  'funding_effective_at_utc': boundary.isoformat(),
                  'processed_at_utc': datetime.now(UTC).isoformat()}
+        CausalRunner.restore(candidate.config, candidate.capture(), candidate.all_inputs(), candidate.ledger_events())
         self._persist(candidate, candidate.all_inputs(), [event], 'legacy-migration', migration=True)
         self.status = 'STOPPED' if candidate.intent == 'STOPPED' else 'WAITING_CONNECTION'
         self.stream_error = 'verified v2 migration; awaiting fresh public stream'
@@ -324,16 +328,26 @@ class PaperReplaySession(LocalPaperSession):
                 for symbol, b in bars.items():
                     if symbol in self.broker.positions and b['open_time'].hour in self.broker.funding_hours and b['open_time'].minute == 0:
                         b.update(self._funding_metadata(symbol, b['open_time']))
-            candidate = self.runner.fork()
-            candidate.advance(bars, signal, mode)
-            receipt = datetime.now(UTC).isoformat()
-            inputs = [stored_bar(validate_bar(b, s, '15m'), b.get('received_at_utc', receipt)) for s, b in bars.items()]
-            if signal is not None:
-                inputs.extend(stored_bar(validate_bar(b, s, '4h'), b.get('received_at_utc', receipt)) for s, b in signal.items())
-            event = {'key': 'batch-' + bars['BTCUSDT']['open_time'].isoformat(), 'kind': 'PAPER_BATCH',
-                     'execution_mode': mode, 'simulated_at_utc': closed.isoformat(), 'processed_at_utc': receipt,
-                     'equity_usd': candidate.broker.equity, 'trial_id': candidate.trial_id}
-            self._persist(candidate, inputs, [event], event['key'])
+            # Durable acceptance cannot interleave after the control check and
+            # before this financial batch commits. Downloads remain outside.
+            with self.storage.lock:
+                candidate = self.runner.fork()
+                self._drain_controls(candidate)
+                if candidate.intent == 'STOPPED':
+                    self._persist(candidate, [], [], 'operator-stop:' + digest(candidate.controls))
+                    self.status = 'STOPPED'
+                    return
+                batch_mode = ('REALTIME' if mode == 'REALTIME' and expected is not None
+                              and bars['BTCUSDT']['open_time'] == expected['BTCUSDT']['open_time'] else 'REPLAY')
+                candidate.advance(bars, signal, batch_mode)
+                receipt = datetime.now(UTC).isoformat()
+                inputs = [stored_bar(validate_bar(b, s, '15m'), b.get('received_at_utc', receipt)) for s, b in bars.items()]
+                if signal is not None:
+                    inputs.extend(stored_bar(validate_bar(b, s, '4h'), b.get('received_at_utc', receipt)) for s, b in signal.items())
+                event = {'key': 'batch-' + bars['BTCUSDT']['open_time'].isoformat(), 'kind': 'PAPER_BATCH',
+                         'execution_mode': batch_mode, 'simulated_at_utc': closed.isoformat(), 'processed_at_utc': receipt,
+                         'equity_usd': candidate.broker.equity, 'trial_id': candidate.trial_id}
+                self._persist(candidate, inputs, [event], event['key'])
             if self.runner.trials.current['status'] == 'FAILED':
                 self.run_research()
             if self.status == 'RECOVERY_REQUIRED':
@@ -379,12 +393,40 @@ class PaperReplaySession(LocalPaperSession):
     def run_research(self):
         """One bounded internal round. No endpoint accepts caller-supplied scores."""
         with self.lock:
+            if self.runner is not None and self.status != 'RECOVERY_REQUIRED':
+                self._consume_controls()
             runner = self.runner
             if (self._closed or runner is None or self.status == 'RECOVERY_REQUIRED'
                     or runner.trials.current['status'] != 'FAILED' or runner.intent != 'RUNNING'
                     or runner.broker.positions or runner.broker.pending_orders or runner.broker.pending_closes):
                 return self.state()
             cutoff = runner.last_open['BTCUSDT'] + timedelta(minutes=15)
+            if runner.intent_at(cutoff) != 'RUNNING':
+                return self.state()
+            verdict = self.research.get('last_verdict')
+            if (verdict and verdict.get('eligible') is True
+                    and verdict.get('identity') not in runner.trials.allocations):
+                try:
+                    with self.storage.lock:
+                        candidate = self.runner.fork()
+                        self._drain_controls(candidate)
+                        if candidate.intent == 'RUNNING' and candidate.intent_at(cutoff) == 'RUNNING':
+                            recipe = self._checked_research_recipe(verdict, persisted=True)
+                            if utc(verdict['cutoff_utc']) > cutoff:
+                                raise ValueError('research verdict is unavailable at promotion time')
+                            candidate.promote(recipe, verdict, cutoff)
+                            event = {'key': 'research-promotion:' + verdict['identity'], 'kind': 'RESEARCH_PROMOTION',
+                                     'verdict_identity': verdict['identity'], 'recipe_identity': recipe['identity'],
+                                     'simulated_at_utc': cutoff.isoformat(), 'processed_at_utc': utc(self.clock()).isoformat()}
+                            self._persist(candidate, [], [event], event['key'])
+                        elif candidate.trial_events:
+                            self._persist(candidate, [], [], 'operator-controls:' + digest(candidate.trial_events))
+                            if candidate.intent in ('STOPPING', 'STOPPED'):
+                                self.status = candidate.intent
+                except Exception as exc:
+                    self.status, self.error = 'RECOVERY_REQUIRED', f'frozen paper promotion blocked: {exc}'
+                    self.stream_connected, self.reconnect_required = False, False
+                return self.state()
             next_time = self.research.get('next_attempt_after_utc')
             if next_time and cutoff < utc(next_time):
                 return self.state()
@@ -408,25 +450,47 @@ class PaperReplaySession(LocalPaperSession):
                     verdict = {'eligible': False, 'status': 'DATA_BLOCKED', 'cutoff_utc': cutoff.isoformat(),
                                'reason': str(exc), 'holdout_consumed': False}
                     verdict['identity'] = digest(verdict)
-                candidate = self.runner.fork()
-                if verdict.get('eligible') is True:
-                    if (digest({k: v for k, v in verdict.items() if k != 'identity'}) != verdict['identity']
-                            or not verdict.get('holdout_consumed')
-                            or verdict.get('holdout_interval_utc') not in self.research['used_holdouts']
-                            or promotion_verdict(verdict['folds'], verdict['stressed_folds'])['eligible'] is not True):
-                        raise ValueError('research promotion evidence/claim integrity mismatch')
-                    recipe = next(r for r in self.catalog if r['identity'] == verdict['selected_recipe_identity'])
-                    candidate.promote(recipe, verdict, cutoff)
-                self.research.update(status=verdict['status'], last_verdict=verdict)
-                event = {'key': 'research-verdict:' + verdict['identity'], 'kind': 'RESEARCH_VERDICT',
-                         'verdict': verdict, 'processed_at_utc': datetime.now(UTC).isoformat()}
-                self._persist(candidate, [], [event], event['key'])
+                with self.storage.lock:
+                    candidate = self.runner.fork()
+                    self._drain_controls(candidate)
+                    if verdict.get('eligible') is True and candidate.intent == 'RUNNING':
+                        recipe = self._checked_research_recipe(verdict)
+                        candidate.promote(recipe, verdict, cutoff)
+                    self.research.update(status=verdict['status'], last_verdict=verdict)
+                    event = {'key': 'research-verdict:' + verdict['identity'], 'kind': 'RESEARCH_VERDICT',
+                             'verdict': verdict, 'processed_at_utc': datetime.now(UTC).isoformat()}
+                    self._persist(candidate, [], [event], event['key'])
             except PaperInterrupted:
                 self.stream_connected, self.reconnect_required = False, False
             except Exception as exc:
                 self.status, self.error = 'RECOVERY_REQUIRED', f'paper research persistence/admission blocked: {exc}'
                 self.stream_connected, self.reconnect_required = False, False
             return self.state()
+
+    def _checked_research_recipe(self, verdict, persisted=False):
+        if (digest({k: v for k, v in verdict.items() if k != 'identity'}) != verdict['identity']
+                or not verdict.get('holdout_consumed')
+                or verdict.get('holdout_interval_utc') not in self.research['used_holdouts']
+                or promotion_verdict(verdict['folds'], verdict['stressed_folds'])['eligible'] is not True):
+            raise ValueError('research promotion evidence/claim integrity mismatch')
+        recipes = [r for r in self.catalog if r['identity'] == verdict['selected_recipe_identity']]
+        if len(recipes) != 1:
+            raise ValueError('research selected recipe is missing or ambiguous')
+        recipe = recipes[0]
+        if (recipe['config'] != self.config or utc(recipe['available_at_utc']) > utc(verdict['cutoff_utc'])
+                or recipe_snapshot(recipe['strategy_id'], self.config, utc(recipe['available_at_utc'])) != recipe):
+            raise ValueError('research frozen recipe/config changed')
+        if persisted:
+            events = self._all_events()
+            originals = [e['verdict'] for e in events if e['kind'] == 'RESEARCH_VERDICT'
+                         and e.get('verdict', {}).get('identity') == verdict['identity']]
+            claims = [e for e in events if e['kind'] == 'RESEARCH_HOLDOUT_CLAIM'
+                      and e.get('holdout_interval_utc') == verdict['holdout_interval_utc']]
+            if (originals != [verdict] or len(claims) != 1
+                    or any(claims[0].get(k) != verdict.get(k)
+                           for k in ('selected_recipe_identity', 'cutoff_utc', 'data_sha256'))):
+                raise ValueError('persisted research verdict/holdout provenance mismatch')
+        return recipe
 
     def on_connection(self, connected, reason):
         with self.lock:
@@ -522,28 +586,68 @@ class PaperReplaySession(LocalPaperSession):
                 self.status, self.error = 'RECOVERY_REQUIRED', str(exc)
             return self.state()
 
-    def _control(self, intent):
-        with self.lock:
-            self._claim_account()
-            if self.runner is None or self.status == 'RECOVERY_REQUIRED' or self.runner.intent == 'STOPPED':
-                return self.state()
-            if self.runner.intent == intent:
-                return self.state()
+    def accept_control_request(self, command):
+        """Capture operator time durably before waiting for the account writer."""
+        if command['name'] in ('start', 'restore'):
+            return dict(command)
+        if (self._closed or self.runner is None or self.status == 'RECOVERY_REQUIRED'
+                or self.runner.intent == 'STOPPED' and command['name'] != 'stop'):
+            raise RuntimeError('paper control requires a verified nonterminal account')
+        self.storage.record_control(command['id'], command['name'], command['requested_at_utc'])
+        return dict(command, durable=True)
+
+    def _drain_controls(self, candidate):
+        requests = self.storage.pending_controls()
+        for request in requests:
+            intent = {'pause': 'PAUSED', 'resume': 'RUNNING', 'stop': 'STOPPING'}[request['name']]
+            stamp = utc(request['requested_at_utc'])
+            completion = {'key': 'operator-applied:' + request['request_id'],
+                'kind': 'OPERATOR_INTENT', 'request_id': request['request_id'], 'name': request['name'],
+                'effective_at_utc': stamp.isoformat(), 'processed_at_utc': utc(self.clock()).isoformat()}
+            if candidate.intent == 'STOPPED':
+                if intent != 'STOPPING':
+                    completion.update(kind='OPERATOR_REJECTED', reason='terminal paper trial cannot resume or pause')
+            else:
+                candidate.set_intent(intent, stamp)
+            candidate.trial_events.append(dict(completion, intent=candidate.intent))
+        return bool(requests)
+
+    def _consume_controls(self):
+        with self.storage.lock:
             candidate = self.runner.fork()
-            stamp = max(utc(self.clock()), candidate.last_open['BTCUSDT'] + timedelta(minutes=15))
-            candidate.set_intent(intent, stamp)
-            event = {'key': 'control-' + str(self.storage.last['generation'] + 1), 'kind': 'OPERATOR_INTENT',
-                     'intent': candidate.intent, 'effective_at_utc': stamp.isoformat()}
+            if self._drain_controls(candidate):
+                self._persist(candidate, [], [], 'operator-controls:' + digest(candidate.trial_events))
+                if candidate.intent in ('STOPPING', 'STOPPED'):
+                    self.status = candidate.intent
+
+    def apply_control_request(self, command):
+        with self.lock:
+            if self._closed or self.runner is None or self.status == 'RECOVERY_REQUIRED':
+                raise RuntimeError('paper account cannot apply the operator request')
             try:
-                self._persist(candidate, [], [event], event['key'])
+                self._consume_controls()
             except Exception as exc:
                 self.status, self.error = 'RECOVERY_REQUIRED', f'operator intent storage failed: {exc}'
                 self.stream_connected, self.reconnect_required = False, False
-                return self.state()
-            if candidate.intent == 'STOPPED':
-                self.status = 'STOPPED'
-            elif candidate.intent == 'STOPPING':
-                self.status = 'STOPPING'
+                raise
+            application = self.storage.control_application(command['id'])
+            if application is None:
+                raise RuntimeError('operator request has no durable application')
+            if application['kind'] == 'OPERATOR_REJECTED':
+                raise ValueError(application['reason'])
+            return self.state()
+
+    def _control(self, intent):
+        name = {'PAUSED': 'pause', 'RUNNING': 'resume', 'STOPPING': 'stop'}[intent]
+        command = {'id': 'control-' + uuid4().hex, 'name': name,
+                   'requested_at_utc': utc(self.clock()).isoformat()}
+        try:
+            self.accept_control_request(command)
+            return self.apply_control_request(command)
+        except Exception as exc:
+            if self.runner is not None and self.runner.intent != 'STOPPED':
+                self.status, self.error = 'RECOVERY_REQUIRED', f'operator intent storage failed: {exc}'
+                self.stream_connected, self.reconnect_required = False, False
             return self.state()
 
     def pause(self):

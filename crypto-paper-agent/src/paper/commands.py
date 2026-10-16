@@ -3,11 +3,15 @@ from collections import deque
 from copy import deepcopy
 from datetime import datetime, timezone
 from threading import Condition, Event, Thread
+from uuid import uuid4
 
 
 class PaperCommands:
-    def __init__(self, apply):
+    def __init__(self, apply, accept=None, application=None, clock=None):
         self.apply = apply
+        self.accept = accept
+        self.application = application
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.condition = Condition()
         self.queue = deque()
         self.closed = False
@@ -27,15 +31,25 @@ class PaperCommands:
             if len(self.queue) >= 16:
                 raise RuntimeError('paper control queue is full')
             self.sequence += 1
-            self.latest = {'id': f'control-{self.sequence}', 'name': name, 'status': 'PENDING', 'error': None,
-                           'requested_at_utc': datetime.now(timezone.utc).isoformat(), 'completed_at_utc': None}
+            command = {'id': 'control-' + uuid4().hex, 'name': name, 'status': 'PENDING', 'error': None,
+                       'requested_at_utc': self.clock().isoformat(), 'completed_at_utc': None,
+                       'durable': False}
+            if self.accept is not None:
+                command = self.accept(command)
+            self.latest = command
             self.queue.append(self.latest)
             self.condition.notify()
             return deepcopy(self.latest)
 
     def state(self):
         with self.condition:
-            return deepcopy(self.latest)
+            command = deepcopy(self.latest)
+        if command and command.get('durable') and command['status'] in ('PENDING', 'RUNNING') and self.application:
+            applied = self.application(command['id'])
+            if applied is not None:
+                command.update(intent_persisted=True, effective_at_utc=applied['effective_at_utc'],
+                               intent_persisted_at_utc=applied['processed_at_utc'])
+        return command
 
     def _run(self):
         while True:
@@ -46,7 +60,7 @@ class PaperCommands:
                 command = self.queue.popleft()
                 command['status'] = 'RUNNING'
             try:
-                self.apply(command['name'])
+                self.apply(deepcopy(command) if self.accept is not None else command['name'])
                 error = None
             except Exception as exc:
                 error = str(exc)

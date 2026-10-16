@@ -67,13 +67,23 @@ def test_http_health_recovery_start_stop_and_errors(api, tmp_path):
     assert requests.post(url + '/api/start', headers={'Origin': 'http://localhost:bad'}, timeout=2).status_code == 403
     # Evidence created after construction must still block the first Start.
     (tmp_path / 'state.json').write_text('{', encoding='utf-8')
-    for endpoint in ('start', 'start', 'stop', 'stop'):
+    for endpoint in ('start', 'start'):
         reply = requests.post(url + '/api/' + endpoint, timeout=3)
         assert reply.status_code == 202
         assert await_operation(server)['status'] == 'FAILED'
         state = requests.get(url + '/api/state', timeout=2).json()
         assert state['status'] == 'RECOVERY_REQUIRED'
         assert state['account']['wallet_usd'] is None
+        assert (tmp_path / 'state.json').read_bytes() == b'{'
+        assert not (tmp_path / 'paper.sqlite3').exists()
+    for endpoint in ('stop', 'stop', 'pause', 'resume'):
+        reply = requests.post(url + '/api/' + endpoint, timeout=3)
+        assert reply.status_code == 503  # No verified account exists to accept a durable intent.
+        state = reply.json()
+        assert state['api_time_utc']
+        assert state['status'] == 'RECOVERY_REQUIRED'
+        assert state['account']['wallet_usd'] is None
+        assert not state['risk_gate']['admission_open']
         assert (tmp_path / 'state.json').read_bytes() == b'{'
         assert not (tmp_path / 'paper.sqlite3').exists()
     assert requests.get(url + '/api/missing', timeout=2).status_code == 404
