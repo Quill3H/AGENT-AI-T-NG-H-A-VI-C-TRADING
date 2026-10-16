@@ -100,7 +100,7 @@ def main():
     parser.add_argument(
         "--strategy",
         default="trend_following",
-        choices=["trend_following", "breakout_retest", "smc_liquidity_sweep", "funding_arbitrage", "all"],
+        choices=["trend_following", "breakout_retest", "smc_liquidity_sweep", "donchian_trend", "funding_arbitrage", "all"],
         help="Strategy to backtest (default: trend_following)",
     )
     parser.add_argument(
@@ -196,9 +196,7 @@ def main():
     from src.logging.trade_logger import compute_config_hash, snapshot_run_config
     from src.features.news_calendar import NewsCalendarFilter
     from src.execution.paper_broker import PaperBroker
-    from src.strategies.trend_following import TrendFollowingStrategy
-    from src.strategies.breakout_retest import BreakoutRetestStrategy
-    from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
+    from src.strategies.registry import directional_strategy
 
     # 1. Kiểm tra chiến lược được hỗ trợ (Test 13: fail rõ ràng nếu chưa hỗ trợ)
 
@@ -410,12 +408,7 @@ def main():
 
     # 6. Khởi tạo Strategy và BacktestEngine
     print(f"\n[Engine] Initializing {args.strategy} and BacktestEngine...")
-    strategy_cls = {
-        "trend_following": TrendFollowingStrategy,
-        "breakout_retest": BreakoutRetestStrategy,
-        "smc_liquidity_sweep": SMCLiquiditySweepStrategy,
-    }[args.strategy]
-    strategy = strategy_cls(config=config, symbol=symbol)
+    strategy = directional_strategy(args.strategy, config, symbol)
     engine = BacktestEngine(
         config=config,
         data_4h=data[timeframes[0]],

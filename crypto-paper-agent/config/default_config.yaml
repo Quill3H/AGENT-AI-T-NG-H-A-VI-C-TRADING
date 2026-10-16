@@ -18,6 +18,10 @@ risk:
   # Khoảng cách tối thiểu giữa giá thanh lý và stop-loss (tính theo % entry price)
   # Hard invariant: |liq_price - stop_price| / entry_price >= 0.30
   min_liquidation_buffer_pct: 0.30
+  # Trần danh nghĩa một lệnh: tối đa 2 lần vốn (owner 2026-10-16). Lệnh lớn hơn bị từ chối.
+  max_notional_pct_of_equity: 2.0
+  # Dữ liệu nến đứt quá 60 phút: đóng hết vị thế ở giá mở nến kế tiếp và dừng phiên (kill switch).
+  max_data_gap_minutes: 60
 
 circuit_breakers:
   # Nếu lỗ ròng trong rolling 24h vượt mức này → đóng toàn bộ, khóa trading 24h

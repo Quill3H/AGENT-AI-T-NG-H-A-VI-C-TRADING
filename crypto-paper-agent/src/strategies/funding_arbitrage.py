@@ -145,7 +145,7 @@ class FundingArbitrageSimulator:
             and ts.minute == ts.second == ts.microsecond == ts.nanosecond == 0
         )
 
-    def simulate(self, frame, initial_capital, notional_usd=None, force_close=True):
+    def simulate(self, frame, initial_capital, notional_usd=None, force_close=True, stop_after_exit=False):
         capital = number(initial_capital, "initial_capital", positive=True)
         requested = (
             None
@@ -236,9 +236,8 @@ class FundingArbitrageSimulator:
                 reason = None
                 if r.perp_collateral + r.perp_pnl <= r.quantity * perp * mmr - cum:
                     reason = "LIQUIDATION"
-                elif spot <= entry_spot * (1 - self.stop_pct) or perp >= entry_perp * (
-                    1 + self.stop_pct
-                ):
+                elif r.spot_pnl + r.perp_pnl <= -self.stop_pct * r.spot_notional:
+                    # The legs hedge each other: only a basis (spread) loss threatens the basket.
                     reason = "EMERGENCY_STOP"
                 elif self.cb.is_locked or self.cb.is_halted:
                     reason = "CIRCUIT_BREAKER_LOCK"
@@ -355,6 +354,8 @@ class FundingArbitrageSimulator:
                     "equity": r.equity,
                 }
             )
+            if stop_after_exit and r.exited:
+                break
         if force_close and r.spot_inventory:
             unwind(frame.index[-1], spot, perp, "FORCE_CLOSE_END_OF_DATA")
             r.snapshots[-1].update(

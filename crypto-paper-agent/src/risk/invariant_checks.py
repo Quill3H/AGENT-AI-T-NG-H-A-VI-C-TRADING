@@ -351,6 +351,17 @@ def check_all_invariants(
                 max_leverage = f_max_lev
                 max_lev_valid = True
 
+    # max_notional_pct_of_equity: optional hard cap on one order's notional (None = no cap)
+    max_notional_pct = None
+    if "max_notional_pct_of_equity" in risk_cfg:
+        raw_cap = risk_cfg["max_notional_pct_of_equity"]
+        if type(raw_cap) is bool or not isinstance(raw_cap, (int, float)) or not math.isfinite(float(raw_cap)) or float(raw_cap) <= 0:
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_CONFIG_ERROR: config.risk.max_notional_pct_of_equity must be positive finite numeric, got {raw_cap!r}"
+            )
+        else:
+            max_notional_pct = float(raw_cap)
+
     # min_liquidation_buffer_pct: default 0.30 only when omitted
     if "min_liquidation_buffer_pct" not in risk_cfg:
         min_buffer_pct = 0.30
@@ -801,6 +812,13 @@ def check_all_invariants(
                     f"({total_required_capital:.2f} USD = {required_margin_usd:.2f} margin + {est_entry_fee_usd:.2f} fee) "
                     f"exceeds available margin ({available_margin:.2f} USD)."
                 )
+
+    if max_notional_pct is not None and pos_size_valid and equity_valid:
+        if position_size_usd > equity * max_notional_pct + 1e-4:
+            rejection_reasons.append(
+                f"INVARIANT_FAIL_MAX_NOTIONAL_EXCEEDED: Order notional ({position_size_usd:.2f} USD) exceeds "
+                f"{max_notional_pct:.2f}x equity ({equity * max_notional_pct:.2f} USD)."
+            )
 
     # -------------------------------------------------------------
     # 3. Hard Invariant C: Min Liquidation Buffer (Tier-Consistent) (G1)

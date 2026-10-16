@@ -36,3 +36,28 @@ Cost stress on #7: fees and slippage x2 gave +17.46%, x3 gave +15.94% (2022 -0.0
 #7, funding carry basket (`config/strategies/funding_arbitrage.yaml`, min_apr 0.15,
 exit after two negative settlements, basis emergency stop 2%), 1-hour quotes,
 fees x1. Ratio 10.9 versus 2.5 for #9 and 1.1 for #3.
+
+## Result of the frozen candidate (opened after the freeze commit 7534d6c)
+
+| Window | Start | End | Return | Max DD | Yearly | Baskets | Owner verdict |
+|---|---|---|---|---|---|---|---|
+| Final check 2024-2025 | 10,000 | 10,690.98 | +6.91% | 0.23% | 2024 +6.26, 2025 +0.62 | 3 | (2-year window) |
+| Owner window 2021-2025 | 10,000 | 12,824.61 | +28.25% | 1.74% | +16.78, +0.08, +1.92, +7.02, +0.62 | 10 | **SUCCESS** |
+| Same, fees and slippage x2 | 10,000 | 12,614 | +26.14% | 1.93% | +15.93, +0.01, +1.50, +6.63, +0.53 | 10 | SUCCESS |
+| Extra look 2026-01..09 | 10,000 | 10,000 | 0.00% | 0% | no basket opened | 0 | - |
+
+Buy-and-hold BTC perpetual for comparison: +198.6% with a 76.7% drawdown.
+The per-window "verdict" field in the JSON applies the 5-year rule, so it reads FAIL on
+3-year and 2-year windows by construction.
+
+Limits that matter for interpreting this:
+- Profit is concentrated in 2021 and 2024, the two high-funding years; 2022, 2023 and
+  2025 are close to flat. It passes "every year profitable" with little margin in 2022.
+- Ten baskets is a small sample; the result depends on funding staying positive.
+- Quotes are hourly opens; intra-hour basis moves, spot/futures account transfers and
+  borrow costs are not modelled. 19 missing spot hours were forward-filled.
+- 2021-2023 was used to choose the method, so the 2021-2025 figure is not fully
+  out of sample; only 2024-2025 (+6.91%) is.
+
+Reproduce: `python scripts/reproduce_method_search.py --data-dir <dir>` (about 2 minutes);
+data: `python scripts/download_vision_history.py --output <dir> --allow-network`.
