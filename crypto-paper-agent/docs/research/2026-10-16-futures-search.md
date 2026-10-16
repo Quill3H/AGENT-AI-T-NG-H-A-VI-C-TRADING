@@ -119,3 +119,18 @@ Selection rule applied: **H1 is frozen by this commit** (only candidate with no
 losing year). It will be run once on 2026-01..09. H3 (the owner's 10% risk
 choice) is also run once on 2026-01..09 as a reference only; it cannot be
 selected after the fact.
+
+## Round 2 final check 2026-01-01..2026-09-30 (H1 frozen in b455831)
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output: `hybrid_final_H1.json`, `hybrid_final_H3.json`
+in `/mnt/project-files/market-data/binance-vision-usdm/`.
+
+| Run | Final | Return | Max DD | Trades | Monthly 2026-01..09 (%) |
+|---|---|---|---|---|---|
+| H1 carry (frozen) | 10,000.00 | 0.00% | 0.00% | 0 | no basket opened: funding never reached the 15% APR entry level |
+| H3 F3@10% (reference) | 11,535.53 | +15.36% | 26.57% | 28 | +7.98, +14.02, -14.86, -2.98, +6.02, +13.07, -2.54, +8.72, -10.71 |
+
+H1's check is inconclusive (no trades). H3 made +15.4% in nine months with a
+26.6% drawdown and month-to-month swings from -14.9% to +14.0%; no month reached
++20%. Nine months is far too short to call H3 validated, and it lost in both
+2024 and 2025.
