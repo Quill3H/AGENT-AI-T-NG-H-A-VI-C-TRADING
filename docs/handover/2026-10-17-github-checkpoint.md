@@ -73,7 +73,8 @@ Môi trường: Windows, `.venv-paper/Scripts/python.exe`, **Python 3.12.14**,
 | Frontend mặc định, `npm test` | Không test nào chạy; ba lỗi worker startup timeout, exit 1 |
 | Frontend thử lại, một threads worker | **30 passed / 3 files passed**, exit 0 |
 | `npm run build` | **PASS**, Vite 8.3.1, 23 modules; JS 426.45 kB/CSS 14.75 kB trước gzip |
-| `git diff --check`, staged diff check | **PASS** |
+| Working-tree `git diff --check`, staged diff check | **PASS** |
+| Tích lũy toàn PR, `git diff --check base..HEAD` | Hai cảnh báo blank line at EOF: `tests/test_local_paper_server.py:159` và `web-preview/src/App.test.jsx:1154` (đường dẫn dưới crypto-paper-agent); chưa sửa trong checkpoint |
 | Liên kết file tương đối trong tài liệu đang xuất bản | **138 links checked**, không thiếu target |
 | Rà credential patterns trên candidate files | Không khớp private-key/token/API-secret literal patterns đã kiểm tra; không phải chứng nhận security audit |
 | API JSON schema + ví dụ backend tổng hợp | Thuộc test `test_paper_replay_contract.py` trong full offline |
