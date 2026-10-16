@@ -63,3 +63,10 @@ N4 is not run yet: its open-interest metrics files are on the owner's device and
 device folder link dropped during the download. No final-stage run has been made, so
 the selection is still open. Raw output: `results_new_directions_dev_N1-N3.json` in
 the shared market-data folder.
+
+## Selection (frozen before any final-stage run)
+Owner decision card, 2026-10-16 20:32 UTC: "Chọn luôn". This drops N4 instead of
+waiting for the device data. N4 stays untested and is recorded as dropped for lack of
+data access. It did not fail. Under the pre-registered rule, N2 `regime_switch` is the
+only eligible candidate (no losing year, 67 trades), so **N2 is chosen**. The final runs
+use `--stage final --candidate N2`.
