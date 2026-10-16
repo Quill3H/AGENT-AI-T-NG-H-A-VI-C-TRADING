@@ -103,3 +103,19 @@ Candidates (10,000 USDT):
 Selection rule unchanged (best return / max DD among candidates with no losing
 year in 2021-2025). The chosen candidate is frozen by commit, then run once on
 2026-01..09. Hybrid sleeves run independently and are summed hour by hour.
+
+## Round 2 development results 2021-2025
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output:
+`/mnt/project-files/market-data/binance-vision-usdm/hybrid_search_dev_2026-10-16.json`.
+
+| # | Candidate | Final | Return | Max DD | Yearly 2021..2025 | Avg month | Months >= +20% | Losing months |
+|---|---|---|---|---|---|---|---|---|
+| H1 | carry, 3 coins | 12,864.89 | +28.65% | 2.85% | +18.40 / +0.12 / +1.88 / +6.18 / +0.33 | +0.42% | 0 | 5 |
+| H2 | half F3@10% + half carry | 33,067.76 | +230.68% | 38.52% | +77.65 / +27.48 / +97.95 / -12.72 / -15.48 | +2.01% | 3 | 28 |
+| H3 | F3@10% alone | 53,270.64 | +432.71% | 44.41% | +136.89 / +41.15 / +132.00 / -15.66 / -18.58 | +2.83% | 7 | 29 |
+
+Selection rule applied: **H1 is frozen by this commit** (only candidate with no
+losing year). It will be run once on 2026-01..09. H3 (the owner's 10% risk
+choice) is also run once on 2026-01..09 as a reference only; it cannot be
+selected after the fact.
