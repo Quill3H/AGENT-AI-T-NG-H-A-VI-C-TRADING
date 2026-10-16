@@ -140,3 +140,16 @@ leverage_brackets:
     - [200000000,  0.15,  5016300]
     - [300000000,  0.25,  25016300]
     - [500000000,  0.50,  100016300]
+  # ETH/SOL (owner 2026-10-16 asked for BTC, ETH, SOL). Only the first tier matters for a 10k paper
+  # account (orders are capped at 2x equity). SOL uses a deliberately higher MMR than Binance's table
+  # so liquidation is assumed earlier, never later. Re-check against Binance before any change of scale.
+  ETHUSDT:
+    - [50000,      0.005,  0]
+    - [250000,     0.0065, 75]
+    - [1000000,    0.01,   950]
+    - [10000000,   0.02,   10950]
+  SOLUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]

@@ -49,7 +49,8 @@ def load_config(strategy, overrides):
     return config
 
 
-def run(data_dir, strategy, start, end, overrides=(), cost_multiplier=1.0, initial_capital=None, summarize=True):
+def run(data_dir, strategy, start, end, overrides=(), cost_multiplier=1.0, initial_capital=None, summarize=True,
+        symbol="BTCUSDT"):
     """Return the owner-facing summary, or the finished broker when summarize=False."""
     config = load_config(strategy, overrides)
     if initial_capital is not None:
@@ -59,17 +60,18 @@ def run(data_dir, strategy, start, end, overrides=(), cost_multiplier=1.0, initi
     start, end = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
     signal_tf = config["strategy"].get("timeframe_signal", "4h")
     exec_tf = config["strategy"].get("timeframe_execution", "15m")
-    signal = load_bars(data_dir, signal_tf)
+    signal = load_bars(data_dir, signal_tf, symbol=symbol)
     signal = signal.loc[(signal.index >= start - WARMUP) & (signal.index < end)]
-    execution = load_bars(data_dir, exec_tf)
+    execution = load_bars(data_dir, exec_tf, symbol=symbol)
     execution = execution.loc[(execution.index >= start) & (execution.index < end)]
-    execution = attach_funding(execution, load_funding(data_dir))
+    execution = attach_funding(execution, load_funding(data_dir, symbol=symbol))
     engine = BacktestEngine(
         config=config,
         data_4h=signal,
         data_15m=execution,
-        strategy=directional_strategy(strategy, config),
+        strategy=directional_strategy(strategy, config, symbol),
         broker=PaperBroker(config=config),
+        symbol=symbol,
     )
     metrics = engine.run(force_close=True)
     return summarize_run(engine.broker, metrics, start, end) if summarize else engine.broker
@@ -83,9 +85,10 @@ def main():
     parser.add_argument("--end", default="2025-12-31")
     parser.add_argument("--config", action="append", default=[], help="extra YAML merged over the strategy config")
     parser.add_argument("--cost-multiplier", type=float, default=1.0)
+    parser.add_argument("--symbol", default="BTCUSDT", help="BTCUSDT, ETHUSDT or SOLUSDT")
     parser.add_argument("--output")
     args = parser.parse_args()
-    summary = run(args.data_dir, args.strategy, args.start, args.end, args.config, args.cost_multiplier)
+    summary = run(args.data_dir, args.strategy, args.start, args.end, args.config, args.cost_multiplier, symbol=args.symbol)
     text = json.dumps(summary, indent=2, default=str)
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")

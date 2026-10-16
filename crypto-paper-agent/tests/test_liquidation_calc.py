@@ -177,7 +177,7 @@ class TestLiquidationCalculation:
         brackets = config.get("leverage_brackets", {})
         with pytest.raises(ValueError, match="not found in provided leverage brackets configuration"):
             calculate_estimated_liquidation_price(
-                "LONG", 50000.0, 30000.0, 5.0, symbol="SOLUSDT", leverage_brackets=brackets
+                "LONG", 50000.0, 30000.0, 5.0, symbol="DOGEUSDT", leverage_brackets=brackets
             )
 
     def test_invalid_bracket_structure_raises(self):

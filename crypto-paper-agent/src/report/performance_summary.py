@@ -31,6 +31,32 @@ def yearly_returns(equity, start_equity):
     return {int(year): round(float((close / open_ - 1.0) * 100.0), 2) for year, close, open_ in zip(year_end.index, year_end, opening)}
 
 
+MONTHLY_TARGET_PCT = 20.0
+
+
+def monthly_stats(equity, start_equity):
+    """Month-by-month view the owner asked for: how many months hit +20%, how many lost, and ruin risk."""
+    utc_index = equity.index.tz_convert(None) if equity.index.tz is not None else equity.index
+    month_end = equity.groupby(utc_index.to_period("M")).last()
+    month_end = month_end.reindex(pd.period_range(month_end.index[0], month_end.index[-1], freq="M")).ffill()
+    opening = month_end.shift(1).fillna(start_equity)
+    returns = ((month_end / opening - 1.0) * 100.0).round(2)
+    months = len(returns)
+    growth = float(month_end.iloc[-1]) / float(start_equity)
+    return {
+        "months": months,
+        "monthly_return_pct": {str(period): float(value) for period, value in returns.items()},
+        "average_month_pct": round((growth ** (1.0 / months) - 1.0) * 100.0, 2) if growth > 0 else -100.0,
+        "median_month_pct": round(float(returns.median()), 2),
+        "best_month_pct": round(float(returns.max()), 2),
+        "worst_month_pct": round(float(returns.min()), 2),
+        "months_at_or_above_20pct": int((returns >= MONTHLY_TARGET_PCT).sum()),
+        "losing_months": int((returns < 0).sum()),
+        "lowest_equity_usd": round(float(min(equity.min(), start_equity)), 2),
+        "lost_half_of_start": bool(equity.min() <= 0.5 * start_equity),
+    }
+
+
 def bootstrap_mean_ci(values, samples=5000, seed=7):
     values = np.asarray(values, dtype=float)
     if len(values) < 2:
@@ -70,6 +96,7 @@ def curve_summary(equity, start_equity, start, end, trade_pnl):
         "win_rate_pct": round(100.0 * sum(p > 0 for p in trade_pnl) / len(trade_pnl), 1) if trade_pnl else None,
         "mean_trade_usd": round(float(np.mean(trade_pnl)), 2) if trade_pnl else None,
         "mean_trade_usd_95ci": bootstrap_mean_ci(trade_pnl),
+        "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
         "verdict": verdict(total_return, years),
     }
 
@@ -99,5 +126,6 @@ def summarize_run(broker, metrics, start, end):
         "profit_factor": metrics.get("profit_factor"),
         "sharpe_ratio": metrics.get("sharpe_ratio"),
         "rejection_reasons": metrics.get("rejection_reasons"),
+        "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
         "verdict": verdict(total_return, years),
     }
