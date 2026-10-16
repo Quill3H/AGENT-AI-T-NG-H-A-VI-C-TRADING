@@ -1,5 +1,93 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Current GitHub handoff - 2026-10-17
+
+GitHub publication: [Draft PR #6](https://github.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/pull/6),
+open against `codex/local-paper-futures-app`.
+
+Read [the publication checkpoint](2026-10-17-github-checkpoint.md) first for
+the repaired code SHA, fresh test results, S1-S5 progress, API contract,
+remaining gates and next responsible role. Target base is
+`codex/local-paper-futures-app` at `d1cd95a726e12245ede22326e05b09990975ccd6`.
+The branch is published for review; independent/operational acceptance remains
+pending. No merge, account startup or Scheduled Task installation is part of
+this publication.
+
+Repaired code A: `d9670f41408c7abfe7bb682453e4edb7f198d3fb`.
+Fresh author verification: Python offline **715 passed, 2 skipped, 5 deselected**;
+web **30 passed** with one threads worker, build passed. The full handoff records
+the default frontend worker timeout, skips, runtime observations and NOT_VERIFIED
+checks separately.
+
+## Prior Windows PAPER replay candidate - 2026-10-02
+
+**HISTORICAL AUTHOR_SELF_REVIEWED CHECKPOINT; see 2026-10-17 above for updates.** No
+independent acceptance, profitable bot, economic validation or 24/7 availability
+is claimed. This current section supersedes operational dispatch instructions
+in the older dated checkpoints below without deleting their evidence.
+
+- Active implementation branch: `codex/windows-paper-replay`. Earlier checkpoint:
+  `c89333516f9032155923375a876d0350deb6c267`. Recovery/control/ledger repairs
+  after that checkpoint are still finalizing; final code-under-test SHA and
+  pinned full test/runtime results must be supplied by the root final handoff.
+  Do not label earlier checkpoint results verification of the repaired code.
+  Documentation commit: see Git history and final handoff, not a self-SHA guess.
+- Source base: `1876b134684be6e925d954c4bd3635b61d33fcdc`. Main last known at
+  `fe1c1330d913e78239db575ff8433cf069fe1b01`; recheck Git refs before subsequent
+  work. No main merge/force-push/rebase/squash is authorized in this milestone.
+- Owner expressly approved a **new separate 10,000 imaginary USDT account**,
+  default `crypto-paper-agent/data/paper_accounts/windows-paper-v3`. This is
+  not continuation/reset of legacy capital. Preserve the complete legacy
+  `data/paper_sessions` directory and the owner's unrelated INDEX/audit/workflow
+  changes. Owner-account startup/task installation results are reported
+  separately after final verification; they are not inferred from this document.
+- Authority: [approved design](../superpowers/specs/2026-10-01-windows-paper-replay-design.md)
+  and [ADR 0013](../adr/0013-windows-paper-replay-and-trials.md). Existing stop,
+  <=5x leverage, sizing, news, cost/liquidation and Circuit Breaker policies are
+  unchanged. Fixed SIMULATED 0.01% funding at UTC+7 07/15/23 applies only to
+  this named experiment; other public-source funding remains fail-closed.
+- S1-S5 code is present: fixed model/recipe identity, compact SQLite with
+  immutable account identity, exact typed exposure/ledger/risk restore,
+  complete causal gap replay, trial thresholds/eligible research allocations,
+  responsive v3 API and Windows task/management scripts. Unknown/torn/missing
+  evidence requires RECOVERY_REQUIRED, not guessed state or a new allocation.
+- Only Trend Following initially runs, using closed 4h/next 15m-open paper
+  execution. Registered Breakout & Retest becomes active only through the
+  frozen causal research gates. SMC/PPO/Arbitrage are not active in this account.
+  Trial <5,000 fails; >=15,000 records a milestone and continues; restart,
+  insufficient research or Stop cannot silently mint replacement capital.
+- Commands use immutable OPERATOR_REQUEST acceptance timestamps before the
+  long writer wait and atomic OPERATOR_INTENT application. Financial batches
+  and promotion drain pending controls at safe boundaries. HTTP 202 is not
+  completion; state exposes operation/intent/busy/gates. Shutdown of the
+  Windows service is separate from terminal StopBot; Pause is reversible.
+- The owner later authorized helper agents. Bounded code audits/documentation
+  assistance remain author-side work, not independent tester/reviewer acceptance.
+  Earlier no-subagent implementation-plan restrictions are historical.
+
+Current handoff resources: [project state](../PROJECT_STATE.md),
+[Windows runbook](../operations/LOCAL_PAPER_WEB.md),
+[API v3](../../crypto-paper-agent/docs/operations/PAPER_REPLAY_API_V3.md),
+[schema](../../crypto-paper-agent/docs/operations/paper_replay_state_v3.schema.json)
+and [six SYNTHETIC examples](../../crypto-paper-agent/docs/operations/paper_replay_api_examples_v3.json).
+The examples are fixture-derived integration data, not market performance.
+
+Before delivery: freeze the repaired commit, rerun exact-SHA/full/clean/API/UI/
+Windows/public checks, inspect legacy-account preservation and separately record
+the authorized new-account/task actions. Independent acceptance remains pending.
+Do not claim full 360-day research, task/logon/reboot/power-loss durability,
+24/7 public operation or general mobile usability from short/fixture tests.
+The wide UI retains mobile scrolling. Earlier C: disk exhaustion is historical;
+later free-space check reported 4.34 GB, not a permanent capacity guarantee.
+No task installation or Windows power-setting change is assumed here.
+
+## Historical checkpoints below
+
+The dated snapshots below preserve prior results, authority and limits. Earlier
+"Current" headings and old paths do not override the latest AGENTS/ADR/current
+candidate contract. In particular, the historical single-main authorization
+does not authorize a main merge in this scoped milestone.
+
 ## Local prospective paper UI candidate — 2026-09-27
 
 Branch `codex/local-paper-scanner`, code A

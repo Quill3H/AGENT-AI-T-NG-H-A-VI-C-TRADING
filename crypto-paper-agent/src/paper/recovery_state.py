@@ -15,11 +15,12 @@ from src.execution.order_models import (
 from src.execution.paper_broker import PaperBroker
 from src.risk.circuit_breakers import CircuitBreakerState
 from src.strategies.trend_following import SetupContext, SetupState, TrendFollowingStrategy
+from src.strategies.breakout_retest import BreakoutSetup
 
 
 CLASSES = {cls.__name__: cls for cls in (
     AccountSnapshot, FundingEvent, OrderExecutionRecord, OrderRequest,
-    Position, TradeRecord, SetupContext,
+    Position, TradeRecord, SetupContext, BreakoutSetup,
 )}
 ENUMS = {cls.__name__: cls for cls in (
     ExitReason, OrderDirection, OrderSide, OrderStatus, OrderType,
@@ -97,7 +98,11 @@ def unpack(value):
         extras = {"_last_unrealized_pnl"} if cls is Position else set()
         if not isinstance(raw, dict) or set(raw) != names | extras:
             raise ValueError("checkpoint record fields do not match")
-        record = cls(**{key: unpack(raw[key]) for key in names})
+        decoded = {key: unpack(raw[key]) for key in names}
+        record = cls(**decoded)
+        # Constructors must not repair inconsistent persisted evidence.
+        if any(getattr(record, key) != decoded[key] for key in names):
+            raise ValueError('checkpoint record normalization changed persisted fields')
         if cls is Position:
             record._last_unrealized_pnl = unpack(raw["_last_unrealized_pnl"])
         return record

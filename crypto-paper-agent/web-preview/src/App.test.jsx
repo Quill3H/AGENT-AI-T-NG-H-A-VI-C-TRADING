@@ -780,3 +780,375 @@ describe('paper research console — Binance dark UI & Independent Review Fixes'
     })
   })
 })
+
+describe('Timeframe and coin switching, out-of-order API, and stream resilience', () => {
+  let originalFetch
+  let originalWebSocket
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch
+    originalWebSocket = globalThis.WebSocket
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch {}
+    }
+    class MockWebSocket {
+      close() {}
+      addEventListener() {}
+      removeEventListener() {}
+      send() {}
+    }
+    globalThis.WebSocket = MockWebSocket
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    globalThis.WebSocket = originalWebSocket
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname)
+      } catch {}
+    }
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  it('switches timeframe 1m → 15m → 4h with keyboard and mouse accessibility, updates active state, and fetches /api/chart', async () => {
+    const fetchedUrls = []
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      fetchedUrls.push(url)
+      if (url.startsWith('/api/chart')) {
+        const u = new URL(url, 'http://localhost')
+        const interval = u.searchParams.get('interval')
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            symbol: 'BTCUSDT',
+            interval,
+            candles: [
+              { time: 1700000000, open: 60000, high: 60100, low: 59900, close: 60050, volume: 10 },
+            ],
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ mode: 'PAPER_RESEARCH', status: 'IDLE' }),
+      })
+    })
+
+    render(<App />)
+
+    const btn1m = screen.getByRole('button', { name: /Khung thời gian 1m/i })
+    const btn15m = screen.getByRole('button', { name: /Khung thời gian 15m/i })
+    const btn4h = screen.getByRole('button', { name: /Khung thời gian 4h/i })
+
+    expect(btn1m).toBeInTheDocument()
+    expect(btn15m).toBeInTheDocument()
+    expect(btn4h).toBeInTheDocument()
+
+    // Default timeframe is 1m
+    expect(btn1m).toHaveAttribute('aria-pressed', 'true')
+    expect(btn1m.className).toContain('active')
+    expect(btn15m).toHaveAttribute('aria-pressed', 'false')
+    expect(btn4h).toHaveAttribute('aria-pressed', 'false')
+
+    // Switch to 15m
+    await act(async () => {
+      fireEvent.click(btn15m)
+    })
+
+    expect(btn15m).toHaveAttribute('aria-pressed', 'true')
+    expect(btn15m.className).toContain('active')
+    expect(btn1m).toHaveAttribute('aria-pressed', 'false')
+
+    await waitFor(() => {
+      expect(fetchedUrls.some((u) => u.includes('interval=15m'))).toBe(true)
+    })
+
+    // Switch to 4h
+    await act(async () => {
+      fireEvent.click(btn4h)
+    })
+
+    expect(btn4h).toHaveAttribute('aria-pressed', 'true')
+    expect(btn4h.className).toContain('active')
+    expect(btn15m).toHaveAttribute('aria-pressed', 'false')
+
+    await waitFor(() => {
+      expect(fetchedUrls.some((u) => u.includes('interval=4h'))).toBe(true)
+    })
+
+    // Verify indicator overlay explains that changing visual timeframe does not alter the 4h/15m bot rule
+    expect(screen.getByText(/Quy tắc vào lệnh: Cố định theo Trend Following \(4h\/15m\)/i)).toBeInTheDocument()
+  })
+
+  it('switches coins BTC → ETH → SOL, immediately purging departed coin data and connecting new WebSocket stream', async () => {
+    const wsUrls = []
+    class TrackingWebSocket {
+      constructor(url) {
+        this.url = url
+        wsUrls.push(url)
+        this.onopen = null
+        this.onmessage = null
+        this.onerror = null
+        this.onclose = null
+      }
+      close() {}
+      send() {}
+      addEventListener() {}
+      removeEventListener() {}
+    }
+    globalThis.WebSocket = TrackingWebSocket
+
+    const fetchedUrls = []
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      fetchedUrls.push(url)
+      if (url.startsWith('/api/chart')) {
+        const u = new URL(url, 'http://localhost')
+        const symbol = u.searchParams.get('symbol')
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            symbol,
+            interval: '1m',
+            candles: [{ time: 1700000000, open: 100, high: 110, low: 90, close: 105, volume: 5 }],
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ mode: 'PAPER_RESEARCH', status: 'IDLE' }),
+      })
+    })
+
+    render(<App />)
+
+    // Switch to ETH
+    const ethBtn = screen.getByRole('button', { name: /ETHUSDT/i })
+    await act(async () => {
+      fireEvent.click(ethBtn)
+    })
+
+    await waitFor(() => {
+      expect(ethBtn).toHaveAttribute('aria-pressed', 'true')
+      expect(fetchedUrls.some((u) => u.includes('symbol=ETHUSDT'))).toBe(true)
+      expect(wsUrls.some((u) => u.includes('ethusdt@kline_1m'))).toBe(true)
+    })
+
+    // Switch to SOL
+    const solBtn = screen.getByRole('button', { name: /SOLUSDT/i })
+    await act(async () => {
+      fireEvent.click(solBtn)
+    })
+
+    await waitFor(() => {
+      expect(solBtn).toHaveAttribute('aria-pressed', 'true')
+      expect(fetchedUrls.some((u) => u.includes('symbol=SOLUSDT'))).toBe(true)
+      expect(wsUrls.some((u) => u.includes('solusdt@kline_1m'))).toBe(true)
+    })
+  })
+
+  it('discards out-of-order API chart responses to prevent stale data overwriting newer requests', async () => {
+    let resolveFirstReq = null
+    let resolveSecondReq = null
+
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('/api/chart')) {
+        const u = new URL(url, 'http://localhost')
+        const interval = u.searchParams.get('interval')
+        if (interval === '1m') {
+          return new Promise((resolve) => {
+            resolveFirstReq = () =>
+              resolve({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                  symbol: 'BTCUSDT',
+                  interval: '1m',
+                  candles: [{ time: 1000, open: 10000, high: 10100, low: 9900, close: 10050 }],
+                }),
+              })
+          })
+        }
+        if (interval === '15m') {
+          return new Promise((resolve) => {
+            resolveSecondReq = () =>
+              resolve({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                  symbol: 'BTCUSDT',
+                  interval: '15m',
+                  candles: [{ time: 2000, open: 20000, high: 20200, low: 19800, close: 20100 }],
+                }),
+              })
+          })
+        }
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ mode: 'PAPER_RESEARCH', status: 'IDLE' }),
+      })
+    })
+
+    render(<App />)
+
+    // Switch to 15m (Second request)
+    const btn15m = screen.getByRole('button', { name: /Khung thời gian 15m/i })
+    await act(async () => {
+      fireEvent.click(btn15m)
+    })
+
+    // Now resolve the 15m response first
+    await act(async () => {
+      if (resolveSecondReq) resolveSecondReq()
+    })
+
+    // Then resolve the older 1m response later (out of order)
+    await act(async () => {
+      if (resolveFirstReq) resolveFirstReq()
+    })
+
+    // Verify the chart retains 15m state and does not revert to 1m
+    expect(btn15m).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/Quy tắc vào lệnh: Cố định theo Trend Following \(4h\/15m\) · Đổi khung 15m/i)).toBeInTheDocument()
+  })
+
+  it('handles WebSocket stream events, discards mismatched coin/timeframe messages, and handles WS disconnection', async () => {
+    let capturedWs = null
+    class InteractiveWebSocket {
+      constructor(url) {
+        this.url = url
+        capturedWs = this
+        this.onopen = null
+        this.onmessage = null
+        this.onerror = null
+        this.onclose = null
+      }
+      close() {}
+      send() {}
+      addEventListener() {}
+      removeEventListener() {}
+    }
+    globalThis.WebSocket = InteractiveWebSocket
+
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('/api/chart')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            symbol: 'BTCUSDT',
+            interval: '1m',
+            candles: [{ time: 1700000000, open: 65000, high: 65100, low: 64900, close: 65050 }],
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ mode: 'PAPER_RESEARCH', status: 'IDLE' }),
+      })
+    })
+
+    render(<App />)
+
+    expect(capturedWs).toBeTruthy()
+
+    // Trigger open
+    await act(async () => {
+      if (capturedWs.onopen) capturedWs.onopen()
+    })
+
+    // Send a message from mismatched stream (e.g. ETHUSDT while viewing BTCUSDT)
+    await act(async () => {
+      if (capturedWs.onmessage) {
+        capturedWs.onmessage({
+          data: JSON.stringify({
+            k: {
+              s: 'ETHUSDT',
+              i: '1m',
+              t: 1700000060000,
+              o: '3000',
+              h: '3050',
+              l: '2990',
+              c: '3020',
+              x: false,
+            },
+          }),
+        })
+      }
+    })
+
+    // Should NOT show ETH price on BTC
+    expect(screen.queryByText(/3,020.00/)).not.toBeInTheDocument()
+
+    // Send matching BTCUSDT 1m message
+    await act(async () => {
+      if (capturedWs.onmessage) {
+        capturedWs.onmessage({
+          data: JSON.stringify({
+            k: {
+              s: 'BTCUSDT',
+              i: '1m',
+              t: 1700000060000,
+              o: '65050',
+              h: '65200',
+              l: '65000',
+              c: '65180',
+              x: false,
+            },
+          }),
+        })
+      }
+    })
+
+    // Status shows provisional candle running
+    expect(screen.getByText(/Nến 1m đang chạy \(Provisional\)/i)).toBeInTheDocument()
+
+    // Trigger WS close/disconnect
+    await act(async () => {
+      if (capturedWs.onclose) capturedWs.onclose()
+    })
+
+    // Status updates to disconnected without fabricating synthetic candles
+    await waitFor(() => {
+      expect(screen.getByText(/WebSocket ngắt kết nối/i)).toBeInTheDocument()
+    })
+  })
+
+  it('displays unavailable or error status and does not invent fake bars when /api/chart fails', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      if (url.startsWith('/api/chart')) {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: 'Service Unavailable' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ mode: 'PAPER_RESEARCH', status: 'IDLE' }),
+      })
+    })
+
+    render(<App />)
+
+    // Wait for error state to be reflected in UI
+    await waitFor(() => {
+      expect(screen.getByText(/Nguồn dữ liệu không sẵn sàng · Không thể tải lịch sử nến/i)).toBeInTheDocument()
+    })
+
+    // Verify chart indicates error state without fabricating candles
+    expect(screen.queryByText(/64,000.00/)).not.toBeInTheDocument()
+  })
+})
+

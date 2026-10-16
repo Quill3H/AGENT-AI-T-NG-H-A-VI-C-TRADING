@@ -33,12 +33,23 @@ const parseBarTime = (t) => {
 /**
  * @param {{
  *   symbol: string,
+ *   timeframe?: string,
  *   candles: { time?: number, time_utc?: string, open: number, high: number, low: number, close: number, provisional?: boolean }[],
  *   precision?: number,
  *   liveCandle?: { time?: number, time_utc?: string, open: number, high: number, low: number, close: number } | null,
+ *   status?: 'LOADING' | 'READY' | 'ERROR' | 'UNAVAILABLE',
+ *   errorMessage?: string | null,
  * }} props
  */
-export function CandlestickChart({ symbol, candles = [], precision = 2, liveCandle = null }) {
+export function CandlestickChart({
+  symbol,
+  timeframe = '1m',
+  candles = [],
+  precision = 2,
+  liveCandle = null,
+  status = 'READY',
+  errorMessage = null,
+}) {
   const containerRef = useRef(null)
   const chartRef = useRef(null)
   const seriesRef = useRef(null)
@@ -166,11 +177,19 @@ export function CandlestickChart({ symbol, candles = [], precision = 2, liveCand
       seriesRef.current = null
       lastTimeRef.current = null
     }
-  }, [symbol, precision])
+  }, [symbol, timeframe, precision])
 
   // ── Sync candles array updates from backend ─────────────────────────────────
   useEffect(() => {
-    if (!seriesRef.current || !candles || candles.length === 0) return
+    if (!seriesRef.current) return
+
+    if (!candles || candles.length === 0) {
+      try {
+        seriesRef.current.setData([])
+        lastTimeRef.current = null
+      } catch {}
+      return
+    }
 
     try {
       const sorted = candles
@@ -185,7 +204,11 @@ export function CandlestickChart({ symbol, candles = [], precision = 2, liveCand
 
       if (sorted.length > 0) {
         seriesRef.current.setData(sorted)
+        chartRef.current?.timeScale().fitContent()
         lastTimeRef.current = sorted[sorted.length - 1].time
+      } else {
+        seriesRef.current.setData([])
+        lastTimeRef.current = null
       }
     } catch {
       // Fallback
@@ -213,15 +236,40 @@ export function CandlestickChart({ symbol, candles = [], precision = 2, liveCand
 
   return (
     <div
-      ref={containerRef}
       style={{
         width: '100%',
         height: '100%',
         position: 'absolute',
         inset: 0,
       }}
-      role="img"
-      aria-label={`Biểu đồ nến ${symbol} — Dữ liệu công khai Binance USD-M Futures`}
-    />
+    >
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          inset: 0,
+        }}
+        role="img"
+        aria-label={`Biểu đồ nến ${symbol} (${timeframe}) — Dữ liệu công khai Binance USD-M Futures`}
+      />
+      {status === 'LOADING' && (
+        <div className="chart-status-overlay" role="status" aria-live="polite">
+          <div className="chart-spinner" aria-hidden="true" />
+          <span>Đang tải nến {symbol} ({timeframe})...</span>
+        </div>
+      )}
+      {(status === 'ERROR' || status === 'UNAVAILABLE') && (
+        <div className="chart-status-overlay error" role="alert">
+          <span>⚠ {errorMessage || 'Nguồn dữ liệu không sẵn sàng'}</span>
+        </div>
+      )}
+      {status === 'READY' && (!candles || candles.length === 0) && (
+        <div className="chart-status-overlay" role="status">
+          <span>Chưa có dữ liệu nến cho {symbol} ({timeframe})</span>
+        </div>
+      )}
+    </div>
   )
 }

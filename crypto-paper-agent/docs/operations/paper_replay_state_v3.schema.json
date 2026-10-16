@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Paper replay API v3 - backend-owned account and provenance",
+  "type": "object",
+  "required": ["api_version", "api_time_utc", "mode", "status", "session_id", "account_profile", "connection", "account", "recovery", "risk_gate", "operator_intent", "execution_mode", "backend_busy", "operation", "current_prices", "funding_model", "recipe", "trial_id", "trials", "replay", "research", "orders", "pending_orders", "open_positions", "trades", "funding_events", "history"],
+  "properties": {
+    "api_version": {"const": 3},
+    "mode": {"const": "PAPER_RESEARCH"},
+    "api_time_utc": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["IDLE", "SCANNING", "WAITING_SYNC", "WAITING_CONNECTION", "RECOVERY_REQUIRED", "STOPPING", "STOPPED"]},
+    "session_id": {"type": ["string", "null"]},
+    "account_profile": {"enum": ["windows-paper-v3", "<CUSTOM_ACCOUNT>"]},
+    "error": {"type": ["string", "null"]},
+    "source_time_utc": {"type": ["string", "null"], "format": "date-time"},
+    "received_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "last_processed_open_utc": {"type": ["string", "null"], "format": "date-time"},
+    "operator_intent": {"enum": [null, "RUNNING", "PAUSED", "STOPPING", "STOPPED"]},
+    "execution_mode": {"enum": [null, "REPLAY", "REALTIME"]},
+    "backend_busy": {"type": "boolean"},
+    "operation": {"anyOf": [{"type": "null"}, {"type": "object", "required": ["id", "name", "status", "error", "requested_at_utc", "completed_at_utc"], "properties": {
+      "id": {"type": "string"}, "name": {"enum": ["start", "restore", "pause", "resume", "stop"]},
+      "status": {"enum": ["PENDING", "RUNNING", "APPLIED", "FAILED", "CANCELLED"]},
+      "error": {"type": ["string", "null"]}, "requested_at_utc": {"type": "string", "format": "date-time"},
+      "completed_at_utc": {"type": ["string", "null"], "format": "date-time"}
+    }}]},
+    "connection": {"type": "object", "required": ["connected", "error", "source", "last_event_received_at_utc", "reconnect_required"], "properties": {
+      "connected": {"type": "boolean"}, "error": {"type": ["string", "null"]}, "source": {"type": "string"},
+      "last_event_received_at_utc": {"type": ["string", "null"], "format": "date-time"}, "reconnect_required": {"type": "boolean"}
+    }},
+    "account": {"type": "object", "required": ["initial_equity_usd", "wallet_usd", "equity_usd", "available_margin_usd", "reserved_collateral_usd", "unrealized_pnl_usd", "breaker_locked"], "properties": {
+      "initial_equity_usd": {"type": ["number", "null"]}, "wallet_usd": {"type": ["number", "null"]},
+      "equity_usd": {"type": ["number", "null"]}, "available_margin_usd": {"type": ["number", "null"]},
+      "reserved_collateral_usd": {"type": ["number", "null"]}, "unrealized_pnl_usd": {"type": ["number", "null"]},
+      "breaker_locked": {"type": ["boolean", "null"]}
+    }},
+    "recovery": {"type": "object", "required": ["required", "account_known", "reconciled", "view"], "properties": {
+      "required": {"type": "boolean"}, "account_known": {"type": "boolean"}, "reconciled": {"type": "boolean"},
+      "view": {"enum": ["UNKNOWN", "LAST_DURABLE_SNAPSHOT", "CURRENT_PROCESS"]}
+    }},
+    "risk_gate": {"type": "object", "required": ["admission_open", "reason", "halted"], "properties": {
+      "admission_open": {"type": "boolean"}, "reason": {"type": ["string", "null"]}, "halted": {"type": "boolean"}
+    }},
+    "current_prices": {"type": "object", "required": ["BTCUSDT", "ETHUSDT", "SOLUSDT"], "additionalProperties": {"type": "object", "required": ["price", "valid", "kind", "as_of_utc"], "properties": {
+      "price": {"type": ["number", "null"]}, "valid": {"type": "boolean"},
+      "kind": {"enum": ["PUBLIC_FUTURES", "STALE_OR_UNAVAILABLE"]}, "as_of_utc": {"type": ["string", "null"], "format": "date-time"}
+    }, "allOf": [{"if": {"properties": {"valid": {"const": false}}}, "then": {"properties": {"price": {"type": "null"}}}}]}},
+    "funding_model": {"type": "object", "required": ["kind"], "properties": {"kind": {"enum": ["NOT_CONFIGURED", "FIXED_SIMULATED", "PUBLIC_OBSERVED"]}}, "allOf": [
+      {"if": {"properties": {"kind": {"const": "FIXED_SIMULATED"}}}, "then": {"required": ["rate", "effective_at_utc", "settlement_hours_utc", "settlement_hours_local", "display_timezone", "price_proxy", "version"], "properties": {
+        "rate": {"const": 0.0001}, "effective_at_utc": {"type": "string", "format": "date-time"},
+        "settlement_hours_utc": {"const": [0, 8, 16]}, "settlement_hours_local": {"const": [7, 15, 23]},
+        "display_timezone": {"const": "UTC+07:00"}, "price_proxy": {"const": "CANDLE_OPEN"}, "version": {"type": "string"}
+      }}}
+    ]},
+    "recipe": {"type": ["object", "null"]}, "strategy": {"enum": [null, "trend_following", "breakout_retest"]},
+    "trial_id": {"type": ["string", "null"]},
+    "trials": {"anyOf": [{"type": "null"}, {"type": "object", "required": ["trials", "allocations", "total_capital_injected_usd", "checksum"], "properties": {
+      "trials": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["trial_id", "recipe", "status", "started_at_utc", "initial_capital_usd", "current_equity_usd", "final_equity_usd", "target_reached", "target_at_utc", "failed_at_utc"], "properties": {
+        "initial_capital_usd": {"const": 10000}, "status": {"enum": ["ACTIVE", "FAILED"]}, "target_reached": {"type": "boolean"}
+      }}}, "allocations": {"type": "object"}, "total_capital_injected_usd": {"type": "number", "minimum": 10000}, "checksum": {"type": "string"}
+    }}]},
+    "replay": {"type": "object", "required": ["target_close_utc", "processed_batches", "remaining_batches"], "properties": {
+      "target_close_utc": {"type": ["string", "null"], "format": "date-time"},
+      "processed_batches": {"type": "integer", "minimum": 0}, "remaining_batches": {"type": "integer", "minimum": 0}
+    }},
+    "research": {"type": "object", "required": ["status", "used_holdouts", "next_attempt_after_utc", "last_verdict", "automatic_promotion_connected"]},
+    "orders": {"type": "array", "items": {"type": "object", "required": ["id", "symbol", "side", "status", "rejection_reasons", "fee_usd", "slippage_usd"]}},
+    "pending_orders": {"type": "array", "items": {"type": "object", "required": ["symbol", "side", "signal_time_utc", "signal_price", "stop_loss_price", "leverage"]}},
+    "open_positions": {"type": "array", "items": {"type": "object", "required": ["symbol", "side", "quantity", "entry_price", "stop_loss_price", "leverage", "isolated_collateral_usd", "cumulative_funding_usd"]}},
+    "trades": {"type": "array", "items": {"type": "object", "required": ["id", "symbol", "side", "net_pnl_usd", "fee_usd", "funding_usd", "entry_time_utc", "exit_time_utc"]}},
+    "funding_events": {"type": "array", "items": {"type": "object", "required": ["id", "symbol", "timestamp_utc", "rate", "cashflow_usd"]}},
+    "history": {"type": "object", "required": ["endpoint", "page_size", "sample_unit"], "properties": {"endpoint": {"const": "/api/history"}}}
+  },
+  "allOf": [{"if": {"anyOf": [{"properties": {"status": {"const": "RECOVERY_REQUIRED"}}}, {"properties": {"backend_busy": {"const": true}}}, {"properties": {"operator_intent": {"enum": ["PAUSED", "STOPPING", "STOPPED"]}}}]},
+    "then": {"properties": {"risk_gate": {"properties": {"admission_open": {"const": false}}}}}}]
+}

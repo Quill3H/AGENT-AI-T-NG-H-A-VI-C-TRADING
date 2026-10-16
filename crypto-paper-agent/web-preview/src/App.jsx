@@ -30,33 +30,33 @@ export const STRATEGY_METADATA = [
     id: 'trend_following',
     nameVi: 'Bám theo xu hướng (Trend Following)',
     timeframe: '4h / 15m',
-    status: 'ACTIVE_LIVE',
-    statusLabel: '🟢 Đang chạy trên dữ liệu mới (Paper)',
-    desc: 'Chiến lược duy nhất hiện đang quét và tính toán lệnh mô phỏng trên luồng dữ liệu mới.',
+    status: 'DORMANT',
+    statusLabel: 'Chưa được chọn',
+    desc: '',
   },
   {
-    id: 'breakout',
+    id: 'breakout_retest',
     nameVi: 'Phá vỡ cản & Kiểm tra lại (Breakout)',
-    timeframe: '15m / 1m',
+    timeframe: '4h / 15m',
     status: 'DORMANT',
-    statusLabel: '⚪ Chưa kích hoạt (Mẫu lịch sử)',
-    desc: 'Không chạy trên luồng mới. Giữ nguyên theo hợp đồng kiến trúc.',
+    statusLabel: '⚪ Ứng viên nghiên cứu (Chưa kích hoạt)',
+    desc: 'Ứng viên nghiên cứu độc lập. Không chạy quét hay đặt lệnh trong phiên chạy thực tế.',
   },
   {
     id: 'smc',
     nameVi: 'Quét thanh khoản dòng tiền lớn (SMC)',
     timeframe: '15m',
     status: 'DORMANT',
-    statusLabel: '⚪ Chưa kích hoạt (Mẫu lịch sử)',
-    desc: 'Không chạy trên luồng mới. Giữ nguyên theo hợp đồng kiến trúc.',
+    statusLabel: '⚪ Ứng viên nghiên cứu (Chưa kích hoạt)',
+    desc: 'Ứng viên nghiên cứu độc lập. Không chạy quét hay đặt lệnh trong phiên chạy thực tế.',
   },
   {
     id: 'funding_arb',
     nameVi: 'Khai thác chênh lệch phí Funding',
     timeframe: '8h settlement',
     status: 'DORMANT',
-    statusLabel: '⚪ Chưa kích hoạt (Mẫu lịch sử)',
-    desc: 'Thiếu dữ liệu settlement tại mốc nến. Tạm khóa bảo vệ vốn.',
+    statusLabel: '⚪ Ứng viên nghiên cứu (Chưa kích hoạt)',
+    desc: 'Không đủ điều kiện trong thí nghiệm funding cố định.',
   },
 ]
 
@@ -89,6 +89,11 @@ function getInitialCoin() {
 
 export function App() {
   const [activeCoin, setActiveCoin] = useState(getInitialCoin())
+  const [activeTimeframe, setActiveTimeframe] = useState('1m')
+  const [chartCandles, setChartCandles] = useState([])
+  const [chartStatus, setChartStatus] = useState('LOADING')
+  const [chartError, setChartError] = useState(null)
+
   const [connectionStatus, setConnectionStatus] = useState('CONNECTING')
   // 'CONNECTING' | 'ONLINE' | 'WAITING_DATA' | 'WAITING_CONNECTION' | 'DATA_STALE' | 'SERVER_ERROR' | 'QUARANTINED' | 'RECOVERY_REQUIRED'
 
@@ -155,6 +160,7 @@ export function App() {
 
         setBackendState(data)
         setLastSyncTime(Date.now())
+        if (data.operation?.status === 'FAILED') setActionError(data.operation.error || 'Thao tác backend thất bại')
 
         // Classify connection & backend status
         if (data.status === 'QUARANTINED') {
@@ -163,6 +169,10 @@ export function App() {
           setConnectionStatus('RECOVERY_REQUIRED')
         } else if (data.status === 'WAITING_CONNECTION') {
           setConnectionStatus('WAITING_CONNECTION')
+        } else if (data.api_version >= 3) {
+          setConnectionStatus(data.backend_busy ? 'WAITING_DATA' :
+            data.connection?.connected && COINS.every(c => data.current_prices?.[c.symbol]?.valid)
+              ? 'ONLINE' : 'DATA_STALE')
         } else if (!data.source_time_utc) {
           // Rule: source_time_utc = null must NEVER be considered ONLINE
           setConnectionStatus('WAITING_DATA')
@@ -199,18 +209,19 @@ export function App() {
     }
   }, [])
 
-  // ── 2. Real Public WebSocket Stream for Live 1m Kline Chart ─────────────────
+  // ── 2. Real Public WebSocket Stream for Live Kline Chart (${activeTimeframe}) ─
   useEffect(() => {
     let ws = null
     let reconnectTimer = null
     let isCancelled = false
 
     setWsStatus('CONNECTING')
+    setLiveCandle(null)
 
     const connectWs = () => {
       if (typeof WebSocket === 'undefined') return
       try {
-        const streamUrl = `wss://fstream.binance.com/market/ws/${activeCoin.toLowerCase()}@kline_1m`
+        const streamUrl = `wss://fstream.binance.com/market/ws/${activeCoin.toLowerCase()}@kline_${activeTimeframe}`
         ws = new WebSocket(streamUrl)
 
         ws.onopen = () => {
@@ -224,6 +235,10 @@ export function App() {
             const data = JSON.parse(event.data)
             if (data && data.k) {
               const k = data.k
+              // Drop mismatched events from old streams or other symbols/timeframes when specified
+              if ((k.s && k.s !== activeCoin) || (k.i && k.i !== activeTimeframe)) {
+                return
+              }
               const receiveTime = Date.now()
               setLastWsEventTime(receiveTime)
               setWsStatus('CONNECTED')
@@ -267,14 +282,117 @@ export function App() {
         ws.close()
       }
     }
-  }, [activeCoin])
+  }, [activeCoin, activeTimeframe])
 
-  // ── 3. Handle Coin Change ───────────────────────────────────────────────────
-  const handleCoinChange = (newSymbol) => {
-    setActiveCoin(newSymbol)
+  // ── 3. Dedicated Historical Kline Fetching (/api/chart) with out-of-order drop ─
+  const chartSeqRef = useRef(0)
+  const latestChartSeqRef = useRef(0)
+  const chartAbortRef = useRef(null)
+
+  useEffect(() => {
+    let isCancelled = false
+
+    // Immediately purge data of departed coin/timeframe
+    setChartCandles([])
     setLiveCandle(null)
     setLastWsEventTime(null)
     setWsStatus('CONNECTING')
+    setChartStatus('LOADING')
+    setChartError(null)
+
+    if (chartAbortRef.current) {
+      chartAbortRef.current.abort()
+    }
+    const controller = new AbortController()
+    chartAbortRef.current = controller
+
+    const thisSeq = ++chartSeqRef.current
+
+    const fetchChart = async () => {
+      try {
+        const timeout = setTimeout(() => controller.abort(), 6000)
+        const resp = await fetch(
+          `/api/chart?symbol=${encodeURIComponent(activeCoin)}&interval=${encodeURIComponent(activeTimeframe)}`,
+          {
+            signal: controller.signal,
+            headers: { 'Cache-Control': 'no-cache' },
+          }
+        )
+        clearTimeout(timeout)
+
+        // Drop out-of-order response: an older request finishing after a newer one
+        if (thisSeq < latestChartSeqRef.current || isCancelled) {
+          return
+        }
+
+        if (resp.ok) {
+          const data = await resp.json()
+          if (thisSeq < latestChartSeqRef.current || isCancelled) return
+          latestChartSeqRef.current = thisSeq
+          const rawCandles = Array.isArray(data)
+            ? data
+            : data?.candles ||
+              (activeTimeframe === '1m'
+                ? data?.charts?.[activeCoin] || (activeCoin === 'BTCUSDT' ? data?.chart : null)
+                : null) ||
+              []
+          setChartCandles(rawCandles)
+          setChartStatus('READY')
+          setChartError(null)
+          return
+        }
+
+        // If /api/chart returns 404 (endpoint not implemented in older backend)
+        if (resp.status === 404) {
+          if (activeTimeframe === '1m' && (backendState?.charts?.[activeCoin]?.length > 0 || (activeCoin === 'BTCUSDT' && backendState?.chart?.length > 0))) {
+            latestChartSeqRef.current = thisSeq
+            setChartCandles(backendState.charts?.[activeCoin] || backendState.chart || [])
+            setChartStatus('READY')
+            setChartError(null)
+            return
+          }
+          latestChartSeqRef.current = thisSeq
+          setChartStatus('UNAVAILABLE')
+          setChartError(`API backend chưa hỗ trợ khung ${activeTimeframe}. Đang chờ PR backend của Codex.`)
+          return
+        }
+
+        throw new Error(`HTTP ${resp.status}`)
+      } catch (err) {
+        if (isCancelled || controller.signal.aborted) return
+        if (thisSeq < latestChartSeqRef.current) return
+        latestChartSeqRef.current = thisSeq
+
+        // Fallback for 1m if present in backendState
+        if (activeTimeframe === '1m' && (backendState?.charts?.[activeCoin]?.length > 0 || (activeCoin === 'BTCUSDT' && backendState?.chart?.length > 0))) {
+          setChartCandles(backendState.charts?.[activeCoin] || backendState.chart || [])
+          setChartStatus('READY')
+          setChartError(null)
+          return
+        }
+
+        setChartStatus('ERROR')
+        setChartError('Nguồn dữ liệu không sẵn sàng · Không thể tải lịch sử nến')
+      }
+    }
+
+    fetchChart()
+
+    return () => {
+      isCancelled = true
+      controller.abort()
+    }
+  }, [activeCoin, activeTimeframe])
+
+  // ── 4. Handlers for Coin & Timeframe Changes ────────────────────────────────
+  const handleTimeframeChange = (newTf) => {
+    if (newTf === activeTimeframe) return
+    setActiveTimeframe(newTf)
+  }
+
+  const handleCoinChange = (newSymbol) => {
+    if (newSymbol === activeCoin) return
+    setActiveCoin(newSymbol)
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       const url = new URL(window.location.href)
       url.searchParams.set('coin', newSymbol)
@@ -352,7 +470,7 @@ export function App() {
 
       const data = await resp.json()
       setBackendState(data)
-      if (data.status !== 'STOPPED' && data.status !== 'IDLE') {
+      if (resp.status !== 202 && data.status !== 'STOPPED' && data.status !== 'IDLE' && data.status !== 'STOPPING') {
         setActionError(data.error || 'Server chưa xác nhận trạng thái dừng.')
       }
     } catch (err) {
@@ -362,10 +480,33 @@ export function App() {
     }
   }
 
+  const handlePauseResume = async () => {
+    if (commandBusy || isRecoveryRequired) return
+    setBotActionState('CONTROL')
+    setActionError(null)
+    try {
+      const resp = await fetch(backendState?.operator_intent === 'PAUSED' ? '/api/resume' : '/api/pause',
+        { method: 'POST', signal: AbortSignal.timeout(8000) })
+      const result = await resp.json()
+      if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`)
+      setBackendState(result)
+    } catch (err) {
+      setActionError(err.message || 'Không thể thay đổi trạng thái bot')
+    } finally { setBotActionState(null) }
+  }
+
   // ── Derived Data from Backend State (100% from backend, no client math) ─────
-  const isBotRunning = ['SCANNING', 'WAITING_SYNC', 'WAITING_CONNECTION'].includes(backendState?.status)
+  const isBotRunning = ['SCANNING', 'WAITING_SYNC', 'WAITING_CONNECTION', 'STOPPING'].includes(backendState?.status)
+  const isStopping = backendState?.operator_intent === 'STOPPING' || backendState?.status === 'STOPPING'
+  const commandBusy = botActionState !== null || ['PENDING', 'RUNNING'].includes(backendState?.operation?.status)
   const isQuarantined = backendState?.status === 'QUARANTINED' || connectionStatus === 'QUARANTINED'
   const isRecoveryRequired = backendState?.status === 'RECOVERY_REQUIRED' || connectionStatus === 'RECOVERY_REQUIRED'
+  const selectedStrategy = backendState?.recipe?.strategy_id ||
+    (backendState?.strategy?.startsWith('Trend Following') ? 'trend_following' : backendState?.strategy)
+  const strategyRows = STRATEGY_METADATA.map(row => ({ ...row,
+    status: row.id === selectedStrategy ? 'SELECTED_PAPER' : 'DORMANT',
+    statusLabel: row.id === selectedStrategy ? 'Đã chọn · PAPER' : 'Không hoạt động' }))
+  const strategyLabel = STRATEGY_METADATA.find(row => row.id === selectedStrategy)?.nameVi || 'Chưa xác định'
 
   const account = backendState?.account || {
     initial_equity_usd: null,
@@ -388,11 +529,15 @@ export function App() {
   const isWaitingSync = backendState?.status === 'WAITING_SYNC'
   const isWaitingConnection = backendState?.status === 'WAITING_CONNECTION'
 
-  // Symbol Candles from backend
+  // Symbol Candles: prefer chartCandles (from /api/chart), fallback to backendState.charts for 1m
   const symbolCandles =
-    backendState?.charts?.[activeCoin] ||
-    (activeCoin === 'BTCUSDT' ? backendState?.chart : null) ||
-    []
+    chartCandles.length > 0
+      ? chartCandles
+      : activeTimeframe === '1m'
+      ? backendState?.charts?.[activeCoin] ||
+        (activeCoin === 'BTCUSDT' ? backendState?.chart : null) ||
+        []
+      : []
 
   // Real current price: strictly real or null. ZERO fake numbers (64k/2.5k/150).
   const backendQuoteCurrent = connectionStatus === 'ONLINE' && lastSyncTime !== null && nowTime - lastSyncTime < 10_000
@@ -402,7 +547,10 @@ export function App() {
       typeof market?.last_closed_15m_price === 'number' && Number.isFinite(market.last_closed_15m_price)
       ? market.last_closed_15m_price : null
   }
-  const marketPrice = recentClosedPrice(marketInfo)
+  const authoritativePrice = backendState?.current_prices?.[activeCoin]
+  const marketPrice = backendState?.api_version >= 3
+    ? backendQuoteCurrent && authoritativePrice?.valid ? authoritativePrice.price : null
+    : recentClosedPrice(marketInfo)
 
   // WebSocket freshness check:
   // When disconnected or no new tick received for >15s, do NOT prioritize stale liveCandle price over fresh REST
@@ -411,11 +559,13 @@ export function App() {
 
   // Only use liveCandle.close if WebSocket stream is actively connected and receiving fresh ticks (<15s).
   // If WebSocket is disconnected or stale, strictly fall back to closed REST price from backend.
-  const currentPrice = isWsLive ? (liveCandle.close ?? null) : marketPrice
+  const currentPrice = backendState?.api_version >= 3 ? marketPrice : isWsLive ? (liveCandle.close ?? null) : marketPrice
 
   // Function to get real price for any coin in the left list
   const getCoinPrice = (symbol) => {
     if (symbol === activeCoin && currentPrice !== null) return currentPrice
+    if (backendState?.api_version >= 3) return backendQuoteCurrent && backendState.current_prices?.[symbol]?.valid
+      ? backendState.current_prices[symbol].price : null
     return recentClosedPrice(backendState?.markets?.[symbol])
   }
 
@@ -468,6 +618,9 @@ export function App() {
 
   // Bot status text & color
   const botStatusBadge = (() => {
+    if (isStopping) return { label: 'STOPPING · Chờ đóng vị thế và đối soát', color: '#F0B90B', indicator: 'sync' }
+    if (backendState?.operator_intent === 'PAUSED') return { label: 'PAUSED · Tạm dừng lệnh vào', color: '#F0B90B', indicator: 'sync' }
+    if (backendState?.backend_busy) return { label: 'Đang đối soát backend', color: '#F0B90B', indicator: 'sync' }
     switch (backendState?.status) {
       case 'SCANNING':
         if (isAdmissionOpen) {
@@ -620,7 +773,7 @@ export function App() {
           )}
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thay đổi</span>
+            <span className="ticker-stat-label">Thay đổi cửa sổ</span>
             {changePct24h !== null && change24h !== null ? (
               <span className={`ticker-stat-value mono ${changePct24h >= 0 ? 'text-buy' : 'text-sell'}`}>
                 {changePct24h >= 0 ? '+' : ''}
@@ -633,14 +786,14 @@ export function App() {
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Cao nhất</span>
+            <span className="ticker-stat-label">Cao cửa sổ</span>
             <span className="ticker-stat-value mono">
               {high24h !== null ? money(high24h, precision) : '--'}
             </span>
           </div>
 
           <div className="ticker-stat">
-            <span className="ticker-stat-label">24h Thấp nhất</span>
+            <span className="ticker-stat-label">Thấp cửa sổ</span>
             <span className="ticker-stat-value mono">
               {low24h !== null ? money(low24h, precision) : '--'}
             </span>
@@ -720,20 +873,20 @@ export function App() {
             Chiến lược hệ thống
           </div>
           <div className="strategy-list" role="list">
-            {STRATEGY_METADATA.map((strat) => (
+            {strategyRows.map((strat) => (
               <div
                 key={strat.id}
                 className="strategy-item"
                 role="listitem"
                 style={{
-                  opacity: strat.status === 'ACTIVE_LIVE' ? 1 : 0.65,
-                  borderLeft: strat.status === 'ACTIVE_LIVE' ? '3px solid #0ECB81' : '3px solid transparent',
+                  opacity: strat.status === 'SELECTED_PAPER' ? 1 : 0.65,
+                  borderLeft: strat.status === 'SELECTED_PAPER' ? '3px solid #0ECB81' : '3px solid transparent',
                 }}
               >
                 <div>
                   <div
                     className="strategy-name"
-                    style={{ color: strat.status === 'ACTIVE_LIVE' ? '#0ECB81' : '#EAECEF' }}
+                    style={{ color: strat.status === 'SELECTED_PAPER' ? '#0ECB81' : '#EAECEF' }}
                   >
                     {strat.nameVi}
                   </div>
@@ -823,9 +976,20 @@ export function App() {
               ● {activeCoinConfig.name}
             </span>
             <div className="toolbar-divider" aria-hidden="true" />
-            <span className="toolbar-btn active">1m</span>
-            <span className="toolbar-btn">15m</span>
-            <span className="toolbar-btn">4h</span>
+            <div className="timeframe-buttons" role="group" aria-label="Khung thời gian biểu đồ">
+              {['1m', '15m', '4h'].map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  className={`toolbar-btn ${activeTimeframe === tf ? 'active' : ''}`}
+                  onClick={() => handleTimeframeChange(tf)}
+                  aria-pressed={activeTimeframe === tf}
+                  aria-label={`Khung thời gian ${tf}`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
             <div className="toolbar-divider" aria-hidden="true" />
             <span className="toolbar-btn" style={{ color: '#F0B90B', cursor: 'default' }}>
               📊 Binance Futures Public Stream · Trend Following (4h/15m)
@@ -834,16 +998,16 @@ export function App() {
             <span style={{ fontSize: '11px', color: '#848E9C' }}>
               {isWsLive ? (
                 liveCandle?.provisional ? (
-                  <span style={{ color: '#F0B90B' }}>● Nến 1m đang chạy (Provisional)</span>
+                  <span style={{ color: '#F0B90B' }}>● Nến {activeTimeframe} đang chạy (Provisional)</span>
                 ) : (
-                  <span style={{ color: '#0ECB81' }}>✔ Nến 1m đã đóng</span>
+                  <span style={{ color: '#0ECB81' }}>✔ Nến {activeTimeframe} đã đóng</span>
                 )
               ) : isWsStale && lastWsEventTime ? (
                 <span style={{ color: '#F0B90B' }}>⚠ Mất kết nối/Giá cũ (&gt;15s)</span>
               ) : wsStatus === 'DISCONNECTED' ? (
-                <span style={{ color: '#848E9C' }}>○ WebSocket ngắt kết nối</span>
+                <span style={{ color: '#848E9C' }}>○ WebSocket ngắt kết nối ({activeTimeframe})</span>
               ) : (
-                'Đang đồng bộ nến...'
+                `Đang đồng bộ nến ${activeTimeframe}...`
               )}
             </span>
           </div>
@@ -851,22 +1015,25 @@ export function App() {
           {/* Candlestick Chart Area */}
           <div className="chart-area" style={{ position: 'relative' }}>
             <CandlestickChart
-              key={activeCoin}
+              key={`${activeCoin}-${activeTimeframe}`}
               symbol={activeCoin}
+              timeframe={activeTimeframe}
               candles={symbolCandles}
               liveCandle={liveCandle}
               precision={precision}
+              status={chartStatus}
+              errorMessage={chartError}
             />
 
             {/* Overlay Info */}
             <div className="chart-overlay" aria-hidden="true">
               <div className="chart-label">
                 <span className="chart-label-dot" style={{ background: activeCoinConfig.color }} />
-                {activeCoin} Perpetual · Nến 1m công khai
+                {activeCoin} Perpetual · Nến {activeTimeframe} công khai
               </div>
               <div className="chart-label">
                 <span className="chart-label-dot" style={{ background: '#848E9C' }} />
-                Quyết định trade: Chỉ dựa trên nến 15m/4h đã đóng hoàn toàn
+                Quy tắc vào lệnh: Cố định theo Trend Following (4h/15m) · Đổi khung {activeTimeframe} chỉ đổi cách xem
               </div>
             </div>
           </div>
@@ -956,14 +1123,14 @@ export function App() {
                     <tbody>
                       {completedTrades.map((t, idx) => (
                         <tr key={idx}>
-                          <td className="mono">{t.exit_time || t.time || '--'}</td>
+                          <td className="mono">{t.exit_time_utc || t.exit_time || t.time || '--'}</td>
                           <td>{t.symbol}</td>
                           <td className={t.side === 'LONG' ? 'text-buy' : 'text-sell'}>{t.side}</td>
                           <td className="mono">{money(t.entry_price, precision)}</td>
                           <td className="mono">{money(t.exit_price, precision)}</td>
                           <td className="mono">{Number(t.quantity).toFixed(4)}</td>
-                          <td className={`mono ${(t.pnl_net_usd ?? t.pnl ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}>
-                            {money(t.pnl_net_usd ?? t.pnl ?? 0)} USDT
+                          <td className={`mono ${(t.net_pnl_usd ?? t.pnl_net_usd ?? t.pnl ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}>
+                            {money(t.net_pnl_usd ?? t.pnl_net_usd ?? t.pnl ?? 0)} USDT
                           </td>
                           <td>{t.exit_reason || t.reason || '--'}</td>
                         </tr>
@@ -1000,7 +1167,7 @@ export function App() {
                           <td>{pos.leverage}×</td>
                           <td className="mono">{money(pos.stop_loss_price, precision)}</td>
                           <td className="mono">{Number(pos.quantity).toFixed(4)}</td>
-                          <td className="mono">{money(pos.collateral_usd ?? pos.margin_usd)} USDT</td>
+                          <td className="mono">{money(pos.isolated_collateral_usd ?? pos.collateral_usd ?? pos.margin_usd)} USDT</td>
                           <td className={`mono ${(pos.unrealized_pnl_usd ?? 0) >= 0 ? 'text-buy' : 'text-sell'}`}>
                             {money(pos.unrealized_pnl_usd ?? 0.0)} USDT
                           </td>
@@ -1030,22 +1197,22 @@ export function App() {
                       <tbody>
                         {pendingOrders.map((ord, idx) => (
                           <tr key={`p-${idx}`} style={{ background: 'rgba(240, 185, 11, 0.06)' }}>
-                            <td className="mono">{ord.time_utc || '--'}</td>
+                            <td className="mono">{ord.signal_time_utc || ord.time_utc || '--'}</td>
                             <td>{ord.symbol}</td>
                             <td>{ord.order_type || 'PENDING'}</td>
                             <td className={ord.side === 'LONG' ? 'text-buy' : 'text-sell'}>{ord.side}</td>
-                            <td className="mono">{money(ord.price, precision)}</td>
+                            <td className="mono">{money(ord.signal_price ?? ord.price, precision)}</td>
                             <td className="mono">{Number(ord.quantity || 0).toFixed(4)}</td>
                             <td style={{ color: '#F0B90B' }}>PENDING</td>
                           </tr>
                         ))}
                         {recentOrders.map((ord, idx) => (
                           <tr key={`o-${idx}`}>
-                            <td className="mono">{ord.time_utc || ord.time || '--'}</td>
+                            <td className="mono">{ord.processed_at_utc || ord.requested_at_utc || ord.time_utc || ord.time || '--'}</td>
                             <td>{ord.symbol}</td>
                             <td>{ord.order_type || 'MARKET'}</td>
                             <td className={ord.side === 'LONG' ? 'text-buy' : 'text-sell'}>{ord.side}</td>
-                            <td className="mono">{money(ord.fill_price || ord.price, precision)}</td>
+                            <td className="mono">{money(ord.fill_price || ord.actual_fill_price || ord.price, precision)}</td>
                             <td className="mono">{Number(ord.quantity || 0).toFixed(4)}</td>
                             <td style={{ color: ord.status === 'FILLED' ? '#0ECB81' : '#848E9C' }}>
                               {ord.status || 'SUBMITTED'}
@@ -1084,12 +1251,12 @@ export function App() {
                       </tr>
                       <tr>
                         <td>Bảo toàn vốn qua restart</td>
-                        <td>persistent_state.json tự động khôi phục số dư</td>
+                        <td>SQLite checkpoint · Broker, vị thế, lệnh, phí và risk gate</td>
                         <td style={{ color: '#0ECB81' }}>PERSISTENT</td>
                       </tr>
                       <tr>
                         <td>Giới hạn rủi ro</td>
-                        <td>Đòn bẩy tối đa 5×, Stop-loss 3%, Circuit Breaker 3 lệnh thua</td>
+                        <td>Đòn bẩy tối đa 5×, Stop-loss bắt buộc, Circuit Breaker</td>
                         <td style={{ color: '#F0B90B' }}>STRICT RISK GATE</td>
                       </tr>
                       <tr>
@@ -1117,7 +1284,7 @@ export function App() {
             <div className="bot-control-title">Bot Mô Phỏng · PAPER</div>
             <div className="bot-config-row">
               <span className="bot-config-key">Chiến lược</span>
-              <span className="bot-config-value">Trend Following (4h/15m)</span>
+              <span className="bot-config-value">{strategyLabel}</span>
             </div>
             <div className="bot-config-row">
               <span className="bot-config-key">Rủi ro/lệnh</span>
@@ -1135,6 +1302,16 @@ export function App() {
               <span className="bot-config-key">Cặp theo dõi</span>
               <span className="bot-config-value">BTC · ETH · SOL</span>
             </div>
+            {backendState?.api_version >= 3 && <>
+              <div className="bot-config-row"><span className="bot-config-key">Trial</span><span className="bot-config-value">{backendState.trial_id || 'Chưa có'}</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Funding</span><span className="bot-config-value">{backendState.funding_model?.kind === 'FIXED_SIMULATED' ? 'MÔ PHỎNG 0.01% · 07 / 15 / 23 UTC+7' : 'Nguồn public theo hợp đồng'}</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Thực thi</span><span className="bot-config-value">{backendState.execution_mode || 'Chưa chạy'} · {backendState.replay?.remaining_batches ?? 0} nến chờ</span></div>
+              <div className="bot-config-row"><span className="bot-config-key">Tổng vốn ảo đã cấp</span><span className="bot-config-value">{formatMoneyOrUnknown(backendState.trials?.total_capital_injected_usd)}</span></div>
+              {(backendState.trials?.trials || []).map(trial => <div className="bot-config-row" key={trial.trial_id}>
+                <span className="bot-config-value">{trial.trial_id} · {trial.status} · {formatMoneyOrUnknown(trial.final_equity_usd ?? trial.current_equity_usd)}{trial.target_reached ? ' · TARGET_REACHED (PAPER)' : ''}</span>
+              </div>)}
+              <div className="bot-config-row"><span className="bot-config-key">Research</span><span className="bot-config-value">{backendState.research?.status || 'NOT_REQUIRED'}</span></div>
+            </>}
 
             {/* Buttons: Strictly no optimistic state, locked on RECOVERY_REQUIRED */}
             <div className="bot-btn-group">
@@ -1154,7 +1331,8 @@ export function App() {
                   onClick={handleStart}
                   disabled={
                     isBotRunning ||
-                    botActionState !== null ||
+                    commandBusy ||
+                    (backendState?.api_version >= 3 && backendState?.status === 'STOPPED') ||
                     isQuarantined ||
                     connectionStatus === 'SERVER_ERROR'
                   }
@@ -1172,12 +1350,17 @@ export function App() {
                 type="button"
                 className="btn-stop"
                 onClick={handleStop}
-                disabled={!isBotRunning || botActionState !== null}
+                disabled={!isBotRunning || commandBusy || isStopping}
                 aria-label="Dừng bot mô phỏng"
               >
                 {botActionState === 'STOPPING' ? '⏳ Đang dừng...' : '■ Dừng'}
               </button>
+              {backendState?.api_version >= 3 && <button type="button" className="btn-stop" onClick={handlePauseResume}
+                disabled={!isBotRunning || commandBusy || isStopping || isRecoveryRequired}>
+                {backendState.operator_intent === 'PAUSED' ? 'Tiếp tục' : 'Tạm dừng'}
+              </button>}
             </div>
+            {backendState?.operation && <div className="bot-config-row" role="status"><span className="bot-config-value">{backendState.operation.id} · {backendState.operation.name} · {backendState.operation.status}</span></div>}
 
             {/* Notice for RECOVERY_REQUIRED */}
             {isRecoveryRequired && (

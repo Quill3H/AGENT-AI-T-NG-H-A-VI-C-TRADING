@@ -1,5 +1,6 @@
 """Restart admission is based on exact saved machinery and fresh source bars."""
 from datetime import timedelta
+import json
 
 import pytest
 
@@ -21,6 +22,7 @@ def test_flat_restart_restores_same_account_and_processing_mark(tmp_path):
     source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
     assert session.poll()["status"] == "SCANNING"
     before = session.state()
+    session.shutdown()
 
     restarted = LocalPaperSession(source=source, journal_dir=tmp_path)
     assert restarted.state()["risk_gate"]["admission_open"] is False
@@ -36,9 +38,11 @@ def test_flat_restart_restores_same_account_and_processing_mark(tmp_path):
     for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
         restarted.on_stream_event(stream_bar(symbol))
     assert len(restarted.broker.account_snapshots) == 3
+    restarted.shutdown()
     again = LocalPaperSession(source=source, journal_dir=tmp_path)
     assert again.reconcile_resume()["status"] == "WAITING_CONNECTION"
     assert len(again.broker.account_snapshots) == 3
+    again.shutdown()
 
 
 def test_pending_order_survives_restart_and_fills_once(tmp_path):
@@ -46,6 +50,7 @@ def test_pending_order_survives_restart_and_fills_once(tmp_path):
     session.broker.submit_order(OrderRequest(symbol="BTCUSDT", direction="LONG",
         signal_price=100, stop_loss_price=90, signal_time=BASE))
     session.checkpoint()
+    session.shutdown()
     restarted = LocalPaperSession(source=source, journal_dir=tmp_path)
     assert restarted.reconcile_resume()["status"] == "WAITING_CONNECTION"
     assert len(restarted.broker.pending_orders) == 1
@@ -57,10 +62,12 @@ def test_pending_order_survives_restart_and_fills_once(tmp_path):
     assert len(restarted.broker.pending_orders) == 0
     assert len(restarted.broker.positions) == 1
     order_id = restarted.broker.order_history[-1].order_id
+    restarted.shutdown()
     third = LocalPaperSession(source=source, journal_dir=tmp_path)
     assert third.reconcile_resume()["status"] == "WAITING_CONNECTION"
     assert third.broker.order_history[-1].order_id == order_id
     assert len(third.broker.positions) == 1
+    third.shutdown()
 
 
 def test_open_position_downtime_gap_remains_read_only(tmp_path):
@@ -72,6 +79,7 @@ def test_open_position_downtime_gap_remains_read_only(tmp_path):
     source.now = int((BASE + timedelta(minutes=16)).timestamp() * 1000)
     session.poll()
     saved = session.state()
+    session.shutdown()
     source.now = int((BASE + timedelta(minutes=46)).timestamp() * 1000)
     source.klines = lambda symbol, interval, limit: (
         rows(BASE - timedelta(hours=4 * 210), 210, 240) if interval == "4h"
@@ -83,23 +91,31 @@ def test_open_position_downtime_gap_remains_read_only(tmp_path):
     assert result["account"] == saved["account"]
     assert "gap" in result["error"].lower()
     assert result["risk_gate"]["admission_open"] is False
+    restarted.shutdown()
 
 
 def test_stopped_session_stays_stopped_after_service_restart(tmp_path):
     session, source = _start(tmp_path)
     session.stop()
+    session.shutdown()
     restarted = LocalPaperSession(source=source, journal_dir=tmp_path)
     assert restarted.reconcile_resume()["status"] == "STOPPED"
     assert restarted.state()["risk_gate"]["admission_open"] is False
+    restarted.shutdown()
 
 
 def test_legacy_view_cannot_be_promoted_to_running_broker(tmp_path):
     session, source = _start(tmp_path)
     checkpoint = tmp_path / "account.json"
     assert checkpoint.is_file()
+    session.shutdown()
     # Existing version-one evidence lacks a typed machine image.
+    saved = json.loads(checkpoint.read_text(encoding="utf-8"))
+    saved.update(version=1, machine=None)
+    checkpoint.write_text(json.dumps(saved), encoding="utf-8")
     restarted = LocalPaperSession(source=source, journal_dir=tmp_path)
-    assert restarted.reconcile_resume()["status"] == "WAITING_CONNECTION"
+    assert restarted.reconcile_resume()["status"] == "RECOVERY_REQUIRED"
+    assert restarted.broker is None
 
 
 def test_corrupt_checkpoint_never_contacts_market_or_rewrites_evidence(tmp_path):

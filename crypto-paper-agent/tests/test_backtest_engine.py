@@ -29,6 +29,36 @@ from src.strategies.trend_following import TrendFollowingStrategy
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.mark.parametrize("timeframe", ["4h", "15m"])
+@pytest.mark.parametrize("bad_volume", [np.nan, np.inf, -np.inf, -1.0, True, np.bool_(False), "10"])
+def test_invalid_volume_fails_before_backtest_broker_mutation(backtest_env, timeframe, bad_volume):
+    config, data_4h, data_15m = backtest_env
+    frames = {"4h": data_4h.copy(), "15m": data_15m.copy()}
+    frames[timeframe]["volume"] = frames[timeframe]["volume"].astype(object)
+    frames[timeframe].iloc[0, frames[timeframe].columns.get_loc("volume")] = bad_volume
+    broker = PaperBroker(config)
+    strategy = TrendFollowingStrategy(config, symbol="BTCUSDT")
+    with pytest.raises((TypeError, ValueError), match="volume"):
+        BacktestEngine(config, frames["4h"], frames["15m"], strategy, broker=broker)
+    assert broker.wallet_balance == 10000.0
+    assert broker.positions == {}
+    assert broker.pending_orders == []
+    assert broker.order_history == []
+    assert broker.account_snapshots == []
+    assert broker.current_time is None
+
+
+def test_zero_volume_is_valid_without_inventing_activity(backtest_env):
+    config, data_4h, data_15m = backtest_env
+    data_4h = data_4h.copy()
+    data_15m = data_15m.copy()
+    data_4h["volume"] = 0.0
+    data_15m["volume"] = 0.0
+    engine = BacktestEngine(config, data_4h, data_15m, TrendFollowingStrategy(config))
+    assert (engine.data_4h["volume"] == 0).all()
+    assert (engine.data_15m["volume"] == 0).all()
+
+
 def _generate_synthetic_multitimeframe_data(
     start_dt: datetime = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc),
     n_days: int = 10,

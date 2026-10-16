@@ -17,6 +17,14 @@ not for risk controls or evidence labels. See
 
 ## 1. Source of truth and original intent
 
+Owner-approved scoped experiment, 2026-10-01: [ADR 0013](../adr/0013-windows-paper-replay-and-trials.md)
+and the approved Windows replay design govern the separate `windows-paper-v3`
+account. Fixed SIMULATED funding and validated automatic PAPER trial selection
+are authorized only within that scope. This is not acceptance of G2-G5,
+loosening of public-funding/risk invariants, or permission to merge main. The
+owner expressly authorized a new 10,000 imaginary USDT account without altering
+legacy capital/history. Production promotion and profitability remain unproven.
+
 Read in this order at the start of any new project task:
 
 1. This charter for product intent and unresolved decisions.

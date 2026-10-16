@@ -29,7 +29,7 @@ from loguru import logger
 from src.data_layer.cache_manager import (
     detect_gaps,
     get_cache_path,
-    has_complete_cache,
+    _is_cache_sufficient,
     load_from_cache,
     save_to_cache,
     timeframe_to_timedelta,
@@ -714,12 +714,9 @@ def fetch_all(
         logger.info("[Fetcher] === Xử lý timeframe {} ===", tf)
 
         # 1. OHLCV — kiểm tra cache trước
-        ohlcv_cached = (not force_refresh) and has_complete_cache(
-            raw_dir, exchange_id, safe_symbol, tf, "ohlcv", since, until
-        )
-
-        if ohlcv_cached:
-            ohlcv_df = load_from_cache(raw_dir, exchange_id, safe_symbol, tf, "ohlcv", since, until)
+        ohlcv_df = None if force_refresh else load_from_cache(
+            raw_dir, exchange_id, safe_symbol, tf, "ohlcv", since, until)
+        if ohlcv_df is not None:
             logger.info("[Fetcher] OHLCV {} {} → dùng cache ({} nến)", symbol, tf, len(ohlcv_df))
         else:
             ohlcv_df = fetch_ohlcv(symbol, tf, since, until, config)
@@ -729,15 +726,14 @@ def fetch_all(
         if ohlcv_df is None or ohlcv_df.empty:
             logger.error("[Fetcher] Không có OHLCV data cho {} {}. Bỏ qua timeframe này.", symbol, tf)
             continue
+        if not _is_cache_sufficient(ohlcv_df, since, until, tf):
+            raise ValueError(f"OHLCV {symbol} {tf} is incomplete for requested interval")
 
         # 2. OI — dùng timeframe OI tương ứng
         oi_tf = _map_to_oi_timeframe(tf)
-        oi_cached = (not force_refresh) and has_complete_cache(
-            raw_dir, exchange_id, safe_symbol, oi_tf, "open_interest", since, until
-        )
-
-        if oi_cached:
-            oi_df = load_from_cache(raw_dir, exchange_id, safe_symbol, oi_tf, "open_interest", since, until)
+        oi_df = None if force_refresh else load_from_cache(
+            raw_dir, exchange_id, safe_symbol, oi_tf, "open_interest", since, until)
+        if oi_df is not None:
             logger.info("[Fetcher] OI {} {} → dùng cache ({} records)", symbol, oi_tf, len(oi_df))
         else:
             oi_df = fetch_open_interest(symbol, tf, since, until, config)
@@ -748,12 +744,9 @@ def fetch_all(
             oi_df = pd.DataFrame()
 
         # 3. Funding Rate — chỉ fetch 1 lần (dùng chung cho mọi timeframe)
-        funding_cached = (not force_refresh) and has_complete_cache(
-            raw_dir, exchange_id, safe_symbol, "8h", "funding_rate", since, until
-        )
-
-        if funding_cached:
-            funding_df = load_from_cache(raw_dir, exchange_id, safe_symbol, "8h", "funding_rate", since, until)
+        funding_df = None if force_refresh else load_from_cache(
+            raw_dir, exchange_id, safe_symbol, "8h", "funding_rate", since, until)
+        if funding_df is not None:
             logger.info("[Fetcher] Funding Rate {} → dùng cache ({} records)", symbol, len(funding_df))
         else:
             funding_df = fetch_funding_rate(symbol, since, until, config)

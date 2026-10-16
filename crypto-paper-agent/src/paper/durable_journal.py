@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import re
 
+from src.paper.account_lock import LOCK_FILENAME
+
 
 def encode(value):
     return json.dumps(value, sort_keys=True, default=str, allow_nan=False).encode('utf-8')
@@ -29,7 +31,7 @@ class DurableJournal:
         """Return (existing, snapshot, reason); never modify recovery evidence."""
         try:
             entries = list(self.directory.iterdir()) if self.directory.exists() else []
-            evidence = [p for p in entries if p.name != 'logs']
+            evidence = [p for p in entries if p.name not in ('logs', LOCK_FILENAME)]
             if not evidence:
                 return False, None, None
             checkpoint = decode(self.marker.read_bytes())
@@ -84,7 +86,7 @@ class DurableJournal:
         path = self.directory / f'{session_id}.jsonl'
         if self.digest is None:
             # Exclusive creation leaves durable evidence even if the first write dies.
-            if any(p.name != 'logs' for p in self.directory.iterdir()):
+            if any(p.name not in ('logs', LOCK_FILENAME) for p in self.directory.iterdir()):
                 raise ValueError('existing account evidence cannot be overwritten')
             with self.marker.open('xb') as stream:
                 stream.write(encode({'version': 1, 'session_id': session_id, 'initializing': True}))

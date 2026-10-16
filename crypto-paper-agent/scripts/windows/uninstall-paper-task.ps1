@@ -1,9 +1,2 @@
-$taskName = 'CryptoPaperResearchBackend'
-$task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-if ($task) {
-    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-    Write-Output "Removed $taskName. Journal and logs remain on disk."
-} else {
-    Write-Output "$taskName is not installed."
-}
+param([string]$TaskName = 'CryptoPaperResearchBackend', [int]$Port = 8765)
+& (Join-Path $PSScriptRoot 'manage-paper-task.ps1') -Action Uninstall -TaskName $TaskName -Port $Port
