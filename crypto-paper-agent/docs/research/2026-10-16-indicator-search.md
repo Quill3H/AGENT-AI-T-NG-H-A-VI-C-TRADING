@@ -63,3 +63,24 @@ Selection rule applied: candidates with no losing year and >= 30 trades are I1
 and I5; **I5 (ADX-filtered daily Donchian) is frozen by this commit** (return/DD
 27.5 vs 2.6). Warning recorded before the final run: I5's development profit
 comes overwhelmingly from the SOL sleeve in 2021-2023; BTC lost money.
+
+## Final runs of frozen I5 (frozen in 355b5dd)
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output:
+`/mnt/project-files/market-data/binance-vision-usdm/indicator_search_final_2026-10-16.json`.
+
+| Run | Final | Return | Max DD | Yearly | Trades | Avg month | Months >= +20% | Losing months | Verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| Validation BTC/ETH/SOL 2024-01..2026-09 | 9,871.66 | -1.28% | 38.48% | 2024 -1.33, 2025 -2.59, 2026 +2.70 | 59 | -0.04% | 0/33 | 20 | FAIL |
+| Holdout BNB/XRP/DOGE/ADA 2021-01..2026-09 | 22,597.17 | +125.97% | 47.51% | +119.97 / -12.62 / +4.56 / +16.79 / +4.02 / -7.45 | 145 | +1.19% | 3/69 | 41 | FAIL |
+| Holdout, costs x2 | 21,832.45 | +118.32% | 48.49% | +118.37 / -13.00 / +3.87 / +16.14 / +3.65 / -8.09 | 145 | +1.14% | 3/69 | 41 | FAIL |
+
+Conclusions:
+- The +875% development result did not carry over. On BTC/ETH/SOL after 2023 it
+  roughly broke even with a 38% drawdown; on the four never-seen coins it made
+  +126% over 69 months, almost all in 2021 (+120%), with a 47.5% drawdown and 41
+  losing months. The 95% interval of the mean trade includes zero in both runs.
+- Same pattern as rounds 1-2: daily trend breakouts earn in strong bull years
+  (2021, SOL 2023) and give it back slowly in sideways years.
+- No strategy in rounds 1-3 reached the hoped-for 20-50% per month on a
+  sustained basis. Out-of-sample months >= +20%: 3 of 69 on the holdout coins.
