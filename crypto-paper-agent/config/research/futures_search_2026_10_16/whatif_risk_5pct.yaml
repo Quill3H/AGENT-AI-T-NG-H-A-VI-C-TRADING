@@ -1,0 +1,7 @@
+# WHAT-IF ONLY, NOT ADOPTED: 5% of equity at risk per trade and orders up to 5x equity.
+# Shown to the owner to explain the return/drawdown trade-off; changing the live defaults needs their decision.
+default_conviction: "high"
+base_risk_percent: 0.05
+risk:
+  max_notional_pct_of_equity: 5.0
+leverage: 5.0
