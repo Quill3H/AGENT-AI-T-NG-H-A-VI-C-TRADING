@@ -37,3 +37,25 @@ account; no look-ahead. Paper simulation only; no exchange orders, testnet or ke
 Ideas credited (no code copied): Turtle trading rules (Donchian breakouts,
 Curtis Faith, "Way of the Turtle"); time-series momentum (Moskowitz, Ooi,
 Pedersen 2012, "Time series momentum", JFE).
+
+## Development results 2021-2023 (10,000 USDT, 3 sleeves)
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output:
+`/mnt/project-files/market-data/binance-vision-usdm/futures_search_dev_2026-10-16.json`.
+
+| # | Candidate | Return | Max DD | 2021 / 2022 / 2023 | Trades | Avg month | Months >= +20% | Losing months |
+|---|---|---|---|---|---|---|---|---|
+| F1 | trend_following | +4.58% | 11.36% | +6.92 / -4.41 / +2.33 | 90 | +0.12% | 0 | 22 |
+| F2 | breakout_retest | -16.91% | 17.45% | -10.32 / +1.45 / -8.68 | 104 | -0.51% | 0 | 25 |
+| F3 | Donchian 1d 20/10 | +60.43% | 8.86% | +21.53 / +8.02 / +22.21 | 90 | +1.32% | 0 | 15 |
+| F4 | Donchian 1d 55/20 | +48.80% | 10.19% | +33.74 / -0.39 / +11.69 | 47 | +1.11% | 0 | 19 |
+| F5 | Donchian 4h 20/10 | +20.31% | 13.83% | -4.82 / +7.11 / +18.02 | 654 | +0.52% | 0 | 17 |
+| F6 | Donchian 4h 55/20 | +37.45% | 10.79% | +8.82 / +4.25 / +21.15 | 308 | +0.89% | 0 | 13 |
+
+Selection rule applied: F3 (return/DD 6.8, no losing year). **F3 is frozen by
+this commit before the 2024-2025 check is opened.** No candidate reached +20%
+in any single month during development (best month +11.37%).
+
+The first dev run crashed on F4/SOLUSDT (broker liquidation solver bug when
+funding drains collateral of a winning long); it was fixed with a regression
+test before this run, and no result was used before the fix.
