@@ -1198,9 +1198,8 @@ class PaperBroker:
 
                 if not (math.isfinite(candidate_p) and candidate_p >= 0):
                     continue
-                # Long liquidation price must be <= entry price
-                if candidate_p > entry:
-                    continue
+                # Funding can drain isolated collateral below the entry maintenance margin on a
+                # profitable long; the liquidation price then lies above entry, which is valid.
 
                 candidate_notional = q * candidate_p
                 is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
@@ -1218,9 +1217,7 @@ class PaperBroker:
 
                 if not (math.isfinite(candidate_p) and candidate_p >= 0):
                     continue
-                # Short liquidation price must be >= entry price
-                if candidate_p < entry:
-                    continue
+                # Likewise a short's liquidation price may fall below entry once collateral is drained.
 
                 candidate_notional = q * candidate_p
                 is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
