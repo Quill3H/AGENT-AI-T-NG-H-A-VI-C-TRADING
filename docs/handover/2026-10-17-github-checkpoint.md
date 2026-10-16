@@ -15,12 +15,12 @@ hiệu quả kinh tế. Các kết quả cũ không được dùng làm kết qu
 | Base PR đã fetch/đối chiếu | `codex/local-paper-futures-app` — `d1cd95a726e12245ede22326e05b09990975ccd6` |
 | Checkpoint trước sửa | `c89333516f9032155923375a876d0350deb6c267` |
 | Commit code/test đã sửa (A) | `d9670f41408c7abfe7bb682453e4edb7f198d3fb` |
-| Commit tài liệu bàn giao (B) | Commit chứa tài liệu này; lấy SHA từ Git history/PR, không ghi SHA tự tham chiếu |
+| Commit tài liệu bàn giao ban đầu (B) | `ceb8bcd819b534d63aa60920a632d7d8a18f113c`; commit receipt tiếp theo chỉ bổ sung liên kết/kết quả xuất bản |
 | Main quan sát trong lượt này | `fe1c1330d913e78239db575ff8433cf069fe1b01` |
-| Cách tích hợp | Draft PR từ nhánh công việc vào base nêu trên; chưa merge |
+| Pull request | [#6 — Windows causal replay candidate and current handoff](https://github.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/pull/6), OPEN / DRAFT, chưa merge |
 
 Base là tổ tiên của nhánh hiện tại; giữ nguyên lịch sử sáu commit công việc có
-sẵn sau base, bổ sung commit sửa code/test và commit tài liệu. PR #5 đang mở cho
+sẵn sau base, bổ sung commit sửa code/test, tài liệu và receipt xuất bản. PR #5 đang mở cho
 API/chart ở nhánh khác; không sửa/merge PR đó trong lượt này. URL và SHA xuất bản
 cuối cùng được đối chiếu với GitHub trong bàn giao cuối của lượt làm việc.
 
@@ -176,5 +176,9 @@ gate nào được tự động chuyển sang accepted nhờ việc tạo PR.
 - [x] Ghi cụ thể blockers, NOT_VERIFIED và vai trò tiếp nhận.
 - [ ] Independent technical/economic acceptance và owner operational sign-off.
 
-Việc push/PR được xác nhận qua URL và local/remote SHA trong kết quả bàn giao
-cuối; tài liệu này không tự xem một thao tác mạng đang chờ là đã hoàn thành.
+- [x] Đã push nhánh; local HEAD/origin/remote branch cùng SHA B khi mở PR.
+- [x] GitHub xác nhận PR #6 OPEN / DRAFT, base đúng nhánh/SHA nêu ở mục A.
+
+Receipt này được bổ sung sau khi tạo PR; đọc publication HEAD mới nhất từ PR
+và Git history. Runtime/test/frontend/config giữ nguyên so với A. Kết quả bàn
+giao cuối đối chiếu lại local/remote/PR HEAD sau khi push receipt.

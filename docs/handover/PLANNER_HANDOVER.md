@@ -2,6 +2,9 @@
 
 ## Current GitHub handoff - 2026-10-17
 
+GitHub publication: [Draft PR #6](https://github.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/pull/6),
+open against `codex/local-paper-futures-app`.
+
 Read [the publication checkpoint](2026-10-17-github-checkpoint.md) first for
 the repaired code SHA, fresh test results, S1-S5 progress, API contract,
 remaining gates and next responsible role. Target base is

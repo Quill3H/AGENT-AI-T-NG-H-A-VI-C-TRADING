@@ -15,6 +15,8 @@ code-under-test SHA, publication scope and remaining work are recorded in the
 [current handoff](handover/2026-10-17-github-checkpoint.md). This is not
 independent acceptance, economic validation or demonstrated 24/7 operation.
 Repaired code A: `d9670f41408c7abfe7bb682453e4edb7f198d3fb`.
+GitHub: [Draft PR #6](https://github.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/pull/6)
+to `codex/local-paper-futures-app`; publication remains open for review.
 Fresh Windows Python 3.12.14 offline result: **715 passed, 2 skipped
 (pandas-ta comparison unavailable), 5 deselected**. Web: **30 passed** using
 one threads worker after the default worker-start timeout; Vite build passed.
