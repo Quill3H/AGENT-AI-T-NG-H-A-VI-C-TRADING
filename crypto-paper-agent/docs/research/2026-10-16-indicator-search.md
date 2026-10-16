@@ -43,3 +43,23 @@ Ideas credited (no code copied): Connors & Alvarez, "Short Term Trading Strategi
 That Work" (RSI(2)); Moskowitz, Ooi & Pedersen 2012 (time-series momentum);
 Carter, "Mastering the Trade" (TTM squeeze); Wilder 1978 (ADX, ATR); Olivier
 Seban (Supertrend).
+
+## Development results, BTC/ETH/SOL 2021-2023, 10% risk per trade
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output:
+`/mnt/project-files/market-data/binance-vision-usdm/indicator_search_dev_2026-10-16.json`.
+
+| # | Strategy | Final | Return | Max DD | 2021 / 2022 / 2023 | Trades | Avg month | Months >= +20% | Losing months | BTC / ETH / SOL sleeve |
+|---|---|---|---|---|---|---|---|---|---|---|
+| I1 | tsmom | 17,241.68 | +72.42% | 27.88% | +15.47 / +2.44 / +45.77 | 110 | +1.52% | 0 | 15 | +38 / +110 / +69 |
+| I2 | rsi2_reversion | 10,393.75 | +3.94% | 23.79% | +10.68 / -9.29 / +3.53 | 511 | +0.11% | 0 | 15 | +30 / +39 / -57 |
+| I3 | squeeze_breakout | 11,396.57 | +13.97% | 43.10% | +21.45 / +8.49 / -13.51 | 166 | +0.36% | 2 | 20 | -18 / +87 / -27 |
+| I4 | mtf_trend | 22,707.12 | +127.07% | 40.94% | -7.46 / +16.35 / +110.90 | 223 | +2.30% | 3 | 18 | -35 / -41 / +458 |
+| I5 | adx_donchian | 97,464.27 | +874.64% | 31.83% | +107.33 / +60.47 / +192.95 | 52 | +6.53% | 6 | 15 | -10 / +239 / +2396 |
+| I6 | supertrend | 12,710.90 | +27.11% | 38.53% | +11.56 / -15.30 / +34.53 | 357 | +0.67% | 2 | 18 | -50 / -63 / +195 |
+| ref | F3 donchian 20/10 | 77,853.10 | +678.53% | 28.09% | +136.89 / +41.15 / +132.83 | 89 | +5.87% | 7 | 15 | +8 / +195 / +1833 |
+
+Selection rule applied: candidates with no losing year and >= 30 trades are I1
+and I5; **I5 (ADX-filtered daily Donchian) is frozen by this commit** (return/DD
+27.5 vs 2.6). Warning recorded before the final run: I5's development profit
+comes overwhelmingly from the SOL sleeve in 2021-2023; BTC lost money.
