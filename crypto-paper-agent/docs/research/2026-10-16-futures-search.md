@@ -59,3 +59,31 @@ in any single month during development (best month +11.37%).
 The first dev run crashed on F4/SOLUSDT (broker liquidation solver bug when
 funding drains collateral of a winning long); it was fixed with a regression
 test before this run, and no result was used before the fix.
+
+## Final check and owner window (F3 frozen in 25b0862)
+
+AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED. Raw output:
+`/mnt/project-files/market-data/binance-vision-usdm/futures_search_final_2026-10-16.json`.
+
+| Run | Final equity | Return | Max DD | Yearly | Avg month | Months >= +20% | Losing months | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| Final check 2024-2025 | 9,833.77 | -1.66% | 8.25% | 2024 +1.43, 2025 -3.05 | -0.07% | 0/24 | 15 | FAIL |
+| Owner window 2021-2025 | 15,331.81 | +53.32% | 10.04% | +21.53 / +8.02 / +22.09 / -1.07 / -3.31 | +0.71% | 0/60 | 30 | FAIL (3/5 years up) |
+| 2021-2025, costs x2 | 14,882.26 | +48.82% | 10.64% | +21.24 / +7.49 / +20.16 / -1.48 / -3.53 | +0.66% | 0/60 | 31 | FAIL |
+| WHAT-IF 5% risk/trade | 26,665.49 | +166.65% | 24.57% | +59.17 / +20.94 / +60.71 / -5.42 / -8.86 | +1.65% | 2/60 | 30 | FAIL |
+| WHAT-IF 10% risk/trade | 53,270.64 | +432.71% | 44.41% | +136.89 / +41.15 / +132.00 / -15.66 / -18.58 | +2.83% | 7/60 | 29 | FAIL |
+
+Conclusions:
+- F3 does not generalise: its edge is concentrated in 2021-2023 (mostly SOL) and
+  it loses slightly in 2024-2025. Under the protocol the method fails.
+- No setting reached the owner's hoped-for 20-50% per month. Even at 10% risk
+  per trade (5x the default, not adopted) only 7 of 60 months reached +20%, the
+  average month was +2.83%, the max drawdown 44%, and the last two years lost
+  16-19% each.
+- A first what-if version also raised leverage to 5x; the 30% liquidation-buffer
+  invariant rejected every order (0 trades). It was replaced with a version that
+  keeps leverage and all gates at defaults; the strategy results above were not
+  changed after the final check was opened.
+- 2024-2025 is now seen. Any further method search must use a new untouched
+  check window (for example 2026-01..2026-09, already downloaded) and log
+  every attempt.
