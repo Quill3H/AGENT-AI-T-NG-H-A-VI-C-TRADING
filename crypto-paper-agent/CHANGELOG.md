@@ -1,5 +1,72 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [GitHub publication checkpoint] - 2026-10-17
+
+- Packaged post-c893335 recovery/exposure/ledger/commit-integrity repairs,
+  request-time controls and research-promotion race regressions; refined Windows
+  launcher/process verification without changing strategy or risk policy.
+- Published the v3 API/runbook/ADR, existing audit and S1-S5 plans, and updated
+  project state/entry points with current progress and remaining gates.
+- Fresh verification, exact repaired code SHA, the default frontend worker
+  timeout and successful one-worker retry are recorded in the
+  [current handoff](../docs/handover/2026-10-17-github-checkpoint.md).
+- Scoped ignore rules keep local account runtime evidence out of Git. Owner
+  account startup, task installation, main merge and economic acceptance are
+  not part of this publication; independent review remains pending.
+
+## [Windows PAPER replay S1-S5 candidate] - 2026-10-02
+
+**AUTHOR_SELF_REVIEWED / PENDING FINAL REPAIRED-COMMIT VERIFICATION AND
+INDEPENDENT REVIEW.** Earlier checkpoint:
+`c89333516f9032155923375a876d0350deb6c267`. Final repaired code-under-test SHA
+and pinned test/runtime evidence are pending root finalization; earlier test
+results are not final-code results. Documentation commit: see Git history and
+final handoff.
+
+- Added the owner-approved FIXED_SIMULATED funding model (positive 0.01% at
+  UTC 00/08/16, displayed UTC+7 07/15/23) and immutable recipe/formula/config/
+  source identities. Public-observed/basket funding remains fail-closed;
+  no strategy/risk tuning, leverage increase or stop removal.
+- Added one-owner compact SQLite input/event/commit roots, immutable
+  `paper-account.identity.json`, atomic checkpoints and exact typed recovery.
+  Restore reconciles active/pending exposure, partial costs/funding, ledger
+  identities and risk state; missing/torn/corrupt evidence cannot create capital.
+- Added the shared BTC/ETH/SOL causal runner, complete paginated outage replay,
+  stable retained feature prefixes, cross-symbol/timeframe integrity and
+  separate REPLAY versus fresh verified REALTIME batch provenance.
+- Added explicit <5,000 failure/>=15,000 target lifecycle, preserved trial
+  losses/cumulative supplied capital and exactly-once allocation after flat
+  reconciliation and bounded frozen train/validation/holdout/cost gates.
+  Initial Trend trial is a baseline, not an economically validated winner.
+- Added durable request-time pause/resume/stop receipts before the long writer
+  wait, atomic intent application before batches/promotion, asynchronous v3
+  API controls, responsive read-only busy snapshots, null stale prices,
+  paginated history, JSON schema and six backend-generated SYNTHETIC examples.
+- Added/refined Windows one-writer port/account launch, hidden current-user
+  logon task, bounded crash retries and status/log/pause/resume/StopBot/
+  DisableAndStop/uninstall tools. Startup does not reinstall npm/build the UI,
+  reset capital or bypass RECOVERY_REQUIRED. UI changes render the contract,
+  not fabricated PnL or a redesigned layout.
+- Owner authorized a NEW separate `data/paper_accounts/windows-paper-v3`
+  account with 10,000 imaginary USDT; legacy `data/paper_sessions` is unchanged.
+  Account startup and task registration results are separate final runtime
+  evidence, not presumed by this changelog. Helpers authorized later by the
+  owner provide author-side assistance, not independent acceptance.
+- Post-checkpoint self-review found recovery/ledger, paused setup, request-time
+  control, commit metadata, legacy stop and replay provenance issues. Scoped
+  fixes/regressions are being frozen and rerun; final results must be pinned.
+- Full empirical 360-day research, task/logon/reboot, power-loss durability,
+  24/7 public operation and broad mobile acceptance remain NOT_VERIFIED. No
+  profitability/production-ready claim, live/testnet/key/wallet connection,
+  paid infrastructure, main merge or force-push. C: exhaustion during earlier
+  QA was mitigated only with process-local G: TEMP/TMP; a later read-only check
+  reported 4.34 GB free. No user temp deletion or permanent power/env change.
+
+Operations: [Windows runbook](../docs/operations/LOCAL_PAPER_WEB.md),
+[API v3](docs/operations/PAPER_REPLAY_API_V3.md),
+[scoped ADR](../docs/adr/0013-windows-paper-replay-and-trials.md).
+Final review/evidence is supplied by the root completion handoff.
+
 ## [Owner-directed single-main integration] — 2026-09-23
 
 - Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.

@@ -67,6 +67,13 @@ Khi bắt đầu một phiên làm việc mới, hãy đọc theo thứ tự ưu
 3. **Thanh toán Funding & Hạch toán (Funding & Accounting):**
    - Funding thanh toán tại 00:00, 08:00, 16:00 UTC. Nếu dữ liệu funding chưa sẵn sàng $\to$ **FAIL-CLOSED** (không vào lệnh).
    - Kế toán oracle: bảo toàn công thức $Equity = Cash + Margin + UnrealizedPnL$.
+  - **Ngoại lệ thí nghiệm do chủ dự án duyệt:** [ADR 0013](docs/adr/0013-windows-paper-replay-and-trials.md)
+    áp dụng riêng tài khoản `windows-paper-v3`: funding **FIXED_SIMULATED** 0.01%
+    tại 07/15/23 UTC+7 (00/08/16 UTC), không giả provenance từ sàn. Public funding
+    trong các chế độ khác vẫn fail-closed. Replay toàn bộ nhân quả, trial dưới
+    50%/đạt 150% và nghiên cứu có gate không được vượt qua risk controls cũ.
+    Tài khoản mới 10.000 USDT ảo được phép mở riêng; không chuyển/reset vốn cũ,
+    không xóa lịch sử cũ. Đọc contract v3 và kiểm tra identity/SQLite trước khi ghi.
 
 ---
 

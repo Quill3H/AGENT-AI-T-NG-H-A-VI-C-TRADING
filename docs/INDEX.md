@@ -61,6 +61,12 @@ Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệ
 
 ## 4. Quản lý dự án & Lập kế hoạch (Planning & Gates)
 
+Audit hiện hành ngày 2026-09-30: [đánh giá toàn dự án](reviews/2026-09-30-project-assessment.md)
+và [workflow/task plan](superpowers/plans/2026-09-30-project-workflow.md), code-under-test
+`1876b134684be6e925d954c4bd3635b61d33fcdc`. Đây là AUTHOR_SELF_REVIEWED;
+không thay thế spec/ADR hoặc nghiệm thu độc lập. Full offline pass không che
+historical harness failure hay các blocker realtime/input/ownership được ghi trong audit.
+
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
 | [docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md](planning/PRODUCT_CHARTER_AND_GATE_SPEC.md) | **CANONICAL** | Điều lệ sản phẩm, chuỗi nghiệm thu kỹ thuật G0–G5 và quy tắc cấm nhìn trước. |
@@ -77,6 +83,7 @@ Nếu xuất hiện sự khác biệt hoặc mâu thuẫn giữa các tài liệ
 
 | Tài liệu | Loại | Mô tả |
 | :--- | :--- | :--- |
+| [docs/handover/2026-10-17-github-checkpoint.md](handover/2026-10-17-github-checkpoint.md) | **SUPPORTING / CURRENT** | Bàn giao GitHub: code SHA, kiểm thử mới, tiến độ S1-S5, API và công việc còn lại. |
 | [docs/handover/PLANNER_HANDOVER.md](handover/PLANNER_HANDOVER.md) | **SUPPORTING** | Hồ sơ bàn giao tiến độ kỹ thuật, bằng chứng nghiệm thu và ngữ cảnh các phiên làm việc. |
 
 ---

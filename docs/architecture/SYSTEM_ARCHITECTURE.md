@@ -77,10 +77,10 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 
 | Đặc tính | A. Backtest / Research Replay | B. Realtime Paper Web Stream |
 | :--- | :--- | :--- |
-| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | Backend nhận public Binance Futures `/market` WebSocket 1m/15m, xác minh nến đóng qua REST và dùng REST 4h/funding. Frontend mở socket 1m riêng chỉ để hiển thị. |
-| **Đồng hồ thời gian** | Đồng hồ mô phỏng đơn điệu duyệt qua từng nến đóng. | Đồng hồ thực tế UTC chạy theo event stream nến đóng 15m/4h. |
+| **Nguồn dữ liệu** | File Parquet cache lịch sử (`data/raw/`) hoặc Vision archives. | WebSocket public 1m/15m; REST xác minh nến đóng và tải toàn bộ gap/4h theo trang; funding FIXED_SIMULATED riêng v3 theo ADR 0013. |
+| **Đồng hồ thời gian** | Đồng hồ mô phỏng đơn điệu duyệt qua từng nến đóng. | Runner nhân quả dùng cùng đồng hồ nến cho REALTIME/REPLAY, phân biệt receipt/API/processing time. |
 | **Thực thi lệnh** | Khớp tại `Open` nến tiếp theo kèm trượt giá (slippage). | Khớp tại giá nến tiếp theo khi nến hiện tại xác nhận đóng. |
-| **Phân hệ điều phối**| `crypto-paper-agent/src/backtest/engine.py` | `crypto-paper-agent/src/paper/live_session.py` |
+| **Phân hệ điều phối**| `crypto-paper-agent/src/backtest/engine.py` | `src/paper/replay_session.py` + `causal_runner.py`; `live_session.py` giữ verifier legacy |
 | **Giao diện hiển thị**| Xuất artifacts JSON, CSV, SQLite, PNG. | Giao diện React hiển thị biểu đồ Candlestick, Ledger và Account status. |
 
 ---
@@ -126,10 +126,35 @@ Hệ thống hỗ trợ 2 chế độ vận hành độc lập nhưng chia sẻ 
 - `generator.py`: Điều phối xuất báo cáo hoàn chỉnh gồm `summary.json`, `summary.md`, `trades.json`, `equity_curve.csv`, `equity_curve.png`.
 
 ### 3.7 Web Preview & Realtime Stream (`crypto-paper-agent/src/paper/` & `web-preview/`)
-- `local_server.py`: HTTP loopback server (`ThreadingHTTPServer` + `BaseHTTPRequestHandler`) cung cấp REST endpoints (`/api/state`, `/api/start`, `/api/stop`). Không dùng FastAPI và không host WebSocket server.
-- `live_session.py` + `public_stream.py`: Backend nhận stream public, kiểm tra nến đóng 15m đồng bộ với REST trước khi chuyển vào strategy/risk/PaperBroker. 4h và funding dùng REST public.
-- `durable_journal.py` + `recovery_state.py`: Journal và checkpoint máy v2; bằng chứng cũ/hỏng hoặc khoảng trống không thể chứng minh bị khóa. `local_server.py` khởi động lại worker stream sau khi khôi phục được phiên.
-- `web-preview/`: Frontend React/Vite mở WebSocket Binance `/market/ws/...@kline_1m` riêng chỉ để hiển thị. Giá nến đóng backend chỉ được trình bày khi còn mới; dữ liệu từ trình duyệt không tạo tín hiệu, sizing hay khớp lệnh.
+- `local_server.py` + `commands.py`: HTTP loopback; controls trả 202 cùng operation ID,
+  health/state vẫn phản hồi khi writer bận. Không có endpoint đặt lệnh sàn.
+- `replay_session.py` + `history_source.py` + `public_stream.py`: nguồn public,
+  kiểm tra đóng/đồng bộ/availability, tải toàn bộ gap theo trang, chờ stream tươi.
+- `causal_runner.py`: cùng đường đi nhân quả cho replay/realtime; history prefix
+  đóng → strategy → OrderRequest → broker sizing/invariants/risk → accounting.
+- `compact_store.py`: canonical input/event/checkpoint cùng giao dịch SQLite,
+  checksum/root và marker identity độc lập; một OS owner, hỏng/mất khóa recovery.
+- `trials.py` + `research_cycle.py`: mốc thử nghiệm và nghiên cứu bounded; chỉ
+  thay trial khi đã phẳng/đối soát và đủ gate. Không thay luật/risk của trial đang chạy.
+- `durable_journal.py` + `recovery_state.py` + `live_session.py`: verifier/migration
+  legacy khi có đủ bằng chứng. Thư mục cũ giữ nguyên; không phục hồi chỉ từ số dư.
+- `web-preview/`: chart public chỉ hiển thị; giá/account/trial/funding/replay v3
+  lấy backend. Không tự tính PnL hay tạo lệnh. Giá stale là null, funding có nhãn mô phỏng.
+
+```mermaid
+flowchart LR
+    Public[Public stream / paginated history] --> Integrity[Closed / synchronized / availability]
+    Integrity --> Runner[Causal runner REALTIME / REPLAY]
+    Runner --> Strategy[Closed-prefix features / immutable recipe]
+    Strategy --> Request[OrderRequest / pending next open]
+    Request --> Broker[PaperBroker sizing / invariants / risk / fills]
+    Fixed[Scoped fixed SIMULATED funding] --> Broker
+    Broker --> Store[Atomic inputs / ledgers / checkpoint + identity]
+    Store --> Trials[Trial thresholds / bounded research gates]
+    Trials -->|Eligible new PAPER trial only| Runner
+    Store --> API[Loopback authoritative state / history]
+    API --> Web[Read-only accounting display / serialized controls]
+```
 
 ---
 

@@ -1,5 +1,13 @@
 # Local PAPER stream backend API
 
+> Legacy API v2 reference. The Windows replay candidate at
+> `c89333516f9032155923375a876d0350deb6c267` serves API v3, described in
+> [PAPER_REPLAY_API_V3.md](PAPER_REPLAY_API_V3.md), with a separate
+> `windows-paper-v3` account, transactional storage, full causal replay,
+> fixed SIMULATED funding and asynchronous controls. The v2 behavior and
+> S0-only implementation statements below do not describe that v3 server.
+> Preserve this document for legacy evidence; do not apply it as v3 authority.
+
 Scope: backend contract for the local desktop web UI. This is a local
 research simulation, not an exchange account or native TradingView result.
 Only Trend Following 4h signal / 15m paper execution is active. BTC, ETH and
