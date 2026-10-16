@@ -87,3 +87,19 @@ Conclusions:
 - 2024-2025 is now seen. Any further method search must use a new untouched
   check window (for example 2026-01..2026-09, already downloaded) and log
   every attempt.
+
+## Round 2 protocol (written before any round-2 result was seen)
+
+Owner chose 10% risk per trade for the directional sleeve (ADR 0014).
+2021-2025 has now been seen, so it becomes the development window; the new
+untouched final check is **2026-01-01..2026-09-30** (already downloaded, never
+used in any decision so far).
+
+Candidates (10,000 USDT):
+- H1: funding-carry baskets (entry APR >= 15%, unchanged rules) on BTC, ETH, SOL, one third each.
+- H2: half in F3 (daily Donchian 20/10, 10% risk/trade, 3 coins), half in H1.
+- H3: F3 alone at 10% risk/trade (reference).
+
+Selection rule unchanged (best return / max DD among candidates with no losing
+year in 2021-2025). The chosen candidate is frozen by commit, then run once on
+2026-01..09. Hybrid sleeves run independently and are summed hour by hour.

@@ -30,12 +30,13 @@ def load_config(overrides):
     return config
 
 
-def run(data_dir, start, end, overrides=(), cost_multiplier=1.0, initial_capital=None):
+def run(data_dir, start, end, overrides=(), cost_multiplier=1.0, initial_capital=None, symbol="BTCUSDT"):
     config = load_config(overrides)
+    config.setdefault("data", {})["futures_symbol"] = symbol
     for fee in ("taker_pct", "maker_pct", "slippage_pct"):
         config["fees"][fee] = float(config["fees"][fee]) * cost_multiplier
     start, end = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
-    frame = basket_frame(data_dir)
+    frame = basket_frame(data_dir, symbol=symbol)
     frame = frame.loc[(frame.index >= start) & (frame.index < end)]
     capital = float(initial_capital or config["account"]["initial_equity_usd"])
     curve, baskets = simulate_carry_sequence(frame, config, capital)
