@@ -70,3 +70,17 @@ waiting for the device data. N4 stays untested and is recorded as dropped for la
 data access. It did not fail. Under the pre-registered rule, N2 `regime_switch` is the
 only eligible candidate (no losing year, 67 trades), so **N2 is chosen**. The final runs
 use `--stage final --candidate N2`.
+
+## Final results, N2 regime_switch (run once after freeze 6449d41, AUTHOR_REPORTED)
+
+| Test | Final equity | Return | Max DD | Yearly | Months >= +20% | Losing months |
+|---|---|---|---|---|---|---|
+| A: LINK/AVAX/LTC/DOT 2021-01..2026-09 | 28,336 | +183.4% | 41.7% | 2021 +18.3, 2022 +19.6, 2023 +103.6, 2024 -10.2, 2025 -12.5, 2026 +25.3 | 4/69 | 35 |
+| A, costs x2 | 27,020 | +170.2% | 42.5% | same signs | 4/69 | 35 |
+| B: BTC/ETH/SOL 2024-01..2026-09 | 9,390 | -6.1% | 39.7% | 2024 -2.1, 2025 -2.7, 2026 -1.5 | 0/33 | 21 |
+
+Sleeves in A: AVAX +849%, LINK -33%, LTC -66%, DOT -16%. The gain in A comes from one
+coin, and 2023-11/12 alone add about +115%. Mean trade 95% CI includes zero in all runs.
+Verdict: **FAIL**. B loses in every year, and A has two losing years and depends on a
+single coin. All data to 2026-09 on 11 coins has now been used; any further test needs
+forward paper observation.
