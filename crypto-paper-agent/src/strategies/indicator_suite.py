@@ -303,3 +303,85 @@ class SupertrendStrategy(RuleStrategy):
     def trail(self, frame, held):
         line, _ = supertrend(frame)
         return float(line[-1])
+
+
+class RegimeSwitch(RuleStrategy):
+    """N2: daily ADX regime. ADX > 25 -> Donchian 20 breakout (10-day trailing exit);
+    ADX < 20 -> RSI(2) reversion around SMA(100), exit on SMA(5) cross; otherwise no entry."""
+
+    name = "REGIME_SWITCH"
+    window = 130
+
+    def __init__(self, config, symbol="BTCUSDT"):
+        super().__init__(config, symbol)
+        self.mode = None
+
+    def entry(self, frame):
+        strength = float(adx(frame, 14).iloc[-1])
+        last = float(frame["close"].iloc[-1])
+        if strength > 25:
+            previous = frame.iloc[-21:-1]
+            gap = 2.0 * float(atr(frame, 20).iloc[-1])
+            if last > float(previous["high"].max()):
+                self.mode = "trend"
+                return LONG, last - gap
+            if last < float(previous["low"].min()):
+                self.mode = "trend"
+                return SHORT, last + gap
+        elif strength < 20:
+            trend = float(frame["close"].rolling(100).mean().iloc[-1])
+            value = float(rsi(frame["close"], 2).iloc[-1])
+            gap = 3.0 * float(atr(frame, 20).iloc[-1])
+            if last > trend and value < 10:
+                self.mode = "revert"
+                return LONG, last - gap
+            if last < trend and value > 90:
+                self.mode = "revert"
+                return SHORT, last + gap
+        return None
+
+    def should_exit(self, frame, direction):
+        if self.mode != "revert":
+            return False
+        last, fast = float(frame["close"].iloc[-1]), float(frame["close"].rolling(5).mean().iloc[-1])
+        return (direction == LONG and last > fast) or (direction == SHORT and last < fast)
+
+    def trail(self, frame, direction):
+        if self.mode == "revert":
+            return None
+        window = frame.iloc[-10:]
+        return float(window["low"].min()) if direction == LONG else float(window["high"].max())
+
+
+class SignalSeries(RuleStrategy):
+    """N1/N3/N4: trade a precomputed daily position table (+1 long, -1 short, 0 flat).
+
+    The table (rules.signal_path, parquet, one column per symbol, indexed by daily bar
+    open) is produced by src/research/signals.py, whose value for day d only uses data
+    up to d.  Every entry still carries a 3 x ATR(20) stop.
+    """
+
+    name = "SIGNAL_SERIES"
+    window = 25
+
+    def __init__(self, config, symbol="BTCUSDT"):
+        super().__init__(config, symbol)
+        table = pd.read_parquet(self.rules["signal_path"])
+        self.signal = table[symbol] if symbol in table.columns else pd.Series(dtype=float)
+
+    def _target(self, frame):
+        value = self.signal.get(frame.index[-1], 0.0)
+        return 0.0 if value is None or not np.isfinite(value) else float(value)
+
+    def entry(self, frame):
+        target, last = self._target(frame), float(frame["close"].iloc[-1])
+        gap = 3.0 * float(atr(frame, 20).iloc[-1])
+        if target > 0:
+            return LONG, last - gap
+        if target < 0:
+            return SHORT, last + gap
+        return None
+
+    def should_exit(self, frame, direction):
+        target = self._target(frame)
+        return (direction == LONG and target <= 0) or (direction == SHORT and target >= 0)

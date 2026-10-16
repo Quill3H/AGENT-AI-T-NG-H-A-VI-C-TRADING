@@ -4,7 +4,9 @@ from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
     MultiTimeframeTrend,
+    RegimeSwitch,
     RSI2Reversion,
+    SignalSeries,
     SqueezeBreakout,
     SupertrendStrategy,
     TimeSeriesMomentum,
@@ -23,6 +25,8 @@ DIRECTIONAL_STRATEGIES = {
     "mtf_trend": MultiTimeframeTrend,
     "adx_donchian": ADXDonchian,
     "supertrend": SupertrendStrategy,
+    "regime_switch": RegimeSwitch,
+    "signal_series": SignalSeries,
 }
 
 

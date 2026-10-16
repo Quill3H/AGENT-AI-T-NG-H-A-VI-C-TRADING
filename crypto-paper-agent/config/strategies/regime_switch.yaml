@@ -1,0 +1,13 @@
+# regime_switch.yaml - round-4 candidate, docs/research/2026-10-16-new-directions.md
+strategy:
+  name: "REGIME_SWITCH"
+  enabled: true
+  timeframe_signal: "1d"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
