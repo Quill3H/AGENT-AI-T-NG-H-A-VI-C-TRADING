@@ -1,0 +1,14 @@
+# tsmom.yaml - Daily time-series momentum (I1). Rules: src/strategies/indicator_suite.py,
+# protocol: docs/research/2026-10-16-indicator-search.md. Published default settings, not fitted.
+strategy:
+  name: "TSMOM"
+  enabled: true
+  timeframe_signal: "1d"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
