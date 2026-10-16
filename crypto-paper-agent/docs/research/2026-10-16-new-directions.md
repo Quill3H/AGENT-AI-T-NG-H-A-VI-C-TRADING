@@ -50,3 +50,16 @@ Ideas credited (no code copied): Jegadeesh & Titman 1993; Liu, Tsyvinski & Wu
 2022 "Common risk factors in cryptocurrency" (J. Finance); Wilder 1978; Connors &
 Alvarez (RSI(2)); walk-forward evaluation as described by Lopez de Prado,
 "Advances in Financial Machine Learning" (2018).
+
+## Development results, N1-N3 (2021-01-01..2023-12-31, 10% risk, AUTHOR_REPORTED)
+
+| Candidate | Return | Max DD | 2021 / 2022 / 2023 | Trades | Eligible |
+|---|---|---|---|---|---|
+| N1 xs_momentum (7 coins) | +38.1% | 9.1% | +4.7 / -1.3 / +33.7 | 165 | no (2022 loss) |
+| N2 regime_switch | +643.2% | 37.8% | +83.6 / +35.7 / +198.5 | 67 | yes |
+| N3 ml_price | +2.5% | 41.1% | -7.3 / -28.3 / +54.3 | 95 | no (2021, 2022 loss) |
+
+N4 is not run yet: its open-interest metrics files are on the owner's device and the
+device folder link dropped during the download. No final-stage run has been made, so
+the selection is still open. Raw output: `results_new_directions_dev_N1-N3.json` in
+the shared market-data folder.
