@@ -11,6 +11,15 @@ from src.strategies.indicator_suite import (
     SupertrendStrategy,
     TimeSeriesMomentum,
 )
+from src.strategies.style_suite import (
+    DayOpeningRange,
+    DayVwapReclaim,
+    ScalpBollingerRevert,
+    ScalpEmaCross,
+    SupportResistanceCandles,
+    SwingEmaPullback,
+    WyckoffSpring,
+)
 from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
 from src.strategies.trend_following import TrendFollowingStrategy
 
@@ -27,6 +36,13 @@ DIRECTIONAL_STRATEGIES = {
     "supertrend": SupertrendStrategy,
     "regime_switch": RegimeSwitch,
     "signal_series": SignalSeries,
+    "swing_ema_pullback": SwingEmaPullback,
+    "sr_candles": SupportResistanceCandles,
+    "wyckoff_spring": WyckoffSpring,
+    "day_orb": DayOpeningRange,
+    "day_vwap": DayVwapReclaim,
+    "scalp_ema": ScalpEmaCross,
+    "scalp_bb": ScalpBollingerRevert,
 }
 
 

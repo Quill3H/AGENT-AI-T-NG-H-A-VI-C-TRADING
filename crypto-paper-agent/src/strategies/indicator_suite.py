@@ -96,6 +96,7 @@ class RuleStrategy(BaseStrategy):
 
     name = "RULE"
     window = 300  # bars of history the rules need
+    columns = ("open", "high", "low", "close")  # add "volume" in a subclass that reads it
 
     def __init__(self, config: Dict[str, Any], symbol: str = "BTCUSDT"):
         super().__init__(config, symbol)
@@ -106,9 +107,11 @@ class RuleStrategy(BaseStrategy):
         self.base_risk_percent = float(config.get("base_risk_percent", 0.02))
         self.setup_count = 0
         self.candidate_count = 0
+        self.held_bars = 0  # closed signal bars since the current position was seen open
 
     # subclasses implement these three
-    def entry(self, frame: pd.DataFrame) -> Optional[Tuple[OrderDirection, float]]:
+    def entry(self, frame: pd.DataFrame) -> Optional[Tuple]:
+        """Return (direction, stop) or (direction, stop, take_profit), or None."""
         raise NotImplementedError
 
     def should_exit(self, frame: pd.DataFrame, direction: OrderDirection) -> bool:
@@ -120,10 +123,11 @@ class RuleStrategy(BaseStrategy):
     def on_candle_close(self, candle_4h: Dict[str, Any], history_4h: pd.DataFrame, broker_state: Any) -> Optional[OrderRequest]:
         if history_4h is None or len(history_4h) < self.window:
             return None
-        frame = history_4h.iloc[-self.window:][["open", "high", "low", "close"]].astype(float)
+        frame = history_4h.iloc[-self.window:][list(self.columns)].astype(float)
         signal_time = _ensure_utc(candle_4h.get("close_time") or candle_4h.get("timestamp"))
         position = getattr(broker_state, "positions", {}).get(self.symbol) if broker_state is not None else None
         if position is not None:
+            self.held_bars += 1
             if self.should_exit(frame, position.direction):
                 broker_state.request_close(self.symbol, signal_time)
             else:
@@ -131,16 +135,21 @@ class RuleStrategy(BaseStrategy):
                 if candidate is not None and math.isfinite(candidate) and candidate > 0:
                     broker_state.update_stop_loss(self.symbol, candidate)
             return None
+        self.held_bars = 0
         if any(getattr(o, "symbol", None) == self.symbol for o in getattr(broker_state, "pending_orders", []) or []):
             return None
         signal = self.entry(frame)
         if signal is None:
             return None
-        direction, stop = signal
+        direction, stop = signal[0], signal[1]
+        take_profit = signal[2] if len(signal) > 2 else None
         close = float(frame["close"].iloc[-1])
         if direction == SHORT and not self.allow_short:
             return None
         if not (math.isfinite(stop) and stop > 0) or (direction == LONG and stop >= close) or (direction == SHORT and stop <= close):
+            return None
+        if take_profit is not None and (not math.isfinite(take_profit) or (direction == LONG and take_profit <= close)
+                                        or (direction == SHORT and take_profit >= close)):
             return None
         self.setup_count += 1
         self.candidate_count += 1
@@ -151,7 +160,7 @@ class RuleStrategy(BaseStrategy):
             stop_loss_price=stop,
             signal_time=signal_time,
             conviction_tier=self.default_conviction,
-            take_profit_price=None,
+            take_profit_price=take_profit,
             leverage=self.leverage,
             base_risk_percent=self.base_risk_percent,
             metadata={"strategy": self.name},
