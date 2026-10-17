@@ -264,3 +264,26 @@ class ScalpBollingerRevert(RuleStrategy):
 
     def should_exit(self, frame, direction):
         return self.held_bars >= 24
+
+
+class ScalpRsiPullback(RuleStrategy):
+    """C4/C6 (15m or 1h, owner 2026-10-17 "scalp bằng nến 15m và 1h" for a higher win rate):
+    with close above EMA(200), RSI(2) < 10 -> long; mirror with RSI(2) > 90 below EMA(200).
+    Quick take profit 1 ATR(14), wider stop 1.5 ATR(14), exit after 8 bars."""
+
+    name = "SCALP_RSI_PULLBACK"
+    window = 260
+
+    def entry(self, frame):
+        close = frame["close"]
+        last, trend = float(close.iloc[-1]), float(ema(close, 200).iloc[-1])
+        value = float(rsi(close, 2).iloc[-1])
+        gap = float(atr(frame, 14).iloc[-1])
+        if last > trend and value < 10:
+            return LONG, last - 1.5 * gap, last + gap
+        if last < trend and value > 90:
+            return SHORT, last + 1.5 * gap, last - gap
+        return None
+
+    def should_exit(self, frame, direction):
+        return self.held_bars >= 8

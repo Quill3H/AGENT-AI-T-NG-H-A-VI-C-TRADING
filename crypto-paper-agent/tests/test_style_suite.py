@@ -191,3 +191,28 @@ def test_invalid_take_profit_is_refused():
 @pytest.mark.parametrize("name", ["swing_ema_pullback", "sr_candles", "wyckoff_spring", "day_orb", "day_vwap", "scalp_ema", "scalp_bb"])
 def test_registered(name):
     assert directional_strategy(name, CONFIG).name
+
+
+def test_rsi_pullback_takes_a_quick_profit_with_a_wider_stop():
+    closes = list(np.linspace(100, 130, 258)) + [128.0, 126.0]
+    frame = bars(closes, freq="15min")
+    order = st.ScalpRsiPullback(CONFIG).on_candle_close(candle(frame, "15min"), frame, Broker())
+    assert order.direction == LONG
+    assert order.take_profit_price - order.signal_price < order.signal_price - order.stop_loss_price
+    broker = Broker(LONG)
+    strategy = st.ScalpRsiPullback(CONFIG)
+    for _ in range(8):
+        strategy.on_candle_close(candle(frame, "15min"), frame, broker)
+    assert len(broker.closed) == 1
+
+
+def test_rsi_pullback_does_not_buy_below_the_trend():
+    closes = list(np.linspace(130, 100, 258)) + [98.0, 96.0]
+    frame = bars(closes, freq="15min")
+    order = st.ScalpRsiPullback(CONFIG).on_candle_close(candle(frame, "15min"), frame, Broker())
+    assert order is None
+
+
+@pytest.mark.parametrize("name,tf", [("scalp_bb_15m", "15m"), ("scalp_bb_1h", "1h"), ("scalp_rsi_15m", "15m"), ("scalp_rsi_1h", "1h")])
+def test_short_timeframe_scalps_use_their_own_signal_bars(name, tf):
+    assert load_config(name, [])["strategy"]["timeframe_signal"] == tf

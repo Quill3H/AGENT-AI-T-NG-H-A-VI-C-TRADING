@@ -34,14 +34,26 @@ CANDIDATES = {
     "D2": "day_vwap",
     "C1": "scalp_ema",
     "C2": "scalp_bb",
+    # amendment 2026-10-17 (owner: scalp on 15m and 1h), registered before these ran
+    "C3": "scalp_bb_15m",
+    "C4": "scalp_rsi_15m",
+    "C5": "scalp_bb_1h",
+    "C6": "scalp_rsi_1h",
 }
-SCALPING = ("C1", "C2")
+SCALPING = ("C1", "C2", "C3", "C4", "C5", "C6")
+PILOT = ("2023-01-01", "2023-03-31")  # 1m data is only downloaded for this dev quarter
+PILOT_CANDIDATES = {"P1": "scalp_ema_1m", "P2": "scalp_bb_1m"}
 
 
 def jobs_for(stage, candidate=None):
     """(label, strategy, window, symbols, risk, cost) for every run of a stage."""
     jobs = []
-    if stage == "dev":
+    if stage == "pilot":
+        for key, strategy in PILOT_CANDIDATES.items():
+            for risk in RISKS:
+                jobs.append((f"{key} risk {risk}", strategy, PILOT, CORE, risk, 1.0))
+            jobs.append((f"{key} risk 2%, costs x2", strategy, PILOT, CORE, "2%", 2.0))
+    elif stage == "dev":
         for key, strategy in CANDIDATES.items():
             for risk in RISKS:
                 jobs.append((f"{key} risk {risk}", strategy, DEV, CORE, risk, 1.0))
@@ -60,13 +72,16 @@ def jobs_for(stage, candidate=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", required=True)
-    parser.add_argument("--stage", choices=["dev", "final"], required=True)
+    parser.add_argument("--stage", choices=["dev", "pilot", "final"], required=True)
     parser.add_argument("--candidate", choices=sorted(CANDIDATES))
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     if args.stage == "final" and not args.candidate:
         parser.error("--candidate is required for the final stage")
-    out, lock = {}, threading.Lock()
+    output = Path(args.output)
+    out = json.loads(output.read_text(encoding="utf-8")) if output.is_file() else {}  # resume a stopped run
+    out.pop("selection", None)
+    lock = threading.Lock()
 
     def save():
         Path(args.output).write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
@@ -80,7 +95,7 @@ def main():
                 save()
 
         with ThreadPoolExecutor(6) as threads:
-            for future in [threads.submit(one, job) for job in jobs_for(args.stage, args.candidate)]:
+            for future in [threads.submit(one, job) for job in jobs_for(args.stage, args.candidate) if job[0] not in out]:
                 future.result()
     if args.stage == "dev":
         at_2pct = {key: out[f"{key} risk 2%"] for key in CANDIDATES}

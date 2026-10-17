@@ -61,3 +61,24 @@ return / max drawdown among candidates with no losing development year and at le
 30 completed trades. If none qualifies, the best overall is chosen and flagged. The
 choice is frozen by commit. It is then run once on final test A (at 1%, 2% and 10%,
 plus costs x2 at 2%) and once on final test B (at 1%, 2% and 10%).
+
+## Amendment 1 (2026-10-17 13:27 UTC, before C3-C6 and the 1m pilot ran)
+Owner (relayed): "Để tăng tỷ lệ thắng, hãy scalp bằng nến 15m và 1h nhé" and "nếu 1 phút
+tỷ lệ thắng cao thì cũng oke". At this point the dev results for W1-W3, D1-D2 and C1 were
+known; C2 was still running. Adding candidates after seeing some results raises the
+chance of a lucky pick. The final tests, not the dev ranking, carry the evidence.
+
+New selectable candidates, all on BTC/ETH/SOL 2021-2023 with 15m execution:
+- C3 `scalp_bb_15m`, C5 `scalp_bb_1h`: the C2 Bollinger reversion rule on 15m / 1h bars.
+- C4 `scalp_rsi_15m`, C6 `scalp_rsi_1h`: with close above EMA(200), RSI(2) < 10 -> long
+  (mirror short). Quick take profit 1 ATR(14), wider stop 1.5 ATR(14), exit after 8 bars.
+  This aims at a high win rate; the report shows win rate and net P&L after costs.
+
+1m pilot (not selectable): P1 `scalp_ema_1m` and P2 `scalp_bb_1m` use the C1/C2 rules on 1m
+bars with 1m execution, BTC/ETH/SOL, 2023-01..2023-03 only (dev data). If a pilot is
+net-positive after costs at 2% risk with at least 30 trades, the full 1m period is
+downloaded and it becomes a candidate. Otherwise 1m is not pursued further.
+
+Data: 1m klines for BTC/ETH/SOL 2023-01..03 (Binance Vision, checksum-verified, no gaps).
+NEAR/FIL 1d bars for 2022-02-26..28 and 2022-04-01..02 are resampled from verified 1h
+daily archives, because the 1d daily archives return 404.

@@ -16,6 +16,7 @@ from src.strategies.style_suite import (
     DayVwapReclaim,
     ScalpBollingerRevert,
     ScalpEmaCross,
+    ScalpRsiPullback,
     SupportResistanceCandles,
     SwingEmaPullback,
     WyckoffSpring,
@@ -43,6 +44,12 @@ DIRECTIONAL_STRATEGIES = {
     "day_vwap": DayVwapReclaim,
     "scalp_ema": ScalpEmaCross,
     "scalp_bb": ScalpBollingerRevert,
+    "scalp_bb_15m": ScalpBollingerRevert,
+    "scalp_bb_1h": ScalpBollingerRevert,
+    "scalp_rsi_15m": ScalpRsiPullback,
+    "scalp_rsi_1h": ScalpRsiPullback,
+    "scalp_ema_1m": ScalpEmaCross,
+    "scalp_bb_1m": ScalpBollingerRevert,
 }
 
 
