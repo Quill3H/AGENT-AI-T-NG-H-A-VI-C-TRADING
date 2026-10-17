@@ -148,3 +148,22 @@ because costs and the wider stop outweigh the small take profit.
 **Selection (rule above, at 2% risk): W1 `swing_ema_pullback`.** It is the only
 candidate with no losing year (+80.1%, max DD 13.6%, 718 trades). Frozen by this commit.
 The final runs use `--stage final --candidate W1`.
+
+## Final results, W1 swing_ema_pullback (run once after freeze ee36faf, AUTHOR_REPORTED)
+
+| Test | Risk | Final equity | Return | Max DD | Yearly | Trades | Win rate | Months >= +20% |
+|---|---|---|---|---|---|---|---|---|
+| A: ETC/ATOM/NEAR/FIL 2021-01..2026-09 | 1% | 10,872 | +8.7% | 11.9% | +9.7 / +5.1 / +1.5 / -3.0 / -4.9 / +0.8 | 1987 | 26.0% | 0/69 |
+| A | 2% | 11,492 | +14.9% | 24.3% | +20.9 / +10.4 / +1.8 / -6.8 / -10.0 / +0.8 | 1987 | 26.0% | 0/69 |
+| A | 10% | 7,739 | -22.6% | 90.2% | +237.5 / +37.6 / -38.8 / -23.1 / -45.4 / -35.1 | 1866 | 26.0% | 6/69 |
+| A, costs x2 | 2% | 9,950 | -0.5% | 31.8% | +18.5 / +8.2 / -2.0 / -8.7 / -11.7 / -1.8 | 1987 | 23.8% | 0/69 |
+| B: BTC/ETH/SOL 2024-01..2026-09 | 1% | 10,349 | +3.5% | 5.7% | +2.7 / -1.2 / +2.1 | 766 | 23.2% | 0/33 |
+| B | 2% | 10,649 | +6.5% | 10.7% | +5.5 / -3.0 / +4.0 | 765 | 23.3% | 0/33 |
+| B | 10% | 9,076 | -9.2% | 40.0% | -1.5 / -17.4 / +11.5 | 584 | 23.6% | 3/33 |
+
+The mean trade 95% CI includes zero in every run. At 1-2% risk the rule is slightly
+positive on unseen coins and on 2024-2026, but A loses in 2024 and 2025 and doubled
+costs remove the whole gain. At 10% the volatility drag turns it into a loss: A rose
++237% in 2021, then fell 90% from its peak. Verdict against the owner target
+(20-50%/month): **FAIL**. As a low-risk rule it is weakly positive, NOT_VERIFIED by an
+independent reviewer.
