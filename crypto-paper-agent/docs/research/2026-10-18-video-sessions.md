@@ -77,3 +77,35 @@ are never used.
   four. For a 1h or 4h candidate, missing 1h bars are resampled from the 15m archives
   (recorded per file).
 - B (BTC/ETH/SOL 2024-01..2026-09) and the x20/x5 what-if are unchanged.
+
+## Development results (BTC/ETH/SOL 2021-01..2023-12; AUTHOR_REPORTED)
+
+| Candidate | Risk | Return % | Max DD % | Trades | Trades/week | Win % | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 | 1% | -35.8 | 36.8 | 1244 | 8.0 | 49.1 | -16.4 | -5.9 | -18.4 |
+| T1 | 2% | -46.9 | 49.0 | 1114 | 7.1 | 51.4 | -27.6 | -9.9 | -18.5 |
+| T2 | 1% | -2.8 | 19.5 | 1838 | 11.8 | 40.5 | 3.8 | 4.2 | -10.1 |
+| T2 | 2% | 24.4 | 19.3 | 1760 | 11.3 | 41.5 | 7.7 | 14.8 | 0.6 |
+| T3 | 1% | -32.4 | 35.6 | 1402 | 9.0 | 36.2 | -8.0 | -10.5 | -17.9 |
+| T3 | 2% | -50.4 | 54.9 | 1328 | 8.5 | 36.4 | -16.5 | -20.1 | -25.7 |
+| V1 | 1% | -68.4 | 69.3 | 1750 | 11.2 | 30.8 | -24.6 | -41.2 | -28.7 |
+| V1 | 2% | -61.6 | 64.3 | 981 | 6.3 | 31.1 | -24.3 | -42.7 | -11.7 |
+| V2 | 1% | -53.5 | 55.0 | 1166 | 7.5 | 30.4 | -15.5 | -29.2 | -22.4 |
+| V2 | 2% | -44.9 | 47.4 | 633 | 4.0 | 32.1 | -17.6 | -22.6 | -13.7 |
+| V3 | 1% | -76.4 | 76.7 | 3188 | 20.4 | 40.8 | -54.6 | -38.6 | -15.4 |
+| V3 | 2% | -36.0 | 42.0 | 759 | 4.9 | 43.2 | -16.0 | -21.1 | -3.3 |
+| V4 | 1% | -50.3 | 52.7 | 2759 | 17.6 | 36.2 | -12.0 | -25.1 | -24.5 |
+| V4 | 2% | -44.2 | 52.6 | 1995 | 12.8 | 38.0 | -13.1 | -26.8 | -12.2 |
+| V5 | 1% | -0.7 | 28.4 | 3277 | 21.0 | 20.7 | 14.0 | -7.2 | -6.2 |
+| V5 | 2% | 23.6 | 39.7 | 3193 | 20.4 | 21.1 | 32.0 | -8.1 | 1.9 |
+
+**Selection: V5** (round-5 EMA pullback rules on 1h bars), at rule level "frequency only".
+Every candidate except V2 at 2%, V3 at 2% traded at least 5 times a week, but none had
+no losing year at 1% risk. V5 lost 0.7% at 1% and had the best return/drawdown among the
+frequent ones. T2 (Williams volatility breakout) made +24% at 2% with no losing year, but
+the rule selects at 1%, where it lost 2.8%; it is not picked.
+
+Every video setup lost after fees: the London breakout (V1/V2) won about 31% of trades at
+2R, the Heikin-Ashi scalp 41-43% at 1R, the zone swing break 36-38% at 2.5R. Trades at 1%
+outnumber trades at 2% because tight 5m stops at 2% exceed the 2x notional cap.
+Frozen by this commit before any final run.
