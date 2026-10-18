@@ -82,3 +82,41 @@ class IchimokuKumoBreakout(IchimokuStrategy):
         if prev >= bottom_prev and last < bottom_now and not bullish and not tk_up and last < lagged:
             return SHORT, self._stop(frame, SHORT, float(top_now))
         return None
+
+
+def daily_cloud_side(frame):
+    """+1 if the last completed UTC day closed above its daily cloud, -1 below, 0 inside or
+    unknown. Daily bars are built from the 4h frame with only finished days."""
+    from src.strategies.indicator_suite import completed_daily
+    days = completed_daily(frame)
+    if len(days) < SENKOU_B + SHIFT:
+        return 0
+    ich = ichimoku(days)
+    top = max(ich["cloud_a"].iloc[-1], ich["cloud_b"].iloc[-1])
+    bottom = min(ich["cloud_a"].iloc[-1], ich["cloud_b"].iloc[-1])
+    last = float(days["close"].iloc[-1])
+    return 1 if last > top else (-1 if last < bottom else 0)
+
+
+class IchimokuTkDaily(IchimokuTkCross):
+    """I3 (4h): I1 entries only on the side of the daily cloud (multi-timeframe filter)."""
+
+    name = "ICHIMOKU_TK_DAILY"
+    window = 520  # about 86 days of 4h bars, enough for a daily 52 + 26 cloud
+
+    def entry(self, frame):
+        signal = super().entry(frame)
+        if signal is None:
+            return None
+        side = daily_cloud_side(frame)
+        return signal if (signal[0] == LONG and side > 0) or (signal[0] == SHORT and side < 0) else None
+
+
+class IchimokuTkTrail(IchimokuTkCross):
+    """I4 (4h): I1 with the stop trailed to 0.5 ATR beyond the Kijun each bar (the broker
+    only lets a stop tighten)."""
+
+    name = "ICHIMOKU_TK_TRAIL"
+
+    def trail(self, frame, direction):
+        return self._stop(frame, direction, float(_midpoint(frame, KIJUN).iloc[-1]))

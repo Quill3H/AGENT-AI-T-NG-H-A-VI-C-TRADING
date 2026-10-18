@@ -25,7 +25,8 @@ from src.strategies.style_suite import (
     WyckoffSpring,
 )
 from src.strategies.contrarian_suite import ExtremeFade
-from src.strategies.ichimoku_suite import IchimokuKumoBreakout, IchimokuTkCross
+from src.strategies.ichimoku_suite import IchimokuKumoBreakout, IchimokuTkCross, IchimokuTkDaily, IchimokuTkTrail
+from src.strategies.wyckoff_suite import WyckoffSosLps, WyckoffSpringRun
 from src.strategies.session_suite import (
     HeikinAshiScalp,
     HolyGrail,
@@ -87,6 +88,12 @@ DIRECTIONAL_STRATEGIES = {
     "ichimoku_kumo_15m": IchimokuKumoBreakout,
     "ichimoku_tk_4h_long": IchimokuTkCross,
     "ichimoku_kumo_4h_long": IchimokuKumoBreakout,
+    "wyckoff_spring_run_4h": WyckoffSpringRun,
+    "wyckoff_spring_run_1h": WyckoffSpringRun,
+    "wyckoff_sos_lps_4h": WyckoffSosLps,
+    "wyckoff_sos_lps_1h": WyckoffSosLps,
+    "ichimoku_tk_4h_daily": IchimokuTkDaily,
+    "ichimoku_tk_4h_trail": IchimokuTkTrail,
 }
 
 
