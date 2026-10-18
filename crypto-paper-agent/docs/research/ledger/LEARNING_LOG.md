@@ -24,6 +24,7 @@ to come from coins or months no final test has used, or from forward paper tradi
 - LTCUSDT: 2021-01-01..2026-09-30
 - NEARUSDT: 2021-01-01..2026-09-30
 - SOLUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30
+- TRXUSDT: 2021-01-01..2026-09-30
 - UNIUSDT: 2021-01-01..2026-09-30
 - XLMUSDT: 2021-01-01..2026-09-30
 - XRPUSDT: 2021-01-01..2026-09-30
@@ -121,6 +122,35 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 6 | final-whatif | K3-rr2 | candle_continuation | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 10% | 1.05 | 18.65 | 0.05 | 42.9 |
 | 6 | final-whatif | K3-rr2 | candle_continuation | 2021-01-01..2026-09-30 | XLM/BCH/UNI/AAVE | 2% | 7.5 | 1.78 | 0.15 | 54.3 |
 | 6 | final-whatif | K3-rr2 | candle_continuation | 2021-01-01..2026-09-30 | XLM/BCH/UNI/AAVE | 10% | 45.8 | 8.35 | 0.15 | 54.3 |
+| 7 | dev | V1 | london_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -68.36 | 69.28 | 11.2 | 30.8 |
+| 7 | dev | V1 | london_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -61.65 | 64.28 | 6.28 | 31.1 |
+| 7 | dev | V2 | london_breakout_trend | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -53.55 | 54.99 | 7.46 | 30.4 |
+| 7 | dev | V2 | london_breakout_trend | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -44.92 | 47.39 | 4.05 | 32.1 |
+| 7 | dev | V4 | zone_swing_break | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -50.26 | 52.69 | 17.65 | 36.2 |
+| 7 | dev | V3 | heikin_ashi_scalp | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -35.98 | 42.01 | 4.86 | 43.2 |
+| 7 | dev | V3 | heikin_ashi_scalp | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -76.4 | 76.7 | 20.4 | 40.8 |
+| 7 | dev | V5 | swing_ema_pullback_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -0.73 | 28.39 | 20.97 | 20.7 |
+| 7 | dev | V4 | zone_swing_break | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -44.16 | 52.63 | 12.77 | 38.0 |
+| 7 | dev | V5 | swing_ema_pullback_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 23.57 | 39.71 | 20.43 | 21.1 |
+| 7 | dev | T1 | holy_grail | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -35.81 | 36.81 | 7.96 | 49.1 |
+| 7 | dev | T1 | holy_grail | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -46.87 | 49.03 | 7.13 | 51.4 |
+| 7 | dev | T2 | volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -2.8 | 19.49 | 11.76 | 40.5 |
+| 7 | dev | T3 | nr7_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 1% | -32.4 | 35.56 | 8.97 | 36.2 |
+| 7 | dev | T3 | nr7_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -50.41 | 54.93 | 8.5 | 36.4 |
+| 7 | dev | T2 | volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 24.35 | 19.3 | 11.26 | 41.5 |
+| 7 | validation | V5 | swing_ema_pullback_1h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 1% | -26.29 | 32.85 | 21.86 | 19.2 |
+| 7 | validation | V5 | swing_ema_pullback_1h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 2% | -46.05 | 55.1 | 21.41 | 19.4 |
+| 7 | validation | V5 | swing_ema_pullback_1h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 10% | -75.47 | 77.23 | 5.9 | 25.0 |
+| 7 | final-whatif | V5 | swing_ema_pullback_1h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 2% | -48.13 | 56.23 | 21.62 | 19.0 |
+| 7 | final-whatif | V5 | swing_ema_pullback_1h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 10% | -98.6 | 98.66 | 16.26 | 19.5 |
+| 7 | final | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 10% | -54.58 | 86.77 | 1.32 | 24.6 |
+| 7 | final | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 2% | -88.78 | 92.73 | 6.78 | 19.5 |
+| 7 | final | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 1% | -71.76 | 77.69 | 7.22 | 18.6 |
+| 7 | final | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 1% | -94.4 | 95.28 | 7.23 | 15.3 |
+| 7 | validation | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | BTC/ETH/SOL/TRX | 1% | -36.43 | 51.22 | 28.61 | 19.6 |
+| 7 | validation | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | BTC/ETH/SOL/TRX | 2% | -42.17 | 66.1 | 27.67 | 20.1 |
+| 7 | final-whatif | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 2% | -92.33 | 95.07 | 7.21 | 18.6 |
+| 7 | final-whatif | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 10% | -99.9 | 99.99 | 4.02 | 21.4 |
 
 ## Lessons
 
@@ -130,3 +160,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 4: One coin (AVAX) carried a +183% holdout; returns spread over few coins are luck, not edge.
 - Round 5: Every scalp (1m-1h) lost after fees, even with 55% wins; 4h EMA pullback was weakly positive at 1-2% risk.
 - Round 6: Fast take-profits raise the win rate but lose money; 4h continuation patterns with a 2R target were small but positive on unseen coins with very few trades. x20 leverage cut BTC/ETH trades because liquidation sits about 5% away.
+- Round 7: Trading more often (5-10+ a week) made every method worse after fees. The video's London breakout, Heikin-Ashi scalp and zone break all lost on 5m crypto bars; W1 rules on 1h (about 20 trades a week on three coins) lost 72% on untouched TRX at 1% risk. Williams volatility breakout (T2) was the only frequent method positive in development (+24% at 2%), untested on fresh data.
+- Round 7: Check that every test coin has a leverage-bracket table before a final; TRX lacked one and its first final runs took zero trades (voided and rerun).

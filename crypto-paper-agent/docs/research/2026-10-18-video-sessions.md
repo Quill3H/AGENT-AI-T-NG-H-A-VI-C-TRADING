@@ -109,3 +109,27 @@ Every video setup lost after fees: the London breakout (V1/V2) won about 31% of 
 2R, the Heikin-Ashi scalp 41-43% at 1R, the zone swing break 36-38% at 2.5R. Trades at 1%
 outnumber trades at 2% because tight 5m stops at 2% exceed the 2x notional cap.
 Frozen by this commit before any final run.
+
+## Final results for V5 (frozen at b962e88; AUTHOR_REPORTED)
+
+The first TRX runs took 0 trades because TRXUSDT had no leverage-bracket table and every
+order was rejected. They are voided in the ledger, the table was added (commit 7dd5ce3),
+and the same frozen candidate was rerun once.
+
+| Run | Risk | End equity $ | Return % | Max DD % | Trades | Win % |
+|---|---|---|---|---|---|---|
+| A: TRX 2021-01..2026-09 (untouched) | 1% | 2,824 | -71.8 | 77.7 | 2,165 | 18.6 |
+| A | 2% | 1,122 | -88.8 | 92.7 | 2,032 | 19.5 |
+| A | 10% | 4,542 | -54.6 | 86.8 | 395 | 24.6 |
+| A, costs x2 | 1% | 560 | -94.4 | 95.3 | 2,167 | 15.3 |
+| Top-10 check (seen; only BTC/ETH/SOL/TRX have 5m bars) | 1% | 6,357 | -36.4 | 51.2 | 8,574 | 19.6 |
+| Top-10 check | 2% | 5,783 | -42.2 | 66.1 | 8,293 | 20.1 |
+| B: BTC/ETH/SOL 2024-01..2026-09 (seen) | 1% | 7,371 | -26.3 | 32.9 | 3,132 | 19.2 |
+| B | 2% | 5,395 | -46.1 | 55.1 | 3,068 | 19.4 |
+| B | 10% | 2,453 | -75.5 | 77.2 | 845 | 25.0 |
+| x20/x5 A | 2% / 10% | 767 / 10 | -92.3 / -99.9 | 95.1 / 100.0 | 2,161 / 1,206 | |
+| x20/x5 B | 2% / 10% | 5,187 / 140 | -48.1 / -98.6 | 56.2 / 98.7 | 3,098 / 2,330 | |
+
+Verdict: FAIL. V5 traded about 7 times a week per coin but lost on every test after
+2021. More trades on 1h bars meant smaller moves per trade, so fees and a 19-20% win rate
+outweighed the occasional large winner. Higher leverage only made the losses faster.
