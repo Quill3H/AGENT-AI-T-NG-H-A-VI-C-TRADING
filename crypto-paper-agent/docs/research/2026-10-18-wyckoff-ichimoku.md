@@ -76,3 +76,20 @@ drawdown 24.8%, average month +2.06%. Step reached: none.
   round 8), so the WY2 sleeve costs return. Reported as is; the rule is not changed after
   the fact.
 Frozen by this commit before any check run.
+
+## Checks on seen data for M1 at 5% (frozen at 7f1855b; context, not evidence; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % | Average month % |
+|---|---|---|---|---|---|---|
+| B: BTC/ETH/SOL 2024-01..2026-09 | 12,171 | +21.7 | 15.3 | 694 | 27.1 | +0.60 |
+| B, costs x2 | 10,726 | +7.3 | 15.7 | 707 | 25.5 | +0.21 |
+| BTC/ETH/SOL 2026-10-01..17 | 10,009 | +0.1 | 1.1 | 5 | 20.0 | |
+
+B by year: 2024 +8.6%, 2025 +11.1%, 2026 to September +0.9%; 16 of 33 months lost; best
+month +13.0%, worst -6.4%. By sleeve (each a third of the capital): C1 +17.8%, I1-4h
++34.0%, WY2-4h +13.3%. WY2 made money here after losing in development, which is the kind
+of swing that makes neither period trustworthy on its own.
+
+Verdict: step 1 (10% a month) NOT reached. Mixing three methods gave the shallowest
+drawdown of the recent picks (15% on 2024-2026) but a small return; doubling costs removes
+two thirds of it. M1 joins the weekly forward paper runs.

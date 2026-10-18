@@ -201,6 +201,27 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 9 | final | I1-4h | ichimoku_tk_4h | 2026-10-01..2026-10-17 | XRP/BNB/DOGE/TRX/ADA/LINK/AVAX | 5% | -2.46 | 3.08 | 2.62 | 16.7 |
 | 9 | final | I1-4h | ichimoku_tk_4h | 2026-10-01..2026-10-17 | XRP/BNB/DOGE/TRX/ADA/LINK/AVAX | 5% | -2.31 | 2.98 | 2.62 | 16.7 |
 | 9 | validation | I1-4h | ichimoku_tk_4h | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 153.58 | 18.07 | 5.48 | 33.2 |
+| 10 | dev | WY1-4h | wyckoff_spring_run_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -10.93 | 13.22 | 1.24 | 33.5 |
+| 10 | dev | WY1-4h | wyckoff_spring_run_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -5.96 | 14.41 | 0.89 | 38.1 |
+| 10 | dev | WY1-1h | wyckoff_spring_run_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -25.14 | 29.56 | 2.08 | 39.1 |
+| 10 | dev | WY1-1h | wyckoff_spring_run_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -40.68 | 41.1 | 5.87 | 37.7 |
+| 10 | dev | WY2-4h | wyckoff_sos_lps_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -12.27 | 33.07 | 1.31 | 14.7 |
+| 10 | dev | WY2-4h | wyckoff_sos_lps_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -26.3 | 44.75 | 0.93 | 17.8 |
+| 10 | dev | WY2-1h | wyckoff_sos_lps_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -33.86 | 41.11 | 5.05 | 15.6 |
+| 10 | dev | I3-4h | ichimoku_tk_4h_daily | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 15.44 | 8.86 | 1.06 | 33.7 |
+| 10 | dev | I3-4h | ichimoku_tk_4h_daily | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 28.0 | 23.29 | 0.93 | 34.2 |
+| 10 | dev | I4-4h | ichimoku_tk_4h_trail | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 18.72 | 8.38 | 1.93 | 32.8 |
+| 10 | dev | I4-4h | ichimoku_tk_4h_trail | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 23.96 | 18.38 | 1.75 | 32.8 |
+| 10 | dev | WY2-1h | wyckoff_sos_lps_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -13.19 | 44.78 | 2.34 | 22.1 |
+| 10 | dev | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 27.51 | 10.65 | 5.57 | 25.6 |
+| 10 | dev | I1-4h | ichimoku_tk_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 23.0 | 9.13 | 1.93 | 31.9 |
+| 10 | dev | I1-4h | ichimoku_tk_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 32.91 | 22.79 | 1.75 | 31.8 |
+| 10 | dev | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 108.18 | 24.77 | 4.97 | 26.8 |
+| 10 | dev | W3 | wyckoff_spring | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 0.97 | 8.82 | 0.97 | 35.5 |
+| 10 | dev | W3 | wyckoff_spring | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 8.83 | 15.22 | 0.65 | 40.2 |
+| 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | 0.09 | 1.05 | 2.19 | 20.0 |
+| 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 7.26 | 15.66 | 4.93 | 25.5 |
+| 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 21.71 | 15.28 | 4.84 | 27.1 |
 
 ## Lessons
 
@@ -217,3 +238,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 8: Binance Vision has no funding for the current month and the engine rejects funding older than 24h; forward runs take funding from the public /fapi/v1/fundingRate endpoint via the owner's computer (scripts/extend_vision_daily.py --funding).
 - Round 9: Ichimoku (9/26/52): the Tenkan/Kijun cross on 4h was the only steady variant (+0.8% a month at 5%, no losing year in development); cloud breakouts were flat on 4h and lost on 1h, and every 15m run lost 53-78% after fees.
 - Round 9: Frozen I1-4h at 5% lost 2.3% on the unused 7-coin 2026-10-01..17 window (6 trades). On seen data it made +34% on BTC/ETH/SOL 2024-2026 (all from SOL) and +154% on the top 10 2021-2026 with an 18% drawdown, mostly 2021 and four coins. Step 1 (10% a month) not reached; the whole top-10 history to 2026-10-17 is now spent, so the next evidence is forward paper.
+- Round 10: Wyckoff on BTC/ETH/SOL lost in development on 4h and 1h: springs with an EMA50 exit -6 to -41%, sign of strength + last point of support -12 to -34% with 15-22% wins (breakouts from quiet ranges mostly fell back). Ichimoku daily-cloud filter and Kijun trailing stop both did worse than plain I1-4h.
+- Round 10: Frozen M1 (equal C1 + I1-4h + WY2-4h, 5% risk): development +2.06% a month (drawdown 25%); seen 2024-2026/09 +21.7% (+0.6% a month, drawdown 15%, costs x2 +7.3%); seen 2026-10-01..17 +0.1% on 5 trades. Step 1 not reached. Mixing methods smooths the curve but does not raise the monthly return; WY2 lost in development yet made +13% on 2024-2026, so single-period results flip.
