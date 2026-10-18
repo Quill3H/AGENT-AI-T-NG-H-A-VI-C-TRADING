@@ -12,6 +12,9 @@ from src.strategies.indicator_suite import (
     TimeSeriesMomentum,
 )
 from src.strategies.style_suite import (
+    CandleContinuation,
+    CandlePullback,
+    CandleReversal,
     DayOpeningRange,
     DayVwapReclaim,
     ScalpBollingerRevert,
@@ -50,6 +53,10 @@ DIRECTIONAL_STRATEGIES = {
     "scalp_rsi_1h": ScalpRsiPullback,
     "scalp_ema_1m": ScalpEmaCross,
     "scalp_bb_1m": ScalpBollingerRevert,
+    "candle_pullback": CandlePullback,
+    "candle_reversal": CandleReversal,
+    "candle_continuation": CandleContinuation,
+    "candle_pullback_1h": CandlePullback,
 }
 
 

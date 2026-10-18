@@ -287,3 +287,172 @@ class ScalpRsiPullback(RuleStrategy):
 
     def should_exit(self, frame, direction):
         return self.held_bars >= 8
+
+
+# ------------------------------------------------- round 6: Nison candlesticks
+from src.strategies import candles  # noqa: E402
+
+EXIT_MODES = ("base", "rr1", "rr2", "sr", "pct", "trail", "indicator")
+TIME_EXIT_BARS = 30  # fallback for the take-profit modes so a position cannot sit forever
+
+
+def macd_hist(close):
+    line = ema(close, 12) - ema(close, 26)
+    return line - ema(line, 9)
+
+
+class CandleExits(RuleStrategy):
+    """Shared take-profit / exit choices (owner 2026-10-18), picked by rules.exit_mode:
+    base      - the strategy's own exit (documented on each class)
+    rr1, rr2  - take profit at 1x / 2x the stop distance (fixed R:R)
+    sr        - take profit at the nearest resistance (long) / support (short): 20-bar high / low
+    pct       - take profit 1% from the entry signal price
+    trail     - no take profit; trailing stop at the 10-bar extreme minus/plus 2 ATR(14)
+    indicator - leave when RSI(14) > 70 (long) / < 30 (short), the close reaches the opposite
+                Bollinger band (20, 2), or the MACD(12, 26, 9) histogram turns against the trade
+    Every mode keeps the entry stop-loss."""
+
+    def __init__(self, config, symbol="BTCUSDT"):
+        super().__init__(config, symbol)
+        self.exit_mode = self.rules.get("exit_mode", "base")
+        if self.exit_mode not in EXIT_MODES:
+            raise ValueError(f"unknown exit_mode {self.exit_mode!r}")
+
+    def base_target(self, frame, direction, stop):
+        return None
+
+    def base_exit(self, frame, direction):
+        return False
+
+    def finish(self, frame, direction, stop):
+        last = float(frame["close"].iloc[-1])
+        risk = abs(last - stop)
+        sign = 1.0 if direction == LONG else -1.0
+        mode = self.exit_mode
+        if mode == "base":
+            target = self.base_target(frame, direction, stop)
+        elif mode in ("rr1", "rr2"):
+            target = last + sign * (1.0 if mode == "rr1" else 2.0) * risk
+        elif mode == "pct":
+            target = last * (1.0 + sign * 0.01)
+        elif mode == "sr":
+            previous = frame.iloc[-21:-1]
+            target = float(previous["high"].max()) if direction == LONG else float(previous["low"].min())
+            if (target - last) * sign <= 0:
+                return None  # already at or beyond the level: no room to the target
+        else:
+            target = None
+        return (direction, stop) if target is None else (direction, stop, target)
+
+    def should_exit(self, frame, direction):
+        mode = self.exit_mode
+        if mode == "base":
+            return self.base_exit(frame, direction)
+        if mode == "indicator":
+            close = frame["close"]
+            value = float(rsi(close, 14).iloc[-1])
+            middle, spread = close.rolling(20).mean().iloc[-1], close.rolling(20).std().iloc[-1]
+            hist = macd_hist(close)
+            last = float(close.iloc[-1])
+            if direction == LONG:
+                return value > 70 or last >= middle + 2 * spread or (hist.iloc[-2] > 0 >= hist.iloc[-1])
+            return value < 30 or last <= middle - 2 * spread or (hist.iloc[-2] < 0 <= hist.iloc[-1])
+        if mode == "trail":
+            return False
+        return self.held_bars >= TIME_EXIT_BARS
+
+    def trail(self, frame, direction):
+        if self.exit_mode != "trail":
+            return None
+        gap = 2.0 * float(atr(frame, 14).iloc[-1])
+        window = frame.iloc[-10:]
+        return float(window["high"].max()) - gap if direction == LONG else float(window["low"].min()) + gap
+
+
+def _trend(frame, bullish):
+    close = frame["close"]
+    e50, e200, last = float(ema(close, 50).iloc[-1]), float(ema(close, 200).iloc[-1]), float(close.iloc[-1])
+    return (e50 > e200 and last > e200) if bullish else (e50 < e200 and last < e200)
+
+
+def _ema50_exit(frame, direction):
+    last, e50 = float(frame["close"].iloc[-1]), float(ema(frame["close"], 50).iloc[-1])
+    return (direction == LONG and last < e50) or (direction == SHORT and last > e50)
+
+
+class CandlePullback(CandleExits):
+    """K1 (4h) / K4 (1h): in an EMA50/EMA200 trend, after a pullback, a Nison reversal pattern
+    in the trend direction -> entry. Stop 0.25 ATR(14) beyond the pattern.
+    Base exit: a close through EMA50."""
+
+    name = "CANDLE_PULLBACK"
+    window = 260
+
+    def entry(self, frame):
+        gap = 0.25 * float(atr(frame, 14).iloc[-1])
+        for bullish in (True, False):
+            if not _trend(frame, bullish):
+                continue
+            name, span = candles.reversal_signal(frame, bullish)
+            if name and candles.prior_move(frame, span, bullish):
+                bars = candles.pattern_bars(frame, span)
+                if bullish:
+                    return self.finish(frame, LONG, float(bars["low"].min()) - gap)
+                return self.finish(frame, SHORT, float(bars["high"].max()) + gap)
+        return None
+
+    def base_exit(self, frame, direction):
+        return _ema50_exit(frame, direction)
+
+
+class CandleReversal(CandleExits):
+    """K2 (1d): a Nison reversal pattern after a decline whose low reaches the previous 20-day
+    low (within 0.25 ATR) -> long; mirror at the 20-day high. Stop 0.25 ATR beyond the
+    pattern. Base exit: take profit 2x risk, time exit after 10 bars."""
+
+    name = "CANDLE_REVERSAL"
+    window = 60
+
+    def entry(self, frame):
+        gap = 0.25 * float(atr(frame, 14).iloc[-1])
+        for bullish in (True, False):
+            name, span = candles.reversal_signal(frame, bullish)
+            if not name or not candles.prior_move(frame, span, bullish):
+                continue
+            bars = candles.pattern_bars(frame, span)
+            previous = frame.iloc[-span - 20:-span]
+            if bullish and bars["low"].min() <= previous["low"].min() + gap:
+                return self.finish(frame, LONG, float(bars["low"].min()) - gap)
+            if not bullish and bars["high"].max() >= previous["high"].max() - gap:
+                return self.finish(frame, SHORT, float(bars["high"].max()) + gap)
+        return None
+
+    def base_target(self, frame, direction, stop):
+        last = float(frame["close"].iloc[-1])
+        return last + 2.0 * (last - stop)
+
+    def base_exit(self, frame, direction):
+        return self.held_bars >= 10
+
+
+class CandleContinuation(CandleExits):
+    """K3 (4h): in an EMA50/EMA200 trend, three white soldiers or rising three methods -> long
+    (mirror: three black crows, falling three methods). Stop 0.25 ATR beyond the pattern.
+    Base exit: a close through EMA50."""
+
+    name = "CANDLE_CONTINUATION"
+    window = 260
+
+    def entry(self, frame):
+        gap = 0.25 * float(atr(frame, 14).iloc[-1])
+        for bullish in (True, False):
+            name, span = candles.continuation_signal(frame, bullish)
+            if _trend(frame, bullish) and name:
+                bars = candles.pattern_bars(frame, span)
+                if bullish:
+                    return self.finish(frame, LONG, float(bars["low"].min()) - gap)
+                return self.finish(frame, SHORT, float(bars["high"].max()) + gap)
+        return None
+
+    def base_exit(self, frame, direction):
+        return _ema50_exit(frame, direction)
