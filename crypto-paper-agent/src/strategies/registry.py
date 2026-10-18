@@ -24,6 +24,7 @@ from src.strategies.style_suite import (
     SwingEmaPullback,
     WyckoffSpring,
 )
+from src.strategies.contrarian_suite import ExtremeFade
 from src.strategies.session_suite import (
     HeikinAshiScalp,
     HolyGrail,
@@ -74,6 +75,9 @@ DIRECTIONAL_STRATEGIES = {
     "holy_grail": HolyGrail,
     "volatility_breakout": VolatilityBreakout,
     "nr7_breakout": NarrowRangeBreakout,
+    "swing_ema_pullback_long": SwingEmaPullback,
+    "blowoff_fade": ExtremeFade,
+    "flush_buy": ExtremeFade,
 }
 
 
