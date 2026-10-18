@@ -25,6 +25,7 @@ from src.strategies.style_suite import (
     WyckoffSpring,
 )
 from src.strategies.contrarian_suite import ExtremeFade
+from src.strategies.ichimoku_suite import IchimokuKumoBreakout, IchimokuTkCross
 from src.strategies.session_suite import (
     HeikinAshiScalp,
     HolyGrail,
@@ -78,6 +79,14 @@ DIRECTIONAL_STRATEGIES = {
     "swing_ema_pullback_long": SwingEmaPullback,
     "blowoff_fade": ExtremeFade,
     "flush_buy": ExtremeFade,
+    "ichimoku_tk_4h": IchimokuTkCross,
+    "ichimoku_kumo_4h": IchimokuKumoBreakout,
+    "ichimoku_tk_1h": IchimokuTkCross,
+    "ichimoku_kumo_1h": IchimokuKumoBreakout,
+    "ichimoku_tk_15m": IchimokuTkCross,
+    "ichimoku_kumo_15m": IchimokuKumoBreakout,
+    "ichimoku_tk_4h_long": IchimokuTkCross,
+    "ichimoku_kumo_4h_long": IchimokuKumoBreakout,
 }
 
 

@@ -80,6 +80,8 @@ def main():
     for symbol in args.symbol:
         frames = {}
         for tf in TIMEFRAMES:
+            if not (base_dir / f"{symbol}_perp_{tf}.parquet").is_file():
+                continue  # no history to extend (e.g. 5m exists only for a few coins)
             base = pd.read_parquet(base_dir / f"{symbol}_perp_{tf}.parquet")
             frames[tf] = extend(base, to_frame(tf, read_rows(daily_dir / f"{symbol}_perp_{tf}_dailyfill.csv.gz")))
         base_daily = pd.read_parquet(base_dir / f"{symbol}_perp_1d.parquet")

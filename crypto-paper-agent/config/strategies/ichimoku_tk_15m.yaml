@@ -1,0 +1,14 @@
+# ichimoku_tk_15m.yaml - round-9 candidate I1-15m: Ichimoku Tenkan/Kijun cross above/below the cloud. Rules:
+# src/strategies/ichimoku_suite.py, protocol: docs/research/2026-10-19-ichimoku.md. Fixed before any run, not fitted.
+strategy:
+  name: "ICHIMOKU_TK_CROSS"
+  enabled: true
+  timeframe_signal: "15m"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

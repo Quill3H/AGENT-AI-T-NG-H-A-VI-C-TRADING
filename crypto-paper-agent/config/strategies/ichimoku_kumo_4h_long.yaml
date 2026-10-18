@@ -1,0 +1,14 @@
+# ichimoku_kumo_4h_long.yaml - round-9 candidate I2-4h long only: Ichimoku cloud (Kumo) breakout. Rules:
+# src/strategies/ichimoku_suite.py, protocol: docs/research/2026-10-19-ichimoku.md. Fixed before any run, not fitted.
+strategy:
+  name: "ICHIMOKU_KUMO_BREAKOUT"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false
