@@ -26,6 +26,8 @@ EXITS = PROJECT_ROOT / "config" / "research" / "candles_2026_10_18"
 ENTRIES = {"K1": "candle_pullback", "K2": "candle_reversal", "K3": "candle_continuation", "K4": "candle_pullback_1h"}
 MODES = ("base", "rr1", "rr2", "sr", "pct", "trail", "indicator")
 CANDIDATES = {f"{k}-{m}": (s, m) for k, s in ENTRIES.items() for m in MODES}
+# amendment 1 (owner card 2026-10-18 "Chỉ chạy thử"): x20 BTC/ETH, x5 altcoins, a labelled what-if only
+LEVERAGE_WHATIF = str(EXITS / "whatif_leverage_x20.yaml")
 
 
 def jobs_for(stage, candidate=None):
@@ -35,6 +37,11 @@ def jobs_for(stage, candidate=None):
     s, m = CANDIDATES[candidate]
     if stage == "dev-risk":
         return [(f"{candidate} risk {r}", s, m, DEV, CORE, r, 1.0) for r in ("1%", "10%")]
+    if stage == "leverage":
+        jobs = [(f"x20/x5 dev BTC/ETH/SOL 2021..2023, risk {r}", s, m, DEV, CORE, r, 1.0) for r in ("2%", "10%")]
+        jobs += [(f"x20/x5 A: XLM/BCH/UNI/AAVE, risk {r}", s, m, FINAL_A, FRESH, r, 1.0) for r in ("2%", "10%")]
+        jobs += [(f"x20/x5 B: BTC/ETH/SOL 2024-01..2026-09, risk {r}", s, m, FINAL_B, CORE, r, 1.0) for r in ("2%", "10%")]
+        return jobs
     jobs = [(f"A: XLM/BCH/UNI/AAVE 2021-01..2026-09, risk {r}", s, m, FINAL_A, FRESH, r, 1.0) for r in RISKS]
     jobs.append(("A, risk 2%, costs x2", s, m, FINAL_A, FRESH, "2%", 2.0))
     jobs += [(f"B: BTC/ETH/SOL 2024-01..2026-09, risk {r}", s, m, FINAL_B, CORE, r, 1.0) for r in RISKS]
@@ -44,7 +51,7 @@ def jobs_for(stage, candidate=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", required=True)
-    parser.add_argument("--stage", choices=["dev", "dev-risk", "final"], required=True)
+    parser.add_argument("--stage", choices=["dev", "dev-risk", "final", "leverage"], required=True)
     parser.add_argument("--candidate", choices=sorted(CANDIDATES))
     parser.add_argument("--extra-config", action="append", default=[], help="what-if YAML merged after the risk file")
     parser.add_argument("--output", required=True)
@@ -63,6 +70,8 @@ def main():
         def one(job):
             label, strategy, mode, window, symbols, risk, cost = job
             files = [str(EXITS / f"exit_{mode}.yaml")] + RISKS[risk] + list(args.extra_config)
+            if args.stage == "leverage":
+                files.append(LEVERAGE_WHATIF)
             summary = run_vision_portfolio.run(args.data_dir, strategy, *window, files, cost, symbols=symbols, pool=pool)
             with lock:
                 out[label] = summary

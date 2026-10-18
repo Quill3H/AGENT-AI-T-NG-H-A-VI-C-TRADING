@@ -55,3 +55,17 @@ otherwise the best overall, flagged. Testing 28 variants raises the chance that 
 winner is lucky, so only the final tests count as evidence. The choice is frozen by
 commit, then the chosen one runs at 1% and 10% on development, and once on A and B
 (1%, 2%, 10%, plus costs x2 on A).
+
+## Amendment 1 (2026-10-18, before the development results were read): leverage what-if
+The owner asked for x20 on BTC/ETH and x5 on altcoins and chose "Chỉ chạy thử" (paper
+what-if only) on the decision card. Defaults stay unchanged (2x, cap 5x, notional cap 2x
+equity, liquidation buffer 30%). `config/research/candles_2026_10_18/whatif_leverage_x20.yaml`
+sets per-symbol leverage and relaxes `risk.max_leverage` to 20, `max_notional_pct_of_equity`
+to 20 and `min_liquidation_buffer_pct` to 0.005. The stop must still sit before the estimated
+liquidation price; stop-loss, daily loss limit, kill switch, fees and simulated liquidation
+stay on. With risk-based sizing, leverage alone changes margin, not position size; the what-if
+matters where the 2x notional cap rejected orders (tight stops, 10% risk).
+
+`--stage leverage --candidate <frozen>` runs the frozen candidate once with this file at 2%
+and 10% risk on development, A and B. It is reported beside the default runs, never in
+their place, and does not change the selection.
