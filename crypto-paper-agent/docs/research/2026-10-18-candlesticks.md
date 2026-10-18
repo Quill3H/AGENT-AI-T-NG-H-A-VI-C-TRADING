@@ -112,3 +112,38 @@ the fallback picked the best return/DD overall, and the pick is flagged. K3-rr2 
 21 development trades, so its result rests on very few trades. Every 1h variant (K4) lost
 68-86%; high win rates (K1-pct 73%, K2-pct 86%) still lost money after fees.
 Frozen by this commit before any final run.
+
+## Final results for K3-rr2 (run once after the freeze; AUTHOR_REPORTED)
+
+| Run | Risk | End equity $ | Return % | Max DD % | Trades | Win % |
+|---|---|---|---|---|---|---|
+| Dev BTC/ETH/SOL 2021..2023 | 1% | 10,344 | +3.4 | 1.2 | 21 | 61.9 |
+| Dev | 10% | 11,933 | +19.3 | 7.4 | 15 | 60.0 |
+| A: XLM/BCH/UNI/AAVE 2021-01..2026-09 | 1% | 10,365 | +3.6 | 0.9 | 46 | 54.3 |
+| A | 2% | 10,750 | +7.5 | 1.8 | 46 | 54.3 |
+| A | 10% | 12,943 | +29.4 | 9.0 | 37 | 54.1 |
+| A, costs x2 | 2% | 10,691 | +6.9 | 1.8 | 46 | 54.3 |
+| B: BTC/ETH/SOL 2024-01..2026-09 | 1% | 10,030 | +0.3 | 3.1 | 20 | 40.0 |
+| B | 2% | 10,052 | +0.5 | 6.0 | 20 | 40.0 |
+| B | 10% | 9,634 | -3.7 | 19.9 | 16 | 37.5 |
+
+Leverage what-if (amendment 1: x20 BTC/ETH, x5 altcoins):
+
+| Run | Risk | End equity $ | Return % | Max DD % | Trades |
+|---|---|---|---|---|---|
+| Dev | 2% / 10% | 10,227 / 11,153 | +2.3 / +11.5 | 1.6 / 7.5 | 14 / 14 |
+| A | 2% / 10% | 10,750 / 14,580 | +7.5 / +45.8 | 1.8 / 8.3 | 46 / 46 |
+| B | 2% / 10% | 10,024 / 10,105 | +0.2 / +1.1 | 4.2 / 18.6 | 7 / 7 |
+
+- No month reached +20% in any run. The best month was +12%.
+- A at 2% lost in 2023 (-0.7%) and 2024 (-0.04%). B at 2% lost in 2026 (-1.9%).
+- Trades are few: 46 over 69 months on four coins, and 20 over 33 months on BTC/ETH/SOL.
+  The 95% interval of the mean trade touches or includes 0 in every run except A at 2%
+  (and the x20/x5 A run at 10%).
+- At x20, BTC/ETH liquidation sits about 5% from entry, so wider stops were refused
+  (B: 7 trades instead of 20). At x5 on altcoins at 10% risk, the 2x notional cap no longer
+  rejected orders (46 trades instead of 37), which explains the larger A return.
+
+Verdict: FAIL against the owner's 20-50% per month target. K3-rr2 is small but positive
+on the untouched coins at every risk level and survives doubled costs; it is roughly flat
+on BTC/ETH/SOL 2024-2026.
