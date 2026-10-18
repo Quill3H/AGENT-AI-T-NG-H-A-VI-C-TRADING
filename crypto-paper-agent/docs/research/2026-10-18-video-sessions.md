@@ -100,7 +100,7 @@ are never used.
 | V5 | 2% | 23.6 | 39.7 | 3193 | 20.4 | 21.1 | 32.0 | -8.1 | 1.9 |
 
 **Selection: V5** (round-5 EMA pullback rules on 1h bars), at rule level "frequency only".
-Every candidate except V2 at 2%, V3 at 2% traded at least 5 times a week, but none had
+All candidates at 1% risk traded at least 5 times a week, but none had
 no losing year at 1% risk. V5 lost 0.7% at 1% and had the best return/drawdown among the
 frequent ones. T2 (Williams volatility breakout) made +24% at 2% with no losing year, but
 the rule selects at 1%, where it lost 2.8%; it is not picked.

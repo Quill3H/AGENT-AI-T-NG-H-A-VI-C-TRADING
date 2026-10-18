@@ -33,3 +33,17 @@ def test_round7_selection_requires_five_trades_a_week():
     busy = {**SUMMARY, "total_return_pct": 5.0, "completed_trades": 900, "yearly_return_pct": {"2021": 1, "2022": 1, "2023": 1}}
     assert pick({"rare": rare, "busy": busy}) == ("busy", "full")
     assert pick({"rare": rare}) == ("rare", "none")
+
+
+def test_a_void_run_frees_its_data_once(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.record(7, "final", "V5", "s", "A: TRX", "2021-01-01", "2026-09-30", ["TRXUSDT"], "1%", SUMMARY, path=path)
+    with pytest.raises(ValueError):
+        ledger.check_untouched(["TRXUSDT"], "2021-01-01", "2026-09-30", ledger.load(path))
+    ledger.void(7, "A: TRX", "no leverage table, 0 trades", path=path)
+    ledger.check_untouched(["TRXUSDT"], "2021-01-01", "2026-09-30", ledger.load(path))
+    ledger.record(7, "final", "V5", "s", "A: TRX", "2021-01-01", "2026-09-30", ["TRXUSDT"], "1%", SUMMARY, path=path)
+    records = ledger.load(path)
+    with pytest.raises(ValueError):
+        ledger.check_untouched(["TRXUSDT"], "2021-01-01", "2026-09-30", records)
+    assert len([r for r in records if r["stage"] == "final"]) == 2

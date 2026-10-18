@@ -51,11 +51,34 @@ def load(path=LEDGER):
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def void(round_id, label, reason, path=LEDGER):
+    """Mark an earlier run void because of a setup fault (not its result). The run stays in
+    the ledger; a void run no longer counts as spent final data, so it can be rerun once."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {"recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+             "round": round_id, "stage": "void", "label": label, "reason": reason}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry) + "\n")
+    return entry
+
+
+def _voided(records):
+    """(round, label) pairs voided so far; a later run with the same label is live again."""
+    live, voided = {}, set()
+    for i, r in enumerate(records):
+        key = (r["round"], r.get("label"))
+        if r["stage"] == "void":
+            voided |= {j for j in live.get(key, [])}
+        elif r["stage"] != "lesson":
+            live.setdefault(key, []).append(i)
+    return voided
+
+
 def spent_final_data(records):
-    """{symbol: [(start, end), ...]} already used by a final test."""
-    spent = {}
-    for r in records:
-        if r["stage"] in FINAL_STAGES:
+    """{symbol: [(start, end), ...]} already used by a final test (void runs excluded)."""
+    spent, voided = {}, _voided(records)
+    for i, r in enumerate(records):
+        if r["stage"] in FINAL_STAGES and i not in voided:
             for symbol in r["symbols"]:
                 window = tuple(r["window"])
                 if window not in spent.setdefault(symbol, []):
@@ -87,7 +110,8 @@ def note(round_id, lesson, path=LEDGER):
 
 def summary_markdown(records):
     """A readable digest: one table row per run, then the lessons, newest round last."""
-    runs = [r for r in records if r["stage"] != "lesson"]
+    voided = _voided(records)
+    runs = [r for i, r in enumerate(records) if r["stage"] not in ("lesson", "void") and i not in voided]
     lines = ["| Round | Stage | Candidate | Strategy | Window | Symbols | Risk | Return % | Max DD % | Trades/week | Win % |",
              "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in runs:
