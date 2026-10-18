@@ -24,6 +24,15 @@ from src.strategies.style_suite import (
     SwingEmaPullback,
     WyckoffSpring,
 )
+from src.strategies.session_suite import (
+    HeikinAshiScalp,
+    HolyGrail,
+    LondonBreakout,
+    LondonBreakoutTrend,
+    NarrowRangeBreakout,
+    VolatilityBreakout,
+    ZoneSwingBreak,
+)
 from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
 from src.strategies.trend_following import TrendFollowingStrategy
 
@@ -57,6 +66,14 @@ DIRECTIONAL_STRATEGIES = {
     "candle_reversal": CandleReversal,
     "candle_continuation": CandleContinuation,
     "candle_pullback_1h": CandlePullback,
+    "london_breakout": LondonBreakout,
+    "london_breakout_trend": LondonBreakoutTrend,
+    "heikin_ashi_scalp": HeikinAshiScalp,
+    "zone_swing_break": ZoneSwingBreak,
+    "swing_ema_pullback_1h": SwingEmaPullback,
+    "holy_grail": HolyGrail,
+    "volatility_breakout": VolatilityBreakout,
+    "nr7_breakout": NarrowRangeBreakout,
 }
 
 
