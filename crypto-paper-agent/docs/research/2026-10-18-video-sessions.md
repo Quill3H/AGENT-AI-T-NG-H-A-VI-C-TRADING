@@ -64,3 +64,16 @@ notional cap.
 
 The rule level reached is reported. Eight candidates raise the chance of a lucky winner;
 only A counts as evidence. The choice is frozen by commit before the final run.
+
+## Amendment 1 (2026-10-18 07:34, before any development result was read): test universe
+The owner asked to test only the 10 largest coins by market cap and to download no more
+altcoins. Final tests use the 10 largest coins we already hold: BTC, ETH, XRP, BNB, SOL,
+DOGE, TRX, ADA, LINK and AVAX. ALGO, VET and SAND are dropped; they were downloaded but
+are never used.
+- Final A (untouched): TRX only. It is the only one of the 10 no final test has used.
+- Top-10 check (seen): all 10 coins, 2021-01..2026-09. The other 9 coins were used by
+  earlier final tests, so this run is context, not evidence.
+- Only BTC, ETH, SOL and TRX have 5m bars. A 5m candidate can therefore run only on those
+  four. For a 1h or 4h candidate, missing 1h bars are resampled from the 15m archives
+  (recorded per file).
+- B (BTC/ETH/SOL 2024-01..2026-09) and the x20/x5 what-if are unchanged.
