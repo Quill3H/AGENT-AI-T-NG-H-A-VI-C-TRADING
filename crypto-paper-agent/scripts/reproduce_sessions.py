@@ -24,7 +24,9 @@ from src.research import ledger  # noqa: E402
 
 ROUND = 7
 FINAL_A = ("2021-01-01", "2026-09-30")
-FRESH = ("TRXUSDT", "ALGOUSDT", "VETUSDT", "SANDUSDT")
+# amendment 1 (owner 2026-10-18): only the 10 largest coins; TRX is the one no final has used
+FRESH = ("TRXUSDT",)
+TOP10 = ("BTCUSDT", "ETHUSDT", "XRPUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT", "TRXUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT")
 LEVERAGE_WHATIF = str(PROJECT_ROOT / "config" / "research" / "candles_2026_10_18" / "whatif_leverage_x20.yaml")
 MIN_PER_WEEK = 5.0  # owner 2026-10-18: "1 tuần khoảng 5-10 lệnh"
 CANDIDATES = {
@@ -48,12 +50,22 @@ def pick(results):
     return max(pool, key=lambda k: score(pool[k])), "full" if clean else ("frequency only" if weekly else "none")
 
 
-def jobs_for(stage, candidate=None):
+def available(data_dir, strategy, symbols):
+    """Symbols that hold the candidate's signal and execution bars (no downloads, amendment 1)."""
+    from scripts.run_vision_backtest import load_config
+    timeframes = {load_config(strategy, [])["strategy"][k] for k in ("timeframe_signal", "timeframe_execution")}
+    return tuple(s for s in symbols if all((Path(data_dir) / f"{s}_perp_{tf}.parquet").is_file() for tf in timeframes))
+
+
+def jobs_for(stage, candidate=None, data_dir=None):
     """(label, ledger stage, key, window, symbols, risk, cost, extra files)."""
     if stage == "dev":
         return [(f"{k} risk {r}", "dev", k, DEV, CORE, r, 1.0, []) for k in CANDIDATES for r in ("1%", "2%")]
-    jobs = [(f"A: TRX/ALGO/VET/SAND 2021-01..2026-09, risk {r}", "final", candidate, FINAL_A, FRESH, r, 1.0, [])
-            for r in RISKS]
+    jobs = [(f"A: TRX 2021-01..2026-09, risk {r}", "final", candidate, FINAL_A, FRESH, r, 1.0, []) for r in RISKS]
+    top = available(data_dir, CANDIDATES[candidate][0], TOP10) if data_dir else TOP10
+    name = "/".join(x.replace("USDT", "") for x in top)
+    jobs += [(f"Top-10 check (seen) {name} 2021-01..2026-09, risk {r}", "validation", candidate, FINAL_A, top, r, 1.0, [])
+             for r in ("1%", "2%")]
     jobs.append(("A, risk 1%, costs x2", "final", candidate, FINAL_A, FRESH, "1%", 2.0, []))
     jobs += [(f"B: BTC/ETH/SOL 2024-01..2026-09 (seen), risk {r}", "validation", candidate, FINAL_B, CORE, r, 1.0, [])
              for r in RISKS]
@@ -76,7 +88,7 @@ def main():
     output = Path(args.output)
     out = json.loads(output.read_text(encoding="utf-8")) if output.is_file() else {}
     out.pop("selection", None)
-    jobs = [j for j in jobs_for(args.stage, args.candidate) if j[0] not in out]
+    jobs = [j for j in jobs_for(args.stage, args.candidate, args.data_dir) if j[0] not in out]
     if args.stage == "final":
         ledger.check_untouched(FRESH, *FINAL_A, ledger.load())
     lock = threading.Lock()
