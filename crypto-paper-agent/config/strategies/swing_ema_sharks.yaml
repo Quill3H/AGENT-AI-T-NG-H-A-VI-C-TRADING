@@ -1,0 +1,14 @@
+# swing_ema_sharks.yaml - round-11 candidate S1: C1 with IncomeSharks daily Supertrend + OBV filter. Rules: src/strategies/trader_suite.py,
+# protocol: docs/research/2026-10-18-round11-traders.md. Fixed before any run, not fitted.
+strategy:
+  name: "SWING_EMA_SHARKS"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false

@@ -37,6 +37,7 @@ from src.strategies.session_suite import (
     ZoneSwingBreak,
 )
 from src.strategies.smc_liquidity_sweep import SMCLiquiditySweepStrategy
+from src.strategies.trader_suite import ChedsEmaPullback, GoonerBreakout, SupertrendObv, SwingEmaSharks
 from src.strategies.trend_following import TrendFollowingStrategy
 
 DIRECTIONAL_STRATEGIES = {
@@ -94,6 +95,14 @@ DIRECTIONAL_STRATEGIES = {
     "wyckoff_sos_lps_1h": WyckoffSosLps,
     "ichimoku_tk_4h_daily": IchimokuTkDaily,
     "ichimoku_tk_4h_trail": IchimokuTkTrail,
+    "swing_ema_long_half_1r": SwingEmaPullback,
+    "swing_ema_long_thirds": SwingEmaPullback,
+    "swing_ema_sharks": SwingEmaSharks,
+    "swing_ema_sharks_half_1r": SwingEmaSharks,
+    "supertrend_obv": SupertrendObv,
+    "gooner_breakout": GoonerBreakout,
+    "cheds_ema_pullback": ChedsEmaPullback,
+    "cheds_ema_pullback_thirds": ChedsEmaPullback,
 }
 
 

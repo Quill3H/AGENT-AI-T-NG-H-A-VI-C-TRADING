@@ -108,6 +108,9 @@ class RuleStrategy(BaseStrategy):
         cap = float((config.get("risk") or {}).get("max_leverage", 5.0))
         self.leverage = min(float(per_symbol.get(symbol, config.get("leverage", 2.0))), cap)
         self.base_risk_percent = float(config.get("base_risk_percent", 0.02))
+        # optional scale-outs [[R multiple, fraction of the opening size], ...]; the broker
+        # moves the stop to break-even after each one
+        self.partial_exits = [[float(r), float(f)] for r, f in self.rules.get("partial_exits", [])]
         self.setup_count = 0
         self.candidate_count = 0
         self.held_bars = 0  # closed signal bars since the current position was seen open
@@ -166,6 +169,7 @@ class RuleStrategy(BaseStrategy):
             take_profit_price=take_profit,
             leverage=self.leverage,
             base_risk_percent=self.base_risk_percent,
+            partial_exits=[list(p) for p in self.partial_exits],
             metadata={"strategy": self.name},
         )
 
