@@ -103,7 +103,10 @@ class RuleStrategy(BaseStrategy):
         self.rules = config.get("rules", {})
         self.allow_short = bool(self.rules.get("allow_short", True))
         self.default_conviction = config.get("default_conviction", "normal")
-        self.leverage = min(float(config.get("leverage", 2.0)), 5.0)
+        # per-symbol leverage (what-if configs) falls back to `leverage`; never above risk.max_leverage
+        per_symbol = config.get("leverage_by_symbol") or {}
+        cap = float((config.get("risk") or {}).get("max_leverage", 5.0))
+        self.leverage = min(float(per_symbol.get(symbol, config.get("leverage", 2.0))), cap)
         self.base_risk_percent = float(config.get("base_risk_percent", 0.02))
         self.setup_count = 0
         self.candidate_count = 0

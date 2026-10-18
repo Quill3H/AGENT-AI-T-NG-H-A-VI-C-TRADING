@@ -172,3 +172,29 @@ def test_take_profit_modes_time_out():
 def test_unknown_exit_mode_is_refused():
     with pytest.raises(ValueError):
         st.CandlePullback({**CONFIG, "rules": {"exit_mode": "moon"}})
+
+
+WHATIF = "config/research/candles_2026_10_18/whatif_leverage_x20.yaml"
+
+
+def test_leverage_whatif_is_per_symbol_and_capped_by_risk_config():
+    from scripts.run_vision_backtest import load_config
+    from src.strategies.registry import directional_strategy
+    plain = load_config("candle_pullback", [])
+    assert directional_strategy("candle_pullback", plain, "BTCUSDT").leverage == 2.0
+    whatif = load_config("candle_pullback", [WHATIF])
+    assert directional_strategy("candle_pullback", whatif, "BTCUSDT").leverage == 20.0
+    assert directional_strategy("candle_pullback", whatif, "ETHUSDT").leverage == 20.0
+    assert directional_strategy("candle_pullback", whatif, "SOLUSDT").leverage == 5.0
+    capped = {**whatif, "risk": {**whatif["risk"], "max_leverage": 5}}
+    assert directional_strategy("candle_pullback", capped, "BTCUSDT").leverage == 5.0
+    assert st.CandlePullback({**CONFIG, "leverage": 50.0}).leverage == 5.0  # no risk config: old 5x ceiling
+
+
+def test_x20_still_needs_the_stop_before_liquidation():
+    from scripts.run_vision_backtest import load_config
+    from src.risk.invariant_checks import calculate_estimated_liquidation_price
+    whatif = load_config("candle_pullback", [WHATIF])
+    liq = calculate_estimated_liquidation_price(direction="LONG", entry_price=100.0, position_size_usd=5000.0,
+                                                leverage=20.0, symbol="BTCUSDT", leverage_brackets=whatif["leverage_brackets"])
+    assert 94.0 < liq < 96.0  # about 5% under entry at x20, so a 6% stop cannot be used
