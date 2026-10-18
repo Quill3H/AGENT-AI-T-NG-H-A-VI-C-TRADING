@@ -222,6 +222,34 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | 0.09 | 1.05 | 2.19 | 20.0 |
 | 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 7.26 | 15.66 | 4.93 | 25.5 |
 | 10 | validation | M1 | swing_ema_pullback_long+ichimoku_tk_4h+wyckoff_sos_lps_4h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 21.71 | 15.28 | 4.84 | 27.1 |
+| 11 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 71.8 | 14.13 | 2.34 | 26.5 |
+| 11 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 317.92 | 31.35 | 2.28 | 26.6 |
+| 11 | dev | P1 | swing_ema_long_half_1r | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 39.62 | 11.35 | 2.48 | 37.2 |
+| 11 | dev | P1 | swing_ema_long_half_1r | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 183.6 | 22.12 | 2.35 | 37.9 |
+| 11 | dev | P2 | swing_ema_long_thirds | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 119.24 | 20.19 | 2.35 | 37.9 |
+| 11 | dev | P2 | swing_ema_long_thirds | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 27.55 | 10.39 | 2.48 | 37.2 |
+| 11 | dev | S1 | swing_ema_sharks | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 77.32 | 12.56 | 1.36 | 27.4 |
+| 11 | dev | S1 | swing_ema_sharks | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 368.24 | 25.95 | 1.34 | 26.8 |
+| 11 | dev | X1 | swing_ema_sharks_half_1r | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 39.86 | 9.64 | 1.47 | 39.6 |
+| 11 | dev | X1 | swing_ema_sharks_half_1r | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 157.29 | 20.7 | 1.43 | 39.3 |
+| 11 | dev | S2 | supertrend_obv | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 12.04 | 8.52 | 0.82 | 40.6 |
+| 11 | dev | S2 | supertrend_obv | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 35.29 | 18.78 | 0.82 | 40.6 |
+| 11 | dev | G1 | gooner_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 21.72 | 4.2 | 0.89 | 42.4 |
+| 11 | dev | G1 | gooner_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 67.7 | 10.39 | 0.89 | 42.4 |
+| 11 | dev | K1 | cheds_ema_pullback | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 57.32 | 9.95 | 2.44 | 30.4 |
+| 11 | dev | K1 | cheds_ema_pullback | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 146.71 | 22.48 | 2.41 | 30.6 |
+| 11 | dev | K2 | cheds_ema_pullback_thirds | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 20.58 | 7.87 | 2.52 | 36.8 |
+| 11 | dev | K2 | cheds_ema_pullback_thirds | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 45.44 | 14.81 | 2.46 | 37.1 |
+| 11 | validation | S1 | swing_ema_sharks | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | -2.15 | 3.54 | 3.94 | 11.1 |
+| 11 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 11 | validation | S1 | swing_ema_sharks | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 62.18 | 8.82 | 4.44 | 24.6 |
+| 11 | validation | S1 | swing_ema_sharks | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 2% | -3.77 | 10.75 | 1.48 | 23.6 |
+| 11 | validation | S1 | swing_ema_sharks | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 2% | -6.96 | 12.94 | 1.48 | 21.2 |
+| 11 | validation | S1 | swing_ema_sharks | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | -1.29 | 1.66 | 1.31 | 0.0 |
+| 11 | validation | S1 | swing_ema_sharks | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -3.32 | 26.39 | 1.4 | 24.5 |
+| 11 | validation | S1 | swing_ema_sharks | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -9.97 | 30.24 | 1.4 | 22.0 |
+| 11 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 11 | validation | S1 | swing_ema_sharks | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 200.18 | 16.05 | 4.3 | 24.6 |
 
 ## Lessons
 
@@ -240,3 +268,6 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 9: Frozen I1-4h at 5% lost 2.3% on the unused 7-coin 2026-10-01..17 window (6 trades). On seen data it made +34% on BTC/ETH/SOL 2024-2026 (all from SOL) and +154% on the top 10 2021-2026 with an 18% drawdown, mostly 2021 and four coins. Step 1 (10% a month) not reached; the whole top-10 history to 2026-10-17 is now spent, so the next evidence is forward paper.
 - Round 10: Wyckoff on BTC/ETH/SOL lost in development on 4h and 1h: springs with an EMA50 exit -6 to -41%, sign of strength + last point of support -12 to -34% with 15-22% wins (breakouts from quiet ranges mostly fell back). Ichimoku daily-cloud filter and Kijun trailing stop both did worse than plain I1-4h.
 - Round 10: Frozen M1 (equal C1 + I1-4h + WY2-4h, 5% risk): development +2.06% a month (drawdown 25%); seen 2024-2026/09 +21.7% (+0.6% a month, drawdown 15%, costs x2 +7.3%); seen 2026-10-01..17 +0.1% on 5 trades. Step 1 not reached. Mixing methods smooths the curve but does not raise the monthly return; WY2 lost in development yet made +13% on 2024-2026, so single-period results flip.
+- Round 11: Scale-outs (half at 1R, or thirds at 1R/2R) lift the swing EMA win rate from ~27% to 37-39% but cut the monthly return by a quarter to a half in 2021-23: C1's profit lives in a few large trends, and selling early removes them. Win rate and profit pull in opposite directions for trend-following.
+- Round 11: The IncomeSharks daily dual-Supertrend + OBV filter (S1) improved C1 in 2021-23 (+4.38%/mo vs +4.05% at 5%, DD 26% vs 31%, 10 vs 18 losing months) but failed on seen 2024-01..2026-09: -3.3% at 5% vs C1 +17.8%. A filter that helps in one era can remove the next era's winners; keep C1 unfiltered as the main candidate.
+- Round 11: Nebraskangooner-style 30-bar volume breakout with a 2R target (G1) and Supertrend+OBV entries (S2) win 41-42% of trades with small edges; the Cheds 8 EMA pullback (K1) is profitable but lost in 2022. None beats C1 on monthly return. The 'Reference C1 B' check row is recorded twice (once per check run); it is the same run.

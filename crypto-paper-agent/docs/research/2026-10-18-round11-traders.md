@@ -104,9 +104,33 @@ Findings:
 - Scale-outs raise the win rate from about 27% to 37-39% but cut the monthly return by a
   quarter to a half (P1 5% +2.94% vs C1 +4.05%): the half sold at 1R is the half that would
   have caught the few large trends that pay for everything.
-- The IncomeSharks filter keeps C1's large winners and removes 41% of the trades, mostly
-  losers in sideways markets: higher return, lower drawdown, half the losing months.
+- The IncomeSharks filter removes 41% of C1's trades. The win rate barely moves (26.6% to
+  26.8%), so the removed trades were not mostly losers; they lost money overall (inferred:
+  return rises with fewer trades). Result: higher return, lower drawdown, about half the
+  losing months. [Corrected after the freeze commit; wording only, no number or pick changed.]
 - The 2R breakout (G1) wins 42% but lost in 2022; the dual Supertrend (S2) wins 41% with a
   small edge; the Cheds 8 EMA pullback (K1) lost slightly in 2022.
 
 Frozen by this commit before any check.
+
+## Checks for S1 (frozen at 61b2887; all on seen data, context only; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % | Average month % | Losing months |
+|---|---|---|---|---|---|---|---|
+| **B: BTC/ETH/SOL 2024-01..2026-09, risk 2% (pick)** | 9,623 | -3.8 | 10.8 | 212 | 23.6 | -0.12 | 18 / 33 |
+| B, costs x2, risk 2% | 9,304 | -7.0 | 12.9 | 212 | 21.2 | -0.22 | 18 / 33 |
+| BTC/ETH/SOL 2026-10-01..17, risk 2% | 9,785 | -2.2 | 3.5 | 9 | 11.1 | | |
+| Top-10 2021-01..2026-09, risk 2% | 16,218 | +62.2 | 8.8 | 1,332 | 24.6 | +0.70 | 35 / 69 |
+| B, risk 5% (not the pick) | 9,668 | -3.3 | 26.4 | 200 | 24.5 | -0.10 | 19 / 33 |
+| B, costs x2, risk 5% | 9,003 | -10.0 | 30.2 | 200 | 22.0 | -0.32 | 19 / 33 |
+| BTC/ETH/SOL 2026-10-01..17, risk 5% | 9,871 | -1.3 | 1.7 | 3 | 0 | | |
+| Top-10 2021-01..2026-09, risk 5% | 30,018 | +200.2 | 16.1 | 1,290 | 24.6 | +1.61 | 36 / 69 |
+| Reference C1 B, risk 5% | 11,778 | +17.8 | 24.3 | 375 | 22.9 | +0.50 | 17 / 33 |
+
+Top-10 by year at 5%: 2021 +102.8%, 2022 -4.5%, 2023 +48.9%, 2024 +2.6%, 2025 +3.8%, 2026 to
+September -2.3%.
+
+Verdict: step 1 (10% a month) NOT reached. The filter that helped in 2021-2023 did not
+hold on 2024-2026, where S1 lost while plain C1 made +17.8%. Raising the win rate with
+scale-outs costs more profit than it saves. C1 (round 8) stays the main swing EMA candidate;
+S1 joins the weekly forward paper as a second line so the two can be compared on new data.
