@@ -9,25 +9,25 @@ to come from coins or months no final test has used, or from forward paper tradi
 ## Spent final data
 
 - AAVEUSDT: 2021-01-01..2026-09-30
-- ADAUSDT: 2021-01-01..2026-09-30
+- ADAUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - ATOMUSDT: 2021-01-01..2026-09-30
-- AVAXUSDT: 2021-01-01..2026-09-30
+- AVAXUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - BCHUSDT: 2021-01-01..2026-09-30
-- BNBUSDT: 2021-01-01..2026-09-30
+- BNBUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - BTCUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
-- DOGEUSDT: 2021-01-01..2026-09-30
+- DOGEUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - DOTUSDT: 2021-01-01..2026-09-30
 - ETCUSDT: 2021-01-01..2026-09-30
 - ETHUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
 - FILUSDT: 2021-01-01..2026-09-30
-- LINKUSDT: 2021-01-01..2026-09-30
+- LINKUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - LTCUSDT: 2021-01-01..2026-09-30
 - NEARUSDT: 2021-01-01..2026-09-30
 - SOLUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
-- TRXUSDT: 2021-01-01..2026-09-30
+- TRXUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 - UNIUSDT: 2021-01-01..2026-09-30
 - XLMUSDT: 2021-01-01..2026-09-30
-- XRPUSDT: 2021-01-01..2026-09-30
+- XRPUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 
 ## Runs
 
@@ -180,6 +180,27 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 8 | final | W1 | swing_ema_pullback | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | -1.49 | 4.59 | 6.56 | 20.0 |
 | 8 | final | K3 | candle_continuation | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | 0.0 | 0.0 | 0.0 | None |
 | 8 | final | T2 | volatility_breakout | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | -3.56 | 5.45 | 7.88 | 22.2 |
+| 9 | dev | I1-4h | ichimoku_tk_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 23.0 | 9.13 | 1.93 | 31.9 |
+| 9 | dev | I1-4h | ichimoku_tk_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 32.91 | 22.79 | 1.75 | 31.8 |
+| 9 | dev | I2-4h | ichimoku_kumo_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 4.9 | 18.37 | 1.61 | 32.7 |
+| 9 | dev | I2-4h | ichimoku_kumo_4h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 1.88 | 7.69 | 1.72 | 32.7 |
+| 9 | dev | I1-1h | ichimoku_tk_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 50.02 | 29.94 | 4.81 | 36.4 |
+| 9 | dev | I1-1h | ichimoku_tk_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 32.88 | 21.42 | 7.28 | 32.3 |
+| 9 | dev | I2-1h | ichimoku_kumo_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -19.94 | 30.32 | 7.58 | 28.4 |
+| 9 | dev | I2-1h | ichimoku_kumo_1h | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -29.37 | 46.63 | 5.58 | 30.8 |
+| 9 | dev | I1-15m | ichimoku_tk_15m | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -63.89 | 75.77 | 22.89 | 29.9 |
+| 9 | dev | I1-15m | ichimoku_tk_15m | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -52.61 | 59.82 | 6.28 | 33.7 |
+| 9 | dev | I2-15m | ichimoku_kumo_15m | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -77.04 | 78.02 | 26.85 | 26.7 |
+| 9 | dev | I2-15m | ichimoku_kumo_15m | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -78.26 | 78.78 | 11.86 | 28.3 |
+| 9 | dev | I1-4h-long | ichimoku_tk_4h_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 19.67 | 6.44 | 1.05 | 37.8 |
+| 9 | dev | I1-4h-long | ichimoku_tk_4h_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 35.12 | 22.67 | 0.97 | 38.4 |
+| 9 | dev | I2-4h-long | ichimoku_kumo_4h_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -4.61 | 9.21 | 0.74 | 29.3 |
+| 9 | dev | I2-4h-long | ichimoku_kumo_4h_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -9.78 | 20.81 | 0.69 | 28.7 |
+| 9 | validation | I1-4h | ichimoku_tk_4h | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | 1.66 | 2.74 | 0.44 | 100.0 |
+| 9 | validation | I1-4h | ichimoku_tk_4h | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 34.04 | 21.58 | 1.57 | 35.1 |
+| 9 | final | I1-4h | ichimoku_tk_4h | 2026-10-01..2026-10-17 | XRP/BNB/DOGE/TRX/ADA/LINK/AVAX | 5% | -2.46 | 3.08 | 2.62 | 16.7 |
+| 9 | final | I1-4h | ichimoku_tk_4h | 2026-10-01..2026-10-17 | XRP/BNB/DOGE/TRX/ADA/LINK/AVAX | 5% | -2.31 | 2.98 | 2.62 | 16.7 |
+| 9 | validation | I1-4h | ichimoku_tk_4h | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 153.58 | 18.07 | 5.48 | 33.2 |
 
 ## Lessons
 
@@ -194,3 +215,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 8: Dropping W1's shorts changed little (4.05% vs 3.94% a month in development at 5%); GCR-style blow-off fades and flush buys on 4h lost at every risk and traded rarely; T2's fees took 60% of its gross profit.
 - Round 8: Frozen C1 (W1 long only, 5% risk) averaged +4.05% a month in development (drawdown 31%) but +0.5% a month on 2024-2026/09 (drawdown 24%; SOL lost) and -1.4% on the unused 2026-10-01..17 window (4 trades). Step 1 (10% a month) not reached. The median month is about 0% in every run: a few large trend months carry the result, so a higher monthly target needs more uncorrelated edges, not more risk on one.
 - Round 8: Binance Vision has no funding for the current month and the engine rejects funding older than 24h; forward runs take funding from the public /fapi/v1/fundingRate endpoint via the owner's computer (scripts/extend_vision_daily.py --funding).
+- Round 9: Ichimoku (9/26/52): the Tenkan/Kijun cross on 4h was the only steady variant (+0.8% a month at 5%, no losing year in development); cloud breakouts were flat on 4h and lost on 1h, and every 15m run lost 53-78% after fees.
+- Round 9: Frozen I1-4h at 5% lost 2.3% on the unused 7-coin 2026-10-01..17 window (6 trades). On seen data it made +34% on BTC/ETH/SOL 2024-2026 (all from SOL) and +154% on the top 10 2021-2026 with an 18% drawdown, mostly 2021 and four coins. Step 1 (10% a month) not reached; the whole top-10 history to 2026-10-17 is now spent, so the next evidence is forward paper.
