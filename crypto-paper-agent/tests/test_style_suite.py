@@ -216,3 +216,15 @@ def test_rsi_pullback_does_not_buy_below_the_trend():
 @pytest.mark.parametrize("name,tf", [("scalp_bb_15m", "15m"), ("scalp_bb_1h", "1h"), ("scalp_rsi_15m", "15m"), ("scalp_rsi_1h", "1h")])
 def test_short_timeframe_scalps_use_their_own_signal_bars(name, tf):
     assert load_config(name, [])["strategy"]["timeframe_signal"] == tf
+
+
+def test_non_positive_short_take_profit_is_refused():
+    class Deep(st.RuleStrategy):
+        window = 5
+
+        def entry(self, frame):
+            last = float(frame["close"].iloc[-1])
+            return SHORT, last * 1.6, last - 2.0 * (last * 0.6)  # a 2R target below zero
+
+    frame = bars(np.linspace(100, 101, 10), freq="1D")
+    assert Deep(CONFIG).on_candle_close(candle(frame, "1D"), frame, Broker()) is None

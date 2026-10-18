@@ -151,7 +151,7 @@ class RuleStrategy(BaseStrategy):
             return None
         if not (math.isfinite(stop) and stop > 0) or (direction == LONG and stop >= close) or (direction == SHORT and stop <= close):
             return None
-        if take_profit is not None and (not math.isfinite(take_profit) or (direction == LONG and take_profit <= close)
+        if take_profit is not None and (not math.isfinite(take_profit) or take_profit <= 0 or (direction == LONG and take_profit <= close)
                                         or (direction == SHORT and take_profit >= close)):
             return None
         self.setup_count += 1
