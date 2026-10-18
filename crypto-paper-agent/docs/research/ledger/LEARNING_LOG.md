@@ -14,16 +14,16 @@ to come from coins or months no final test has used, or from forward paper tradi
 - AVAXUSDT: 2021-01-01..2026-09-30
 - BCHUSDT: 2021-01-01..2026-09-30
 - BNBUSDT: 2021-01-01..2026-09-30
-- BTCUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30
+- BTCUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
 - DOGEUSDT: 2021-01-01..2026-09-30
 - DOTUSDT: 2021-01-01..2026-09-30
 - ETCUSDT: 2021-01-01..2026-09-30
-- ETHUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30
+- ETHUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
 - FILUSDT: 2021-01-01..2026-09-30
 - LINKUSDT: 2021-01-01..2026-09-30
 - LTCUSDT: 2021-01-01..2026-09-30
 - NEARUSDT: 2021-01-01..2026-09-30
-- SOLUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30
+- SOLUSDT: 2024-01-01..2025-12-31, 2026-01-01..2026-09-30, 2024-01-01..2026-09-30, 2026-10-01..2026-10-17
 - TRXUSDT: 2021-01-01..2026-09-30
 - UNIUSDT: 2021-01-01..2026-09-30
 - XLMUSDT: 2021-01-01..2026-09-30
@@ -151,6 +151,35 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 7 | validation | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | BTC/ETH/SOL/TRX | 2% | -42.17 | 66.1 | 27.67 | 20.1 |
 | 7 | final-whatif | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 2% | -92.33 | 95.07 | 7.21 | 18.6 |
 | 7 | final-whatif | V5 | swing_ema_pullback_1h | 2021-01-01..2026-09-30 | TRX | 10% | -99.9 | 99.99 | 4.02 | 21.4 |
+| 8 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 71.8 | 14.13 | 2.34 | 26.5 |
+| 8 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 317.92 | 31.35 | 2.28 | 26.6 |
+| 8 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | 1243.71 | 50.99 | 1.98 | 28.5 |
+| 8 | dev | C2 | blowoff_fade | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -9.94 | 14.04 | 0.44 | 32.4 |
+| 8 | dev | C2 | blowoff_fade | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -24.53 | 24.7 | 0.3 | 31.9 |
+| 8 | dev | C2 | blowoff_fade | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | -22.77 | 24.78 | 0.14 | 27.3 |
+| 8 | dev | C3 | flush_buy | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -1.61 | 7.16 | 0.13 | 42.9 |
+| 8 | dev | C3 | flush_buy | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -9.68 | 17.34 | 0.11 | 35.3 |
+| 8 | dev | C3 | flush_buy | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | -12.37 | 21.37 | 0.06 | 40.0 |
+| 8 | dev | C4 | swing_ema_pullback_long+candle_continuation+volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 34.38 | 7.36 | 13.74 | 39.2 |
+| 8 | dev | C4 | swing_ema_pullback_long+candle_continuation+volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 97.54 | 23.01 | 10.24 | 37.8 |
+| 8 | dev | W1 | swing_ema_pullback | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 80.06 | 13.58 | 4.59 | 26.5 |
+| 8 | dev | W1 | swing_ema_pullback | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 301.42 | 26.08 | 4.4 | 27.1 |
+| 8 | dev | W1 | swing_ema_pullback | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | 1137.99 | 50.13 | 3.89 | 27.1 |
+| 8 | dev | K3 | candle_continuation | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 6.98 | 2.31 | 0.13 | 61.9 |
+| 8 | dev | K3 | candle_continuation | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 14.16 | 5.62 | 0.13 | 60.0 |
+| 8 | dev | K3 | candle_continuation | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | 19.33 | 7.37 | 0.1 | 60.0 |
+| 8 | dev | C4 | swing_ema_pullback_long+candle_continuation+volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | 398.01 | 42.87 | 5.69 | 34.7 |
+| 8 | dev | T2 | volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 24.35 | 19.3 | 11.26 | 41.5 |
+| 8 | dev | T2 | volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -39.48 | 51.26 | 7.83 | 40.7 |
+| 8 | dev-whatif | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 228.55 | 30.0 | 1.87 | 25.6 |
+| 8 | dev-whatif | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | 1117.94 | 57.58 | 1.82 | 26.4 |
+| 8 | dev | T2 | volatility_breakout | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 10% | -69.01 | 71.42 | 3.62 | 37.5 |
+| 8 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 8 | final | C1 | swing_ema_pullback_long | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | -1.4 | 2.1 | 1.75 | 0.0 |
+| 8 | final | C1 | swing_ema_pullback_long | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | -1.69 | 2.32 | 1.75 | 0.0 |
+| 8 | final | W1 | swing_ema_pullback | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | -1.49 | 4.59 | 6.56 | 20.0 |
+| 8 | final | K3 | candle_continuation | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | 0.0 | 0.0 | 0.0 | None |
+| 8 | final | T2 | volatility_breakout | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 2% | -3.56 | 5.45 | 7.88 | 22.2 |
 
 ## Lessons
 
@@ -162,3 +191,6 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 6: Fast take-profits raise the win rate but lose money; 4h continuation patterns with a 2R target were small but positive on unseen coins with very few trades. x20 leverage cut BTC/ETH trades because liquidation sits about 5% away.
 - Round 7: Trading more often (5-10+ a week) made every method worse after fees. The video's London breakout, Heikin-Ashi scalp and zone break all lost on 5m crypto bars; W1 rules on 1h (about 20 trades a week on three coins) lost 72% on untouched TRX at 1% risk. Williams volatility breakout (T2) was the only frequent method positive in development (+24% at 2%), untested on fresh data.
 - Round 7: Check that every test coin has a leverage-bracket table before a final; TRX lacked one and its first final runs took zero trades (voided and rerun).
+- Round 8: Dropping W1's shorts changed little (4.05% vs 3.94% a month in development at 5%); GCR-style blow-off fades and flush buys on 4h lost at every risk and traded rarely; T2's fees took 60% of its gross profit.
+- Round 8: Frozen C1 (W1 long only, 5% risk) averaged +4.05% a month in development (drawdown 31%) but +0.5% a month on 2024-2026/09 (drawdown 24%; SOL lost) and -1.4% on the unused 2026-10-01..17 window (4 trades). Step 1 (10% a month) not reached. The median month is about 0% in every run: a few large trend months carry the result, so a higher monthly target needs more uncorrelated edges, not more risk on one.
+- Round 8: Binance Vision has no funding for the current month and the engine rejects funding older than 24h; forward runs take funding from the public /fapi/v1/fundingRate endpoint via the owner's computer (scripts/extend_vision_daily.py --funding).

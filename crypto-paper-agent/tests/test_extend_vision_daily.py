@@ -22,3 +22,12 @@ def test_daily_bars_need_all_24_hours():
     days = daily_from_hourly(hourly)
     assert list(days.index) == [pd.Timestamp("2026-10-01", tz="UTC")]
     assert days["volume"].iloc[0] == 72.0
+
+
+def test_funding_from_api_reads_saved_rest_rows(tmp_path):
+    import json
+    from scripts.extend_vision_daily import funding_from_api
+    path = tmp_path / "BTCUSDT_funding_api.json"
+    path.write_text(json.dumps({"rows": [{"fundingTime": 1790812800001, "fundingRate": "0.0001"}]}))
+    frame = funding_from_api(path)
+    assert frame["funding_rate"].iloc[0] == 0.0001 and frame.index[0].year == 2026

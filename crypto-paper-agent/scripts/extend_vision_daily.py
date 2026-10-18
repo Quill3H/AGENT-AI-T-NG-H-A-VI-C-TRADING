@@ -7,8 +7,9 @@
 The daily archives are fetched on the owner's computer with checksum checks (the cloud
 proxy blocks Binance). The base files are never modified: each output parquet is the base
 history plus the new days, so earlier rows stay byte-for-byte the same values. 1d bars for
-the new days are built from 1h bars. Funding is copied as is; Binance publishes it
-monthly, so new days carry no funding until the month's file exists. A manifest records
+the new days are built from 1h bars. Binance Vision publishes funding monthly, so funding
+for the new days comes from the public REST endpoint /fapi/v1/fundingRate (no keys), saved
+on the owner's computer as <SYMBOL>_funding_api.json and passed with --funding. A manifest records
 row counts, missing bars and sha256 of every file written.
 """
 import argparse
@@ -43,6 +44,15 @@ def extend(base, new):
     return pd.concat([base, new]).sort_index()
 
 
+def funding_from_api(path):
+    """Rows of a saved /fapi/v1/fundingRate response, in the base funding file's columns."""
+    rows = json.loads(Path(path).read_text(encoding="utf-8"))["rows"]
+    frame = pd.DataFrame({"funding_interval_hours": 8, "funding_rate": [float(r["fundingRate"]) for r in rows]},
+                         index=pd.to_datetime([int(r["fundingTime"]) for r in rows], unit="ms", utc=True))
+    frame.index.name = "timestamp"
+    return frame
+
+
 def daily_from_hourly(hourly):
     days = hourly.resample("1D").agg(AGG)
     counts = hourly["close"].resample("1D").count()
@@ -62,6 +72,7 @@ def main():
     parser.add_argument("--daily", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--symbol", action="append", required=True)
+    parser.add_argument("--funding", help="dir of <SYMBOL>_funding_api.json files")
     args = parser.parse_args()
     base_dir, daily_dir, out_dir = Path(args.base), Path(args.daily), Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +88,15 @@ def main():
             path = out_dir / f"{symbol}_perp_{tf}.parquet"
             frame.to_parquet(path)
             manifest["files"][path.name] = {**check(frame, tf), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
-        shutil.copy2(base_dir / f"{symbol}_perp_funding.parquet", out_dir / f"{symbol}_perp_funding.parquet")
+        funding = pd.read_parquet(base_dir / f"{symbol}_perp_funding.parquet")
+        if args.funding:
+            api = funding_from_api(Path(args.funding) / f"{symbol}_funding_api.json")
+            funding = extend(funding, api.astype({"funding_interval_hours": funding["funding_interval_hours"].dtype}))
+            shutil.copy2(Path(args.funding) / f"{symbol}_funding_api.json", out_dir / f"{symbol}_funding_api.json")
+        path = out_dir / f"{symbol}_perp_funding.parquet"
+        funding.to_parquet(path)
+        manifest["files"][path.name] = {"rows": len(funding), "end": str(funding.index[-1]), "missing_bars": 0,
+                                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
         source = daily_dir / f"{symbol}_{'_'.join(TIMEFRAMES)}_dailyfill_manifest.json"
         if source.is_file():
             shutil.copy2(source, out_dir / source.name)
