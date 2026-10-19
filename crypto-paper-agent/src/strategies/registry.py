@@ -9,6 +9,7 @@ from src.strategies.adaptive_suite import (
 )
 from src.strategies.breakout_retest import BreakoutRetestStrategy
 from src.strategies.cross_section import CrossSectionMomentum
+from src.strategies.pairs import PairsDistance
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
@@ -122,6 +123,9 @@ DIRECTIONAL_STRATEGIES = {
     "xsmom_3w_long": CrossSectionMomentum,
     "xsmom_3w_dual": CrossSectionMomentum,
     "xsmom_1w_ls": CrossSectionMomentum,
+    "pairs_ggr_12m": PairsDistance,
+    "pairs_fast_3m": PairsDistance,
+    "pairs_fast_3m_10": PairsDistance,
 }
 
 
