@@ -10,6 +10,7 @@ from src.strategies.adaptive_suite import (
 from src.strategies.breakout_retest import BreakoutRetestStrategy
 from src.strategies.cross_section import CrossSectionMomentum
 from src.strategies.pairs import PairsDistance
+from src.strategies.funding_signals import C1FundingFilter, FundingCarry
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
@@ -126,6 +127,9 @@ DIRECTIONAL_STRATEGIES = {
     "pairs_ggr_12m": PairsDistance,
     "pairs_fast_3m": PairsDistance,
     "pairs_fast_3m_10": PairsDistance,
+    "c1_funding_filter": C1FundingFilter,
+    "funding_carry_ls": FundingCarry,
+    "funding_crowded_short": FundingCarry,
 }
 
 

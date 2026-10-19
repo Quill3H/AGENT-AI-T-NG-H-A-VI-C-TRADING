@@ -1,0 +1,19 @@
+# funding_crowded_short.yaml - round-15 candidate F3: short the 3 highest 7-day mean funding when positive, weekly. Rules: src/strategies/funding_signals.py,
+# protocol: docs/research/2026-10-19-round15-funding.md. Fixed before any run, not fitted.
+strategy:
+  name: "FUNDING_CARRY"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  side: short
+  lookback_days: 7
+  top_n: 3
+  min_coins: 6
+  universe: [BTCUSDT, ETHUSDT, XRPUSDT, BNBUSDT, SOLUSDT, DOGEUSDT, TRXUSDT, ADAUSDT, LINKUSDT, AVAXUSDT]
