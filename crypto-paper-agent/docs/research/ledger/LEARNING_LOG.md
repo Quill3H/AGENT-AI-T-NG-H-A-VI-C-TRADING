@@ -269,6 +269,20 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 12 | validation | A2 | swing_ema_adaptive_exit | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 1.54 | 28.06 | 3.27 | 22.6 |
 | 12 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
 | 12 | validation | A2 | swing_ema_adaptive_exit | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 222.41 | 24.0 | 10.4 | 24.0 |
+| 13 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 174.45 | 21.31 | 8.12 | 24.4 |
+| 13 | dev | X2 | xsmom_3w_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 28.67 | 12.76 | 1.18 | 41.3 |
+| 13 | dev | X1 | xsmom_3w_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 11.5 | 3.04 | 2.28 | 40.3 |
+| 13 | dev | X2 | xsmom_3w_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 10.33 | 5.01 | 1.18 | 41.3 |
+| 13 | dev | X1 | xsmom_3w_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 23.98 | 8.29 | 2.28 | 40.1 |
+| 13 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 52.37 | 10.95 | 8.26 | 24.2 |
+| 13 | dev | X3 | xsmom_3w_dual | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 11.08 | 4.74 | 1.65 | 41.9 |
+| 13 | dev | X3 | xsmom_3w_dual | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 29.48 | 13.22 | 1.65 | 41.9 |
+| 13 | dev | X4 | xsmom_1w_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 5.9 | 3.88 | 2.93 | 46.3 |
+| 13 | dev | X4 | xsmom_1w_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 14.64 | 8.98 | 2.92 | 46.2 |
+| 13 | validation | X3 | xsmom_3w_dual | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 0.31 | 9.72 | 2.07 | 39.5 |
+| 13 | validation | X3 | xsmom_3w_dual | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -1.66 | 10.16 | 2.07 | 39.2 |
+| 13 | validation | X3 | xsmom_3w_dual | 2026-10-01..2026-10-17 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -1.87 | 2.4 | 3.5 | 12.5 |
+| 13 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 25.01 | 19.6 | 8.11 | 22.1 |
 
 ## Lessons
 
@@ -294,3 +308,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 12: Entry filters (taker order flow A4, volatility expansion A6) and tighter trailing stops (Chandelier A3) lower drawdown but cut C1's few big winners, so monthly return falls. KAMA trend (A1) is flat; the trend/range switch (A5) lost in 2022 (inferred: the Bollinger reversion leg, since C1 alone was positive that year). A2's edge on 2024-26 is thin and vanishes with costs x2 (+1.5%).
 - Round 12: Cross-check 2026-10-19 (two blind rebuilds from a written spec + one code audit, Claude subagents): the engine's C1/A2 numbers reproduce within ~1% when the 5% daily-loss breaker counts realized P&L only (as the engine does, src/risk/circuit_breakers.py); no look-ahead, fee or funding bug found. If the breaker counts mark-to-market losses, returns fall a lot (A2 5% dev +225% vs +488%; 2024-26/09 A2 +14.5% vs C1 +26.6%), so A2's edge over C1 depends on that definition.
 - Round 12: Audit facts: after 3 losses risk halves and recovers only after 3 wins in a row, so ~95% of '5%' trades run at 2.5% (and '2%' at 1%); one SOL trade (2023-10-15..11-17) made ~57% of A2 5% dev profit and the top 2 ~78%; the liquidation-buffer gate rejects ~19-20 SOL signals with stops >~19.5% away; max drawdown is on 15m closes (no intrabar lows), so it is understated.
+- Round 13: Cross-sectional momentum on the top-10 (rank by 1- or 3-week return, long top 3 / short bottom 3, weekly rebalance, 2 daily-ATR stop) wins 40-46% of trades with a 3-13% drawdown in 2021-23 but only +0.16 to +0.72% a month at 5%, a quarter of C1 on the same coins (+2.84%). Long-only lost in 2022; the long/short versions had no losing year.
+- Round 13: Frozen X3 (3-week dual momentum, 5%, 52cc289) made +0.3% on seen top-10 2024-01..2026-09 (DD 9.7%), -1.7% with costs x2 and -1.9% on 2026-10-01..17; C1 on the same top-10 made +25.0% (DD 19.6%). The academic weekly crypto momentum spread (Liu-Tsyvinski-Wu, hundreds of coins, no costs) does not survive 10 perpetuals with costs; relative strength alone is not an edge here.

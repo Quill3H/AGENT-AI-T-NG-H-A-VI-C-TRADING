@@ -86,3 +86,20 @@ The long/short X1 had no losing year and the smallest drawdown (8.3% at 5%); the
 X2 lost in 2022; the 1-week X4 was weakest (+0.38% a month).
 
 Frozen by this commit before any check.
+
+## Checks for X3 at 5% (frozen at 52cc289; all on seen data, context only; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % | Average month % | Losing months |
+|---|---|---|---|---|---|---|---|
+| **B: top-10 2024-01..2026-09** | 10,031 | +0.3 | 9.7 | 296 | 39.5 | +0.01 | 16 / 33 |
+| B, costs x2 | 9,834 | -1.7 | 10.2 | 296 | 39.2 | -0.05 | 16 / 33 |
+| Reference C1, B (same top-10, 5%) | 12,501 | +25.0 | 19.6 | 1,162 | 22.1 | +0.68 | 23 / 33 |
+| Top-10 2026-10-01..17 | 9,813 | -1.9 | 2.4 | 8 | 12.5 | | |
+
+X3 B by year: 2024 +2.0%, 2025 +1.4%, 2026 to September -3.0%.
+
+Verdict: step 1 (10% a month) NOT reached. Weekly relative-strength momentum on 10 large
+perpetuals is about break-even after costs in 2024-2026 and loses with doubled costs; the
+published weekly spread did not survive a 10-coin universe with fees, slippage and funding.
+It is smoother than C1 (drawdown 10% vs 20%) but earns almost nothing. C1 stays the main
+candidate; X3 is added to the weekly forward paper only as a low-drawdown comparison line.
