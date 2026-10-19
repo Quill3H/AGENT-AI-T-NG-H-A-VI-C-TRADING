@@ -53,6 +53,7 @@ def run(data_dir, strategy, start, end, overrides=(), cost_multiplier=1.0, initi
         symbol="BTCUSDT"):
     """Return the owner-facing summary, or the finished broker when summarize=False."""
     config = load_config(strategy, overrides)
+    config["runtime"] = {"data_dir": str(data_dir)}  # cross-sectional rules read peer bars from here
     if initial_capital is not None:
         config["account"]["initial_equity_usd"] = float(initial_capital)
     for fee in ("taker_pct", "maker_pct", "slippage_pct"):

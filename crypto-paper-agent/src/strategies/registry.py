@@ -8,6 +8,7 @@ from src.strategies.adaptive_suite import (
     SwingEmaVolExpansion,
 )
 from src.strategies.breakout_retest import BreakoutRetestStrategy
+from src.strategies.cross_section import CrossSectionMomentum
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
@@ -117,6 +118,10 @@ DIRECTIONAL_STRATEGIES = {
     "swing_ema_order_flow": SwingEmaOrderFlow,
     "regime_swing_bands": RegimeSwingBands,
     "swing_ema_vol_expansion": SwingEmaVolExpansion,
+    "xsmom_3w_ls": CrossSectionMomentum,
+    "xsmom_3w_long": CrossSectionMomentum,
+    "xsmom_3w_dual": CrossSectionMomentum,
+    "xsmom_1w_ls": CrossSectionMomentum,
 }
 
 
