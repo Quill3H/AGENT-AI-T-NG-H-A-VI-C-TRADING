@@ -72,3 +72,21 @@ but lost 3.6% in 2022; shorting only the most crowded longs (F3) lost money (-7.
 so in 2021-23 high funding on a coin did not predict that coin falling within a week.
 
 Frozen by this commit before any check.
+
+## Checks for F1 at 5% (frozen at b511588; all on seen data, context only; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % | Average month % | Losing months |
+|---|---|---|---|---|---|---|---|
+| **B: top-10 2024-01..2026-09** | 11,488 | +14.9 | 17.3 | 989 | 21.7 | +0.42 | 21 / 33 |
+| B, costs x2 | 10,146 | +1.5 | 23.7 | 1,003 | 19.3 | +0.04 | 24 / 33 |
+| Reference C1, B (same top-10, 5%) | 12,501 | +25.0 | 19.6 | 1,162 | 22.1 | +0.68 | 23 / 33 |
+| Top-10 2026-10-01..17 | 9,572 | -4.3 | 4.4 | 25 | 12.0 | | |
+
+F1 B by year: 2024 +17.2%, 2025 -2.4%, 2026 to September +0.4%.
+
+Verdict: step 1 NOT reached and F1 is worse than plain C1 on 2024-2026 (+14.9% vs +25.0%),
+as it was in development. Skipping trend entries while funding is crowded removes more
+winners than losers: in crypto uptrends funding stays high while price keeps rising. The
+BIS crash link may hold at the market level over months, but it does not help a 4h entry
+filter, and a weekly sort on funding (F2) or shorting crowded coins (F3) has no edge after
+costs here. Not added to forward paper.

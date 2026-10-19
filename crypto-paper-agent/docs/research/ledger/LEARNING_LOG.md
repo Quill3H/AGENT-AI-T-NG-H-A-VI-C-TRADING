@@ -295,6 +295,20 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 14 | validation | P1 | pairs_ggr_12m | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 8.6 | 3.66 | 0.24 | 50.0 |
 | 14 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 25.01 | 19.6 | 8.11 | 22.1 |
 | 14 | validation | P1 | pairs_ggr_12m | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 8.33 | 3.65 | 0.24 | 50.0 |
+| 15 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 174.45 | 21.31 | 8.12 | 24.4 |
+| 14 | whatif | P1 | pairs_ggr_12m | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 10% | 32.03 | 7.14 | 0.15 | 50.0 |
+| 15 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 52.37 | 10.95 | 8.26 | 24.2 |
+| 15 | dev | F1 | c1_funding_filter | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 44.36 | 9.89 | 6.91 | 23.8 |
+| 15 | dev | F2 | funding_carry_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 9.37 | 3.13 | 2.21 | 46.2 |
+| 15 | dev | F1 | c1_funding_filter | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 127.74 | 21.31 | 6.72 | 24.1 |
+| 15 | dev | F2 | funding_carry_ls | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 23.99 | 7.06 | 2.2 | 46.2 |
+| 14 | whatif | P1 | pairs_ggr_12m | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 10% | 16.79 | 8.48 | 0.24 | 50.0 |
+| 15 | dev | F3 | funding_crowded_short | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | -1.71 | 2.8 | 1.25 | 46.7 |
+| 15 | dev | F3 | funding_crowded_short | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -7.21 | 8.1 | 1.24 | 46.4 |
+| 15 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 25.01 | 19.6 | 8.11 | 22.1 |
+| 15 | validation | F1 | c1_funding_filter | 2026-10-01..2026-10-17 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -4.28 | 4.43 | 10.94 | 12.0 |
+| 15 | validation | F1 | c1_funding_filter | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 14.88 | 17.28 | 6.9 | 21.7 |
+| 15 | validation | F1 | c1_funding_filter | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 1.46 | 23.68 | 7.0 | 19.3 |
 
 ## Lessons
 
@@ -324,3 +338,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 13: Frozen X3 (3-week dual momentum, 5%, 52cc289) made +0.3% on seen top-10 2024-01..2026-09 (DD 9.7%), -1.7% with costs x2 and -1.9% on 2026-10-01..17; C1 on the same top-10 made +25.0% (DD 19.6%). The academic weekly crypto momentum spread (Liu-Tsyvinski-Wu, hundreds of coins, no costs) does not survive 10 perpetuals with costs; relative strength alone is not an edge here.
 - Round 14: Gatev-Goetzmann-Rouwenhorst distance pairs on the top-10 perpetuals (one sleeve per coin, net leg sign, 3 daily-ATR stop): the 12-month formation / 6-month trading original (P1) trades rarely (24 trades in 2021-23) and made +0.38% a month at 5% with a 3.8% drawdown; 3-month formation variants (P2/P3) trade 5-7x more and are flat after costs. Faster pairs churn into fees; slow pairs keep the edge.
 - Round 14: Frozen P1 (5%, 8b23f23) made +8.6% on seen top-10 2024-01..2026-09 with a 3.7% drawdown, positive each year (+3.9/+0.7/+3.8), +8.3% with costs x2, no trade in 2026-10-01..17. First method positive every seen year with a drawdown < 4%, but tiny and on 34 trades only; return/drawdown 2.3 vs C1 1.3. Market-neutral pairs are a diversifier, not a 10%-a-month engine.
+- Round 15: Funding as a crowding signal on the top-10 perpetuals (after BIS 'Crypto carry': high carry predicts crashes): blocking C1 longs while 7-day funding is above its 180-day 90th percentile (F1) cut ~220 trades and lowered return in 2021-23 (+2.31% vs +2.84%/mo at 5%) and on seen 2024-26/09 (+14.9% vs C1 +25.0%); a weekly long-lowest/short-highest funding sort (F2) made +0.6%/mo with a 2022 loss; shorting the most crowded coins (F3) lost. In uptrends funding stays high while price keeps rising; funding is not a usable 4h-weekly coin signal here.
+- Round 14: Owner what-if (card 'Thử 10%'): frozen P1 at 10% risk made +32.0% dev (DD 7.1%) and +16.8% on seen 2024-26/09 (DD 8.5%, 2025 -0.2%): return and drawdown both roughly double. Added to forward paper as a labelled what-if.
