@@ -46,3 +46,33 @@ BTC 2021-01..02 at 2% (inside this round's development window). No other data wa
 3. Otherwise the best return / max drawdown.
 The result also reports whether the pick beats C1 at the same risk. Steps of 10/20/30/50% a
 month are reported. The choice is frozen by commit before any check.
+
+## Development results (BTC/ETH/SOL 2021-01..2023-12; AUTHOR_REPORTED)
+
+| Run | Return % | Max DD % | Trades | Win % | Average month % | Median month % | Worst month % | Losing months / 36 | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| A1 risk 2% | -2.14 | 6.02 | 188 | 25.5 | -0.06 | -0.11 | -1.62 | 21 | -1.67 | -0.26 | -0.22 |
+| A1 risk 5% | -0.48 | 12.5 | 180 | 26.7 | -0.01 | -0.2 | -3.93 | 19 | -4.22 | -0.28 | 4.2 |
+| A2 risk 2% | 107.17 | 13.17 | 469 | 28.4 | 2.04 | 0.0 | -2.29 | 16 | 28.83 | 1.7 | 58.12 |
+| A2 risk 5% | 487.78 | 25.66 | 461 | 28.4 | 5.04 | 0.0 | -4.97 | 15 | 80.59 | 6.41 | 205.86 |
+| A3 risk 2% | 37.11 | 12.1 | 507 | 29.0 | 0.88 | 0.0 | -2.76 | 15 | 16.77 | 1.98 | 15.14 |
+| A3 risk 5% | 127.1 | 24.18 | 495 | 29.1 | 2.3 | 0.01 | -6.48 | 14 | 43.05 | 5.57 | 50.37 |
+| A4 risk 2% | 46.77 | 5.7 | 79 | 30.4 | 1.07 | 0.0 | -1.61 | 15 | 4.25 | 0.7 | 39.8 |
+| A4 risk 5% | 131.22 | 12.83 | 79 | 29.1 | 2.36 | 0.0 | -3.97 | 16 | 9.88 | 0.95 | 108.45 |
+| A5 risk 2% | 50.44 | 13.8 | 396 | 29.5 | 1.14 | -0.35 | -2.82 | 21 | 17.45 | -3.01 | 32.06 |
+| A5 risk 5% | 167.32 | 28.35 | 375 | 30.1 | 2.77 | -0.65 | -7.64 | 19 | 45.21 | -5.89 | 95.62 |
+| A6 risk 2% | 26.05 | 7.37 | 165 | 28.5 | 0.65 | 0.0 | -1.92 | 15 | 11.85 | 1.89 | 10.6 |
+| A6 risk 5% | 74.46 | 16.22 | 164 | 28.7 | 1.56 | 0.0 | -4.83 | 15 | 30.03 | 5.49 | 27.18 |
+| C1 risk 2% | 71.8 | 14.13 | 366 | 26.5 | 1.51 | -0.08 | -1.99 | 18 | 24.56 | 2.24 | 34.91 |
+| C1 risk 5% | 317.92 | 31.35 | 357 | 26.6 | 4.05 | -0.07 | -6.81 | 18 | 67.16 | 7.0 | 133.66 |
+
+**Selection: A2 at 5% risk** (C1 with the ADX-adaptive exit), rule level "full": no losing
+year, max drawdown 25.7%, average month +5.04% (C1 at 5%: +4.05%, drawdown 31.4%). Win rate
+28.4% (C1 26.6%), losing months 15 of 36 (C1 18). Step reached: none (10% not reached).
+
+Other findings: the KAMA trend (A1) is flat to slightly negative; the Chandelier stop (A3)
+and the volatility filter (A6) cut C1's big winners; the order-flow filter (A4) keeps only 79
+trades with the lowest drawdown (12.8% at 5%) but half C1's monthly return; the trend/range
+switch (A5) lost in 2022 because the Bollinger reversion leg lost.
+
+Frozen by this commit before any check.
