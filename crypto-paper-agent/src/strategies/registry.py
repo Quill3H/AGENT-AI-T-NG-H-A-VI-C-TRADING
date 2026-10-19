@@ -1,4 +1,12 @@
 """Name -> directional strategy class, shared by the CLI and research scripts."""
+from src.strategies.adaptive_suite import (
+    KamaTrend,
+    RegimeSwingBands,
+    SwingEmaAdaptiveExit,
+    SwingEmaChandelier,
+    SwingEmaOrderFlow,
+    SwingEmaVolExpansion,
+)
 from src.strategies.breakout_retest import BreakoutRetestStrategy
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
@@ -103,6 +111,12 @@ DIRECTIONAL_STRATEGIES = {
     "gooner_breakout": GoonerBreakout,
     "cheds_ema_pullback": ChedsEmaPullback,
     "cheds_ema_pullback_thirds": ChedsEmaPullback,
+    "kama_trend": KamaTrend,
+    "swing_ema_adaptive_exit": SwingEmaAdaptiveExit,
+    "swing_ema_chandelier": SwingEmaChandelier,
+    "swing_ema_order_flow": SwingEmaOrderFlow,
+    "regime_swing_bands": RegimeSwingBands,
+    "swing_ema_vol_expansion": SwingEmaVolExpansion,
 }
 
 

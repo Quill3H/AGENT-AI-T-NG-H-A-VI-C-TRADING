@@ -1,0 +1,14 @@
+# kama_trend.yaml - round-12 candidate A1: Kaufman adaptive moving average trend. Rules: src/strategies/adaptive_suite.py,
+# protocol: docs/research/2026-10-19-round12-adaptive.md. Fixed before any run, not fitted.
+strategy:
+  name: "KAMA_TREND"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false
