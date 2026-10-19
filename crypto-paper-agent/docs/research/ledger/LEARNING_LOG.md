@@ -250,6 +250,25 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 11 | validation | S1 | swing_ema_sharks | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -9.97 | 30.24 | 1.4 | 22.0 |
 | 11 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
 | 11 | validation | S1 | swing_ema_sharks | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 200.18 | 16.05 | 4.3 | 24.6 |
+| 12 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 317.92 | 31.35 | 2.28 | 26.6 |
+| 12 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 71.8 | 14.13 | 2.34 | 26.5 |
+| 12 | dev | A1 | kama_trend | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -2.14 | 6.02 | 1.2 | 25.5 |
+| 12 | dev | A1 | kama_trend | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -0.48 | 12.5 | 1.15 | 26.7 |
+| 12 | dev | A2 | swing_ema_adaptive_exit | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 107.17 | 13.17 | 3.0 | 28.4 |
+| 12 | dev | A2 | swing_ema_adaptive_exit | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 487.78 | 25.66 | 2.95 | 28.4 |
+| 12 | dev | A3 | swing_ema_chandelier | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 37.11 | 12.1 | 3.24 | 29.0 |
+| 12 | dev | A3 | swing_ema_chandelier | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 127.1 | 24.18 | 3.17 | 29.1 |
+| 12 | dev | A4 | swing_ema_order_flow | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 46.77 | 5.7 | 0.51 | 30.4 |
+| 12 | dev | A4 | swing_ema_order_flow | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 131.22 | 12.83 | 0.51 | 29.1 |
+| 12 | dev | A5 | regime_swing_bands | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 50.44 | 13.8 | 2.53 | 29.5 |
+| 12 | dev | A5 | regime_swing_bands | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 167.32 | 28.35 | 2.4 | 30.1 |
+| 12 | dev | A6 | swing_ema_vol_expansion | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 26.05 | 7.37 | 1.06 | 28.5 |
+| 12 | dev | A6 | swing_ema_vol_expansion | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 74.46 | 16.22 | 1.05 | 28.7 |
+| 12 | validation | A2 | swing_ema_adaptive_exit | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | -1.36 | 2.0 | 1.31 | 0.0 |
+| 12 | validation | A2 | swing_ema_adaptive_exit | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 18.6 | 21.98 | 3.27 | 23.9 |
+| 12 | validation | A2 | swing_ema_adaptive_exit | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 1.54 | 28.06 | 3.27 | 22.6 |
+| 12 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 12 | validation | A2 | swing_ema_adaptive_exit | 2021-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 222.41 | 24.0 | 10.4 | 24.0 |
 
 ## Lessons
 
@@ -271,3 +290,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 11: Scale-outs (half at 1R, or thirds at 1R/2R) lift the swing EMA win rate from ~27% to 37-39% but cut the monthly return by a quarter to a half in 2021-23: C1's profit lives in a few large trends, and selling early removes them. Win rate and profit pull in opposite directions for trend-following.
 - Round 11: The IncomeSharks daily dual-Supertrend + OBV filter (S1) improved C1 in 2021-23 (+4.38%/mo vs +4.05% at 5%, DD 26% vs 31%, 10 vs 18 losing months) but failed on seen 2024-01..2026-09: -3.3% at 5% vs C1 +17.8%. A filter that helps in one era can remove the next era's winners; keep C1 unfiltered as the main candidate.
 - Round 11: Nebraskangooner-style 30-bar volume breakout with a 2R target (G1) and Supertrend+OBV entries (S2) win 41-42% of trades with small edges; the Cheds 8 EMA pullback (K1) is profitable but lost in 2022. None beats C1 on monthly return. The 'Reference C1 B' check row is recorded twice (once per check run); it is the same run.
+- Round 12: An ADX-adaptive exit on C1 (A2: exit under EMA20 while ADX(14) <= 25, else EMA50) is the first change that improved C1 both in 2021-23 (+5.04%/mo vs +4.05% at 5%, DD 25.7% vs 31.4%) and on seen 2024-01..2026-09 (+18.6% vs +17.8%, DD 22.0% vs 24.3%, 13 vs 17 losing months). Cutting losers faster in weak trends while letting strong trends run adapts better than entry filters.
+- Round 12: Entry filters (taker order flow A4, volatility expansion A6) and tighter trailing stops (Chandelier A3) lower drawdown but cut C1's few big winners, so monthly return falls. KAMA trend (A1) is flat; the trend/range switch (A5) lost in 2022 (inferred: the Bollinger reversion leg, since C1 alone was positive that year). A2's edge on 2024-26 is thin and vanishes with costs x2 (+1.5%).

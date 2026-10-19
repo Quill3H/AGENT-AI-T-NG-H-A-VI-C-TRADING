@@ -73,6 +73,24 @@ year, max drawdown 25.7%, average month +5.04% (C1 at 5%: +4.05%, drawdown 31.4%
 Other findings: the KAMA trend (A1) is flat to slightly negative; the Chandelier stop (A3)
 and the volatility filter (A6) cut C1's big winners; the order-flow filter (A4) keeps only 79
 trades with the lowest drawdown (12.8% at 5%) but half C1's monthly return; the trend/range
-switch (A5) lost in 2022 because the Bollinger reversion leg lost.
+switch (A5) lost in 2022, inferred to come from the Bollinger reversion leg since C1 alone was positive that year.
 
 Frozen by this commit before any check.
+
+## Checks for A2 at 5% (frozen at 33296b0; all on seen data, context only; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % | Average month % | Losing months |
+|---|---|---|---|---|---|---|---|
+| **B: BTC/ETH/SOL 2024-01..2026-09** | 11,860 | +18.6 | 22.0 | 468 | 23.9 | +0.52 | 13 / 33 |
+| B, costs x2 | 10,154 | +1.5 | 28.1 | 469 | 22.6 | +0.05 | 16 / 33 |
+| Reference C1, B | 11,778 | +17.8 | 24.3 | 375 | 22.9 | +0.50 | 17 / 33 |
+| BTC/ETH/SOL 2026-10-01..17 | 9,864 | -1.4 | 2.0 | 3 | 0 | | |
+| Top-10 2021-01..2026-09 | 32,241 | +222.4 | 24.0 | 3,117 | 24.0 | +1.71 | 41 / 69 |
+
+B by year: 2024 +16.5%, 2025 +5.6%, 2026 to September -3.6%. Top-10 by year: 2021 +95.8%,
+2022 -6.0%, 2023 +72.4%, 2024 +11.2%, 2025 -1.9%, 2026 -6.8%.
+
+Verdict: step 1 (10% a month) NOT reached. A2 is the first variant that is at least as good
+as C1 on both the development years and 2024-2026 (more return, less drawdown, fewer losing
+months), but the 2024-2026 gain is small (+0.5% a month) and nearly disappears with doubled
+costs. A2 joins the weekly forward paper next to C1.
