@@ -283,6 +283,18 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 13 | validation | X3 | xsmom_3w_dual | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -1.66 | 10.16 | 2.07 | 39.2 |
 | 13 | validation | X3 | xsmom_3w_dual | 2026-10-01..2026-10-17 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -1.87 | 2.4 | 3.5 | 12.5 |
 | 13 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 25.01 | 19.6 | 8.11 | 22.1 |
+| 14 | dev | P2 | pairs_fast_3m | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | -1.03 | 2.56 | 0.81 | 46.0 |
+| 14 | dev | P1 | pairs_ggr_12m | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 14.73 | 3.77 | 0.15 | 50.0 |
+| 14 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 174.45 | 21.31 | 8.12 | 24.4 |
+| 14 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 52.37 | 10.95 | 8.26 | 24.2 |
+| 14 | dev | P1 | pairs_ggr_12m | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 5.59 | 1.55 | 0.15 | 50.0 |
+| 14 | dev | P2 | pairs_fast_3m | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | -0.4 | 1.03 | 0.81 | 46.0 |
+| 14 | dev | P3 | pairs_fast_3m_10 | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 2% | 0.59 | 2.1 | 1.1 | 51.7 |
+| 14 | dev | P3 | pairs_fast_3m_10 | 2021-01-01..2023-12-31 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 1.53 | 5.22 | 1.1 | 51.7 |
+| 14 | validation | P1 | pairs_ggr_12m | 2026-10-01..2026-10-17 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 0.0 | 0.0 | 0.0 | None |
+| 14 | validation | P1 | pairs_ggr_12m | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 8.6 | 3.66 | 0.24 | 50.0 |
+| 14 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 25.01 | 19.6 | 8.11 | 22.1 |
+| 14 | validation | P1 | pairs_ggr_12m | 2024-01-01..2026-09-30 | BTC/ETH/XRP/BNB/SOL/DOGE/TRX/ADA/LINK/AVAX | 5% | 8.33 | 3.65 | 0.24 | 50.0 |
 
 ## Lessons
 
@@ -310,3 +322,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 12: Audit facts: after 3 losses risk halves and recovers only after 3 wins in a row, so ~95% of '5%' trades run at 2.5% (and '2%' at 1%); one SOL trade (2023-10-15..11-17) made ~57% of A2 5% dev profit and the top 2 ~78%; the liquidation-buffer gate rejects ~19-20 SOL signals with stops >~19.5% away; max drawdown is on 15m closes (no intrabar lows), so it is understated.
 - Round 13: Cross-sectional momentum on the top-10 (rank by 1- or 3-week return, long top 3 / short bottom 3, weekly rebalance, 2 daily-ATR stop) wins 40-46% of trades with a 3-13% drawdown in 2021-23 but only +0.16 to +0.72% a month at 5%, a quarter of C1 on the same coins (+2.84%). Long-only lost in 2022; the long/short versions had no losing year.
 - Round 13: Frozen X3 (3-week dual momentum, 5%, 52cc289) made +0.3% on seen top-10 2024-01..2026-09 (DD 9.7%), -1.7% with costs x2 and -1.9% on 2026-10-01..17; C1 on the same top-10 made +25.0% (DD 19.6%). The academic weekly crypto momentum spread (Liu-Tsyvinski-Wu, hundreds of coins, no costs) does not survive 10 perpetuals with costs; relative strength alone is not an edge here.
+- Round 14: Gatev-Goetzmann-Rouwenhorst distance pairs on the top-10 perpetuals (one sleeve per coin, net leg sign, 3 daily-ATR stop): the 12-month formation / 6-month trading original (P1) trades rarely (24 trades in 2021-23) and made +0.38% a month at 5% with a 3.8% drawdown; 3-month formation variants (P2/P3) trade 5-7x more and are flat after costs. Faster pairs churn into fees; slow pairs keep the edge.
+- Round 14: Frozen P1 (5%, 8b23f23) made +8.6% on seen top-10 2024-01..2026-09 with a 3.7% drawdown, positive each year (+3.9/+0.7/+3.8), +8.3% with costs x2, no trade in 2026-10-01..17. First method positive every seen year with a drawdown < 4%, but tiny and on 34 trades only; return/drawdown 2.3 vs C1 1.3. Market-neutral pairs are a diversifier, not a 10%-a-month engine.
