@@ -48,3 +48,27 @@ unit tests on synthetic data.
 3. Otherwise the best return / max drawdown.
 The result also reports whether the pick beats C1 on the same top-10 at the same risk. The
 choice is frozen by commit before any check.
+
+## Development results (top-10 2021-01..2023-12; AUTHOR_REPORTED)
+
+| Run | Return % | Max DD % | Trades | Win % | Average month % | Median month % | Worst month % | Losing months / 36 | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1 risk 2% | 52.37 | 10.95 | 1291 | 24.2 | 1.18 | -0.35 | -1.88 | 22 | 37.47 | -3.18 | 14.48 |
+| C1 risk 5% | 174.45 | 21.31 | 1269 | 24.4 | 2.84 | -0.74 | -4.31 | 22 | 95.24 | -6.06 | 49.64 |
+| F1 risk 2% | 44.36 | 9.89 | 1080 | 23.8 | 1.03 | -0.3 | -1.82 | 21 | 29.05 | -3.09 | 15.43 |
+| F1 risk 5% | 127.74 | 21.31 | 1050 | 24.1 | 2.31 | -0.69 | -4.7 | 22 | 72.37 | -6.48 | 41.28 |
+| F2 risk 2% | 9.37 | 3.13 | 346 | 46.2 | 0.25 | 0.03 | -0.78 | 17 | 5.89 | -1.28 | 4.62 |
+| F2 risk 5% | 23.99 | 7.06 | 344 | 46.2 | 0.6 | -0.11 | -2.22 | 20 | 16.98 | -3.6 | 9.95 |
+| F3 risk 2% | -1.71 | 2.8 | 195 | 46.7 | -0.05 | -0.05 | -1.02 | 18 | -0.72 | 0.74 | -1.72 |
+| F3 risk 5% | -7.21 | 8.1 | 194 | 46.4 | -0.21 | -0.25 | -2.52 | 21 | -1.91 | 1.66 | -6.95 |
+
+**Selection: F1 at 5% risk** (C1 with the crowded-funding filter), rule level "drawdown only":
+every variant lost in at least one development year. Average month +2.31%, max drawdown
+21.3%, 1,050 trades, win rate 24.1%. It does **not** beat C1 at the same risk (+2.84%): the
+filter removed about 220 C1 trades and more winners than losers. Step reached: none.
+
+Other findings: the weekly funding sort (F2) made +0.6% a month at 5% with a 7.1% drawdown
+but lost 3.6% in 2022; shorting only the most crowded longs (F3) lost money (-7.2% at 5%),
+so in 2021-23 high funding on a coin did not predict that coin falling within a week.
+
+Frozen by this commit before any check.
