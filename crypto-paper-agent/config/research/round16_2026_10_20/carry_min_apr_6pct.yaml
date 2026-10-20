@@ -1,0 +1,4 @@
+# Round 16 (docs/research/2026-10-20-round16-carry-portfolio.md): open a spot/perp funding basket
+# when funding annualises to at least 6% (round 2 used 15%). Fixed before any run.
+funding_arbitrage:
+  min_apr: 0.06
