@@ -11,6 +11,7 @@ from src.strategies.breakout_retest import BreakoutRetestStrategy
 from src.strategies.cross_section import CrossSectionMomentum
 from src.strategies.pairs import PairsDistance
 from src.strategies.funding_signals import C1FundingFilter, FundingCarry
+from src.strategies.reddit_plan import RedditPlan
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
@@ -130,6 +131,9 @@ DIRECTIONAL_STRATEGIES = {
     "c1_funding_filter": C1FundingFilter,
     "funding_carry_ls": FundingCarry,
     "funding_crowded_short": FundingCarry,
+    "reddit_premarket": RedditPlan,
+    "reddit_open_reversal": RedditPlan,
+    "reddit_plan_both": RedditPlan,
 }
 
 
