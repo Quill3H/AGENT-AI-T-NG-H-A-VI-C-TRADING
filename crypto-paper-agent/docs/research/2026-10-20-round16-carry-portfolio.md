@@ -51,3 +51,24 @@ threshold (above) were known when the 6% and 10% thresholds were chosen.
 3. Otherwise the best return / max drawdown.
 The result is compared with the 5.9% a year deposit (about 0.48% a month). The choice is frozen
 by commit before any check.
+
+## Development results (2021-01..2023-12; AUTHOR_REPORTED)
+
+| Run | End equity $ | Return % | Max DD % | Trades | Win % (rule sleeves) | Average month % | Median month % | Worst month % | Losing months / 36 | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| K1 | 11,447 | 14.47 | 3.38 | 253 |  | 0.38 | -0.01 | -0.48 | 19 | 16.99 | -2.73 | 0.6 |
+| K2 | 11,563 | 15.63 | 3.24 | 215 |  | 0.4 | 0.01 | -0.37 | 17 | 17.16 | -2.15 | 0.86 |
+| M2 risk 2% | 12,414 | 24.14 | 4.57 | 1568 | 24.7 | 0.6 | -0.08 | -0.78 | 22 | 18.15 | -2.2 | 7.43 |
+| M2 risk 5% | 16,788 | 67.88 | 11.11 | 1546 | 24.9 | 1.45 | -0.47 | -2.17 | 23 | 37.41 | -3.79 | 26.99 |
+
+**Selection: M2 at 5% risk** (one third each carry K1, C1 trend, P1 pairs), rule level
+"drawdown only": every candidate lost a little in 2022. Average month +1.45% (about 19% a year,
+against the 5.9% deposit), max drawdown 11.1%, 2022 -3.8%. Step reached: none.
+
+Other findings: carry at the bank-rate (K1, 6%) or 10% (K2) threshold made +14-16% over three
+years (about 5% a year), almost all in 2021, with a 3.3% drawdown and a small 2022 loss; K2's
+higher threshold was slightly better. Carry alone is roughly a bank deposit. Blending it with
+trend and pairs cut C1's drawdown from 21.3% (C1 alone on the top-10 at 5%, round 13) to
+11.1% while keeping about half of C1's monthly return.
+
+Frozen by this commit before any check.
