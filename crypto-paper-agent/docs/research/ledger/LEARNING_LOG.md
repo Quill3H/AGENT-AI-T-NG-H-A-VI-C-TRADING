@@ -315,6 +315,18 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 16 | dev | M2 | carry+swing_ema_pullback_long+pairs_ggr_12m | 2021-01-01..2023-12-31 | ADA/AVAX/BNB/BTC/DOGE/ETH/LINK/SOL/TRX/XRP | 5% | 67.88 | 11.11 | 9.89 | 24.9 |
 | 16 | validation | M2 | carry+swing_ema_pullback_long+pairs_ggr_12m | 2024-01-01..2026-09-30 | ADA/AVAX/BNB/BTC/DOGE/ETH/LINK/SOL/TRX/XRP | 5% | 5.15 | 10.92 | 10.0 | 20.8 |
 | 16 | validation | M2 | carry+swing_ema_pullback_long+pairs_ggr_12m | 2024-01-01..2026-09-30 | ADA/AVAX/BNB/BTC/DOGE/ETH/LINK/SOL/TRX/XRP | 5% | 12.15 | 8.27 | 9.91 | 22.9 |
+| 17 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 71.8 | 14.13 | 2.34 | 26.5 |
+| 17 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 317.92 | 31.35 | 2.28 | 26.6 |
+| 17 | dev | R1 | reddit_premarket | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -22.9 | 37.41 | 2.62 | 39.0 |
+| 17 | dev | R2 | reddit_open_reversal | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -10.56 | 12.53 | 0.17 | 33.3 |
+| 17 | dev | R1 | reddit_premarket | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -50.49 | 54.71 | 7.65 | 35.2 |
+| 17 | dev | R2 | reddit_open_reversal | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -12.48 | 23.42 | 2.54 | 37.5 |
+| 17 | dev | R3 | reddit_plan_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -68.27 | 69.59 | 10.48 | 35.3 |
+| 17 | dev | R3 | reddit_plan_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | -34.25 | 45.56 | 2.66 | 38.5 |
+| 17 | validation | R2 | reddit_open_reversal | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | 0.0 | 0.0 | 0.0 | None |
+| 17 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 17 | validation | R2 | reddit_open_reversal | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -0.17 | 3.99 | 0.01 | 50.0 |
+| 17 | validation | R2 | reddit_open_reversal | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -2.2 | 4.04 | 0.02 | 33.3 |
 
 ## Lessons
 
@@ -347,3 +359,4 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 15: Funding as a crowding signal on the top-10 perpetuals (after BIS 'Crypto carry': high carry predicts crashes): blocking C1 longs while 7-day funding is above its 180-day 90th percentile (F1) cut ~220 trades and lowered return in 2021-23 (+2.31% vs +2.84%/mo at 5%) and on seen 2024-26/09 (+14.9% vs C1 +25.0%); a weekly long-lowest/short-highest funding sort (F2) made +0.6%/mo with a 2022 loss; shorting the most crowded coins (F3) lost. In uptrends funding stays high while price keeps rising; funding is not a usable 4h-weekly coin signal here.
 - Round 14: Owner what-if (card 'Thử 10%'): frozen P1 at 10% risk made +32.0% dev (DD 7.1%) and +16.8% on seen 2024-26/09 (DD 8.5%, 2025 -0.2%): return and drawdown both roughly double. Added to forward paper as a labelled what-if.
 - Round 16: Funding carry at 6%/10% APR thresholds made ~5%/yr on BTC/ETH/SOL 2021-23, almost all in 2021; M2 (1/3 carry, 1/3 C1, 1/3 P1 @5%) dev +1.45%/mo DD 11% but seen 2024-26/09 +12.2% (~4.2%/yr, below the 5.9% bank deposit), costs x2 +5.2%. Blending cut drawdown, not enough return. Not added to forward.
+- Round 17: r/Daytrading US-open plan (pre-market range breakout 07:00-07:30 ET, 09:30 opening-move reversal candle, 2R, two trades a day) on BTC/ETH/SOL 5m: every variant lost in dev 2021-23 (R3 full plan -68% @2%, win 35%); pick R2 @5% traded 2 times on 2024-26/09 (-0.2%). Session-clock 5m rules keep failing after costs on crypto perps. Lessons proposed: no stop widening invariant, per-trade journal.

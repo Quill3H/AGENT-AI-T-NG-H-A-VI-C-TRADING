@@ -98,3 +98,26 @@ one full stop plus costs can reach the 5% daily-loss lock and the losing-streak 
 but the exact split was not traced. The pre-market breakout (R1) is the weakest part.
 
 Frozen by this commit before any check.
+
+## Checks after the freeze (seen data; context only; AUTHOR_REPORTED)
+
+| Run | Return % | Max DD % | Trades | Win % | Average month % | Worst month % | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|---|---|
+| R2 risk 5%, 2024-01..2026-09 | -0.17 | 3.99 | 2 | 50.0 | -0.01 | -0.61 | -0.17 | 0.0 | 0.0 |
+| R2 risk 5%, costs x2 | -2.2 | 4.04 | 3 | 33.3 | -0.07 | -1.86 | -0.35 | -1.86 | 0.0 |
+| R2 risk 5%, 2026-10-01..17 | 0.0 | 0.0 | 0 | | 0.0 | 0.0 | | | 0.0 |
+| Reference C1 risk 5%, 2024-01..2026-09 | 17.78 | 24.27 | 375 | 22.9 | 0.5 | -6.91 | 18.36 | 5.52 | -5.7 |
+
+**Verdict: fail.** The pick trades almost never at 5% risk (2 trades in 33 months) and loses;
+at 2% risk, where it does trade, it lost 12.5% in development. The post's plan does not carry
+over to crypto perpetuals after costs with these rules. Not added to forward paper.
+
+## Risk and behaviour lessons from the post (for the bot's rules)
+Already enforced by the engine: a stop on every order, a daily-loss lock, an order-size cap
+and per-strategy trade caps. Proposed for owner review, not implemented in this round:
+1. A stop may only move toward profit, never be widened (no such invariant was found in
+   src/risk or src/execution).
+2. A per-trade journal record (signal bar, entry, stop, target, exit reason) for every paper
+   trade, so forward weeks can be reviewed trade by trade.
+3. Skip a trade when the stop is too close for the costs (this round's 0.3% rule): with 5m
+   stops, costs took most of the edge.
