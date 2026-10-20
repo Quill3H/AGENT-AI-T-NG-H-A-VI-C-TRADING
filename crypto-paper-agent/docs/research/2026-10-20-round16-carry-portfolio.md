@@ -72,3 +72,18 @@ trend and pairs cut C1's drawdown from 21.3% (C1 alone on the top-10 at 5%, roun
 11.1% while keeping about half of C1's monthly return.
 
 Frozen by this commit before any check.
+
+## Checks after the freeze (2024-01..2026-09, seen data; context only; AUTHOR_REPORTED)
+
+| Run | Return % | Max DD % | Trades | Win % (rule sleeves) | Average month % | Median month % | Worst month % | Losing months / 33 | 2024 | 2025 | 2026 (to 09) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M2 risk 5% | 12.15 | 8.27 | 1420 | 22.9 | 0.35 | -0.15 | -1.59 | 21 | 12.9 | -0.18 | -0.48 |
+| M2 risk 5%, costs x2 | 5.15 | 10.92 | 1433 | 20.8 | 0.15 | -0.49 | -1.71 | 23 | 11.12 | -2.9 | -2.54 |
+
+**Verdict: does not beat the bank.** On 2024-01..2026-09 M2 made +12.2% in 33 months, about
+4.2% a year, below the 5.9% deposit, with an 8.3% drawdown; all of it came in 2024 and both
+2025 and 2026 lost a little. With double costs it made +5.2% (about 1.9% a year). The blend
+does what blends do (C1 alone on the top-10 had a 19.6% drawdown on this period, M2 8.3%), but
+the return per year fell with it. No October check (spot data ends 2026-09-30). M2 is not
+added to forward paper: its trend and pairs sleeves (C1, P1) are already there, and the carry
+sleeve needs spot data the forward dir does not hold.
