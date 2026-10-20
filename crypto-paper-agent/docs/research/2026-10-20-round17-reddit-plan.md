@@ -73,3 +73,28 @@ on the same coins, and its results were known when this round was set up.
 3. Otherwise the best return / max drawdown.
 The result reports whether the pick beats C1 at the same risk and the 5.9% a year bank
 deposit (about 0.48% a month). The choice is frozen by commit before any check.
+
+## Development results (BTC/ETH/SOL 2021-01..2023-12; AUTHOR_REPORTED)
+
+| Run | Return % | Max DD % | Trades | Win % | Average month % | Median month % | Worst month % | Losing months / 36 | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1 risk 2% | 71.8 | 14.13 | 366 | 26.5 | 1.51 | -0.08 | -1.99 | 18 | 24.56 | 2.24 | 34.91 |
+| C1 risk 5% | 317.92 | 31.35 | 357 | 26.6 | 4.05 | -0.07 | -6.81 | 18 | 67.16 | 7.0 | 133.66 |
+| R1 risk 2% | -50.49 | 54.71 | 1195 | 35.2 | -1.93 | -1.73 | -10.31 | 26 | -31.81 | -25.08 | -3.08 |
+| R1 risk 5% | -22.9 | 37.41 | 410 | 39.0 | -0.72 | -0.42 | -11.77 | 19 | -12.14 | -14.75 | 2.93 |
+| R2 risk 2% | -12.48 | 23.42 | 397 | 37.5 | -0.37 | -0.29 | -4.09 | 21 | 3.39 | -10.1 | -5.83 |
+| R2 risk 5% | -10.56 | 12.53 | 27 | 33.3 | -0.31 | 0.0 | -5.36 | 9 | -2.62 | -7.48 | -0.73 |
+| R3 risk 2% | -68.27 | 69.59 | 1638 | 35.3 | -3.14 | -2.86 | -11.46 | 26 | -40.24 | -41.24 | -9.64 |
+| R3 risk 5% | -34.25 | 45.56 | 416 | 38.5 | -1.16 | -0.8 | -11.7 | 20 | -8.46 | -29.16 | 1.41 |
+
+**Selection: R2 at 5% risk** (rule level "drawdown only"; it has the highest average month
+among runs with drawdown <= 35%, and it is still a loss: -0.31% a month). Every R1-R3 run lost
+money in development; none beats C1 or the bank deposit. Step reached: none.
+
+Other findings: the post's full plan (R3) lost 68% at 2% risk with 1,638 trades: with a 2R
+target the 35-39% win rate is just below break-even before costs, and costs on tight 5m stops
+push it well under. At 5% risk far fewer signals became trades (27 for R2 against 397 at 2%);
+one full stop plus costs can reach the 5% daily-loss lock and the losing-streak rule cuts size,
+but the exact split was not traced. The pre-market breakout (R1) is the weakest part.
+
+Frozen by this commit before any check.
