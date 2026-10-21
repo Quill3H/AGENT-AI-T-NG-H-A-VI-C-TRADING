@@ -422,6 +422,14 @@ class PaperBroker:
             and open_time - last_sym_open > duration + self.max_data_gap
         )
 
+        # 5b. Owner rule 2026-10-21: a stop is never widened, whoever changed it.
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            first = pos.initial_stop_loss_price
+            if first is not None and (pos.stop_loss_price < first if pos.direction == OrderDirection.LONG
+                                      else pos.stop_loss_price > first):
+                raise ValueError(f"STOP_WIDENED: {symbol} stop {pos.stop_loss_price} is looser than the entry stop {first}")
+
         # 6. Kiểm tra bỏ sót mốc Funding Settlement khi đang có vị thế mở (E1, H3)
         if last_sym_open is not None and symbol in self.positions and not data_gap:
             t_cur = last_sym_open.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
@@ -1050,7 +1058,8 @@ class PaperBroker:
             return_pct=return_pct,
             exit_reason=exit_reason,
             intrabar_estimated=intrabar_estimated,
-            metadata=dict(position.metadata) if hasattr(position, "metadata") and position.metadata else {},
+            metadata={**(dict(position.metadata) if getattr(position, "metadata", None) else {}),
+                      "stop_at_exit": position.stop_loss_price},
             initial_stop_loss_price=getattr(position, "initial_stop_loss_price", position.stop_loss_price),
             conviction_tier=getattr(position, "conviction_tier", "normal"),
             estimated_liquidation_price=getattr(

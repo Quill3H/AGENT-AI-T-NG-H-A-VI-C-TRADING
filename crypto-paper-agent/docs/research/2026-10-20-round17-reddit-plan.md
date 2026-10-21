@@ -115,9 +115,15 @@ over to crypto perpetuals after costs with these rules. Not added to forward pap
 ## Risk and behaviour lessons from the post (for the bot's rules)
 Already enforced by the engine: a stop on every order, a daily-loss lock, an order-size cap
 and per-strategy trade caps. Proposed for owner review, not implemented in this round:
-1. A stop may only move toward profit, never be widened (no such invariant was found in
-   src/risk or src/execution).
+1. A stop may only move toward profit, never be widened. (Correction 2026-10-21: the round-17
+   search missed it; `PaperBroker.update_stop_loss` already refused a wider stop. The broker now
+   also stops the run with STOP_WIDENED if a position's stop is ever looser than its entry stop.)
 2. A per-trade journal record (signal bar, entry, stop, target, exit reason) for every paper
    trade, so forward weeks can be reviewed trade by trade.
 3. Skip a trade when the stop is too close for the costs (this round's 0.3% rule): with 5m
    stops, costs took most of the edge.
+
+**Owner decision 2026-10-21 ("Tôi đồng ý").** Rules 1 and 2 are adopted: the broker invariant
+above, and `src/report/trade_journal.py` / `scripts/trade_journal.py`, which write one CSV line
+per paper trade (entry, initial stop, stop at exit, target, exit, exit reason, fees, funding,
+net, R). Backtest results are unchanged by both (SOL Q4-2022 sleeves re-run identically).

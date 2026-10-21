@@ -32,6 +32,8 @@ Chỉ giao dịch giấy trên perp BTC/ETH/SOL, nến 5 phút, đòn bẩy 2x, 
 Bot đã có sẵn: lệnh nào cũng có cắt lỗ, khoá khi lỗ quá mức trong ngày, giới hạn khối lượng và số lệnh.
 
 Đề xuất thêm (chờ bạn đồng ý, chưa làm):
-1. **Không bao giờ nới cắt lỗ:** chỉ được dời cắt lỗ về phía có lãi. Mình chưa thấy luật này trong code.
+1. **Không bao giờ nới cắt lỗ:** chỉ được dời cắt lỗ về phía có lãi. (Đính chính 21/10: code đã có sẵn luật chặn nới cắt lỗ khi bot dời stop, lần trước mình tìm sót. Nay bot còn dừng hẳn nếu phát hiện cắt lỗ bị nới bằng bất kỳ cách nào.)
 2. **Nhật ký từng lệnh:** ghi điểm vào, cắt lỗ, chốt lời và lý do thoát cho mỗi lệnh giấy, để xem lại từng tuần.
 3. **Bỏ lệnh khi cắt lỗ quá sát so với phí:** như luật 0,3% ở vòng này.
+
+**Cập nhật 21/10:** bạn đã đồng ý, cả hai luật đã được đưa vào code.
