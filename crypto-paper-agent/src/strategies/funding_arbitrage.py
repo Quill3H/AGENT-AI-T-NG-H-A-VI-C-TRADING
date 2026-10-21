@@ -121,7 +121,7 @@ class FundingArbitrageSimulator:
                 maximum=1,
             )
             source_time(row.observed_funding_time, ts, "observed_funding_time")
-            if self._settlement(ts):
+            if self._settlement(ts, row):
                 if (
                     not isinstance(row.funding_readiness, (bool, np.bool_))
                     or not row.funding_readiness
@@ -139,11 +139,14 @@ class FundingArbitrageSimulator:
             if not required_times.isin(frame.index).all():
                 raise ValueError("dataset omits settlement schedule boundary")
 
-    def _settlement(self, ts):
-        return (
-            ts.hour % self.period == 0
-            and ts.minute == ts.second == ts.microsecond == ts.nanosecond == 0
-        )
+    def _settlement(self, ts, row=None):
+        """Schedule hours, or a bar on its own funding event (4h/2h intervals in stress)."""
+        if ts.minute or ts.second or ts.microsecond or ts.nanosecond:
+            return False
+        if ts.hour % self.period == 0:
+            return True
+        event = getattr(row, "funding_time", None)
+        return event is not None and not pd.isna(event) and pd.Timestamp(event) == ts
 
     def simulate(self, frame, initial_capital, notional_usd=None, force_close=True, stop_after_exit=False):
         capital = number(initial_capital, "initial_capital", positive=True)
@@ -243,7 +246,7 @@ class FundingArbitrageSimulator:
                     reason = "CIRCUIT_BREAKER_LOCK"
                 if reason:
                     unwind(ts, spot, perp, reason)
-                elif self._settlement(ts):
+                elif self._settlement(ts, row):
                     event_time = pd.Timestamp(row.funding_time)
                     if event_time in settled:
                         raise ValueError("duplicate settlement identity")

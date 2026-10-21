@@ -431,7 +431,7 @@ class PaperBroker:
                 t_cur += timedelta(hours=1)
 
         # 7. Kiểm tra Funding Rate, Metadata Provenance và Solver Pre-check (E1, H6, J1, J2)
-        if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
+        if self._is_settlement(open_time, candle):
             if symbol in self.positions and not data_gap:
                 pos = self.positions[symbol]
                 # Nếu vị thế sẽ gap exit (TP/SL/Liq) ngay tại Pha 1 thì không cần funding
@@ -592,7 +592,7 @@ class PaperBroker:
         # PHA 2: Funding Settlement (chỉ cho vị thế còn sống qua Pha 1)
         if symbol in self.positions:
             pos = self.positions[symbol]
-            if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
+            if self._is_settlement(open_time, candle):
                 f_key = (symbol, f_dt)  # exact source event validated in preflight
                 if f_key not in self._settled_funding_keys:
                     raw_rate = candle.get("funding_rate", 0.0)
@@ -1230,6 +1230,19 @@ class PaperBroker:
             f"No tier-consistent liquidation price found for position {position_id} "
             f"({direction.value}, qty={q}, entry={entry}, collateral={c})"
         )
+
+    def _is_settlement(self, open_time, candle):
+        """A bar opening on the schedule hours, or exactly on its own funding event. Binance
+        shortens the interval to 4h/2h in stressed markets (SOLUSDT, 2022-11), so an event
+        at another hour is settled too."""
+        if open_time.minute or open_time.second or open_time.microsecond:
+            return False
+        if open_time.hour in self.funding_hours:
+            return True
+        f_time = candle.get("funding_time")
+        if f_time is None or f_time != f_time or type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
+            return False  # f_time != f_time: NaT/NaN before the first event
+        return _ensure_utc(f_time) == open_time
 
     def _apply_funding_settlement(
         self,

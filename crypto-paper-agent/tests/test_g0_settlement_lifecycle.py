@@ -415,3 +415,29 @@ def test_public_preparation_marks_missing_boundary_unready_offline(
         data = pd.read_parquet(output / f"{name}.parquet")
         assert not bool(data.loc[idx[960], "funding_readiness"])
         assert bool(data.loc[idx[480], "funding_readiness"])
+
+
+def test_broker_settles_an_off_schedule_event_and_not_a_carried_one():
+    """Binance shortened SOLUSDT funding to 2h in 2022-11; such events settle at their own hour,
+    while a later bar carrying the same (backward-merged) event does not settle again."""
+    b = broker()
+    eight = datetime(2024, 1, 1, 8, 0, tzinfo=timezone.utc)
+    b.process_candle(candle(eight, funding_rate=0.0, funding_time=eight, funding_readiness=True))
+    event = datetime(2024, 1, 1, 10, 0, tzinfo=timezone.utc)
+    b.process_candle(candle(event, funding_rate=-0.01, funding_time=event, funding_readiness=True))
+    b.process_candle(candle(event + timedelta(hours=1), funding_rate=-0.01, funding_time=event, funding_readiness=True))
+    assert len(b.funding_history) == 2
+    assert b.wallet_balance == pytest.approx(10000.0 + 10.0 * 100.0 * 0.01)  # the long receives
+    b.verify_accounting_invariants()
+
+
+def test_basket_settles_an_off_schedule_event():
+    f = basket_frame()
+    idx = pd.to_datetime(["2024-01-01T00:00Z", "2024-01-01T01:00Z", "2024-01-01T04:00Z", "2024-01-01T08:00Z"])
+    f.index = idx
+    f["observed_funding_time"] = idx
+    f["funding_time"] = idx
+    sim = FundingArbitrageSimulator({"fees": {"taker_pct": 0.0, "slippage_pct": 0.0}})
+    result = sim.simulate(f, 10000.0, 4000.0)
+    times = [pd.Timestamp(e["source_time"]) for e in result.ledger if e["kind"] == "FUNDING"]
+    assert pd.Timestamp("2024-01-01T04:00Z") in times
