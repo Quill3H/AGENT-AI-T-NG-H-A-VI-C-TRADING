@@ -60,3 +60,45 @@ no_positive, base costs); OI usable 60 minutes late (no_positive, base costs). N
 tuned afterwards. Reading rules from the spec section 8: < 30 completed trades = not enough
 evidence; no_positive loss after costs = v1 fails in that window; profit only in actual = fails
 the funding rule; positive but costs x2 negative = not robust to costs.
+
+## Results (run at frozen 5fdda7c; SEEN_DATA_RETROSPECTIVE; AUTHOR_REPORTED)
+
+Outputs: `docs/research/runs/oi-reclaim-v1-5fdda7c/` (summary.json sha256 e0c3b846...,
+data_check.json, every scenario's event audit and trades, the OI manifest); hourly equity CSVs in
+`/mnt/project-files/research-runs/oi-reclaim-v1-5fdda7c/`.
+
+| Window | Scenario | Status | Trades | Return % | Max DD % | Win % | Net $ | Price $ | Fees $ | Slippage $ | Funding $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| W1 | every OI scenario (6 + lag 60) | DATA_QUALITY_FAILED | 0 | 0.0 | 0.0 | | 0 | 0 | 0 | 0 | 0 |
+| W1 | price_only_no_positive | OK | 0 | 0.0 | 0.0 | | 0 | 0 | 0 | 0 | 0 |
+| W2 | base, costs x2 (actual and no_positive) | OK | 0 | 0.0 | 0.0 | | 0 | 0 | 0 | 0 | 0 |
+| W2 | delay15m_actual | OK | 2 | 1.24 | 0.31 | 100 | 123.59 | 138.45 | 8.75 | 5.25 | -0.86 |
+| W2 | delay15m_no_positive | OK | 2 | 1.24 | 0.31 | 100 | 123.59 | 138.45 | 8.75 | 5.25 | -0.86 |
+| W2 | price_only_no_positive | OK | 0 | 0.0 | 0.0 | | 0 | 0 | 0 | 0 | 0 |
+| W2 | oi_lag60_no_positive | OK | 0 | 0.0 | 0.0 | | 0 | 0 | 0 | 0 | 0 |
+
+Funnel, no_positive base (W1 / W2): complete 1h bars 26,281 / 24,097 (none incomplete); price
+shocks 271 / 289; OI missing 3 / 0; OI not contracting 140 / 193; events 128 / 96; skipped by
+cooldown 17 / 9 (by an open position 0 / 0); accepted 111 / 87; cancelled by a 15m low below
+low_s 64 / 56; expired without confirmation 26 / 12; confirmation signals 21 / 19; rejected at the
+fill open: RR 15 / 11, below the reclaim level 4 / 6, stop-entry-target order 2 / 2; cost gate 0;
+entries 0 / 0. Price-only control: signals 39 / 40, entries 0 / 0 (RR 31 / 24).
+
+**Verdict: no trades.** With the rules as written, v1 opened no position in 69 months at base
+and double costs, with or without the OI condition, and with OI 60 minutes late (the lag stress
+changes nothing, as the spec expected, because the first confirmation bar closes an hour after
+the event). This is not a success. The binding gate is the reward/risk check at the fill: the
+fill must be at or above the 25% reclaim level, so T - E is at most 75% of the drop, while E - S
+is at least 25% of the drop plus 0.25A plus the shock bar's lower wick; RR >= 1.5 then needs
+roughly drop >= A + 4 x wick, which real shock bars with a wick rarely meet. Most events end
+earlier, when price makes a new low within two hours (120 of 198 accepted events).
+
+The one-bar-later entry (delay stress) traded twice in W2 (2024-12-30 and 2025-04-16, both hit
+the target, +$123.6, 52% / 100% of the gain in the largest one / two trades). That is a
+sensitivity result on 2 trades, below the 30-trade floor, and not a candidate: the spec forbids
+picking a variant after the runs. W1 stays DATA_QUALITY_FAILED: of the three events without OI,
+the price-only run shows 2021-11-26 cancelled and 2021-12-04 expired (neither could trade
+whatever OI said); 2021-09-07 15:00 was blocked by cooldown there and is undetermined.
+
+No thresholds were tuned after these runs. Forward paper is not proposed; the owner decides
+whether a v2 with a different, pre-registered entry geometry is worth specifying.
