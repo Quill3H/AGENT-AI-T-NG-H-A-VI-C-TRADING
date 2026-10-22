@@ -1,0 +1,14 @@
+# c1_funding_filter.yaml - round-15 candidate F1: C1 without new longs while 7-day funding is above its 180-day 90th percentile. Rules: src/strategies/funding_signals.py,
+# protocol: docs/research/2026-10-19-round15-funding.md. Fixed before any run, not fitted.
+strategy:
+  name: "C1_FUNDING_FILTER"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false

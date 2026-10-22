@@ -18,6 +18,10 @@ risk:
   # Khoảng cách tối thiểu giữa giá thanh lý và stop-loss (tính theo % entry price)
   # Hard invariant: |liq_price - stop_price| / entry_price >= 0.30
   min_liquidation_buffer_pct: 0.30
+  # Trần danh nghĩa một lệnh: tối đa 2 lần vốn (owner 2026-10-16). Lệnh lớn hơn bị từ chối.
+  max_notional_pct_of_equity: 2.0
+  # Dữ liệu nến đứt quá 60 phút: đóng hết vị thế ở giá mở nến kế tiếp và dừng phiên (kill switch).
+  max_data_gap_minutes: 60
 
 circuit_breakers:
   # Nếu lỗ ròng trong rolling 24h vượt mức này → đóng toàn bộ, khóa trading 24h
@@ -136,3 +140,106 @@ leverage_brackets:
     - [200000000,  0.15,  5016300]
     - [300000000,  0.25,  25016300]
     - [500000000,  0.50,  100016300]
+  # ETH/SOL (owner 2026-10-16 asked for BTC, ETH, SOL). Only the first tier matters for a 10k paper
+  # account (orders are capped at 2x equity). SOL uses a deliberately higher MMR than Binance's table
+  # so liquidation is assumed earlier, never later. Re-check against Binance before any change of scale.
+  ETHUSDT:
+    - [50000,      0.005,  0]
+    - [250000,     0.0065, 75]
+    - [1000000,    0.01,   950]
+    - [10000000,   0.02,   10950]
+  SOLUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  # Round-4 test coins: same conservative table as SOLUSDT.
+  LINKUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  AVAXUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  LTCUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  DOTUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  # Round-5 test coins: same conservative table as SOLUSDT.
+  ETCUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  ATOMUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  NEARUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  FILUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  # Round-6 test coins: same conservative table as SOLUSDT.
+  XLMUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  BCHUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  UNIUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  AAVEUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  # Round-7 untouched top-10 coin (added after its first final run took 0 trades for want of a table).
+  TRXUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  # Round-3 holdout coins: same conservative table as SOLUSDT (only tier 1 matters at 10k scale).
+  BNBUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  XRPUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  DOGEUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]
+  ADAUSDT:
+    - [50000,      0.01,   0]
+    - [250000,     0.02,   500]
+    - [1000000,    0.025,  1750]
+    - [10000000,   0.05,   26750]

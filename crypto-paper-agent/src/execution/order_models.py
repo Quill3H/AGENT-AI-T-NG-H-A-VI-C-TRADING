@@ -54,6 +54,7 @@ class ExitReason(str, Enum):
     FORCE_CLOSE_END_OF_DATA = "FORCE_CLOSE_END_OF_DATA"
     END_OF_DATA = "END_OF_DATA"
     MANUAL = "MANUAL"
+    KILL_SWITCH = "KILL_SWITCH"
 
 
 

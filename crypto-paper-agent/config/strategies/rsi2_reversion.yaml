@@ -1,0 +1,14 @@
+# rsi2_reversion.yaml - 4h Connors RSI(2) mean reversion (I2). Rules: src/strategies/indicator_suite.py,
+# protocol: docs/research/2026-10-16-indicator-search.md. Published default settings, not fitted.
+strategy:
+  name: "RSI2_REVERSION"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

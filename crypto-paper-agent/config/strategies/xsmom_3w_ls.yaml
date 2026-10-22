@@ -1,0 +1,19 @@
+# xsmom_3w_ls.yaml - round-13 candidate X1: 3-week cross-sectional momentum, long top 3 / short bottom 3. Rules: src/strategies/cross_section.py,
+# protocol: docs/research/2026-10-19-round13-cross-section.md. Fixed before any run, not fitted.
+strategy:
+  name: "CROSS_SECTION_MOMENTUM"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  lookback_weeks: 3
+  top_n: 3
+  min_coins: 6
+  absolute: false
+  universe: [BTCUSDT, ETHUSDT, XRPUSDT, BNBUSDT, SOLUSDT, DOGEUSDT, TRXUSDT, ADAUSDT, LINKUSDT, AVAXUSDT]

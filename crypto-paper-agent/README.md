@@ -60,12 +60,30 @@ venv\Scripts\activate
 # Cài dependencies
 pip install -r requirements.txt
 
+# (Tùy chọn) PPO / quickstart đầy đủ: cần thêm gymnasium, stable-baselines3, torch
+# Thiếu các gói này thì test PPO và quickstart tự bỏ qua (skip), phần còn lại vẫn chạy.
+pip install -r requirements-rl.txt
+
 # Chạy tests
 pytest tests/ -v
 
 # Chạy backtest (sau Giai đoạn 4)
 python run_backtest.py --strategy trend_following
 ```
+
+## Chạy backtest 2021–2025 trên dữ liệu Binance chính thức
+
+```bash
+# Tải toàn bộ lưu trữ công khai Binance Vision (không cần key), kiểm checksum từng file
+python scripts/download_vision_history.py --output data/vision --allow-network
+# Phương pháp đã chốt (ăn funding, trung lập giá) và các phương pháp theo xu hướng
+python scripts/run_vision_carry.py --data-dir data/vision --start 2021-01-01 --end 2025-12-31
+python scripts/run_vision_backtest.py --data-dir data/vision --strategy donchian_trend
+# Chạy lại toàn bộ 9 lần thử của đợt tìm phương pháp 2026-10-16
+python scripts/reproduce_method_search.py --data-dir data/vision
+```
+
+Kết quả và giới hạn: `docs/research/2026-10-16-method-search.md`.
 
 ## Khoảng thời gian backtest
 

@@ -121,7 +121,7 @@ class FundingArbitrageSimulator:
                 maximum=1,
             )
             source_time(row.observed_funding_time, ts, "observed_funding_time")
-            if self._settlement(ts):
+            if self._settlement(ts, row):
                 if (
                     not isinstance(row.funding_readiness, (bool, np.bool_))
                     or not row.funding_readiness
@@ -139,13 +139,16 @@ class FundingArbitrageSimulator:
             if not required_times.isin(frame.index).all():
                 raise ValueError("dataset omits settlement schedule boundary")
 
-    def _settlement(self, ts):
-        return (
-            ts.hour % self.period == 0
-            and ts.minute == ts.second == ts.microsecond == ts.nanosecond == 0
-        )
+    def _settlement(self, ts, row=None):
+        """Schedule hours, or a bar on its own funding event (4h/2h intervals in stress)."""
+        if ts.minute or ts.second or ts.microsecond or ts.nanosecond:
+            return False
+        if ts.hour % self.period == 0:
+            return True
+        event = getattr(row, "funding_time", None)
+        return event is not None and not pd.isna(event) and pd.Timestamp(event) == ts
 
-    def simulate(self, frame, initial_capital, notional_usd=None, force_close=True):
+    def simulate(self, frame, initial_capital, notional_usd=None, force_close=True, stop_after_exit=False):
         capital = number(initial_capital, "initial_capital", positive=True)
         requested = (
             None
@@ -236,15 +239,14 @@ class FundingArbitrageSimulator:
                 reason = None
                 if r.perp_collateral + r.perp_pnl <= r.quantity * perp * mmr - cum:
                     reason = "LIQUIDATION"
-                elif spot <= entry_spot * (1 - self.stop_pct) or perp >= entry_perp * (
-                    1 + self.stop_pct
-                ):
+                elif r.spot_pnl + r.perp_pnl <= -self.stop_pct * r.spot_notional:
+                    # The legs hedge each other: only a basis (spread) loss threatens the basket.
                     reason = "EMERGENCY_STOP"
                 elif self.cb.is_locked or self.cb.is_halted:
                     reason = "CIRCUIT_BREAKER_LOCK"
                 if reason:
                     unwind(ts, spot, perp, reason)
-                elif self._settlement(ts):
+                elif self._settlement(ts, row):
                     event_time = pd.Timestamp(row.funding_time)
                     if event_time in settled:
                         raise ValueError("duplicate settlement identity")
@@ -355,6 +357,8 @@ class FundingArbitrageSimulator:
                     "equity": r.equity,
                 }
             )
+            if stop_after_exit and r.exited:
+                break
         if force_close and r.spot_inventory:
             unwind(frame.index[-1], spot, perp, "FORCE_CLOSE_END_OF_DATA")
             r.snapshots[-1].update(

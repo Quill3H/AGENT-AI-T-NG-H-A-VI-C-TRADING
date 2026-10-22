@@ -1,5 +1,14 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Core hardening and method search — 2026-10-16
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Owner-directed work on branch `claude/project-thread-uiqlsn` (base `main` `fe1c133`); see the PR for the final SHA. Paper only; no order path, testnet or credential.
+
+- Data: full Binance Vision BTCUSDT archive 2020-09..2026-09, 584 files, all SHA-256 checksums matched; perp 5m/15m/1h/4h/1d with zero missing bars (`scripts/download_vision_history.py`).
+- Policy changes recorded in ADR 0013: funding ms-snap (≤1 s), hedged-basket emergency stop, 2x notional cap, kill switch + 60-minute data-gap stop, SMC risk 2%, fail-closed fetcher.
+- Method search (`docs/research/2026-10-16-method-search.md`): 9 attempts on 2021–2023, frozen candidate = funding carry basket. Owner window 2021–2025: 10,000 → 12,824.61 USDT (+28.25%, max DD 1.74%, every year positive) = owner SUCCESS rule; untouched 2024–2025 alone +6.91%.
+- Offline tests: 435 passed, 4 skipped (pandas-ta ×2, PPO extras ×2), 5 network deselected, Python 3.13, without RL extras installed. Tester/Independent Reviewer still required.
+
 ## Single-main integration and sync — 2026-09-23
 
 **OWNER-AUTHORIZED INTEGRATION, NOT GATE ACCEPTANCE.** The owner requested one visible `main` workflow and matching local/GitHub committed state. `main` was fast-forwarded (no rebase or force push) from `e970337d504563e5987a4db6b5c06c635bf7244b` to the G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9`. Local `main`, `origin/main` and GitHub `main` matched at that SHA before this documentation-only update; the final documentation SHA is in Git history and the task handoff. Code-under-test remains `d4afed6d365b3e435e79a772f7de912ee4a39b11`.

@@ -1,0 +1,15 @@
+# reddit_plan_both.yaml - round-17 candidate R3: the post's plan: R1 and R2, at most one each, then stop for the day. Rules: src/strategies/reddit_plan.py,
+# protocol: docs/research/2026-10-20-round17-reddit-plan.md. Fixed before any run, not fitted.
+strategy:
+  name: "REDDIT_PLAN"
+  enabled: true
+  timeframe_signal: "5m"
+  timeframe_execution: "5m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  setups: [premarket, open_reversal]

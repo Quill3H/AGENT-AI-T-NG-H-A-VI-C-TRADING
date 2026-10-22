@@ -1,0 +1,14 @@
+# wyckoff_spring_run_1h.yaml - round-10 candidate WY1-1h: Wyckoff spring/upthrust, EMA50 exit. Rules: src/strategies/wyckoff_suite.py,
+# protocol: docs/research/2026-10-18-wyckoff-ichimoku.md. Fixed before any run, not fitted.
+strategy:
+  name: "WYCKOFF_SPRING_RUN"
+  enabled: true
+  timeframe_signal: "1h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

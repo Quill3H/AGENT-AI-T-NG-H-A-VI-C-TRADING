@@ -1,0 +1,67 @@
+{
+  "oi_manifest": {
+    "days": 2130,
+    "status": {
+      "OK": 2130
+    },
+    "not_ok": []
+  },
+  "oi_invalid_rows_dropped": 473,
+  "oi_invalid_days": [
+    "2021-05-22",
+    "2022-03-07",
+    "2022-03-08",
+    "2023-06-06",
+    "2023-08-09",
+    "2023-11-11",
+    "2023-11-20",
+    "2023-11-23",
+    "2023-11-26",
+    "2024-07-09",
+    "2024-07-10",
+    "2024-07-11",
+    "2024-07-12",
+    "2024-07-13",
+    "2024-07-14",
+    "2024-07-15",
+    "2024-08-12",
+    "2025-01-08",
+    "2025-01-28",
+    "2025-03-06",
+    "2025-04-11",
+    "2025-04-15",
+    "2025-07-21"
+  ],
+  "windows": {
+    "W1": {
+      "oi_expected_5m": 315360,
+      "oi_missing_5m": 614,
+      "oi_off_grid": 0,
+      "oi_missing_hour_snapshots": 45,
+      "bars_15m": 105120,
+      "bars_15m_gaps": 0,
+      "bars_15m_zero_volume": 11,
+      "funding_events": 3285,
+      "funding_off_8h_schedule": 0
+    },
+    "W2": {
+      "oi_expected_5m": 289152,
+      "oi_missing_5m": 460,
+      "oi_off_grid": 0,
+      "oi_missing_hour_snapshots": 41,
+      "bars_15m": 96384,
+      "bars_15m_gaps": 0,
+      "bars_15m_zero_volume": 4,
+      "funding_events": 3012,
+      "funding_off_8h_schedule": 0
+    }
+  },
+  "inputs": {
+    "BTCUSDT_metrics_raw.csv.gz": "5b110ec936d9609ec7adecf8e42cb42c0743b88f49eb7af7676251c3f4d8c4be",
+    "BTCUSDT_metrics_raw_manifest.json": "65c5ded058e2a4d342ec99d76be740428ab7d9e76e48e95309d79b19e33a7562",
+    "BTCUSDT_perp_15m.parquet": "42bdf78df8ceeb35b3436acb15a10897154464e6f35ec13887f8fa91e1f7f473",
+    "BTCUSDT_perp_funding.parquet": "445298b9b6a6f7741d71bea34a97b1ddbff7bb9d10c4e0308a9a3b3d8059a379",
+    "btc_oi_contraction_reclaim_v1.yaml": "df90000d2519fea611d285155d6568fbf1e9c67b66a0c3484685fbd3f729b802"
+  },
+  "frozen_commit": "5fdda7c"
+}

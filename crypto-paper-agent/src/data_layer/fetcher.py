@@ -54,6 +54,10 @@ INITIAL_BACKOFF_SECONDS = 2.0
 # Exchange initialization
 # ---------------------------------------------------------------------------
 
+class FetchError(RuntimeError):
+    """Public data could not be downloaded completely; callers must not use a partial dataset."""
+
+
 def _get_exchange() -> ccxt.binance:
     """
     Khởi tạo exchange Binance Futures (public, không cần API key).
@@ -188,10 +192,8 @@ def _fetch_ohlcv_chunk(
             logger.warning("[Fetcher] Network error: {}. Chờ {}s (lần {}/{})", str(e)[:100], wait, attempt + 1, MAX_RETRIES)
             time.sleep(wait)
         except ccxt.ExchangeError as e:
-            logger.error("[Fetcher] Exchange error khi fetch OHLCV: {}", str(e)[:200])
-            return []
-    logger.error("[Fetcher] Đã thử {} lần mà vẫn thất bại khi fetch OHLCV.", MAX_RETRIES)
-    return []
+            raise FetchError(f"Exchange error while fetching OHLCV {symbol} {timeframe}: {str(e)[:200]}") from e
+    raise FetchError(f"OHLCV {symbol} {timeframe} still failing after {MAX_RETRIES} attempts")
 
 
 def _candles_to_dataframe(candles: list) -> pd.DataFrame:
@@ -562,9 +564,8 @@ def _fetch_funding_chunk(
             # accounting fail-closed.
             raise
         except Exception as e:
-            logger.error("[Fetcher] Funding fetch error: {}", str(e)[:200])
-            return []
-    return []
+            raise FetchError(f"Funding fetch error for {symbol}: {str(e)[:200]}") from e
+    raise FetchError(f"Funding {symbol} still failing after {MAX_RETRIES} attempts")
 
 
 # ---------------------------------------------------------------------------

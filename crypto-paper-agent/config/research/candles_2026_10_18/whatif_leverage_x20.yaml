@@ -1,0 +1,14 @@
+# WHAT-IF ONLY (owner card 2026-10-18 "Chỉ chạy thử"): x20 for BTC/ETH, x5 for altcoins, paper only.
+# Defaults in config/default_config.yaml are unchanged. Relaxed limits, all labelled:
+#   risk.max_leverage 5 -> 20
+#   risk.max_notional_pct_of_equity 2.0 -> 20.0 (alts stay bounded by x5 margin)
+#   risk.min_liquidation_buffer_pct 0.30 -> 0.005 (the stop must still sit before liquidation)
+# Stop-loss, daily loss limit, kill switch, isolated margin, fees and simulated liquidation stay on.
+leverage: 5.0
+leverage_by_symbol:
+  BTCUSDT: 20.0
+  ETHUSDT: 20.0
+risk:
+  max_leverage: 20
+  max_notional_pct_of_equity: 20.0
+  min_liquidation_buffer_pct: 0.005

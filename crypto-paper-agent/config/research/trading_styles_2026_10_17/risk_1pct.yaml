@@ -1,0 +1,3 @@
+# Round 5 risk level: 1% of sleeve equity per trade (owner's document, rule 1-2%).
+default_conviction: "low"
+base_risk_percent: 0.01

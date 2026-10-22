@@ -1,0 +1,15 @@
+# reddit_open_reversal.yaml - round-17 candidate R2: reversal candle against the 09:30-09:45 ET opening move, 09:45-11:00 ET. Rules: src/strategies/reddit_plan.py,
+# protocol: docs/research/2026-10-20-round17-reddit-plan.md. Fixed before any run, not fitted.
+strategy:
+  name: "REDDIT_PLAN"
+  enabled: true
+  timeframe_signal: "5m"
+  timeframe_execution: "5m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  setups: [open_reversal]

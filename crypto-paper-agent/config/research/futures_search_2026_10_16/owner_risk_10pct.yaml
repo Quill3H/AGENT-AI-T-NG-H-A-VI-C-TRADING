@@ -1,0 +1,6 @@
+# Owner decision 2026-10-16 (decision card, option "10% (rủi ro cao)"): the directional futures
+# sleeve risks 10% of sleeve equity per trade in paper research. Leverage stays 2x, orders stay
+# capped at 2x equity, and the 5% rolling-24h daily-loss breaker, stop-loss requirement,
+# liquidation buffer and data-gap kill switch are unchanged. See ADR 0014.
+default_conviction: "ultra_high"
+base_risk_percent: 0.10
