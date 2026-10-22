@@ -2,3 +2,11 @@
 # Secrets: never commit keys or local environment files
 .env
 .env.*
+.venv/
+.bootstrap/
+__pycache__/
+.pytest_cache/
+.superpowers/
+crypto-paper-agent/artifacts/
+crypto-paper-agent/market-data/
+/*.log
