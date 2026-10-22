@@ -1,5 +1,11 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [ETH–BTC price cointegration v1] — 2026-10-22
+
+- Implement the owner-approved fixed experiment as a separate shared-wallet workflow with causal weekly formation, two-leg lifecycle, protective/time/weekly exits and independent actual/no-positive funding accounts. Add fail-closed data preparation and twelve retrospective scenarios without threshold search.
+- Code-under-test `dc418d307aae987874415676d84ff5eb5728c259`: offline 686 passed, 4 skipped, 5 network deselected; separate reviewer independently passed 24 account/replay tests and reported no outstanding P1/P2 in reviewed scope.
+- Outcome: 2021–2023 one losing pair (-0.246151% actual, -0.247587% without funding credits); 2024–09/2026 no trades. Insufficient evidence, v1 failed after costs in its traded window. Report and source/runtime/data manifests added; no economic or live-trading acceptance.
+
 ## [Owner-directed single-main integration] — 2026-09-23
 
 - Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.

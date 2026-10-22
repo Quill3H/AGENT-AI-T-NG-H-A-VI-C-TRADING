@@ -1,0 +1,17 @@
+{
+  "source_url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+  "collected_at": "2026-10-22T04:38:13.102166+00:00",
+  "historical_assumption": true,
+  "symbols": {
+    "BTCUSDT": {
+      "step": 0.001,
+      "min_quantity": 0.001,
+      "min_notional": 50.0
+    },
+    "ETHUSDT": {
+      "step": 0.001,
+      "min_quantity": 0.001,
+      "min_notional": 20.0
+    }
+  }
+}

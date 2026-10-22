@@ -1,5 +1,16 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## ETH–BTC cointegration v1 — 2026-10-22
+
+**IMPLEMENTED / SEEN-DATA RETROSPECTIVE; NO ECONOMIC ACCEPTANCE.** Owner-approved fixed price-convergence experiment, excluding positive funding as a source of profits. Base `claude/project-thread-uiqlsn` at `a3a1681c4762a88bfa2dc9adced07be64f4f6ee6`; code-under-test `dc418d307aae987874415676d84ff5eb5728c259`, local branch `codex/eth-btc-cointegration-v1`. Remote integration is not part of this checkpoint.
+
+- Added fixed weekly ETH-on-BTC OLS/Engle–Granger/I(1)/AR half-life model, one shared-capital pair coordinator, independently compounded actual/no-positive funding accounts and offline replay/data preparation tools. Existing broker and risk rules remain in force.
+- Public inputs: 438 checksummed Binance Vision ZIPs, 2020-09..2026-09, with full initialization. Historical filters use a disclosed current exchangeInfo snapshot. Funding amounts use settlement-bar open prices as a mark-price proxy.
+- Twelve fixed retrospective scenarios: 2021–2023 has 1/157 eligible weeks and one signal; baseline one completed losing pair, actual -24.615088 USDT, no-positive -24.758711 USDT. 2024–09/2026 has 5/144 eligible weeks, zero signals/trades. Cost2x rejects the only old-window signal on hedge-lot rounding; delayed-leg results are also negative.
+- Verdict: **chưa đủ bằng chứng; thất bại v1 sau chi phí trong giai đoạn có giao dịch.** No tuning, pair substitution or leverage increase. This is not a profitable method or new-data final test.
+- Pinned-code offline suite: **686 passed, 4 skipped, 5 network deselected**. New modules: 44 passing tests. Separate source reviewer: no outstanding P1/P2, 24 targeted tests independently passed; economic acceptance and full project gates remain pending.
+- Vietnamese report: [2026-10-22-eth-btc-cointegration-v1](docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md). Reproduction and limitations: [operations](docs/operations/ETH_BTC_COINTEGRATION.md), [ADR0015](docs/decisions/0015-eth-btc-cointegration-v1.md). Raw data/full equity artifacts remain local and reproducible; compact evidence and append-only research records are in Git.
+
 ## Core hardening and method search — 2026-10-16
 
 **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Owner-directed work on branch `claude/project-thread-uiqlsn` (base `main` `fe1c133`); see the PR for the final SHA. Paper only; no order path, testnet or credential.

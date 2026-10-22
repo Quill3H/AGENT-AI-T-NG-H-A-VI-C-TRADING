@@ -65,3 +65,9 @@ Final complete offline suite: 686 passed, 4 skipped, 5 network deselected,
 shorter writable Windows basetemp; no production workaround was introduced.
 Ledger adapter maps completed_pairs to the existing completed_trades column;
 one observation in this strategy is one completed two-leg pair.
+
+Pinned code dc418d307aae987874415676d84ff5eb5728c259 rerun: 686 passed,
+4 skipped, 5 network deselected in 122.44s. Twelve retrospective scenarios
+use this exact code. No code/threshold change followed outcome inspection.
+Final reports distinguish insufficient paired samples from the observed
+post-cost v1 loss. No economic gate acceptance or GitHub publication claimed.

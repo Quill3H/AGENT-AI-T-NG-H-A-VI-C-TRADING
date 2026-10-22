@@ -327,6 +327,18 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 17 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
 | 17 | validation | R2 | reddit_open_reversal | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -0.17 | 3.99 | 0.01 | 50.0 |
 | 17 | validation | R2 | reddit_open_reversal | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -2.2 | 4.04 | 0.02 | 33.3 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2461508810516322 | 0.2568261841460859 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2475871120092954 | 0.25826226140340414 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2481474773508907 | 0.25683131148177823 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.24958370830854282 | 0.25826741740926584 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
 
 ## Lessons
 
@@ -361,3 +373,4 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 16: Funding carry at 6%/10% APR thresholds made ~5%/yr on BTC/ETH/SOL 2021-23, almost all in 2021; M2 (1/3 carry, 1/3 C1, 1/3 P1 @5%) dev +1.45%/mo DD 11% but seen 2024-26/09 +12.2% (~4.2%/yr, below the 5.9% bank deposit), costs x2 +5.2%. Blending cut drawdown, not enough return. Not added to forward.
 - Round 17: r/Daytrading US-open plan (pre-market range breakout 07:00-07:30 ET, 09:30 opening-move reversal candle, 2R, two trades a day) on BTC/ETH/SOL 5m: every variant lost in dev 2021-23 (R3 full plan -68% @2%, win 35%); pick R2 @5% traded 2 times on 2024-26/09 (-0.2%). Session-clock 5m rules keep failing after costs on crypto perps. Lessons proposed: no stop widening invariant, per-trade journal.
 - Round 17: Cost audit 2026-10-21: taker 0.05% + slippage 0.03% per side on notional, both sides, real funding events. Bug fixed: funding was settled only at 00/08/16 UTC, missing 75 off-schedule SOLUSDT events 2022-11-09..18 (sum -21.5%). Re-measured SOL Q4-2022 sleeves: I1 -2.9% of the SOL sleeve (<1% of account), others unchanged; no earlier verdict changes.
+- Round ETH_BTC_V1_2026_10_22: Fixed ETH/BTC cointegration v1: 2021-2023 only one losing pair, 2024-Sep2026 no signals. Insufficient evidence; v1 failed after costs in the traded window. No-positive funding baseline -24.758711 USDT; do not tune thresholds, substitute pairs or raise leverage after seeing outcomes. Full report docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md.

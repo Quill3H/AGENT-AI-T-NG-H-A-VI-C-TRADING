@@ -1,0 +1,627 @@
+{
+  "strategy": "eth_btc_cointegration_v1",
+  "evaluation_type": "SEEN_DATA_RETROSPECTIVE",
+  "inputs": {
+    "ETHUSDT_perp_15m.parquet": "236230c3d4cac46987995b815d940be3ffdf0e3bcd8b852a3c696ab6cb664a3c",
+    "ETHUSDT_perp_funding.parquet": "ecb1f6cf55111995534339ec43b9bbcae106ec859a110d1c0bd1e5b9c6617c72",
+    "BTCUSDT_perp_15m.parquet": "22715a9da388348af05587dc87b0e60fa6a4ee31f8ac18fffd43a130607feecd",
+    "BTCUSDT_perp_funding.parquet": "c09660d632f9c2e39501dd6bc3e3c07348abf8afbb11114c90305bdccedafbba"
+  },
+  "lot_metadata": {
+    "source_url": "https://fapi.binance.com/fapi/v1/exchangeInfo",
+    "collected_at": "2026-10-22T04:38:13.102166+00:00",
+    "historical_assumption": true,
+    "symbols": {
+      "BTCUSDT": {
+        "step": 0.001,
+        "min_quantity": 0.001,
+        "min_notional": 50.0
+      },
+      "ETHUSDT": {
+        "step": 0.001,
+        "min_quantity": 0.001,
+        "min_notional": 20.0
+      }
+    }
+  },
+  "lot_metadata_sha256": "6d4060af4821ae3bf25226fd533f62f06eed4b5641454fd5207610915b5eb27c",
+  "config": {
+    "account": {
+      "initial_equity_usd": 10000,
+      "base_currency": "USDT"
+    },
+    "risk": {
+      "conviction_tiers": {
+        "low": 0.01,
+        "normal": 0.02,
+        "high": 0.05,
+        "ultra_high": 0.1
+      },
+      "max_leverage": 5,
+      "min_liquidation_buffer_pct": 0.3,
+      "max_notional_pct_of_equity": 2.0,
+      "max_data_gap_minutes": 60
+    },
+    "circuit_breakers": {
+      "daily_loss_limit_pct": 0.05,
+      "consecutive_losses_threshold": 3,
+      "risk_reduction_on_streak": 0.5,
+      "recovery_mode": "after_3_wins",
+      "consecutive_wins_to_recover": 3
+    },
+    "fees": {
+      "taker_pct": 0.0005,
+      "maker_pct": 0.0002,
+      "slippage_pct": 0.0003
+    },
+    "data": {
+      "symbol": "BTC/USDT",
+      "timeframes": [
+        "4h",
+        "15m",
+        "1m"
+      ],
+      "exchange": "binance",
+      "start_date": "2021-01-01",
+      "end_date": "2026-09-01",
+      "raw_data_dir": "data/raw",
+      "processed_data_dir": "data/processed",
+      "futures_symbol": "BTCUSDT"
+    },
+    "open_interest": {
+      "lookback_periods": 500,
+      "use_binance_vision_historical": true
+    },
+    "oi_confluence": {
+      "mode": "optional",
+      "fallback_when_nan": true,
+      "nan_log_note": "OI_BYPASSED_HISTORICAL"
+    },
+    "funding_rate": {
+      "settlement_hours_utc": [
+        0,
+        8,
+        16
+      ],
+      "max_forward_fill_candles": 480
+    },
+    "features": {
+      "ema_periods": [
+        20,
+        50,
+        200
+      ],
+      "rsi_period": 14,
+      "macd_fast": 12,
+      "macd_slow": 26,
+      "macd_signal": 9,
+      "atr_period": 14,
+      "oi_delta_lookback": 20,
+      "cvd_divergence_lookback": 50
+    },
+    "smc": {
+      "swing_n": 3,
+      "min_bos_pct": 0.001
+    },
+    "news_filter": {
+      "enabled": false,
+      "blackout_minutes_before": 15,
+      "blackout_minutes_after": 15,
+      "calendar_source": "manual_csv",
+      "calendar_file": "data/news_calendar.csv"
+    },
+    "logging": {
+      "trade_log_db": "data/trades.db",
+      "trade_log_json_dir": "data/trade_logs",
+      "log_level": "INFO"
+    },
+    "backtest": {
+      "random_seed": 42,
+      "signal_on_close": true,
+      "execute_on_next_open": true
+    },
+    "leverage_brackets": {
+      "BTCUSDT": [
+        [
+          50000,
+          0.004,
+          0
+        ],
+        [
+          250000,
+          0.005,
+          50
+        ],
+        [
+          1000000,
+          0.01,
+          1300
+        ],
+        [
+          10000000,
+          0.025,
+          16300
+        ],
+        [
+          20000000,
+          0.05,
+          266300
+        ],
+        [
+          50000000,
+          0.1,
+          1266300
+        ],
+        [
+          100000000,
+          0.125,
+          2516300
+        ],
+        [
+          200000000,
+          0.15,
+          5016300
+        ],
+        [
+          300000000,
+          0.25,
+          25016300
+        ],
+        [
+          500000000,
+          0.5,
+          100016300
+        ]
+      ],
+      "ETHUSDT": [
+        [
+          50000,
+          0.005,
+          0
+        ],
+        [
+          250000,
+          0.0065,
+          75
+        ],
+        [
+          1000000,
+          0.01,
+          950
+        ],
+        [
+          10000000,
+          0.02,
+          10950
+        ]
+      ],
+      "SOLUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "LINKUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "AVAXUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "LTCUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "DOTUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "ETCUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "ATOMUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "NEARUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "FILUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "XLMUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "BCHUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "UNIUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "AAVEUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "TRXUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "BNBUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "XRPUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "DOGEUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ],
+      "ADAUSDT": [
+        [
+          50000,
+          0.01,
+          0
+        ],
+        [
+          250000,
+          0.02,
+          500
+        ],
+        [
+          1000000,
+          0.025,
+          1750
+        ],
+        [
+          10000000,
+          0.05,
+          26750
+        ]
+      ]
+    }
+  },
+  "versions": {
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "statsmodels": "0.15.0",
+    "pyarrow": "26.0.0"
+  },
+  "files": {
+    "src/strategies/eth_btc_cointegration.py": "499ac0132dcf6a6d34470a0852ab5bafaa9c964ee68042a2631f46016f3a8341",
+    "src/execution/pair_account.py": "db65bf3c0c39ff5762f52e021ee2cc8c487fc7cde3bd5eb2700d2fd15a3cc566",
+    "src/research/cointegration.py": "d1734129e31edc11dd7acd15a35dc48fc09c82bd751ee87fff64804f0aa58ce1",
+    "scripts/run_eth_btc_cointegration.py": "67d5c9dd4af7e72e6572329e6f35835ba05bb6190c0ef56ef176eda7cddc09d0"
+  },
+  "complete": true,
+  "source_manifest_sha256": "aaee440ec925616432fb7c84220ce7976d491672a03f59f024f6c6d3c9c9e209",
+  "base_commit": "dc418d307aae987874415676d84ff5eb5728c259",
+  "outputs": {
+    "2021-2023-actual-cost1-delay0.json": "cf407ed6ba4516cd37781200316ae6a0f0287c1d6b16dbafa4b518a154915bb6",
+    "2021-2023-actual-cost1-delay1.json": "811ab843dd66953478a17974e14f1cd59c960fd4e59de7a739163234ae28d3f8",
+    "2021-2023-actual-cost2-delay0.json": "6c28d4c732b4c4d55e10c24eaa7c2228a9777019627d61aa238be8b3c930b08b",
+    "2021-2023-no_positive-cost1-delay0.json": "ea7c085341eab4a53fbf6dc216a96b7ddde3fd88fcc854d3659d9f5458ba9199",
+    "2021-2023-no_positive-cost1-delay1.json": "e04de9443c301382711dd450193f55ddcfc8ea22db08be1dc7894ea607c08450",
+    "2021-2023-no_positive-cost2-delay0.json": "e827db1b8df8b2bb56c6f3d9ce71602cf178698faffd797b758726232597e700",
+    "2024-2026-actual-cost1-delay0.json": "bdfe059e18734aa66bf2e5960f4b01f3fc58bab2cb8f19c192f088e17a0f8f56",
+    "2024-2026-actual-cost1-delay1.json": "d4fedf0d5960c4a0c92c4799312a3a4e14f676f7c2ee15f77da7466f7266105e",
+    "2024-2026-actual-cost2-delay0.json": "f978a8d0f3a12cce2422e13edcf6471dd9cca83dd6194f70b08505c66f1efd7d",
+    "2024-2026-no_positive-cost1-delay0.json": "93e04a998eb64913917bf6fc73c0b785a244b035e195214ddf0e7f8a1fae4c94",
+    "2024-2026-no_positive-cost1-delay1.json": "fbfedf6ddc7e4a441d6b9101414c194e9a1aacf01dd57e624d849987cb99cfdb",
+    "2024-2026-no_positive-cost2-delay0.json": "bcfd37c7d68755ebcadbdab599f5e36ab299ba7922a4d6014491fbb1bd409dbd",
+    "bao-cao.md": "374431a1af62db1750a7e9f76510e0187ae3baf6faaba201684f2c462bf31047",
+    "summary.json": "7d3bcb55cf6ad3c43cac1118a0388ae9020f00f8f97c8a8df28a4b6011947e4a"
+  }
+}

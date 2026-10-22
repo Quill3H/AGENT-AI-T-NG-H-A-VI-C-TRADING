@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent
+configfile: pytest.ini
+collected 44 items
+
+tests\test_eth_btc_cointegration.py .............                        [ 29%]
+tests\test_pair_account.py ................                              [ 65%]
+tests\test_cointegration_replay.py ........                              [ 84%]
+tests\test_cointegration_cli.py ...                                      [ 90%]
+tests\test_cointegration_data.py ....                                    [100%]
+
+============================= 44 passed in 5.71s ==============================
