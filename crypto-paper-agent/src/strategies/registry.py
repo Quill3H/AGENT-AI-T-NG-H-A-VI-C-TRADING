@@ -12,6 +12,7 @@ from src.strategies.cross_section import CrossSectionMomentum
 from src.strategies.pairs import PairsDistance
 from src.strategies.funding_signals import C1FundingFilter, FundingCarry
 from src.strategies.reddit_plan import RedditPlan
+from src.strategies.ict_liquidity import IctLiquidity
 from src.strategies.donchian_trend import DonchianTrendStrategy
 from src.strategies.indicator_suite import (
     ADXDonchian,
@@ -134,6 +135,10 @@ DIRECTIONAL_STRATEGIES = {
     "reddit_premarket": RedditPlan,
     "reddit_open_reversal": RedditPlan,
     "reddit_plan_both": RedditPlan,
+    "ict_orb_fvg": IctLiquidity,
+    "ict_irl_erl": IctLiquidity,
+    "ict_both": IctLiquidity,
+    "ict_orb_fvg_1m": IctLiquidity,
 }
 
 

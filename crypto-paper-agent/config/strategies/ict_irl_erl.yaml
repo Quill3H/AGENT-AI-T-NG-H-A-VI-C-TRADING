@@ -1,0 +1,17 @@
+# ict_irl_erl.yaml - round-19 candidate L2: IRL -> ERL, first retracement into a 30-minute FVG after the sweep, fixed 2R. Rules: src/strategies/ict_liquidity.py,
+# protocol: docs/research/2026-10-23-round19-ict-sweep-fvg.md. Fixed before any run, not fitted.
+strategy:
+  name: "ICT_LIQUIDITY"
+  enabled: true
+  timeframe_signal: "5m"
+  timeframe_execution: "5m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  setups: [irl_erl]
+  bar_minutes: 5
+  window_bars: 240

@@ -1,0 +1,17 @@
+# ict_orb_fvg.yaml - round-19 candidate L1: 15-minute ORB + FVG entry after the pre-New-York sweep context, target the Asia extreme. Rules: src/strategies/ict_liquidity.py,
+# protocol: docs/research/2026-10-23-round19-ict-sweep-fvg.md. Fixed before any run, not fitted.
+strategy:
+  name: "ICT_LIQUIDITY"
+  enabled: true
+  timeframe_signal: "5m"
+  timeframe_execution: "5m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  setups: [orb_fvg]
+  bar_minutes: 5
+  window_bars: 240
