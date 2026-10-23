@@ -1,0 +1,58 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /tmp/claude-0/oldtree/crypto-paper-agent
+configfile: pytest.ini
+plugins: platformdirs-4.13.5, anyio-4.15.1, cov-7.1.0
+collected 35 items
+
+tests/test_oi_reclaim.py .......................FFFFFFFFFFFF             [100%]
+
+=================================== FAILURES ===================================
+E   KeyError: 'breaker'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:345: KeyError: 'breaker'
+E   AttributeError: 'Trade' object has no attribute 'risk_multiplier'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:379: AttributeError: 'Trade' object has no attribute 'risk_multiplier'
+E   AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+      
+      - CIRCUIT_BREAKER_LOCK
+      + TIME_STOP)
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:391: AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+E   AssertionError: assert 'TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+      
+      - CIRCUIT_BREAKER_LOCK
+      + TIME_STOP
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:405: AssertionError: assert 'TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+E   AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:415: AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+E   AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:422: AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+E   assert (np.float64(0.0) == 0 and np.float64(0.0) == -3.362865 ± 3.4e-06
+      
+      comparison failed
+      Obtained: 0.0
+      Expected: -3.362865 ± 3.4e-06)
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:443: assert (np.float64(0.0) == 0 and np.float64(0.0) == -3.362865 ± 3.4e-06
+E   KeyError: 'ledger'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:457: KeyError: 'ledger'
+E   AttributeError: 'Trade' object has no attribute 'intrabar_estimated'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:465: AttributeError: 'Trade' object has no attribute 'intrabar_estimated'
+E   AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:488: AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+E   AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:500: AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+E   AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+/tmp/claude-0/oldtree/crypto-paper-agent/tests/test_oi_reclaim.py:508: AttributeError: module 'reproduce_oi_reclaim' has no attribute 'evaluate'
+=========================== short test summary info ============================
+FAILED tests/test_oi_reclaim.py::test_daily_loss_breaker_blocks_the_next_entry
+FAILED tests/test_oi_reclaim.py::test_f1_three_losses_halve_the_risk_of_the_next_trade
+FAILED tests/test_oi_reclaim.py::test_f1_funding_loss_trips_the_breaker_and_closes_at_that_open
+FAILED tests/test_oi_reclaim.py::test_f1_forced_close_does_not_count_in_the_streak
+FAILED tests/test_oi_reclaim.py::test_f2_missing_stop_candle_is_a_data_error_not_a_time_stop
+FAILED tests/test_oi_reclaim.py::test_f2_missing_or_bad_funding_is_a_data_error_not_zero
+FAILED tests/test_oi_reclaim.py::test_f3_open_equity_includes_funding_when_paid
+FAILED tests/test_oi_reclaim.py::test_f3_curve_is_rebuilt_from_the_ledger_and_marks_the_open_position
+FAILED tests/test_oi_reclaim.py::test_f3_intrabar_exit_is_stamped_when_the_bar_closes
+FAILED tests/test_oi_reclaim.py::test_f4_report_keeps_the_end_of_window_settlement
+FAILED tests/test_oi_reclaim.py::test_f4_year_end_window_has_no_extra_year - ...
+FAILED tests/test_oi_reclaim.py::test_cli_reports_data_failures_without_scoring_them
+======================== 12 failed, 23 passed in 8.67s =========================

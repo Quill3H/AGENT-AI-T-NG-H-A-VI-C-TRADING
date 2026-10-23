@@ -63,6 +63,11 @@ the funding rule; positive but costs x2 negative = not robust to costs.
 
 ## Results (run at frozen 5fdda7c; SEEN_DATA_RETROSPECTIVE; AUTHOR_REPORTED)
 
+**SUPERSEDED 2026-10-23** by the rerun at `ce7ce67` below (Codex review F1-F4: breaker, data
+checks, equity curve, final settlement). Kept as the record of that run; its 16 ledger rows are
+voided. The drawdown 0.31% and the "69 months" and "mutually exclusive" wording below are wrong
+or limited, see the corrections in the rerun section.
+
 Outputs: `docs/research/runs/oi-reclaim-v1-5fdda7c/` (summary.json sha256 e0c3b846...,
 data_check.json, every scenario's event audit and trades, the OI manifest); hourly equity CSVs in
 `/mnt/project-files/research-runs/oi-reclaim-v1-5fdda7c/`.
@@ -102,3 +107,33 @@ whatever OI said); 2021-09-07 15:00 was blocked by cooldown there and is undeter
 
 No thresholds were tuned after these runs. Forward paper is not proposed; the owner decides
 whether a v2 with a different, pre-registered entry geometry is worth specifying.
+
+## Rerun after Codex review (engine ce7ce67, 2026-10-23; SEEN_DATA_RETROSPECTIVE; AUTHOR_REPORTED)
+
+Same rules, inputs (identical sha256) and scenarios. Engine changes only: project circuit breaker
+and invariants with a cashflow ledger, data checks that fail closed, 15m equity rebuilt from the
+ledger, intrabar exits stamped at the bar close, settled final equity in the report. Details,
+regressions and reconciliation: `docs/reviews/OI_RECLAIM_V1_FIX_HANDOFF_2026-10-23.md`; outputs
+`docs/research/runs/oi-reclaim-v1-ce7ce67/` (events, trades, cashflows, 15m equity curves
+`*_equity_15m.csv.gz`).
+
+| Window | Scenario | Status | Trades | Return % | Max DD % (15m) | Net $ | Funding $ |
+|---|---|---|---|---|---|---|---|
+| W1 | every OI scenario (6 + lag 60) | DATA_QUALITY_FAILED, not scored | | | | | |
+| W1 | price_only_no_positive | OK | 0 | 0.00 | 0.00 | 0 | 0 |
+| W2 | base, costs x2 (actual and no_positive) | OK | 0 | 0.00 | 0.00 | 0 | 0 |
+| W2 | delay15m (actual and no_positive) | OK | 2 | 1.24 | 0.43 | 123.59 | -0.86 |
+| W2 | price_only_no_positive, oi_lag60_no_positive | OK | 0 | 0.00 | 0.00 | 0 | 0 |
+
+Both windows pass the new trading-data check (no missing 15m bar, every 00/08/16 funding event
+present and finite). No breaker lock or risk halving occurred. Funnel counts are unchanged.
+
+Corrections:
+- W1 is DATA_QUALITY_FAILED, so the scored evidence is W2 only: no trade at base or double costs
+  in 33 months (2024-01..2026-09), not 69.
+- W2 misses 460 OI snapshots on the 5m grid (41 on the hour); only the snapshots needed at its
+  price shocks are all present.
+- The reclaim and RR gates are not mutually exclusive: an entry window exists when
+  lower wick + 0.25A <= 0.25 x drop (Codex: 30/111 and 28/87 accepted events have one, but
+  only 1/21 and 3/19 confirmed signals). The window is narrow and the 1h confirmation usually
+  comes after price has left it. To be analysed before any v2; v1 is not re-tuned.

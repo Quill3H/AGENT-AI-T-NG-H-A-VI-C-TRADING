@@ -1,5 +1,14 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Round 18 OI reclaim v1: review fixes and rerun — 2026-10-23
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Branch `claude/project-thread-bla4me` (base `claude/project-thread-uiqlsn` at `ab1ad81`); engine fix `ce7ce676ce8683f04af21ef7b64249579a4c01ee`, results/docs in the next commit. Paper only.
+
+- Codex review of `5fdda7c` (REQUEST_CHANGES, F1-F4) is addressed: project circuit breaker and invariants with a cashflow ledger, fail-closed data checks (missing 15m bar / scheduled funding), 15m equity from the ledger, settled final equity in reports. Strategy rules unchanged.
+- Rerun on the same inputs: W1 DATA_QUALITY_FAILED (3 shocks without OI, not scored); W2 base and costs x2: 0 trades; W2 delay stress: 2 trades, +123.59 USDT, 15m DD 0.43% (was reported 0.31%). Old 16 ledger rows voided, not deleted.
+- Tests: offline suite at `ce7ce67` 677 passed, 4 skipped, 5 deselected (log `docs/research/runs/oi-reclaim-v1-ce7ce67/tests_full_ce7ce67.log`); 12 regressions red on `5fdda7c`. Handoff: `docs/reviews/OI_RECLAIM_V1_FIX_HANDOFF_2026-10-23.md`.
+- Next owner: Codex re-review. A v2 needs its own pre-registered spec after that; the delay variant is not a candidate.
+
 ## Core hardening and method search — 2026-10-16
 
 **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Owner-directed work on branch `claude/project-thread-uiqlsn` (base `main` `fe1c133`); see the PR for the final SHA. Paper only; no order path, testnet or credential.
