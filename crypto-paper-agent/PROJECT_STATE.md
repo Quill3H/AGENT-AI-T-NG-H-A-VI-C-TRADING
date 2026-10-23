@@ -1,5 +1,13 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Round 18 fix: btc_oi_contraction_reclaim_v1 after Codex review — 2026-10-23
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — awaiting Codex re-review; not gate acceptance.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `ff64ed7d9a432cc972c72359ebae17ecbd648400`; results/docs in the following commit. Paper only.
+
+- Codex review of `5fdda7c`/`ab1ad81` (REQUEST_CHANGES, F1–F4) fixed without changing any v1 parameter: project `CircuitBreakerState` + `check_all_invariants` with event-time cashflows and a forced close on lock (F1); `DataQualityError` preflight on 15m bars and 8h funding settlements, failed runs kept out of scored results and ledgered as `data-quality-failed` (F2); 15m equity from a cashflow ledger with funding at payment time, DD on 15m closes, intrabar exits stamped at bar close (F3); window-end settlement kept and final equity reconciled (F4).
+- 12 regressions red on `ab1ad81`, green at `ff64ed7`; offline suite 680 passed, 2 skipped, 5 network deselected.
+- Rerun on the same data (same sha256): funnels unchanged; W1 OI scenarios DATA_QUALITY_FAILED (not scored), W2 0 trades at base/2x costs; W2 delay stress 2 trades +1.24%, DD 0.43% (was 0.31%). No v2, no delay variant selected. Details: `docs/research/2026-10-22-btc-oi-reclaim-v1.md`, `docs/reports-vi/vong-18-sua-loi-oi-v1-2026-10-23.md`.
+
 ## Core hardening and method search — 2026-10-16
 
 **AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Owner-directed work on branch `claude/project-thread-uiqlsn` (base `main` `fe1c133`); see the PR for the final SHA. Paper only; no order path, testnet or credential.

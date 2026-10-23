@@ -102,3 +102,77 @@ whatever OI said); 2021-09-07 15:00 was blocked by cooldown there and is undeter
 
 No thresholds were tuned after these runs. Forward paper is not proposed; the owner decides
 whether a v2 with a different, pre-registered entry geometry is worth specifying.
+
+## Fix and rerun at ff64ed7 (Codex review 2026-10-22, REQUEST_CHANGES F1-F4)
+
+Codex reviewed 5fdda7c / ab1ad81 (`REVIEW-CHO-CLAUDE-OI-RECLAIM-V1-2026-10-22.md`) and reproduced
+four defects in the simulator and its report. All are fixed at **ff64ed7**; no v1 parameter and
+no line of the config changed (shock 2A, OI -1%, reclaim 25%, RR 1.5, stop/target, cooldown,
+confirmation, cost gate, risk 0.5%, 1x, lot/tick, costs). AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED.
+
+- **F1 risk.** The simulator now uses the project `CircuitBreakerState` and `check_all_invariants`
+  (as the broker and carry simulator do). Entry costs, every funding payment and the exit are
+  booked at their own time in the rolling 24h ledger (5% of equity -> 24h lock); a lock while a
+  position is open closes it at that bar's open (`CIRCUIT_BREAKER_LOCK`, cashflow booked, not
+  counted in the streak, as in the broker); only a closed trade's net P&L moves the streak
+  (3 losses -> risk x0.5, 3 wins in a row -> x1). Entries go through the invariants (stop side,
+  1x leverage, "normal" 2% tier ceiling, actual stop risk <= budget, margin, notional <=
+  min(project 2x, v1 1x) equity, liquidation buffer). The old calendar-day counter is gone; the
+  breaker's lock is fixed at 24h, so `lock_hours` must stay 24.
+- **F2 data.** `Simulator.preflight` fails the run (`DataQualityError`) before anything is
+  simulated if a 15m bar from the first ATR input (start - 16h) to the window end is missing, off
+  grid, non-finite or inconsistent, if any 00/08/16 UTC funding settlement in the window is
+  missing or non-finite, or if there is no funding table. Missing funding is never zero and a
+  missing bar is never "stop not touched". The CLI marks such runs `DATA_QUALITY_FAILED` with no
+  metrics; runs with price shocks lacking OI snapshots are also `DATA_QUALITY_FAILED`, their
+  numbers kept only under `diagnostic_not_scored`, and the ledger records both with stage
+  `data-quality-failed` and no metrics (never `validation`).
+- **F3 equity.** The equity curve is built at every 15m close from the cashflow ledger (entry,
+  funding in the bar it is paid, exit) plus the open position marked at the close. Max drawdown
+  is on those 15m closes with the start equity as the first peak (intrabar lows are not seen, so
+  it is still a lower bound). Intrabar stop/target exits are stamped at the bar close
+  (`exit_time`, when the fill is known) with `exit_bar` = the bar's open.
+- **F4 settlement.** The summary keys each 15m value by its bar open, so the window-end close
+  (END_OF_WINDOW settlement) stays inside the window and its own year/month; the run and the
+  report both fail if final equity != start + trades' net P&L != start + ledger cashflows (1e-6).
+
+Tests: 12 regressions (`test_f1_*` .. `test_f4_*` in `tests/test_oi_reclaim.py`; the fix
+commit message says 13 by mistake), all red on ab1ad81
+(`runs/oi-reclaim-v1-ff64ed7/logs/oi-tests-red-on-ab1ad81.log`) and green at ff64ed7. Five fail
+on behaviour and reproduce Codex's numbers (TIME_STOP instead of a breaker close, a 3% risk entry
+accepted, open-equity funding 0 vs -3.362865, reported 9,997.31 vs cash 9,994.62 twice); seven
+fail on names the fix adds (risk_multiplier, DataQualityError, run_scenario, drawdown_pct,
+exit_bar, cashflows), whose old behaviour Codex's probes already showed (4th loss still at 0.5%,
+a dropped stop bar -> TIME_STOP, empty funding -> funding 0). The
+existing fixtures now carry zero-rate 8h funding and start the window on the second day (ATR
+history); the old `lock_hours=1` check became a check that the 24h lock covers the blocked fill.
+Full offline suite at ff64ed7: 680 passed, 2 skipped, 5 network deselected (`logs/`).
+
+Rerun: same inputs, same sha256 as the first run (`data_check.json`), outputs in
+`docs/research/runs/oi-reclaim-v1-ff64ed7/` (summary.json sha256 1a904892...; per scenario
+events / trades / cashflows CSVs; the W2 delay 15m equity curves), all 15m curves in
+`/mnt/project-files/research-runs/oi-reclaim-v1-ff64ed7/equity-15m/`. The 5fdda7c ledger rows are
+voided (kept, marked superseded) and the rerun recorded at ff64ed7.
+
+| Window | Scenario | Status | Trades | Return % | Max DD % (15m) | Net $ | Funding $ |
+|---|---|---|---|---|---|---|---|
+| W1 | 6 OI scenarios + OI lag 60 | DATA_QUALITY_FAILED (3 shocks without OI) | not scored | | | | |
+| W1 | price_only_no_positive | OK | 0 | 0.00 | 0.00 | 0 | 0 |
+| W2 | base, costs x2 (actual / no_positive), OI lag 60, price only | OK | 0 | 0.00 | 0.00 | 0 | 0 |
+| W2 | delay15m_actual / no_positive | OK | 2 | 1.24 | **0.43** (was 0.31) | 123.59 | -0.86 |
+
+Funnels and rejects are identical to the first run in every scenario (the fixes change accounting
+and risk, not the rules); the breaker never locked and every trade ran at risk x1. The delay
+trades keep their fills and P&L (net 123.590892, as Codex replayed); their TARGET exits are now
+stamped 15 minutes later (bar close). Drawdown 0.4299% equals Codex's funding-aware 15m figure.
+Both 15m/funding preflights passed (no bar or settlement missing in W1 or W2).
+
+Corrections to the text above (Codex): W1 is DATA_QUALITY_FAILED, so "no position in 69 months"
+holds only for W2 plus the W1 price-only control; W1's OI scenarios are not evidence. W2 has 460
+missing 5m OI snapshots (41 on the hour); what holds is that no W2 price shock lacks its two OI
+snapshots, not that W2 OI coverage is complete. And reclaim 25% and RR 1.5 are not mutually
+exclusive: ignoring tick/slippage, with D = Cprev - close_s and wick w, a valid entry exists when
+w + 0.25A <= 0.25D; with tick and entry slippage, 30/111 (W1) and 28/87 (W2) accepted events had
+a feasible entry range but only 1/21 and 3/19 signals still had one at the signal. The narrow
+entry range after a 1h confirmation, not a contradiction, is what removes the trades. No v2 and
+no delay variant is proposed from this; that needs a new pre-registered spec.
