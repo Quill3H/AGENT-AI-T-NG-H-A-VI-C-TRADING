@@ -21,7 +21,8 @@ Per 15m bar with open time b while a position is open (fill bar excluded for ste
 Every fill and exit pays taker fee and adverse slippage. Funding is never a signal or gate.
 
 Risk (Codex review 2026-10-22, F1): the project CircuitBreakerState and check_all_invariants,
-as in the broker and the carry simulator. Entry costs, each funding payment and the exit are
+as in the broker and the carry simulator; where the project and v1 both set a limit (daily
+loss, notional) the stricter one applies (review 2, F5). Entry costs, each funding payment and the exit are
 booked as cashflows at their own time (rolling 24h loss, 5% -> 24h lock that closes an open
 position at once); only the closed trade's net P&L moves the loss/win streak (3 losses -> risk
 x0.5, 3 wins in a row -> x1). Every cashflow also goes to a ledger, and the 15m equity curve is
@@ -139,6 +140,12 @@ def detect(h1, oi, cfg, start, end):
     return pd.DataFrame(rows)
 
 
+def loss_limit(value, name):
+    if type(value) is bool or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value < 1:
+        raise ValueError(f"{name} must be a fraction in (0, 1), got {value!r}")
+    return float(value)
+
+
 class Simulator:
     def __init__(self, bars15, funding, oi, config=None, project_config=None):
         self.cfg = {**DEFAULTS, **(config or {})}
@@ -152,7 +159,11 @@ class Simulator:
         # the stricter of the project cap and v1's 1x notional cap
         risk["max_notional_pct_of_equity"] = min(float(risk.get("max_notional_pct_of_equity", math.inf)),
                                                  float(self.cfg["max_notional_x_equity"]))
-        breakers = {**project_config.get("circuit_breakers", {}), "daily_loss_limit_pct": self.cfg["daily_loss_pct"]}
+        breakers = dict(project_config.get("circuit_breakers", {}))
+        # the stricter of the project and v1 daily-loss limits; neither overrides a tighter one
+        limits = [loss_limit(self.cfg["daily_loss_pct"], "daily_loss_pct"),
+                  loss_limit(breakers.get("daily_loss_limit_pct", 0.05), "circuit_breakers.daily_loss_limit_pct")]
+        breakers["daily_loss_limit_pct"] = min(limits)
         self.project = {**project_config, "risk": risk, "circuit_breakers": breakers,
                         "fees": {"taker_pct": self.cfg["taker_pct"]}}
         self.b = bars15
@@ -289,7 +300,7 @@ class Simulator:
         return {"trades": trades, "audit": audit, "layers": layers, "rejects": rejects,
                 "missing_oi_event_times": missing_oi, "curve": curve, "curve_detail": curve_detail,
                 "cashflows": list(self.ledger), "final_cash": cash, "start": start, "end": end,
-                "breaker": {"locks": breaker.lock_count, "risk_multiplier_at_end": breaker.risk_multiplier,
+                "breaker": {"daily_loss_limit_pct": breaker.daily_loss_limit_pct, "locks": breaker.lock_count, "risk_multiplier_at_end": breaker.risk_multiplier,
                             "consecutive_losses_at_end": breaker.consecutive_losses}}
 
     # ------------------------------------------------------------------

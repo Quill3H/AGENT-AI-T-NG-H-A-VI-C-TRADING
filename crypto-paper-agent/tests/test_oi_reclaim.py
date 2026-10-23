@@ -514,3 +514,40 @@ def test_f4_cashflow_ledger_reconciles_with_trades_and_curve():
         booked = sum(e["amount"] for e in result["cashflows"])
         assert booked == pytest.approx(sum(t.net_pnl for t in result["trades"]), abs=1e-9)
         assert result["curve"].iloc[-1] == pytest.approx(10000 + booked, abs=1e-9) == result["final_cash"]
+
+
+# ---------------------------------------------------------------- Codex review 2 (F5)
+def project_with_loss_limit(pct):
+    import yaml
+    cfg = yaml.safe_load(orc.PROJECT_CONFIG.read_text(encoding="utf-8"))
+    cfg["circuit_breakers"]["daily_loss_limit_pct"] = pct
+    return cfg
+
+
+@pytest.mark.parametrize("project_pct, v1_pct, effective, closes", [
+    (0.01, 0.05, 0.01, True),   # the project limit is stricter: it stays
+    (0.05, 0.01, 0.01, True),   # v1 stricter (synthetic case only; the frozen v1 config is 5%)
+    (0.05, 0.05, 0.05, False),  # the research runs: unchanged behaviour
+])
+def test_f5_the_stricter_daily_loss_limit_applies(project_pct, v1_pct, effective, closes):
+    b = scenario()
+    pay = SHOCK + 2 * H + 2 * Q
+    f = funding_at(b, (pay, 0.06))  # the long pays about 2.1% of equity once, at 18:30
+    sim = orc.Simulator(b, f, oi_series(b), {"daily_loss_pct": v1_pct}, project_config=project_with_loss_limit(project_pct))
+    result = sim.run(*window(b))
+    (tr,) = result["trades"]
+    assert -0.05 * 10000 < tr.funding < -0.01 * 10000
+    if closes:
+        assert tr.exit_reason == "CIRCUIT_BREAKER_LOCK" and tr.exit_time == pay and result["breaker"]["locks"] == 1
+    else:
+        assert tr.exit_reason == "TIME_STOP" and result["breaker"]["locks"] == 0
+    assert result["breaker"]["daily_loss_limit_pct"] == effective
+
+
+@pytest.mark.parametrize("bad", [0.0, -0.01, 1.0, float("nan"), "5%", True])
+def test_f5_an_invalid_daily_loss_limit_is_refused(bad):
+    b = scenario()
+    with pytest.raises((ValueError, TypeError)):
+        orc.Simulator(b, settlements(b), oi_series(b), {"daily_loss_pct": bad})
+    with pytest.raises((ValueError, TypeError)):
+        orc.Simulator(b, settlements(b), oi_series(b), project_config=project_with_loss_limit(bad))
