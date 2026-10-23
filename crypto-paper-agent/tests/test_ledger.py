@@ -47,3 +47,94 @@ def test_a_void_run_frees_its_data_once(tmp_path):
     with pytest.raises(ValueError):
         ledger.check_untouched(["TRXUSDT"], "2021-01-01", "2026-09-30", records)
     assert len([r for r in records if r["stage"] == "final"]) == 2
+
+
+def test_preregistration_must_precede_the_first_round_result(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.record(19, "dev", "V1", "s", "first", "2021-01-01", "2021-12-31",
+                  ["BTCUSDT"], "0.5%", SUMMARY, path=path)
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError, match="must precede"):
+        ledger.preregister(19, "h19", ["V1"], ["matched_random"], [1.0, 2.0], path=path)
+
+    assert path.read_bytes() == before
+
+
+def test_protocol_run_rejects_an_undeclared_variant_or_cost_before_writing(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.preregister(19, "h19", ["V1"], ["matched_random"], [1.0, 2.0], path=path)
+    before = path.read_bytes()
+
+    for variant, cost in (("V2", 1.0), ("V1", 3.0)):
+        with pytest.raises(ValueError, match="undeclared"):
+            ledger.record(
+                19, "dev", variant, "s", "candidate", "2021-01-01", "2021-12-31",
+                ["BTCUSDT"], "0.5%", SUMMARY, frozen_commit="abc123", path=path,
+                protocol={"hypothesis_id": "h19", "variant_id": variant,
+                          "run_role": "candidate", "cost_multiplier": cost},
+            )
+        assert path.read_bytes() == before
+
+
+def test_preregistered_round_rejects_a_result_without_protocol_metadata(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.preregister(19, "h19", ["V1"], [], [1.0], path=path)
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError, match="requires protocol metadata"):
+        ledger.record(19, "dev", "V1", "s", "untracked", "2021-01-01", "2021-12-31",
+                      ["BTCUSDT"], "0.5%", SUMMARY, frozen_commit="abc123", path=path)
+
+    assert path.read_bytes() == before
+
+
+def test_integrity_report_requires_all_variants_costs_controls_and_frozen_commits(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.preregister(19, "h19", ["V1", "V2"], ["matched_random"], [1.0, 2.0], path=path)
+
+    def add(variant, role, cost, frozen="abc123"):
+        ledger.record(
+            19, "validation", variant, "s", f"{variant}-{role}-{cost}",
+            "2021-01-01", "2021-12-31", ["BTCUSDT"], "0.5%", SUMMARY,
+            frozen_commit=frozen, path=path,
+            protocol={"hypothesis_id": "h19", "variant_id": variant,
+                      "run_role": role, "cost_multiplier": cost},
+        )
+
+    add("V1", "candidate", 1.0)
+    add("V1", "candidate", 2.0)
+    add("V2", "candidate", 1.0)
+    report = ledger.research_integrity(ledger.load(path))[0]
+    assert report["status"] == "PROTOCOL_INCOMPLETE"
+    assert "V2 missing cost multipliers: [2.0]" in report["reasons"]
+    assert "missing required controls: ['matched_random']" in report["reasons"]
+
+    add("V2", "candidate", 2.0)
+    add("V1", "matched_random", 1.0)
+    report = ledger.research_integrity(ledger.load(path))[0]
+    assert report == {
+        "round": 19,
+        "hypothesis_id": "h19",
+        "status": "PROTOCOL_COMPLETE",
+        "observed_runs": 5,
+        "observed_variants": 2,
+        "declared_variants": 2,
+        "bonferroni_alpha": 0.025,
+        "reasons": [],
+    }
+
+
+def test_integrity_report_labels_legacy_rounds_and_hides_preregistration_from_runs(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.record(18, "validation", "OIR1", "s", "legacy", "2024-01-01", "2024-12-31",
+                  ["BTCUSDT"], "0.5%", SUMMARY, path=path)
+    ledger.preregister(19, "h19", ["V1"], [], [1.0], path=path)
+    records = ledger.load(path)
+
+    reports = {r["round"]: r for r in ledger.research_integrity(records)}
+    assert reports[18]["status"] == "LEGACY_UNREGISTERED"
+    assert reports[18]["observed_runs"] == 1
+    assert reports[19]["status"] == "PROTOCOL_INCOMPLETE"
+    assert "h19" in ledger.integrity_markdown(records)
+    assert "h19" not in ledger.summary_markdown(records)

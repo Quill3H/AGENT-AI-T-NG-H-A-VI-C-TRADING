@@ -29,6 +29,31 @@ to come from coins or months no final test has used, or from forward paper tradi
 - XLMUSDT: 2021-01-01..2026-09-30
 - XRPUSDT: 2021-01-01..2026-09-30, 2026-10-01..2026-10-17
 
+## Research integrity
+
+| Round | Hypothesis | Status | Runs | Observed / declared variants | Bonferroni alpha | Gaps |
+|---|---|---|---|---|---|---|
+| 1 | - | LEGACY_UNREGISTERED | 1 | 1 / ? | n/a | no causal preregistration in the ledger |
+| 2 | - | LEGACY_UNREGISTERED | 1 | 1 / ? | n/a | no causal preregistration in the ledger |
+| 5 | - | LEGACY_UNREGISTERED | 45 | 12 / ? | n/a | no causal preregistration in the ledger |
+| 6 | - | LEGACY_UNREGISTERED | 38 | 29 / ? | n/a | no causal preregistration in the ledger |
+| 3 | - | LEGACY_UNREGISTERED | 2 | 1 / ? | n/a | no causal preregistration in the ledger |
+| 4 | - | LEGACY_UNREGISTERED | 2 | 1 / ? | n/a | no causal preregistration in the ledger |
+| 7 | - | LEGACY_UNREGISTERED | 29 | 8 / ? | n/a | no causal preregistration in the ledger |
+| 8 | - | LEGACY_UNREGISTERED | 29 | 7 / ? | n/a | no causal preregistration in the ledger |
+| 9 | - | LEGACY_UNREGISTERED | 21 | 8 / ? | n/a | no causal preregistration in the ledger |
+| 10 | - | LEGACY_UNREGISTERED | 21 | 9 / ? | n/a | no causal preregistration in the ledger |
+| 11 | - | LEGACY_UNREGISTERED | 28 | 9 / ? | n/a | no causal preregistration in the ledger |
+| 12 | - | LEGACY_UNREGISTERED | 19 | 7 / ? | n/a | no causal preregistration in the ledger |
+| 13 | - | LEGACY_UNREGISTERED | 14 | 5 / ? | n/a | no causal preregistration in the ledger |
+| 14 | - | LEGACY_UNREGISTERED | 14 | 4 / ? | n/a | no causal preregistration in the ledger |
+| 15 | - | LEGACY_UNREGISTERED | 12 | 4 / ? | n/a | no causal preregistration in the ledger |
+| 16 | - | LEGACY_UNREGISTERED | 6 | 3 / ? | n/a | no causal preregistration in the ledger |
+| 17 | - | LEGACY_UNREGISTERED | 12 | 4 / ? | n/a | no causal preregistration in the ledger |
+| 18 | - | LEGACY_UNREGISTERED | 16 | 1 / ? | n/a | no causal preregistration in the ledger |
+
+The Bonferroni value is a reference threshold for a declared search family, not proof of an edge.
+
 ## Runs
 
 | Round | Stage | Candidate | Strategy | Window | Symbols | Risk | Return % | Max DD % | Trades/week | Win % |

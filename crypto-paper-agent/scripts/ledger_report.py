@@ -23,7 +23,9 @@ def main():
     spent = ledger.spent_final_data(records)
     lines = [HEADER, "## Spent final data", ""]
     lines += [f"- {symbol}: " + ", ".join(f"{a}..{b}" for a, b in windows) for symbol, windows in sorted(spent.items())]
-    lines += ["", "## Runs", "", ledger.summary_markdown(records)]
+    lines += ["", "## Research integrity", "", ledger.integrity_markdown(records),
+              "The Bonferroni value is a reference threshold for a declared search family, not proof of an edge.",
+              "", "## Runs", "", ledger.summary_markdown(records)]
     target = ledger.LEDGER.parent / "LEARNING_LOG.md"
     target.write_text("\n".join(lines), encoding="utf-8")
     print(target)
