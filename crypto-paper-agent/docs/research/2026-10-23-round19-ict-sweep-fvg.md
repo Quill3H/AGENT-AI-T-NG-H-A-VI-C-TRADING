@@ -103,3 +103,53 @@ weekdays when flat, which cannot change any signal. Unit tests use synthetic bar
 (London breakout and other session rules) and round 17 (US-open plan) already failed on the same
 coins after costs, and the repo's original `smc_liquidity_sweep` strategy uses related ideas;
 those results were known when this round was set up.
+
+## Development results (BTC/ETH/SOL 2021-01..2023-12; pilot 2023-01..03; AUTHOR_REPORTED)
+
+Run at 3fc2e7e; raw output docs/research/runs/round19-ict-3fc2e7e/dev.json.
+
+| Run | Return % | Max DD % | Trades | Win % | Mean net R | Average month % | 2021 | 2022 | 2023 |
+|---|---|---|---|---|---|---|---|---|---|
+| C1 risk 2% | 71.8 | 14.13 | 366 | 26.5 | 0.438 | 1.51 | 24.56 | 2.24 | 34.91 |
+| C1 risk 5% | 317.92 | 31.35 | 357 | 26.6 | 0.438 | 4.05 | 67.16 | 7.0 | 133.66 |
+| L1 risk 5% | 0.0 | 0.0 | 0 |  |  | 0.0 | 0.0 | 0.0 | 0.0 |
+| L1 risk 2% | 2.39 | 3.3 | 13 | 46.2 | 0.29 | 0.07 | 1.95 | 1.18 | -0.74 |
+| L2 risk 5% | 3.59 | 2.02 | 4 | 100.0 | 0.53 | 0.1 | 3.05 | 0.52 | 0.0 |
+| L2 risk 2% | 0.13 | 3.31 | 16 | 62.5 | 0.018 | 0.0 | 1.09 | -1.42 | 0.48 |
+| L3 risk 2% | 2.66 | 3.63 | 25 | 56.0 | 0.168 | 0.07 | 1.68 | 1.26 | -0.29 |
+| L3 risk 5% | 3.59 | 2.02 | 4 | 100.0 | 0.53 | 0.1 | 3.05 | 0.52 | 0.0 |
+| L1 risk 2%, costs x2 | 1.89 | 3.38 | 16 | 50.0 | 0.385 | 0.05 | 1.55 | 1.12 | -0.78 |
+| L1 risk 5%, costs x2 | 0.0 | 0.0 | 0 |  |  | 0.0 | 0.0 | 0.0 | 0.0 |
+| L2 risk 2%, costs x2 | -1.62 | 4.33 | 17 | 58.8 | -0.139 | -0.05 | 0.74 | -1.85 | -0.5 |
+| L2 risk 5%, costs x2 | 3.28 | 2.0 | 4 | 100.0 | 0.485 | 0.09 | 2.85 | 0.41 | 0.0 |
+| L3 risk 2%, costs x2 | -0.67 | 4.71 | 28 | 53.6 | 0.03 | -0.02 | 1.05 | -0.35 | -1.36 |
+| L3 risk 5%, costs x2 | 3.28 | 2.0 | 4 | 100.0 | 0.485 | 0.09 | 2.85 | 0.41 | 0.0 |
+| L1 pilot window 5m, risk 2% | 0.0 | 0.0 | 0 |  |  | 0.0 |  |  | 0.0 |
+| P1 pilot 1m, risk 2% | 0.0 | 0.0 | 0 |  |  | 0.0 |  |  | 0.0 |
+
+**Selection: L2 at 5% risk** (rule level "drawdown only": no run is free of a losing year with
+trades, so the highest average month with drawdown <= 35% is taken). It made +3.6% in three
+years on **4 trades** (+0.10% a month); it does not beat C1 at 5% (+4.05% a month) or the bank
+deposit (0.48% a month). L3 at 5% is identical to L2 at 5% (its L1 half never traded at 5%).
+
+Funnel (diagnostic only, computed after the run from the frozen code; long and short counted
+separately, weekdays 2021-01-15..2023-12-29):
+
+| Coin | Weekdays | Side-days with both levels swept | + HTF FVG tapped and held | + Asia target still open at the NY open |
+|---|---|---|---|---|
+| BTCUSDT | 771 | 373 | 179 | 124 |
+| ETHUSDT | 771 | 364 | 173 | 126 |
+| SOLUSDT | 771 | 335 | 143 | 104 |
+
+About 100-125 side-days a coin pass the context, but the displacement, the entry trigger, the
+0.3% minimum stop and (L1) the 1.5R room to the Asia extreme leave 13-28 trades in three years at
+2% risk. At 5% risk most of those orders disappear; the likely cause is the 2x-equity notional
+cap (5% risk on a 0.3-1% stop asks for 5-16x equity), as in rounds 5 and 17, not traced order by
+order. The 1m pilot and the 5m run on 2023-01..03 both made **0 trades**, so the 1m entry
+question is unanswered on the data we have.
+
+Pre-registered forward gate on the pick (dev part): average month 0.10% < 0.48% FAIL, trades
+4 < 30 FAIL, drawdown 2.0% <= 35% pass, costs x2 +3.3% > 0 pass. The pick therefore cannot join
+the forward check-in whatever the seen-data checks show; they run anyway, as registered.
+
+Frozen by this commit before any check.
