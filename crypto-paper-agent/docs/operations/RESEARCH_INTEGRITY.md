@@ -5,13 +5,14 @@ does not replace an independent review.
 
 ## Future-round sequence
 
-1. Write the hypothesis, candidate variants, required controls and cost multipliers before
-   reading performance results.
+1. Write the hypothesis, candidate variants, control configuration and cost multipliers before
+   reading performance results. Round 19 and later cannot append a result without this step.
 2. Call `src.research.ledger.preregister(...)` before the first result for that round. The
    ledger refuses a late or duplicate registration.
-3. Freeze the code/config commit.
+3. Freeze the code/config commit in the registration itself.
 4. Append each result with `ledger.record(..., protocol={...})`. A protocol run is rejected if
-   its hypothesis, variant or cost multiplier was not declared, or if `frozen_commit` is absent.
+   its candidate, hypothesis, variant, role, control configuration, cost multiplier or commit
+   differs from the registration.
 5. Generate `docs/research/ledger/LEARNING_LOG.md` with `scripts/ledger_report.py`. Read the
    `Research integrity` table separately from the strategy's return and risk result.
 
@@ -22,8 +23,9 @@ ledger.preregister(
     19,
     "btc_example_v1",
     variants=["V1", "V2"],
-    required_controls=["matched_random"],
+    controls={"matched_random": {"seed": 7, "repetitions": 100}},
     cost_multipliers=[1.0, 2.0],
+    frozen_commit=commit,
 )
 
 ledger.record(
@@ -36,12 +38,28 @@ ledger.record(
         "cost_multiplier": 1.0,
     },
 )
+
+ledger.record(
+    19, "validation", "V1", "btc_example", "V1 placebo", start, end,
+    ["BTCUSDT"], "0.5%", placebo_summary, frozen_commit=commit,
+    protocol={
+        "hypothesis_id": "btc_example_v1",
+        "variant_id": "V1",
+        "run_role": "matched_random",
+        "cost_multiplier": 1.0,
+        "control_spec": {"seed": 7, "repetitions": 100},
+    },
+)
 ```
 
-`PROTOCOL_COMPLETE` means only that every declared candidate/cost combination and required
-control was recorded from frozen code. `PROTOCOL_INCOMPLETE` names missing evidence.
+`PROTOCOL_COMPLETE` means only that every declared variant, cost and role combination was
+recorded from the registered commit. A single placebo row cannot satisfy multiple variants or
+cost scenarios. `PROTOCOL_INCOMPLETE` names missing evidence.
 `LEGACY_UNREGISTERED` means the round predates this causal record or did not use it. None of
 these statuses is a profitability verdict.
+
+Every new result receives a `run_id`. If two results reuse a label, pass the intended ID to
+`ledger.void(..., run_id=...)`; the ledger rejects an ambiguous label instead of voiding both.
 
 The reported Bonferroni value is `familywise_alpha / declared_variants`. It is a reference for
 the declared search family. The project must not treat it as a valid significance result unless

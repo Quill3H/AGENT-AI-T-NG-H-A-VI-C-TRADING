@@ -16,11 +16,14 @@ Safety rules the ledger enforces or records:
 import datetime as dt
 import json
 import math
-from numbers import Real
+import uuid
+from collections.abc import Mapping
+from numbers import Integral, Real
 from pathlib import Path
 
 LEDGER = Path(__file__).resolve().parents[2] / "docs" / "research" / "ledger" / "ledger.jsonl"
 FINAL_STAGES = ("final", "final-whatif")
+PREREGISTRATION_REQUIRED_FROM_ROUND = 19
 
 
 def trades_per_week(summary, start, end):
@@ -60,14 +63,39 @@ def _cost_multipliers(values):
     return costs
 
 
-def preregister(round_id, hypothesis_id, variants, required_controls=(), cost_multipliers=(1.0, 2.0),
+def _control_specs(controls):
+    if not isinstance(controls, Mapping):
+        raise TypeError("controls must be a mapping")
+    names = _unique_names(controls, "controls", allow_empty=True)
+    specs = {}
+    for name in names:
+        spec = controls[name]
+        if not isinstance(spec, Mapping):
+            raise TypeError(f"control spec for {name} must be a mapping")
+        spec = dict(spec)
+        if name == "matched_random":
+            if set(spec) != {"seed", "repetitions"}:
+                raise ValueError("matched_random control requires exactly seed and repetitions")
+            if isinstance(spec["seed"], bool) or not isinstance(spec["seed"], Integral):
+                raise ValueError("matched_random seed must be an integer")
+            if (isinstance(spec["repetitions"], bool)
+                    or not isinstance(spec["repetitions"], Integral)
+                    or spec["repetitions"] <= 0):
+                raise ValueError("matched_random repetitions must be a positive integer")
+        specs[name] = spec
+    return specs
+
+
+def preregister(round_id, hypothesis_id, variants, controls, cost_multipliers, frozen_commit,
                 familywise_alpha=0.05, path=LEDGER):
     """Append a protocol before a round's first result; old rounds remain explicitly legacy."""
     if not isinstance(hypothesis_id, str) or not hypothesis_id.strip():
         raise ValueError("hypothesis_id must be a non-empty string")
     variants = _unique_names(variants, "variants")
-    controls = _unique_names(required_controls, "required_controls", allow_empty=True)
+    controls = _control_specs(controls)
     costs = _cost_multipliers(cost_multipliers)
+    if not isinstance(frozen_commit, str) or not frozen_commit.strip():
+        raise ValueError("frozen_commit must be a non-empty string")
     if (isinstance(familywise_alpha, bool) or not isinstance(familywise_alpha, Real)
             or not math.isfinite(float(familywise_alpha)) or not 0 < familywise_alpha < 1):
         raise ValueError("familywise_alpha must be between zero and one")
@@ -83,19 +111,21 @@ def preregister(round_id, hypothesis_id, variants, required_controls=(), cost_mu
         "stage": "preregister",
         "hypothesis_id": hypothesis_id,
         "planned_variants": variants,
-        "required_controls": controls,
+        "controls": controls,
         "cost_multipliers": costs,
+        "frozen_commit": frozen_commit,
         "familywise_alpha": float(familywise_alpha),
         "bonferroni_alpha": float(familywise_alpha) / len(variants),
     }, path)
 
 
-def _validate_protocol(round_id, protocol, frozen_commit, path):
+def _validate_protocol(round_id, candidate, protocol, frozen_commit, path):
     if not isinstance(protocol, dict):
         raise TypeError("protocol must be a mapping")
     required = {"hypothesis_id", "variant_id", "run_role", "cost_multiplier"}
-    if set(protocol) != required:
-        raise ValueError(f"protocol fields must be exactly {sorted(required)}")
+    allowed = required | {"control_spec"}
+    if not required <= set(protocol) or not set(protocol) <= allowed:
+        raise ValueError(f"protocol fields must contain {sorted(required)} and optional control_spec")
     registrations = [r for r in load(path)
                      if r.get("round") == round_id and r.get("stage") == "preregister"]
     if len(registrations) != 1 or registrations[0]["hypothesis_id"] != protocol["hypothesis_id"]:
@@ -103,26 +133,52 @@ def _validate_protocol(round_id, protocol, frozen_commit, path):
     registration = registrations[0]
     if protocol["variant_id"] not in registration["planned_variants"]:
         raise ValueError(f"undeclared variant: {protocol['variant_id']}")
+    if candidate != protocol["variant_id"]:
+        raise ValueError("candidate must equal protocol variant_id")
     cost = protocol["cost_multiplier"]
     if (isinstance(cost, bool) or not isinstance(cost, Real) or not math.isfinite(float(cost))
             or float(cost) not in registration["cost_multipliers"]):
         raise ValueError(f"undeclared cost multiplier: {cost}")
-    if not isinstance(protocol["run_role"], str) or not protocol["run_role"].strip():
+    role = protocol["run_role"]
+    if not isinstance(role, str) or not role.strip():
         raise ValueError("run_role must be a non-empty string")
-    if not isinstance(frozen_commit, str) or not frozen_commit.strip():
-        raise ValueError("protocol runs require frozen_commit")
+    if role == "candidate":
+        if "control_spec" in protocol:
+            raise ValueError("candidate runs must not include control_spec")
+    else:
+        if role not in registration["controls"]:
+            raise ValueError(f"undeclared control: {role}")
+        if protocol.get("control_spec") != registration["controls"][role]:
+            raise ValueError(f"control_spec does not match preregistration for {role}")
+    if frozen_commit != registration["frozen_commit"]:
+        raise ValueError("frozen_commit does not match preregistration")
     return {**protocol, "cost_multiplier": float(cost)}
+
+
+def _requires_preregistration(round_id):
+    return (not isinstance(round_id, Integral) or isinstance(round_id, bool)
+            or round_id >= PREREGISTRATION_REQUIRED_FROM_ROUND)
 
 
 def record(round_id, stage, candidate, strategy, label, start, end, symbols, risk, summary,
            source="", config_files=(), frozen_commit=None, path=LEDGER, protocol=None):
     """Append one run. Returns the record written."""
-    if protocol is None and any(r.get("round") == round_id and r.get("stage") == "preregister"
-                                for r in load(path)):
+    records = load(path)
+    registrations = [r for r in records
+                     if r.get("round") == round_id and r.get("stage") == "preregister"]
+    if not registrations and _requires_preregistration(round_id):
+        raise ValueError(f"round {round_id} requires preregistration")
+    if protocol is None and registrations:
         raise ValueError(f"preregistered round {round_id} requires protocol metadata")
-    protocol = _validate_protocol(round_id, protocol, frozen_commit, path) if protocol is not None else None
+    protocol = (_validate_protocol(round_id, candidate, protocol, frozen_commit, path)
+                if protocol is not None else None)
+    known_ids = {r.get("run_id") for r in records if r.get("run_id")}
+    run_id = uuid.uuid4().hex
+    while run_id in known_ids:
+        run_id = uuid.uuid4().hex
     entry = {
         "recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "run_id": run_id,
         "round": round_id, "stage": stage, "candidate": candidate, "strategy": strategy, "label": label,
         "source": source, "config_files": [str(Path(f).name) for f in config_files],
         "window": [start, end], "symbols": list(symbols), "risk": risk, "frozen_commit": frozen_commit,
@@ -142,21 +198,44 @@ def load(path=LEDGER):
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def void(round_id, label, reason, path=LEDGER):
+def void(round_id, label, reason, path=LEDGER, run_id=None):
     """Mark an earlier run void because of a setup fault (not its result). The run stays in
     the ledger; a void run no longer counts as spent final data, so it can be rerun once."""
+    records = load(path)
+    already_voided = _voided(records)
+    targets = [(i, r) for i, r in enumerate(records)
+               if i not in already_voided and r.get("round") == round_id
+               and r.get("label") == label
+               and r.get("stage") not in ("lesson", "void", "preregister")
+               and (run_id is None or r.get("run_id") == run_id)]
+    if not targets:
+        raise ValueError("void target not found")
+    if len(targets) > 1:
+        raise ValueError("void target is ambiguous; provide run_id")
+    target = targets[0][1]
     entry = {"recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
              "round": round_id, "stage": "void", "label": label, "reason": reason}
+    if target.get("run_id"):
+        entry["target_run_id"] = target["run_id"]
+    else:
+        entry["target_recorded_at"] = target["recorded_at"]
     return _append(entry, path)
 
 
 def _voided(records):
-    """(round, label) pairs voided so far; a later run with the same label is live again."""
+    """Indexes of voided runs; legacy void rows retain their historical label semantics."""
     live, voided = {}, set()
     for i, r in enumerate(records):
         key = (r["round"], r.get("label"))
         if r["stage"] == "void":
-            voided |= {j for j in live.get(key, [])}
+            if r.get("target_run_id"):
+                voided |= {j for j in live.get(key, [])
+                           if records[j].get("run_id") == r["target_run_id"]}
+            elif r.get("target_recorded_at"):
+                voided |= {j for j in live.get(key, [])
+                           if records[j].get("recorded_at") == r["target_recorded_at"]}
+            else:
+                voided |= {j for j in live.get(key, [])}
         elif r["stage"] not in ("lesson", "preregister"):
             live.setdefault(key, []).append(i)
     return voided
@@ -224,19 +303,17 @@ def research_integrity(records):
         protocol_runs = [r for r in runs if r.get("protocol", {}).get("hypothesis_id")
                          == registration["hypothesis_id"]]
         reasons = []
+        roles = ["candidate", *registration["controls"]]
         for variant in registration["planned_variants"]:
-            seen_costs = {r["protocol"]["cost_multiplier"] for r in protocol_runs
-                          if r["protocol"]["variant_id"] == variant
-                          and r["protocol"]["run_role"] == "candidate"}
-            missing = [cost for cost in registration["cost_multipliers"] if cost not in seen_costs]
-            if missing:
-                reasons.append(f"{variant} missing cost multipliers: {missing}")
-        seen_controls = {r["protocol"]["run_role"] for r in protocol_runs}
-        missing_controls = [role for role in registration["required_controls"] if role not in seen_controls]
-        if missing_controls:
-            reasons.append(f"missing required controls: {missing_controls}")
-        if any(not r.get("frozen_commit") for r in protocol_runs):
-            reasons.append("one or more protocol runs lack frozen_commit")
+            for role in roles:
+                seen_costs = {r["protocol"]["cost_multiplier"] for r in protocol_runs
+                              if r["protocol"]["variant_id"] == variant
+                              and r["protocol"]["run_role"] == role}
+                missing = [cost for cost in registration["cost_multipliers"]
+                           if cost not in seen_costs]
+                if missing:
+                    prefix = variant if role == "candidate" else f"{variant}/{role}"
+                    reasons.append(f"{prefix} missing cost multipliers: {missing}")
         reports.append({
             "round": round_id,
             "hypothesis_id": registration["hypothesis_id"],
