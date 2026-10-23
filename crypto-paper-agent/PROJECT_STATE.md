@@ -6,6 +6,7 @@
 
 - Codex review of `5fdda7c`/`ab1ad81` (REQUEST_CHANGES, F1–F4) fixed without changing any v1 parameter: project `CircuitBreakerState` + `check_all_invariants` with event-time cashflows and a forced close on lock (F1); `DataQualityError` preflight on 15m bars and 8h funding settlements, failed runs kept out of scored results and ledgered as `data-quality-failed` (F2); 15m equity from a cashflow ledger with funding at payment time, DD on 15m closes, intrabar exits stamped at bar close (F3); window-end settlement kept and final equity reconciled (F4).
 - 12 regressions red on `ab1ad81`, green at `ff64ed7`; offline suite 680 passed, 2 skipped, 5 network deselected.
+- Codex review 2 (2026-10-23) closed F1–F4 and found F5 (v1 5% overwrote a stricter project daily-loss limit); fixed at `85df7c4` (stricter limit applies), 9 regressions red/green, offline 689 passed/2 skipped, matrix rerun identical to ff64ed7.
 - Rerun on the same data (same sha256): funnels unchanged; W1 OI scenarios DATA_QUALITY_FAILED (not scored), W2 0 trades at base/2x costs; W2 delay stress 2 trades +1.24%, DD 0.43% (was 0.31%). No v2, no delay variant selected. Details: `docs/research/2026-10-22-btc-oi-reclaim-v1.md`, `docs/reports-vi/vong-18-sua-loi-oi-v1-2026-10-23.md`.
 
 ## Core hardening and method search — 2026-10-16

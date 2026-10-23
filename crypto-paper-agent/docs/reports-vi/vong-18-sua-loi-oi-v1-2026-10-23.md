@@ -105,3 +105,19 @@ Chỉ giao dịch giấy. Bản sửa cho 4 lỗi Codex nêu (F1–F4) khi revie
 - Ledger: 16 dòng của `5fdda7c` được đánh dấu void (vẫn giữ lại, không xóa); 16 dòng mới ở `ff64ed7`,
   gồm 9 dòng validation và 7 dòng data-quality-failed; thêm 1 bài học. LEARNING_LOG đã sinh lại.
 - Tài liệu kỹ thuật: `docs/research/2026-10-22-btc-oi-reclaim-v1.md`, mục "Fix and rerun at ff64ed7".
+
+## Cập nhật sau review lần 2 của Codex (F5, commit `85df7c4`)
+- **Lỗi:** bộ mô phỏng lấy ngưỡng lỗ 5% của v1 ghi đè lên giới hạn của dự án. Nếu dự án đặt 1% thì
+  một khoản funding vượt 1% không đóng lệnh ngay.
+- **Đã sửa:** ngưỡng có hiệu lực là **mức chặt hơn** giữa dự án và v1. Cả hai giá trị được kiểm tra
+  phải nằm trong (0, 1), và ngưỡng có hiệu lực được ghi ra kết quả. File cấu hình v1 không đổi (5%).
+- **Kiểm thử mới `test_f5_*` (9 ca), đều đỏ trên `9cf357f` và xanh trên `85df7c4`:**
+  - dự án 1% / v1 5%: lệnh giờ đóng ngay lúc trả funding 18:30, trước đây giữ tới TIME_STOP;
+  - dự án 5% / v1 1%: lệnh cũng đóng ngay;
+  - 5% / 5%: vẫn giữ tới TIME_STOP như cũ;
+  - ngưỡng không hợp lệ bị từ chối.
+- **Toàn bộ kiểm thử offline tại `85df7c4`:** 689 passed, 2 skipped, 5 network deselected.
+- **Chạy lại cả ma trận tại `85df7c4`:**
+  - `summary.json` giống hệt bản `ff64ed7`, chỉ khác mã commit và trường ngưỡng mới (0,05 ở mọi kịch bản);
+  - mọi file sự kiện, lệnh và dòng tiền giống từng byte;
+  - vì vậy kết quả `ff64ed7` giữ nguyên, ledger chỉ thêm một ghi chú.

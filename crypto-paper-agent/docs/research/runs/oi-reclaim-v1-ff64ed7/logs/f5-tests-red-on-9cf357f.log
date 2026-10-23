@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.16, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent
+configfile: pytest.ini
+plugins: platformdirs-4.13.5, anyio-4.15.1, cov-7.1.0
+collected 45 items / 36 deselected / 9 selected
+
+tests/test_oi_reclaim.py FFFFFFFFF                                       [100%]
+
+=================================== FAILURES ===================================
+E   AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+      
+      - CIRCUIT_BREAKER_LOCK
+      + TIME_STOP)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:541: AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+E   KeyError: 'daily_loss_limit_pct'
+----------------------------- Captured stderr call -----------------------------
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:544: KeyError: 'daily_loss_limit_pct'
+E   KeyError: 'daily_loss_limit_pct'
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:544: KeyError: 'daily_loss_limit_pct'
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+E   Failed: DID NOT RAISE any of (ValueError, TypeError)
+/home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent/tests/test_oi_reclaim.py:550: Failed: DID NOT RAISE any of (ValueError, TypeError)
+=============================== warnings summary ===============================
+../../../../usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37
+  /usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37: Pandas4Warning: The 'mode.copy_on_write' option is deprecated. Copy-on-Write can no longer be disabled (it is always enabled with pandas >= 3.0), and setting the option has no impact. This option will be removed in pandas 4.0.
+    from pandas_ta.core import AnalysisIndicators
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_oi_reclaim.py::test_f5_the_stricter_daily_loss_limit_applies[0.01-0.05-0.01-True]
+FAILED tests/test_oi_reclaim.py::test_f5_the_stricter_daily_loss_limit_applies[0.05-0.01-0.01-True]
+FAILED tests/test_oi_reclaim.py::test_f5_the_stricter_daily_loss_limit_applies[0.05-0.05-0.05-False]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[0.0]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[-0.01]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[1.0]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[nan]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[5%]
+FAILED tests/test_oi_reclaim.py::test_f5_an_invalid_daily_loss_limit_is_refused[True]
+================= 9 failed, 36 deselected, 1 warning in 2.55s ==================

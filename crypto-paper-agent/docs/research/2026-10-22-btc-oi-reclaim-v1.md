@@ -176,3 +176,20 @@ w + 0.25A <= 0.25D; with tick and entry slippage, 30/111 (W1) and 28/87 (W2) acc
 a feasible entry range but only 1/21 and 3/19 signals still had one at the signal. The narrow
 entry range after a 1h confirmation, not a contradiction, is what removes the trades. No v2 and
 no delay variant is proposed from this; that needs a new pre-registered spec.
+
+## F5 at 85df7c4 (Codex review 2, 2026-10-23)
+
+Codex re-review closed F1-F4 (12 regressions red on ab1ad81 / green at ff64ed7; offline 678
+passed, 4 skipped without pandas-ta; the two delay trades and DD 0.4299% replayed) and found one
+P2: the simulator overwrote the project `circuit_breakers.daily_loss_limit_pct` with v1's 5%, so
+a stricter project limit (1%) did not close a position when a funding payment crossed it. Fixed
+at **85df7c4**: the effective limit is min(project, v1), both validated as a fraction in (0, 1),
+and reported in `result["breaker"]`. v1 config unchanged (5%).
+
+Regressions `test_f5_*` (9 cases, `logs/f5-tests-red-on-9cf357f.log` / `oi-tests-green-85df7c4.log`):
+project 1% / v1 5% now closes at the 18:30 payment (CIRCUIT_BREAKER_LOCK; was TIME_STOP, the
+behavioural red), project 5% / v1 1% closes too, 5% / 5% keeps TIME_STOP, invalid limits are
+refused. Offline suite at 85df7c4: 689 passed, 2 skipped, 5 network deselected. Rerun of the full
+matrix at 85df7c4 (no ledger rows): summary.json identical to the ff64ed7 run except the frozen
+commit and the new limit field (0.05 in every scenario), every events/trades/cashflows CSV
+byte-identical (`logs/rerun-85df7c4-summary.json`). The ff64ed7 results stand.
