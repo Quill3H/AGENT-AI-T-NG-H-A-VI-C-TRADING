@@ -153,3 +153,21 @@ Pre-registered forward gate on the pick (dev part): average month 0.10% < 0.48% 
 the forward check-in whatever the seen-data checks show; they run anyway, as registered.
 
 Frozen by this commit before any check.
+
+## Checks after the freeze (seen data; context only; AUTHOR_REPORTED)
+
+Frozen pick L2 at 5% risk, run at 9d94cd6; raw output docs/research/runs/round19-ict-3fc2e7e/check.json.
+`ledger.check_untouched` refused both windows (already spent), so they are recorded as `validation`.
+
+| Run | Return % | Max DD % | Trades | Win % | Mean net R | Average month % | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|---|---|
+| L2 risk 5%, 2024-01..2026-09 | -2.87 | 3.74 | 5 | 20.0 | -0.327 | -0.09 | -0.96 | -1.93 | 0.0 |
+| L2 risk 5%, costs x2 | -3.27 | 3.99 | 5 | 20.0 | -0.397 | -0.10 | -1.04 | -2.25 | 0.0 |
+| L2 risk 5%, 2026-10-01..17 | 0.0 | 0.0 | 0 | | | 0.0 | | | 0.0 |
+| Reference C1 risk 5%, 2024-01..2026-09 | 17.78 | 24.27 | 375 | 22.9 | 0.091 | 0.50 | 18.36 | 5.52 | -5.7 |
+
+**Verdict: fail.** The forward gate fails on three lines (dev average month, dev trade count,
+seen return). The post's two setups, translated to BTC/ETH/SOL perpetuals with UTC sessions and
+the New York open, almost never line up (4-28 trades in three years) and do not make money after
+costs; the 4/4 dev winners at 5% are followed by 1 winner in 5 on 2024-26/09. Not added to the
+forward check-in; the research conclusion stays NO_TRADES.

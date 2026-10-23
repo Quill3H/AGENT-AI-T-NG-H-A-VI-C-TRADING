@@ -343,6 +343,26 @@ to come from coins or months no final test has used, or from forward paper tradi
 | 18 | validation | OIR1 | btc_oi_contraction_reclaim_v1 | 2024-01-01..2026-09-30 | BTC | 0.5% | 1.24 | 0.43 | 0.01 | 100.0 |
 | 18 | validation | OIR1 | btc_oi_contraction_reclaim_v1 | 2024-01-01..2026-09-30 | BTC | 0.5% | 0.0 | 0.0 | 0.0 | None |
 | 18 | validation | OIR1 | btc_oi_contraction_reclaim_v1 | 2024-01-01..2026-09-30 | BTC | 0.5% | 0.0 | 0.0 | 0.0 | None |
+| 19 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 71.8 | 14.13 | 2.34 | 26.5 |
+| 19 | dev | C1 | swing_ema_pullback_long | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 317.92 | 31.35 | 2.28 | 26.6 |
+| 19 | dev | L1 | ict_orb_fvg | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 0.0 | 0.0 | 0.0 | None |
+| 19 | dev | L1 | ict_orb_fvg | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 2.39 | 3.3 | 0.08 | 46.2 |
+| 19 | dev | L2 | ict_irl_erl | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 3.59 | 2.02 | 0.03 | 100.0 |
+| 19 | dev | L2 | ict_irl_erl | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 0.13 | 3.31 | 0.1 | 62.5 |
+| 19 | dev | L3 | ict_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 2.66 | 3.63 | 0.16 | 56.0 |
+| 19 | dev | L3 | ict_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 3.59 | 2.02 | 0.03 | 100.0 |
+| 19 | dev-costs | L1 | ict_orb_fvg | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | 1.89 | 3.38 | 0.1 | 50.0 |
+| 19 | dev-costs | L1 | ict_orb_fvg | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 0.0 | 0.0 | 0.0 | None |
+| 19 | dev-costs | L2 | ict_irl_erl | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -1.62 | 4.33 | 0.11 | 58.8 |
+| 19 | dev-costs | L2 | ict_irl_erl | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 3.28 | 2.0 | 0.03 | 100.0 |
+| 19 | dev-costs | L3 | ict_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 2% | -0.67 | 4.71 | 0.18 | 53.6 |
+| 19 | dev-costs | L3 | ict_both | 2021-01-01..2023-12-31 | BTC/ETH/SOL | 5% | 3.28 | 2.0 | 0.03 | 100.0 |
+| 19 | dev-pilot | L1 | ict_orb_fvg | 2023-01-01..2023-03-31 | BTC/ETH/SOL | 2% | 0.0 | 0.0 | 0.0 | None |
+| 19 | dev-pilot | P1 | ict_orb_fvg_1m | 2023-01-01..2023-03-31 | BTC/ETH/SOL | 2% | 0.0 | 0.0 | 0.0 | None |
+| 19 | validation | L2 | ict_irl_erl | 2026-10-01..2026-10-17 | BTC/ETH/SOL | 5% | 0.0 | 0.0 | 0.0 | None |
+| 19 | validation | C1 | swing_ema_pullback_long | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | 17.78 | 24.27 | 2.62 | 22.9 |
+| 19 | validation | L2 | ict_irl_erl | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -2.87 | 3.74 | 0.03 | 20.0 |
+| 19 | validation | L2 | ict_irl_erl | 2024-01-01..2026-09-30 | BTC/ETH/SOL | 5% | -3.27 | 3.99 | 0.03 | 20.0 |
 
 ## Lessons
 
@@ -380,3 +400,5 @@ to come from coins or months no final test has used, or from forward paper tradi
 - Round 18: btc_oi_contraction_reclaim_v1 (owner spec, BTC 1h drop >= 2 ATR + OI contracts -1%, reclaim 25%, target pre-drop close): 0 trades 2021-01..2026-09 at base/2x costs, with or without OI. Binding gate: RR >= 1.5 at a fill above the 25% reclaim level needs drop >= ~A + 4 x lower wick; 61% of accepted events made a new low first. W1 DATA_QUALITY_FAILED (3 shocks without OI snapshots). Delay stress 2 trades +1.2% (sensitivity only). OI raw: /mnt/project-files/market-data/binance-vision-metrics-btcusdt (473 zero rows, 98k exact dups, unsorted files).
 - Round 18: Fix ff64ed7 after Codex review (F1-F4): the OI-reclaim simulator now runs on the project breaker/invariants with event-time cashflows, fails on missing 15m bars or funding settlements, measures DD on a 15m cashflow-ledger curve and reconciles the end-of-window settlement. Rerun on the same data: funnels unchanged, still 0 trades at base/2x costs; W2 delay stress 2 trades +1.24%, DD 0.43% (was 0.31%, hourly sampling hid it). Lesson: a dedicated simulator must reuse the project risk state and a cashflow ledger from day one; reported DD from resampled curves understates risk. 25% reclaim and RR 1.5 are not contradictory: the entry range after a 1h confirmation is narrow.
 - Round 18: F5 fix 85df7c4 (Codex review 2): the OI-reclaim simulator now keeps the stricter of the project and v1 daily-loss limits instead of overwriting the project value with v1's 5%. Rerun at 85df7c4 identical to ff64ed7 (both sides 5%), so the ff64ed7 rows stand; no new run rows. Lesson: when a study config and the project config both set a risk limit, take the stricter, never assign.
+- Round 19: ICT liquidity post (owner, r/Daytrading NQ, 2 winners 1.8R/2R): Asia 00-06 / London 07-12 UTC lows (highs) swept before the 09:30 ET open, 1h/4h FVG tapped and held, 1-ATR displacement, then L1 15m ORB + 5m FVG to the Asia extreme (>=1.5R) or L2 first tap of a 30m FVG for 2R, weekdays, both sides. About 35-45% of weekdays sweep both levels and ~15% of side-days pass the full context, but only 13-28 trades fire in 2021-23 at 2% (win 46-62%, mean net R 0.02-0.29, +0.1%/mo at best) and 0-4 at 5% (2x notional cap with tight stops). Frozen L2 @5% (9d94cd6): dev +3.6% on 4 trades, seen 2024-26/09 -2.9% on 5 trades (costs x2 -3.3%); 1m pilot 2023-Q1 had 0 trades. Fail; not in forward. A multi-condition discretionary setup becomes too rare to measure once every condition is written down; two winners say nothing about it.
+- Round 19: Correction to the round-19 funnel shares above: per 100 weekdays 2021-23, 43-48 side-days sweep both levels, 19-23 also pass the HTF FVG test and 13-16 still have the Asia target open at the New York open (BTC/ETH/SOL; long and short counted separately; docs/research/runs/round19-ict-3fc2e7e/funnel_dev.json).
