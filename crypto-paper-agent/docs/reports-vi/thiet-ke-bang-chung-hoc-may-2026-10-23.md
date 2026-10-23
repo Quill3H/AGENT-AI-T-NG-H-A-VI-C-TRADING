@@ -10,7 +10,13 @@
 4. **Toàn bộ dữ liệu 20 coin đã bị tiêu hoặc đã thấy**, nên chỉ dùng để phát triển. Còn hai nguồn bằng chứng mới: **ALGO, VET, SAND** (2021-01..2026-09, đã tải, chưa từng mở, chưa có trong ledger) và **dữ liệu forward từ 2026-10-18 trở đi**.
 5. **Khi nào đủ bằng chứng:** nếu chủ dự án đồng ý dùng ALGO/VET/SAND làm tập final một lần, khoảng 2.100 ngày ở đó đủ phát hiện mô hình có Sharpe năm từ khoảng **0,7** trở lên. Sau đó vẫn cần forward paper: ít nhất **8–9 tháng** nếu Sharpe khoảng 2, khoảng **15 tháng** nếu 1,5, khoảng **2,7 năm** nếu 1. Nếu không dùng ba coin này thì chỉ còn forward.
 
-**Cần chủ dự án quyết:** có dùng ALGO/VET/SAND làm tập final cho học máy không. Ba coin này bị bỏ ở vòng 7 vì quyết định "chỉ test 10 coin lớn nhất", nên mình không tự dùng.
+## Quyết định của chủ dự án (2026-10-23 10:29 UTC, trước bước 1)
+
+Chủ dự án chọn **không dùng ALGO/VET/SAND, chỉ chạy forward**. Vì vậy:
+- Ba coin này vẫn không được mở. `guard_seen` tiếp tục chặn chúng, và chúng không vào bất kỳ bước nào của nghiên cứu học máy.
+- **Cổng F (mục 8) bị bỏ.** Bước 3 (mục 9) cũng bị bỏ. Ứng viên qua cổng D đi thẳng sang cổng P (forward paper trên top-10).
+- Cổng P trở thành bằng chứng duy nhất. Sau 1 năm forward, cổng P chỉ phát hiện được Sharpe năm từ 1,65 trở lên. Sau 2 năm là từ 1,16 trở lên. Muốn phát hiện Sharpe 1 thì cần khoảng 990 ngày (khoảng 2,7 năm).
+- Mục 5.5, mục 8 (cổng F) và mục 10.1 bên dưới giữ nguyên để ghi lại phương án đã cân nhắc, không còn hiệu lực.
 
 ## 1. Phạm vi và những gì giữ nguyên
 
