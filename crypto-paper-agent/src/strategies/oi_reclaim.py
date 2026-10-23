@@ -15,14 +15,29 @@ Per 15m bar with open time b while a position is open (fill bar excluded for ste
   1. gap through stop or target at the open -> exit at open (price exits precede funding)
   2. funding event at b -> cashflow -qty * open * rate (no_positive drops cashflows > 0)
   3. b >= fill + 24h -> exit at open (TIME_STOP)
-  4. low <= stop -> exit at stop; else high >= target -> exit at target (stop first if both)
+  4. low <= stop -> exit at stop; else high >= target -> exit at target (stop first if both).
+     Known only when the bar closes, so the exit is stamped b + 15m (intrabar_estimated).
 Every fill and exit pays taker fee and adverse slippage. Funding is never a signal or gate.
+
+Risk and accounting (Codex review 2026-10-22, F1-F4): every cashflow (entry cost, funding,
+exit) goes to a ledger at its event time and to the project CircuitBreakerState (rolling 24h
+loss, 3-loss streak halves risk, 3 wins restore it); a lock closes the open position at the next
+open (CIRCUIT_BREAKER_LOCK, not counted in the streak, as in PaperBroker). Entries pass the
+project invariants (check_all_invariants). The equity curve is rebuilt from the ledger at every
+15m close. A missing 15m bar or a missing/non-finite scheduled funding event in the window
+raises DataQualityError instead of producing a result.
 """
 import math
 from dataclasses import dataclass, field, asdict
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
+
+from src.features.news_calendar import NewsCalendarFilter
+from src.risk.circuit_breakers import CircuitBreakerState
+from src.risk.invariant_checks import calculate_estimated_liquidation_price, check_all_invariants
 
 HOUR = pd.Timedelta("1h")
 QUARTER = pd.Timedelta("15min")
@@ -33,8 +48,48 @@ DEFAULTS = {
     "time_stop_hours": 24, "risk_pct": 0.005, "max_notional_x_equity": 1.0, "taker_pct": 0.0005,
     "slippage_pct": 0.0003, "lot_step": 0.001, "tick": 0.1, "min_notional": 100.0,
     "daily_loss_pct": 0.05, "lock_hours": 24, "entry_delay_bars": 0, "use_oi": True,
-    "funding_mode": "actual", "initial_equity": 10000.0,
+    "funding_mode": "actual", "initial_equity": 10000.0, "funding_hours": (0, 8, 16),
 }
+PROJECT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "default_config.yaml"
+
+
+class DataQualityError(ValueError):
+    """The data a run needs is incomplete; the run has no scoreable result."""
+
+    def __init__(self, issues):
+        self.issues = issues
+        super().__init__("; ".join(f"{k}: {v['count']}" for k, v in issues.items()))
+
+
+def funding_rates(funding):
+    if funding is None or "funding_rate" not in funding:
+        return pd.Series(dtype=float, index=pd.DatetimeIndex([], tz="UTC"))
+    return funding["funding_rate"]
+
+
+def data_issues(bars, funding, start, end, funding_hours=(0, 8, 16)):
+    """Problems in the 15m bars and funding a run over [start, end) needs. Empty dict = usable.
+    Every 15m open in the window must exist with finite positive OHLC (a missing bar can hide a
+    stop), and every scheduled funding time must carry a finite rate (missing is not zero)."""
+    issues = {}
+
+    def add(name, times):
+        times = list(times)
+        if times:
+            issues[name] = {"count": len(times), "first": [str(t) for t in times[:5]]}
+
+    grid = pd.date_range(start, end, freq="15min", inclusive="left")
+    w = bars[(bars.index >= start) & (bars.index < end)]
+    add("missing_15m_bars", grid.difference(w.index))
+    px = w[["open", "high", "low", "close"]].to_numpy(dtype=float)
+    bad = ~np.isfinite(px).all(axis=1) | (px <= 0).any(axis=1)
+    add("bad_ohlc", w.index[bad])
+    rates = funding_rates(funding)
+    rates = rates[(rates.index >= start) & (rates.index < end)]
+    due = grid[np.isin(grid.hour, list(funding_hours)) & (grid.minute == 0)]
+    add("missing_funding_events", due.difference(rates.index))
+    add("non_finite_funding", rates.index[~np.isfinite(rates.to_numpy(dtype=float))])
+    return issues
 
 
 def hourly_bars(bars15):
@@ -78,6 +133,10 @@ class Trade:
     net_pnl: float = 0.0
     equity_before: float = 0.0
     risk_budget: float = 0.0
+    risk_multiplier: float = 1.0
+    liquidation_price: float = None
+    exit_bar_open: pd.Timestamp = None
+    intrabar_estimated: bool = False
     gate: dict = field(default_factory=dict)
 
 
@@ -112,14 +171,29 @@ def detect(h1, oi, cfg, start, end):
 
 
 class Simulator:
-    def __init__(self, bars15, funding, oi, config=None):
+    def __init__(self, bars15, funding, oi, config=None, project_config=None):
         self.cfg = {**DEFAULTS, **(config or {})}
         if self.cfg["funding_mode"] not in ("actual", "no_positive"):
             raise ValueError("funding_mode must be actual or no_positive")
+        if self.cfg["lock_hours"] != 24:
+            raise ValueError("lock_hours is fixed at 24 by the project circuit breaker")
         self.b = bars15
         self.h1, self.incomplete_hours = hourly_bars(bars15)
-        self.funding = funding["funding_rate"] if funding is not None else pd.Series(dtype=float)
+        self.funding_table = funding
+        self.funding = funding_rates(funding)
         self.oi = oi
+        project = project_config if project_config is not None else yaml.safe_load(PROJECT_CONFIG.read_text(encoding="utf-8"))
+        breaker = dict(project.get("circuit_breakers", {}))
+        breaker["daily_loss_limit_pct"] = self.cfg["daily_loss_pct"]
+        self.project = {**project, "circuit_breakers": breaker}
+        self.news = NewsCalendarFilter(self.project)
+
+    # ------------------------------------------------------------------ ledger
+    def _book(self, time, kind, amount, event_id, curve_time):
+        """One cashflow. curve_time = the first 15m close at which it is known."""
+        self.cash += amount
+        self.ledger.append({"time": time, "curve_time": curve_time, "kind": kind, "event_id": event_id,
+                            "amount": amount, "cash_after": self.cash})
 
     # ------------------------------------------------------------------
     def run(self, start, end):
@@ -128,10 +202,14 @@ class Simulator:
         bars = self.b[(self.b.index >= start) & (self.b.index < end)]
         if not len(bars):
             raise ValueError("no 15m bars in window")
+        issues = data_issues(self.b, self.funding_table, start, end, cfg["funding_hours"])
+        if issues:
+            raise DataQualityError(issues)
         last_close_time = bars.index[-1] + QUARTER
         shocks = detect(self.h1, self.oi, cfg, start, last_close_time)
         lag = pd.Timedelta(minutes=cfg["oi_lag_minutes"])
-        cash = cfg["initial_equity"]
+        self.cash, self.ledger = cfg["initial_equity"], []
+        self.cb = CircuitBreakerState.from_config(self.project)
         trades, audit = [], []
         layers = {"complete_1h_bars": int(((self.h1.index + HOUR >= start) & (self.h1.index + HOUR <= last_close_time)).sum()),
                   "incomplete_1h_bars": self.incomplete_hours, "price_shocks": len(shocks), "oi_missing": 0,
@@ -141,8 +219,6 @@ class Simulator:
         missing_oi = []
         cooldown_until = None
         busy_until = None
-        lock_until = None
-        day_key, day_start_equity, day_realized = None, cash, 0.0
 
         for ev in shocks.to_dict("records"):
             row = dict(ev)
@@ -180,36 +256,34 @@ class Simulator:
                 continue
             layers["signals"] += 1
             fill_time = info["fill_time"]
-            if lock_until is not None and fill_time < lock_until:
+            if not self.cb.is_trading_allowed(fill_time):
                 rejects["BREAKER_LOCK"] = rejects.get("BREAKER_LOCK", 0) + 1
                 row["outcome"] = "REJECT_BREAKER_LOCK"
                 audit.append(row)
                 continue
-            trade, reason = self._enter(ev, fill_time, cash)
+            trade, reason = self._enter(ev, fill_time)
             if trade is None:
                 rejects[reason] = rejects.get(reason, 0) + 1
                 row["outcome"] = "REJECT_" + reason
                 audit.append(row)
                 continue
             self._hold(trade, end, last_close_time)
-            cash += trade.net_pnl
+            booked = sum(e["amount"] for e in self.ledger if e["event_id"] == trade.event_id)
+            if abs(booked - trade.net_pnl) > 1e-6:
+                raise AssertionError(f"{trade.event_id}: ledger {booked} != trade net {trade.net_pnl}")
             busy_until = trade.exit_time
             trades.append(trade)
             row["outcome"] = "TRADE_" + trade.exit_reason
             audit.append(row)
-            # daily-loss breaker on realized P&L (UTC day of the exit)
-            key = trade.exit_time.normalize()
-            if key != day_key:
-                day_key, day_start_equity, day_realized = key, cash - trade.net_pnl, 0.0
-            day_realized += trade.net_pnl
-            if day_realized <= -cfg["daily_loss_pct"] * day_start_equity:
-                lock_until = trade.exit_time + pd.Timedelta(hours=cfg["lock_hours"])
 
+        if abs(cfg["initial_equity"] + sum(e["amount"] for e in self.ledger) - self.cash) > 1e-6:
+            raise AssertionError("cash does not reconcile with the ledger")
         curve = self._equity_curve(bars, trades)
         return {"trades": trades, "audit": audit, "layers": layers, "rejects": rejects,
-                "missing_oi_event_times": missing_oi, "curve": curve, "final_cash": cash,
+                "missing_oi_event_times": missing_oi, "curve": curve, "final_cash": self.cash,
+                "ledger": list(self.ledger), "breaker": {"locks": self.cb.lock_count,
+                                                         "final_risk_multiplier": self.cb.risk_multiplier},
                 "start": start, "end": end}
-
     # ------------------------------------------------------------------
     def _confirm(self, ev, available, last_close_time):
         cfg, h1, b = self.cfg, self.h1, self.b
@@ -245,8 +319,9 @@ class Simulator:
                 return "SIGNAL", info
         return "EXPIRED", info
 
-    def _enter(self, ev, fill_time, cash):
+    def _enter(self, ev, fill_time):
         cfg = self.cfg
+        cash = self.cash
         fee, slip = cfg["taker_pct"], cfg["slippage_pct"]
         o = float(self.b.at[fill_time, "open"])
         level = ev["close_s"] + cfg["reclaim"] * (ev["c_prev"] - ev["close_s"])
@@ -261,7 +336,8 @@ class Simulator:
             return None, "PRICE_ORDER"
         if target - entry < cfg["min_rr"] * (entry - stop):
             return None, "RR"
-        budget = cfg["risk_pct"] * cash
+        multiplier = self.cb.risk_multiplier
+        budget = cfg["risk_pct"] * multiplier * cash
         stop_fill = stop * (1 - slip)
         per_unit = (entry - stop_fill) + entry * fee + stop_fill * fee
         qty = budget / per_unit
@@ -278,10 +354,25 @@ class Simulator:
                 "round_trip_cost": cost, "risk_at_stop": qty * per_unit, "budget": budget}
         if gross <= cfg["cost_gate"] * cost:
             return None, "COST_GATE"
+        # project hard invariants (risk tier, leverage, notional, margin, liquidation vs stop, breaker)
+        order = {"symbol": "BTCUSDT", "direction": "LONG", "entry_price": entry, "stop_loss_price": stop,
+                 "leverage": 1.0, "base_risk_percent": cfg["risk_pct"], "risk_percent": cfg["risk_pct"] * multiplier,
+                 "conviction_tier": "low", "position_size_usd": qty * entry, "timestamp": fill_time}
+        account = {"equity": cash, "available_margin": cash, "current_time": fill_time,
+                   "circuit_breaker_state": self.cb, "news_filter": self.news}
+        ok, reasons = check_all_invariants(order, account, self.project)
+        if not ok:
+            gate["invariant_reasons"] = reasons
+            return None, "INVARIANT"
         trade = Trade(ev["event_id"], fill_time, o, entry, qty, stop, target, equity_before=cash,
-                      risk_budget=budget, gate=gate)
+                      risk_budget=budget, risk_multiplier=multiplier, gate=gate)
+        trade.liquidation_price = calculate_estimated_liquidation_price(
+            "LONG", entry, qty * entry, 1.0, "BTCUSDT", self.project.get("leverage_brackets"))
         trade.fees = qty * entry * fee
         trade.slippage_cost = qty * o * slip
+        entry_cost = -(trade.fees + trade.slippage_cost)
+        self._book(fill_time, "ENTRY", entry_cost, trade.event_id, fill_time + QUARTER)
+        self.cb.record_cashflow(entry_cost, fill_time, max(0.0, self.cash), param_name="entry_cost")
         return trade, None
 
     def _hold(self, tr, end, last_close_time):
@@ -289,11 +380,23 @@ class Simulator:
         fee, slip = cfg["taker_pct"], cfg["slippage_pct"]
         b = self.b
         later = b[(b.index >= tr.fill_time) & (b.index < end)]
+        steps = later.index.to_series().diff().dropna()
+        if (steps != QUARTER).any():
+            raise DataQualityError({"missing_15m_bars": {"count": int((steps != QUARTER).sum()),
+                                                         "first": [str(t) for t in steps.index[steps != QUARTER][:5]]}})
         deadline = tr.fill_time + pd.Timedelta(hours=cfg["time_stop_hours"])
-        exit_raw = exit_px = None
+        exit_raw = None
+        intrabar = False
         for when, bar in later.iterrows():
             o, h, l, c = float(bar["open"]), float(bar["high"]), float(bar["low"]), float(bar["close"])
-            if when != tr.fill_time:
+            if when == tr.fill_time:
+                if self.cb.is_locked or self.cb.is_halted:  # the entry cost itself tripped the breaker
+                    exit_raw, reason, at = o, "CIRCUIT_BREAKER_LOCK", when
+                    break
+            else:
+                if o <= tr.liquidation_price:
+                    exit_raw, reason, at = tr.liquidation_price, "LIQUIDATION", when
+                    break
                 if o <= tr.stop:
                     exit_raw, reason, at = o, "STOP_GAP", when
                     break
@@ -302,41 +405,62 @@ class Simulator:
                     break
                 if when in self.funding.index:
                     rate = float(self.funding.at[when])
+                    if not math.isfinite(rate):
+                        raise DataQualityError({"non_finite_funding": {"count": 1, "first": [str(when)]}})
                     flow = -tr.quantity * o * rate
                     if cfg["funding_mode"] == "no_positive" and flow > 0:
                         tr.funding_skipped_positive += flow
                     else:
                         tr.funding += flow
+                        self._book(when, "FUNDING", flow, tr.event_id, when + QUARTER)
+                        mark = self.cash + tr.quantity * (o - tr.entry_open)
+                        self.cb.record_cashflow(flow, when, max(0.0, mark), param_name="funding")
+                        if self.cb.is_locked or self.cb.is_halted:
+                            exit_raw, reason, at = o, "CIRCUIT_BREAKER_LOCK", when
+                            break
+                elif when.minute == 0 and when.hour in cfg["funding_hours"]:
+                    raise DataQualityError({"missing_funding_events": {"count": 1, "first": [str(when)]}})
                 if when >= deadline:
                     exit_raw, reason, at = o, "TIME_STOP", when
                     break
             if l <= tr.stop:
-                exit_raw, reason, at = tr.stop, "STOP", when
+                exit_raw, reason, at, intrabar = tr.stop, "STOP", when + QUARTER, True
                 break
             if h >= tr.target:
-                exit_raw, reason, at = tr.target, "TARGET", when
+                exit_raw, reason, at, intrabar = tr.target, "TARGET", when + QUARTER, True
                 break
         if exit_raw is None:
-            last = later.iloc[-1]
-            exit_raw, reason, at = float(last["close"]), "END_OF_WINDOW", later.index[-1] + QUARTER
+            when = later.index[-1]
+            exit_raw, reason, at = float(later.iloc[-1]["close"]), "END_OF_WINDOW", when + QUARTER
         exit_px = exit_raw * (1 - slip)
         tr.exit_time, tr.exit_price, tr.exit_reason = at, exit_px, reason
+        tr.exit_bar_open, tr.intrabar_estimated = when, intrabar
         tr.price_pnl = tr.quantity * (exit_raw - tr.entry_open)
-        tr.slippage_cost += tr.quantity * exit_raw * slip
-        tr.fees += tr.quantity * exit_px * fee
+        exit_slip, exit_fee = tr.quantity * exit_raw * slip, tr.quantity * exit_px * fee
+        tr.slippage_cost += exit_slip
+        tr.fees += exit_fee
         tr.net_pnl = tr.price_pnl - tr.slippage_cost - tr.fees + tr.funding
+        exit_cash = tr.price_pnl - exit_slip - exit_fee
+        # stamped at the open for gap / time / breaker exits (known then), at the close otherwise
+        self._book(at, "EXIT", exit_cash, tr.event_id, at if at > when else at + QUARTER)
+        if reason == "CIRCUIT_BREAKER_LOCK":  # forced close: cashflow only, no streak (PaperBroker rule)
+            self.cb.record_cashflow(exit_cash, at, max(0.0, self.cash), param_name="exit_cashflow")
+        else:
+            self.cb.record_trade_result(pnl=tr.net_pnl, timestamp=at, equity=max(0.0, self.cash), cashflow=exit_cash)
 
     def _equity_curve(self, bars, trades):
-        """Cash plus open-position mark (close, no exit costs) at every 15m close."""
-        equity = pd.Series(self.cfg["initial_equity"], index=bars.index + QUARTER, dtype=float)
-        cash = self.cfg["initial_equity"]
+        """Equity at every 15m close: initial equity + every ledger cashflow known by that close
+        + the open position marked at the close (no exit costs)."""
+        closes = bars.index + QUARTER
+        flows = pd.Series([e["amount"] for e in self.ledger], index=pd.DatetimeIndex([e["curve_time"] for e in self.ledger]),
+                          dtype=float) if self.ledger else pd.Series(dtype=float, index=pd.DatetimeIndex([], tz="UTC"))
+        booked = flows.groupby(level=0).sum().cumsum().reindex(closes, method="ffill").fillna(0.0)
+        equity = self.cfg["initial_equity"] + booked
+        close_px = pd.Series(bars["close"].to_numpy(dtype=float), index=closes)
         for tr in trades:
-            inside = (equity.index > tr.fill_time) & (equity.index < tr.exit_time)
-            marks = bars["close"].reindex(equity.index[inside] - QUARTER).to_numpy()
-            entry_cost = tr.quantity * tr.entry_open * self.cfg["slippage_pct"] + tr.quantity * tr.entry_price * self.cfg["taker_pct"]
-            equity[inside] = cash - entry_cost + tr.quantity * (marks - tr.entry_open)
-            cash += tr.net_pnl
-            equity[equity.index >= tr.exit_time] = cash
+            exit_known = next(e["curve_time"] for e in self.ledger if e["event_id"] == tr.event_id and e["kind"] == "EXIT")
+            inside = (closes > tr.fill_time) & (closes < exit_known)
+            equity[inside] += tr.quantity * (close_px[inside] - tr.entry_open)
         return equity
 
 

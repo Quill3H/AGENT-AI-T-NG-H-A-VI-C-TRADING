@@ -79,9 +79,16 @@ def max_drawdown_pct(equity):
     return round(float(((peak - equity) / peak).max() * 100.0), 2) if len(equity) else 0.0
 
 
-def curve_summary(equity, start_equity, start, end, trade_pnl):
-    """Summary for runs that produce an equity curve and per-trade P&L outside the broker."""
+def curve_summary(equity, start_equity, start, end, trade_pnl, final_equity=None):
+    """Summary for runs that produce an equity curve and per-trade P&L outside the broker.
+
+    final_equity: the settled equity at the window end. A snapshot stamped exactly at `end`
+    (the next period's first instant) is dropped so no empty year/month appears; pass the settled
+    value here so the end-of-window settlement still reaches the last in-window point."""
     equity = equity[equity.index < end]
+    if final_equity is not None and len(equity):
+        equity = equity.copy()
+        equity.iloc[-1] = float(final_equity)
     final = float(equity.iloc[-1]) if len(equity) else float(start_equity)
     total_return = (final / start_equity - 1.0) * 100.0
     years = yearly_returns(equity, start_equity) if len(equity) else {}

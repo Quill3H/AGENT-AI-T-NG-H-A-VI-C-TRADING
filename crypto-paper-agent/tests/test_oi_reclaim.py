@@ -51,8 +51,24 @@ def oi_series(b, drop_at_t=-0.02):
     return oi
 
 
+def full_days(b):
+    """Real data covers whole UTC days: pad the fixture with flat bars at the last close."""
+    day_end = b.index[-1].normalize() + pd.Timedelta(days=1)
+    pad = pd.date_range(b.index[-1] + Q, day_end, freq="15min", inclusive="left")
+    last = float(b["close"].iloc[-1])
+    return pd.concat([b, pd.DataFrame({"open": last, "high": last, "low": last, "close": last}, index=pad)])
+
+
+def schedule(b, rate=0.0):
+    """Funding at 00/08/16 UTC over the fixture's days (zero unless a test sets it)."""
+    idx = pd.date_range(b.index[0].normalize(), b.index[-1].normalize() + pd.Timedelta(days=1), freq="8h", inclusive="left")
+    return pd.DataFrame({"funding_rate": rate}, index=idx)
+
+
 def run(b, oi=None, funding=None, **cfg):
     oi = oi_series(b) if oi is None else oi
+    b = full_days(b)
+    funding = schedule(b) if funding is None else funding
     sim = orc.Simulator(b, funding, oi, cfg)
     return sim.run(str(b.index[0].date()), str((b.index[-1]).date()))
 
@@ -258,9 +274,10 @@ def test_target_and_end_of_window():
     b.loc[SHOCK + 2 * H + 3 * Q, "high"] = 100.2
     (tr,) = run(b)["trades"]
     assert tr.exit_reason == "TARGET" and tr.exit_price == pytest.approx(100.0 * 0.9997)
-    short = scenario(hours=50)
-    (tr,) = run(short)["trades"]
-    assert tr.exit_reason == "END_OF_WINDOW" and tr.exit_time == short.index[-1] + Q
+    late, oi = late_in_day()
+    result = run(late, oi)
+    (tr,) = result["trades"]
+    assert tr.exit_reason == "END_OF_WINDOW" and tr.exit_time == late.index[-1] + Q == result["end"]
 
 
 def test_future_bars_do_not_change_a_finished_trade():
@@ -273,8 +290,12 @@ def test_future_bars_do_not_change_a_finished_trade():
 
 
 # ---------------------------------------------------------------- funding accounts
-def funding_at(*events):
-    return pd.DataFrame({"funding_rate": [r for _, r in events]}, index=pd.DatetimeIndex([t for t, _ in events]))
+def funding_at(*events, days=8):
+    """Zero-rate 8h schedule plus the given events (off-schedule times are allowed)."""
+    base = pd.DataFrame({"funding_rate": 0.0}, index=pd.date_range(T0, T0 + pd.Timedelta(days=days), freq="8h", inclusive="left"))
+    for when, rate in events:
+        base.loc[when, "funding_rate"] = rate
+    return base.sort_index()
 
 
 def test_no_positive_drops_received_funding_and_keeps_paid_funding():
@@ -310,7 +331,7 @@ def test_paid_funding_shrinks_the_next_trade_size():
 def test_daily_loss_breaker_blocks_the_next_entry():
     b = scenario(hours=140)
     gap = SHOCK + 2 * H + 2 * Q
-    b.loc[gap, ["open", "high", "low", "close"]] = (90.0, 90.5, 89.0, 90)  # about -8% of equity at 1x
+    b.loc[gap, ["open", "high", "low", "close"]] = (80.0, 80.5, 79.0, 80)  # about -6.6% of equity
     b.loc[gap + Q:, ["open", "high", "low", "close"]] = (97.9, 98.2, 97.7, 97.9)
     second = SHOCK + 20 * H  # A = 0.5 here; a 1.3 drop with no wick, then a reclaim hour
     put_hour(b, second, [(97.9, 98, 97.5, 97.5), (97.5, 97.5, 97.0, 97.0), (97.0, 97.0, 96.7, 96.7), (96.7, 96.7, 96.6, 96.6)])
@@ -318,7 +339,176 @@ def test_daily_loss_breaker_blocks_the_next_entry():
     b.loc[second + 2 * H:, ["open", "high", "low", "close"]] = (96.95, 97.1, 96.8, 96.95)
     oi = oi_series(b)
     oi[second + H] = 970.0
-    result = run(b, oi, risk_pct=0.2, cooldown_hours=1)
-    assert result["trades"][0].exit_reason == "STOP_GAP"
+    result = run(b, oi, cooldown_hours=1)
+    assert result["trades"][0].exit_reason == "STOP_GAP" and result["trades"][0].net_pnl < -0.05 * 10000
     assert outcome(result)[-1] == "REJECT_BREAKER_LOCK" and result["rejects"] == {"BREAKER_LOCK": 1}
-    assert len(run(b, oi, risk_pct=0.2, cooldown_hours=1, lock_hours=1)["trades"]) == 2  # same event trades once the lock is over
+    assert result["breaker"]["locks"] == 1
+    with pytest.raises(ValueError, match="lock_hours"):
+        run(b, oi, lock_hours=1)  # the project breaker locks for 24h; not a strategy knob
+
+
+# ---------------------------------------------------------------- Codex review 2026-10-22 (F1-F4)
+def late_in_day():
+    """Shock late on day 3, so a trade is still open when the window ends at 72h."""
+    tail = scenario()
+    tail.index = tail.index + 24 * H
+    bars = pd.concat([quiet(24), tail]).iloc[:72 * 4]
+    oi = pd.Series(1000.0, index=pd.date_range(T0, T0 + 72 * H, freq="5min"))
+    oi[SHOCK + 25 * H] = 980.0
+    return bars, oi
+
+
+def losing_chain(blocks):
+    """`blocks` copies of the base scenario, 80h apart, each ending in a 24h time stop (a loss)."""
+    parts = []
+    for k in range(blocks):
+        block = scenario()
+        block.index = block.index + k * 80 * H
+        parts.append(block)
+    bars = pd.concat(parts)
+    oi = pd.Series(1000.0, index=pd.date_range(bars.index[0], bars.index[-1] + Q, freq="5min"))
+    for k in range(blocks):
+        oi[SHOCK + H + k * 80 * H] = 980.0
+    return bars, oi
+
+
+def test_f1_three_losses_halve_the_risk_of_the_next_trade():
+    bars, oi = losing_chain(4)
+    trades = run(bars, oi)["trades"]
+    assert len(trades) == 4 and all(t.net_pnl < 0 for t in trades)
+    assert [t.risk_multiplier for t in trades] == [1.0, 1.0, 1.0, 0.5]
+    assert trades[3].risk_budget / trades[3].equity_before == pytest.approx(0.0025)
+    assert trades[3].quantity < trades[2].quantity
+
+
+def test_f1_funding_loss_trips_the_breaker_and_closes_at_that_open():
+    b = scenario()
+    fill = SHOCK + 2 * H + Q
+    pay = fill + Q
+    result = run(b, funding=funding_at((pay, 0.2)), funding_mode="no_positive")
+    (tr,) = result["trades"]
+    assert tr.funding < -0.05 * 10000
+    assert tr.exit_reason == "CIRCUIT_BREAKER_LOCK" and tr.exit_time == pay
+    assert result["breaker"]["locks"] == 1
+    kinds = [(e["kind"], e["time"]) for e in result["ledger"]]
+    assert kinds == [("ENTRY", fill), ("FUNDING", pay), ("EXIT", pay)]
+
+
+def test_f1_forced_close_does_not_count_in_the_streak():
+    bars, oi = losing_chain(4)
+    fund = pd.DataFrame({"funding_rate": 0.0}, index=pd.date_range(T0, T0 + pd.Timedelta(days=15), freq="8h", inclusive="left"))
+    fill2 = SHOCK + 2 * H + Q + 80 * H
+    fund.loc[fill2 + Q, "funding_rate"] = 0.2  # second trade: emergency close, not a streak loss
+    fund = fund.sort_index()
+    trades = run(bars, oi, funding=fund, funding_mode="no_positive")["trades"]
+    reasons = [t.exit_reason for t in trades]
+    assert reasons[1] == "CIRCUIT_BREAKER_LOCK"
+    # losses 1, 3, 4 (3 counted) -> only a trade after the fourth would be halved
+    assert [t.risk_multiplier for t in trades] == [1.0] * len(trades)
+
+
+def test_f2_missing_stop_candle_is_a_data_error_not_a_time_stop():
+    b = scenario()
+    fill = SHOCK + 2 * H + Q
+    b.loc[fill + Q, ["open", "high", "low", "close"]] = (97.9, 98.2, 96.0, 97.9)
+    assert run(b)["trades"][0].exit_reason == "STOP"
+    with pytest.raises(orc.DataQualityError, match="missing_15m_bars"):
+        run(b.drop(fill + Q))
+
+
+def test_f2_missing_or_bad_funding_is_a_data_error_not_zero():
+    b = scenario()
+    empty = pd.DataFrame({"funding_rate": pd.Series(dtype=float)}, index=pd.DatetimeIndex([], tz="UTC"))
+    with pytest.raises(orc.DataQualityError, match="missing_funding_events"):
+        run(b, funding=empty)
+    with pytest.raises(orc.DataQualityError, match="missing_funding_events"):
+        run(b, funding=funding_at().drop(T0 + 2 * pd.Timedelta(days=1)))
+    with pytest.raises(orc.DataQualityError, match="non_finite_funding"):
+        run(b, funding=funding_at((T0 + 8 * H, float("nan"))))
+    bad = scenario()
+    bad.loc[T0 + 3 * Q, "close"] = float("inf")
+    with pytest.raises(orc.DataQualityError, match="bad_ohlc"):
+        run(bad)
+
+
+def test_f3_open_equity_includes_funding_when_paid():
+    b = scenario()
+    fill = SHOCK + 2 * H + Q
+    pay = fill + Q
+    base = run(b)
+    paid = run(b, funding=funding_at((pay, 0.001)))
+    flow = paid["trades"][0].funding
+    assert flow < 0
+    diff = paid["curve"] - base["curve"]
+    assert diff[pay] == 0 and diff[pay + Q] == pytest.approx(flow)  # known from the close of the bar it was paid in
+    assert paid["final_cash"] - base["final_cash"] == pytest.approx(flow)
+
+
+def test_f3_curve_is_rebuilt_from_the_ledger_and_marks_the_open_position():
+    b = scenario()
+    result = run(b)
+    (tr,) = result["trades"]
+    curve = result["curve"]
+    fill = tr.fill_time
+    entry_cost = -(tr.quantity * tr.entry_open * 0.0003 + tr.quantity * tr.entry_price * 0.0005)
+    assert curve[fill] == 10000
+    assert curve[fill + Q] == pytest.approx(10000 + entry_cost + tr.quantity * (97.9 - 97.9))
+    assert curve.iloc[-1] == pytest.approx(result["final_cash"])
+    assert result["final_cash"] == pytest.approx(10000 + sum(e["amount"] for e in result["ledger"]))
+
+
+def test_f3_intrabar_exit_is_stamped_when_the_bar_closes():
+    b = scenario()
+    hit = SHOCK + 2 * H + 3 * Q
+    b.loc[hit, "high"] = 100.2
+    (tr,) = run(b)["trades"]
+    assert tr.exit_reason == "TARGET" and tr.intrabar_estimated
+    assert tr.exit_bar_open == hit and tr.exit_time == hit + Q
+    gap = scenario()
+    gap.loc[SHOCK + 2 * H + 2 * Q, ["open", "high", "low", "close"]] = (95.0, 95.5, 94.0, 95)
+    (tr,) = run(gap)["trades"]
+    assert tr.exit_time == SHOCK + 2 * H + 2 * Q and not tr.intrabar_estimated  # known at the open
+
+
+def _cli():
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parent.parent / "scripts" / "reproduce_oi_reclaim.py"
+    spec = importlib.util.spec_from_file_location("reproduce_oi_reclaim", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_f4_report_keeps_the_end_of_window_settlement():
+    cli = _cli()
+    bars, oi = late_in_day()
+    bars = full_days(bars)
+    cfg = dict(orc.DEFAULTS)
+    s, result = cli.evaluate(bars, schedule(bars), oi, cfg, str(bars.index[0].date()), str(bars.index[-1].date()))
+    assert result["trades"][0].exit_reason == "END_OF_WINDOW"
+    assert s["status"] == "OK" and s["final_equity_usd"] == round(result["final_cash"], 2)
+    assert s["final_equity_exact_usd"] - 10000 == pytest.approx(sum(t.net_pnl for t in result["trades"]))
+    assert s["total_return_pct"] == round((result["final_cash"] / 10000 - 1) * 100, 2)
+
+
+def test_f4_year_end_window_has_no_extra_year():
+    cli = _cli()
+    start = pd.Timestamp("2023-12-29", tz="UTC")
+    bars = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0},
+                        index=pd.date_range(start, pd.Timestamp("2024-01-01", tz="UTC"), freq="15min", inclusive="left"))
+    s, _ = cli.evaluate(bars, schedule(bars), pd.Series(1000.0, index=pd.date_range(start, pd.Timestamp("2024-01-01", tz="UTC"), freq="5min")),
+                        dict(orc.DEFAULTS), "2023-12-29", "2023-12-31")
+    assert list(s["yearly_return_pct"]) == [2023] and list(s["monthly"]["monthly_return_pct"]) == ["2023-12"]
+
+
+def test_cli_reports_data_failures_without_scoring_them():
+    cli = _cli()
+    b = full_days(scenario())
+    s, result = cli.evaluate(b.drop(SHOCK + 3 * H), schedule(b), oi_series(b), dict(orc.DEFAULTS),
+                             str(b.index[0].date()), str(b.index[-1].date()))
+    assert result is None and s["status"] == "DATA_QUALITY_FAILED" and not s["scored"]
+    assert "total_return_pct" not in s and s["data_quality"]["missing_15m_bars"]["count"] == 1
+    s, _ = cli.evaluate(b, schedule(b), oi_series(b).drop(SHOCK), dict(orc.DEFAULTS),
+                        str(b.index[0].date()), str(b.index[-1].date()))
+    assert s["status"] == "DATA_QUALITY_FAILED" and "total_return_pct" not in s and "diagnostic" in s

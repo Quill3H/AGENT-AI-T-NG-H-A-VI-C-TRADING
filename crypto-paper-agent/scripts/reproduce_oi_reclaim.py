@@ -4,9 +4,11 @@
   python scripts/reproduce_oi_reclaim.py --data-dir <forward dir> --oi <BTCUSDT_metrics_raw.csv.gz> \\
       --oi-manifest <BTCUSDT_metrics_raw_manifest.json> --frozen-commit <sha> --out-dir <dir>
 
-Writes data_check.json, summary.json and, per window and scenario, trades / events CSVs and an
-hourly equity CSV. Every run is appended to the research ledger (round 18, stage validation:
-both windows are seen data).
+Writes data_check.json, summary.json and, per window and scenario, trades / events / cashflow
+CSVs and the 15m equity curve (gzip). Scored runs are appended to the research ledger (round 18,
+stage validation: both windows are seen data). A run whose data fails (missing 15m bar, missing or
+non-finite scheduled funding, missing OI snapshot at a price shock) is DATA_QUALITY_FAILED: its
+numbers, if any, are kept only under "diagnostic" and it is not written to the ledger.
 """
 import argparse
 import hashlib
@@ -51,13 +53,21 @@ def sha256(path):
 
 
 def stats(result, cfg):
+    """Scored metrics on the 15m equity curve (max drawdown is not resampled). The settled final
+    equity must equal the start plus every booked cashflow and the sum of trade net P&L."""
     trades = result["trades"]
     pnl = [t.net_pnl for t in trades]
-    curve = result["curve"].resample("1h", label="right", closed="right").last().dropna()
-    summary = curve_summary(curve, cfg["initial_equity"], result["start"], result["end"], pnl)
+    final = result["final_cash"]
+    booked = sum(e["amount"] for e in result["ledger"])
+    if abs(final - cfg["initial_equity"] - booked) > 1e-6 or abs(booked - sum(pnl)) > 1e-6:
+        raise AssertionError(f"final equity {final} != start + cashflows {booked} / trade net {sum(pnl)}")
+    summary = curve_summary(result["curve"], cfg["initial_equity"], result["start"], result["end"], pnl, final_equity=final)
     wins = sorted((p for p in pnl if p > 0), reverse=True)
     total = sum(pnl)
     summary.update({
+        "final_equity_exact_usd": final,
+        "net_cashflows_usd": booked,
+        "equity_sampling": "15m closes, funding and costs booked at event time",
         "expectancy_usd": round(float(np.mean(pnl)), 2) if pnl else None,
         "price_pnl_usd": round(sum(t.price_pnl for t in trades), 2),
         "funding_usd": round(sum(t.funding for t in trades), 2),
@@ -65,12 +75,29 @@ def stats(result, cfg):
         "fees_usd": round(sum(t.fees for t in trades), 2),
         "slippage_usd": round(sum(t.slippage_cost for t in trades), 2),
         "exit_reasons": pd.Series([t.exit_reason for t in trades]).value_counts().to_dict() if trades else {},
+        "intrabar_estimated_exits": sum(t.intrabar_estimated for t in trades),
         "top_trade_share_of_net_pct": {k: (round(100 * sum(wins[:k]) / total, 1) if total > 0 else None) for k in (1, 2, 5)},
-        "layers": result["layers"], "rejects": result["rejects"],
+        "layers": result["layers"], "rejects": result["rejects"], "breaker": result["breaker"],
         "missing_oi_event_times": result["missing_oi_event_times"],
         "evidence": "chưa đủ bằng chứng (<30 giao dịch)" if len(trades) < 30 else ">= 30 giao dịch (sàn số mẫu, không phải kiểm định)",
     })
     return summary
+
+
+def evaluate(bars, funding, oi, cfg, a, b):
+    """One scenario -> (entry for summary.json, simulator result or None). Data failures are
+    reported, never scored."""
+    try:
+        result = oi_reclaim.Simulator(bars, funding, oi, cfg).run(a, b)
+    except oi_reclaim.DataQualityError as err:
+        return {"status": "DATA_QUALITY_FAILED", "data_quality": err.issues, "scored": False}, None
+    s = stats(result, cfg)
+    if cfg["use_oi"] and result["layers"]["oi_missing"]:
+        return {"status": "DATA_QUALITY_FAILED", "scored": False,
+                "data_quality": {"oi_missing_at_price_shock": {"count": result["layers"]["oi_missing"],
+                                                               "first": result["missing_oi_event_times"][:5]}},
+                "diagnostic": s}, result
+    return {"status": "OK", "scored": True, **s}, result
 
 
 def data_check(bars, funding, oi, dropped, manifest, windows):
@@ -85,6 +112,7 @@ def data_check(bars, funding, oi, dropped, manifest, windows):
         out["windows"][name] = {
             "oi_expected_5m": cov["expected"], "oi_missing_5m": cov["missing"], "oi_off_grid": cov["off_grid"],
             "oi_missing_hour_snapshots": int(len(hours.difference(oi.index))),
+            "trading_data_issues": oi_reclaim.data_issues(bars, funding, pd.Timestamp(a, tz="UTC"), end),
             "bars_15m": len(w), "bars_15m_gaps": int((gaps != pd.Timedelta("15min")).sum()),
             "bars_15m_zero_volume": int((w["volume"] <= 0).sum()) if "volume" in w else None,
             "funding_events": int(((funding.index >= pd.Timestamp(a, tz="UTC")) & (funding.index < end)).sum()),
@@ -102,6 +130,7 @@ def main():
     parser.add_argument("--frozen-commit", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--no-ledger", action="store_true")
+    parser.add_argument("--curve-dir", help="where the 15m equity curves go (default: --out-dir)")
     args = parser.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -117,23 +146,27 @@ def main():
     check["frozen_commit"] = args.frozen_commit
     (out / "data_check.json").write_text(json.dumps(check, indent=2, default=str), encoding="utf-8")
     summary = {"frozen_commit": args.frozen_commit, "label": "SEEN_DATA_RETROSPECTIVE", "windows": {}}
+    curves = Path(args.curve_dir) if args.curve_dir else out
+    curves.mkdir(parents=True, exist_ok=True)
     for wname, (a, b) in windows.items():
         summary["windows"][wname] = {}
         for sname, change in SCENARIOS.items():
-            cfg = {**spec, **change}
-            result = oi_reclaim.Simulator(bars, funding, oi, cfg).run(a, b)
-            s = stats(result, cfg)
-            s["status"] = "DATA_QUALITY_FAILED" if cfg["use_oi"] and result["layers"]["oi_missing"] else "OK"
+            cfg = {**oi_reclaim.DEFAULTS, **spec, **change}
+            s, result = evaluate(bars, funding, oi, cfg, a, b)
             summary["windows"][wname][sname] = s
-            pd.DataFrame(oi_reclaim.trade_rows(result["trades"])).to_csv(out / f"{wname}_{sname}_trades.csv", index=False)
-            pd.DataFrame(result["audit"]).to_csv(out / f"{wname}_{sname}_events.csv", index=False)
-            result["curve"].resample("1h", label="right", closed="right").last().dropna().to_csv(out / f"{wname}_{sname}_equity_1h.csv")
-            if not args.no_ledger:
+            if result is not None:
+                pd.DataFrame(oi_reclaim.trade_rows(result["trades"])).to_csv(out / f"{wname}_{sname}_trades.csv", index=False)
+                pd.DataFrame(result["audit"]).to_csv(out / f"{wname}_{sname}_events.csv", index=False)
+                pd.DataFrame(result["ledger"], columns=["time", "curve_time", "kind", "event_id", "amount", "cash_after"]).to_csv(
+                    out / f"{wname}_{sname}_cashflows.csv", index=False)
+                result["curve"].rename("equity").to_csv(curves / f"{wname}_{sname}_equity_15m.csv.gz", compression="gzip")
+            if s["scored"] and not args.no_ledger:
                 ledger.record(ROUND, "validation", "OIR1", "btc_oi_contraction_reclaim_v1", f"{wname} {sname} (seen)",
                               a, b, ["BTCUSDT"], f"{cfg['risk_pct'] * 100:g}%", s,
                               source="owner spec 2026-10-22, BTC 1h shock + OI contraction + reclaim",
                               config_files=[CONFIG], frozen_commit=args.frozen_commit)
-            print(wname, sname, s["status"], s["total_return_pct"], s["completed_trades"], flush=True)
+            shown = s if s["scored"] else s.get("diagnostic", {})
+            print(wname, sname, s["status"], shown.get("total_return_pct"), shown.get("completed_trades"), flush=True)
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
 
 
