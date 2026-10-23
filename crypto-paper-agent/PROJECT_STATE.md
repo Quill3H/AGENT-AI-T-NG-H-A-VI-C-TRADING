@@ -2,7 +2,7 @@
 
 ## Round 18 fix: btc_oi_contraction_reclaim_v1 after Codex review — 2026-10-23
 
-**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — awaiting Codex re-review; not gate acceptance.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `ff64ed7d9a432cc972c72359ebae17ecbd648400`; results/docs in the following commit. Paper only.
+**Codex review complete for F1–F5 (no blocking defect left); not gate acceptance, no economic validation.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `85df7c4` (F1–F4 first fixed at `ff64ed7`); results and records in `8d3898c`. Research verdict: NO_TRADES / not enough evidence. No v2 started and no delayed-entry variant selected. Paper only.
 
 - Codex review of `5fdda7c`/`ab1ad81` (REQUEST_CHANGES, F1–F4) fixed without changing any v1 parameter: project `CircuitBreakerState` + `check_all_invariants` with event-time cashflows and a forced close on lock (F1); `DataQualityError` preflight on 15m bars and 8h funding settlements, failed runs kept out of scored results and ledgered as `data-quality-failed` (F2); 15m equity from a cashflow ledger with funding at payment time, DD on 15m closes, intrabar exits stamped at bar close (F3); window-end settlement kept and final equity reconciled (F4).
 - 12 regressions red on `ab1ad81`, green at `ff64ed7`; offline suite 680 passed, 2 skipped, 5 network deselected.
