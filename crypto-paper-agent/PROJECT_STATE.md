@@ -1,5 +1,16 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Small additions from the QuantDinger/CCXT/Freqtrade reviews — 2026-10-23
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED.** Owner approved the small proposals from the three repo reviews. Branch `claude/project-thread-jrmpfx` (from `claude/project-thread-ryvuyt` at `fd466ac`). No strategy, v1 parameter or past result changed; no matrix rerun; no v2. Round 18 verdict stays NO_TRADES. Paper only.
+
+- `569224a` ledger fields `variants_tried` / `fold_scores` (+ `variants_tried_by_round`, `fold_matrix`); `execution_assumptions` block in every `persist_research_run` JSON.
+- `44be762` `ccxt==4.5.82` pinned (matches the repair lock); test that the fetcher exchange has no credentials and no sandbox.
+- `389d3d8` recursive (start-point) tests for ewm indicators. Known, not fixed: ADXDonchian ADX(14) on 80 bars and MultiTimeframeTrend daily EMA(200) in 1400 4h bars do not converge (BTC 4h: max 10% / 8.9% off; decision flips about 2.7% / 5%).
+- `d970fdf` forward-paper order-book recorder (`src/execution/book_slippage.py`), not wired into the broker.
+- BTC leverage brackets NOT verified (Binance page is JS-rendered, binance.com blocked from the container); config unchanged, no guessed numbers.
+- Offline suite: 723 passed, 2 skipped, 5 network deselected. Details: `docs/reports-vi/bo-sung-tu-danh-gia-repo-2026-10-23.md`.
+
 ## Round 18 fix: btc_oi_contraction_reclaim_v1 after Codex review — 2026-10-23
 
 **Codex review complete for F1–F5 (no blocking defect left); not gate acceptance, no economic validation.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `85df7c4` (F1–F4 first fixed at `ff64ed7`); results and records in `8d3898c`. Research verdict: NO_TRADES / not enough evidence. No v2 started and no delayed-entry variant selected. Paper only.
