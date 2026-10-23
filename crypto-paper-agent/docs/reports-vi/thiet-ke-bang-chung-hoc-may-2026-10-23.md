@@ -201,7 +201,7 @@ Với 334 lần thử sẵn có, một cấu hình mới phải có Sharpe trên
 | D1 | Lợi nhuận ròng năm ≥ 5,9% ở phí gốc, và > 0 khi phí gấp đôi |
 | D2 | Lợi nhuận/DD và Sharpe ngày ≥ C1 (b1) trên cùng cửa sổ |
 | D3 | DSR ≥ 0,95 với K = số cấu hình đã chạy |
-| D4 | PBO ≤ 0,25 |
+| D4 | PBO ≤ 0,25, hoặc cấu hình được chọn giữ Sharpe ngoài mẫu dương ở ≥ 90% cách chia CSCV (sửa sau tự kiểm tra, mục 12) |
 | D5 | p hoán vị nhãn ≤ 0,01, tức thắng ít nhất 198/200 lần |
 | D6 | Thắng b3: cận dưới khoảng tin cậy 90% bootstrap của chênh lệch Sharpe > 0 |
 | D7 | Dương ít nhất 3/4 năm (2023, 2024, 2025, 2026-01..09). Không coin nào > 30% lợi nhuận. 5 lệnh lớn nhất < 50% lợi nhuận (C1 từng có 1 lệnh SOL chiếm 57%) |
@@ -232,9 +232,9 @@ Trượt bất kỳ tiêu chí nào là loại ứng viên, và dữ liệu fina
 | Bước | Việc | Dữ liệu dùng | Ước lượng |
 |---|---|---|---|
 | 0 | Thiết kế và đếm mẫu (bản này) | Đã thấy, chỉ đếm | Xong |
-| 1 | Khung `src/research/ml/`: đặc trưng, nhãn, chia purge/CPCV, DSR/PBO/bootstrap/hoán vị, cùng các test ở mục 6. Thêm `scikit-learn` (giấy phép BSD) vào requirements | Chỉ dữ liệu tổng hợp | 2–3 ngày làm |
+| 1 | Khung `src/research/ml/`: đặc trưng, nhãn, chia purge/CPCV, DSR/PBO/bootstrap/hoán vị, cùng các test ở mục 6. Thêm `scikit-learn` (giấy phép BSD) vào requirements | Chỉ dữ liệu tổng hợp | Xong (mục 12) |
 | 2 | Nghiên cứu dev, ≤ 24 cấu hình, cổng D | Đã thấy | 1–2 ngày |
-| 3 | Final một lần, cổng F (nếu chủ dự án duyệt dữ liệu) | ALGO/VET/SAND | 1 ngày |
+| 3 | ~~Final một lần, cổng F~~ (bỏ theo quyết định 2026-10-23) | — | — |
 | 4 | Forward paper, cổng P | Từ ngày khoá | ≥ 6 tháng, thực tế 8 tháng đến 2,7 năm |
 
 **Ước lượng khi nào đủ bằng chứng:**
@@ -270,3 +270,47 @@ python scripts/ml_evidence_census.py \
   - Nến 1h/4h/1d dựng lại từ 15m cho mọi coin.
   - Chưa có Tester hay Reviewer độc lập kiểm tra.
 - **Nguồn phương pháp:** López de Prado, *Advances in Financial Machine Learning* (2018), các chương về triple-barrier, độ độc nhất, purge/embargo và CPCV. Bailey & López de Prado (2012) về MinTRL/PSR. Bailey & López de Prado (2014) về Deflated Sharpe. Bailey, Borwein, López de Prado & Zhu (2017) về PBO/CSCV. Politis & Romano (1994) về stationary bootstrap. Tài liệu FreqAI (freqtrade.io) cho các ý tưởng ở mục 1, không chép mã.
+
+## 12. Bước 1 đã làm: khung học máy (2026-10-23)
+
+Code trong `src/research/ml/`. Bước này chỉ chạy trên dữ liệu tổng hợp, không mở dữ liệu thị trường nào và không ghi dòng nào vào ledger.
+
+| File | Nội dung |
+|---|---|
+| `labels.py` | Triple-barrier cho cả mua và bán: khớp ở nến kế tiếp, nhảy giá qua chặn lỗ thì thoát ở giá xấu hơn, phí 0,16%, funding trong (lúc vào, lúc ra]. Nhãn trung lập thị trường. Độ độc nhất |
+| `features.py` | Đặc trưng 4h + 1d (ghép theo **giờ đóng**), nến trễ, funding đã biết, bối cảnh BTC. Ba hàm kiểm tra: cắt cụt, xáo tương lai, khởi động 365 ngày |
+| `splits.py` | Purged walk-forward (purge theo thời gian chung cho mọi coin, embargo 1 ngày), tách 20% cuối để hiệu chỉnh, CPCV 12 nhóm / 66 cách chia / 11 đường |
+| `stats.py` | DSR (dùng PSR có sẵn của `model_governance`), PBO/CSCV kèm xác suất lỗ ngoài mẫu, stationary bootstrap, hoán vị nhãn theo khối 30 ngày, IC theo tháng, t Newey–West |
+| `models.py` | Logistic L2, cây tăng cường độ sâu 3, trung bình hai mô hình. Calibration isotonic chỉ fit trên 20% cuối cửa sổ. Bỏ tín hiệu khi \|p_logistic − p_cây\| > 0,15, hoặc khi DI vượt phân vị 99% |
+| `walkforward.py` | Chạy walk-forward, sổ mua/bán trung lập (nửa vốn mua, nửa vốn bán, phí trên toàn bộ danh nghĩa), lợi nhuận theo ngày, phân phối hoán vị |
+| `gates.py` | Cổng D1–D8 với ngưỡng cố định. Kiểm tra nào không tính được thì là NOT_EVALUATED và chặn kết luận như FAIL |
+| `synthetic.py` | Bảng giá tổng hợp nhiều coin, có thể gài một lợi thế momentum riêng của từng coin |
+
+Dùng lại `src/research/model_governance.py` từ nhánh `claude/project-thread-jrmpfx` (commit 7bebd39), lấy nguyên file, để chỉ có một bản PSR và một bản calibration.
+
+**Tự kiểm tra trên dữ liệu tổng hợp** (6 coin, ngoài mẫu 2022-03..2023-06; test trong `tests/test_ml_framework.py`):
+
+| Bảng giá | Lợi nhuận năm | Sharpe năm | IC | D1 | D3 | D4 | D7 | D8 |
+|---|---|---|---|---|---|---|---|---|
+| Không lợi thế | −18,9% | −0,45 | 0,011 | FAIL | FAIL | FAIL | FAIL | FAIL |
+| Gài lợi thế (IC thật khoảng 0,1) | +167% | 3,15 | 0,094 | PASS | PASS | PASS | PASS | PASS |
+
+- Cả hai bảng giá đều có kết luận FAIL, vì D2 (so với C1), D5 (cần 200 lần hoán vị) và D6 (so với mô hình đơn giản) chưa tính trong test. Đây là hành vi đúng: thiếu kiểm tra nào thì không được kết luận đạt.
+- Một test riêng xác nhận: với lợi thế gài sẵn, Sharpe thật cao hơn mọi lần chạy hoán vị.
+
+**Các test cũng bắt được ba kiểu rò rỉ cố ý:** ghép nến 1d theo giờ mở, đặc trưng nhìn trước một nến, và đặc trưng không bao giờ quên điểm bắt đầu.
+
+**Hai điều chỉnh thiết kế rút ra từ tự kiểm tra** (làm trước bước 2, chưa có kết quả thật nào):
+
+1. **D4:** khi các cấu hình tốt ngang nhau, PBO nằm quanh 0,3–0,5 ngay cả khi lợi thế là thật, vì chọn cái tốt nhất trong mẫu lúc đó chỉ như tung đồng xu. Vì vậy D4 qua khi PBO ≤ 0,25, **hoặc** khi cấu hình được chọn vẫn có Sharpe ngoài mẫu dương ở ít nhất 90% cách chia. PBO cũng không phải phép thử lợi thế: bảng giá không lợi thế bị loại ở D1, D3 và D8, không phải ở D4.
+2. **Khởi động:** EMA50 trên nến 1d sau 365 ngày vẫn còn lệch khoảng 3e-6 ATR so với khi chạy từ đầu chuỗi, nên ngưỡng sai lệch khi kiểm tra khởi động là 1e-5. Bỏ 365 ngày đầu của mỗi coin khỏi tập dữ liệu.
+
+**Chưa làm, để dành cho bước 2:**
+- Nối các hàm trên thành script chạy dev trên 20 coin đã thấy.
+- Tính mốc C1 bằng cùng code báo cáo.
+- Mô hình đơn giản b3 cho D6.
+- Chạy 200 lần hoán vị.
+- Ghi mọi cấu hình vào ledger với stage `dev-ml`.
+- Đường triple-barrier có hướng chưa nối vào sổ; nhãn chính là nhãn trung lập.
+
+**Test:** offline 715 đạt, 2 bỏ qua, 5 network bỏ chọn. 16 test mới mất khoảng 30 giây.

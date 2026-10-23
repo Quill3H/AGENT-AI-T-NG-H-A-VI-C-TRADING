@@ -26,6 +26,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.data_layer.vision_dataset import load_bars, load_funding  # noqa: E402
 from src.research import ledger  # noqa: E402
+from src.research.ml import stats  # noqa: E402
 
 TOP10 = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT", "TRXUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT"]
 OTHERS = ["ETCUSDT", "ATOMUSDT", "NEARUSDT", "FILUSDT", "XLMUSDT", "BCHUSDT", "UNIUSDT", "AAVEUSDT", "DOTUSDT", "LTCUSDT"]
@@ -190,8 +191,7 @@ def min_track_record(sr, sr_star=0.0, skew=0.0, kurt=3.0, alpha=0.05):
 
 def expected_max_sr(trials, var_sr):
     """Expected maximum Sharpe of `trials` skill-less strategies (Bailey et al. 2014, DSR)."""
-    g = 0.5772156649
-    return math.sqrt(var_sr) * ((1 - g) * z(1 - 1 / trials) + g * z(1 - 1 / (trials * math.e)))
+    return stats.expected_max_sharpe(trials, var_sr)
 
 
 def power_tables(trials_seen):
