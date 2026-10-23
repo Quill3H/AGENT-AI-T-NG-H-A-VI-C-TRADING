@@ -12,9 +12,13 @@ Safety rules the ledger enforces or records:
   bot cannot quietly re-tune on its own holdout.
 - Records carry the commit that froze the selection; a lesson is a plain sentence written
   after the run, never a parameter change.
+- A run may declare how many variants its round tried (`variants_tried`) and its score on each
+  fold (`fold_scores`). These are the inputs a later Deflated Sharpe (needs the trial count) or
+  PBO/CSCV (needs a variant x fold matrix) would read; older records simply lack them.
 """
 import datetime as dt
 import json
+import math
 from pathlib import Path
 
 LEDGER = Path(__file__).resolve().parents[2] / "docs" / "research" / "ledger" / "ledger.jsonl"
@@ -26,9 +30,31 @@ def trades_per_week(summary, start, end):
     return round(summary.get("completed_trades", 0) / max(weeks, 1e-9), 2)
 
 
+def _checked_trials(variants_tried, fold_scores):
+    if variants_tried is not None and (isinstance(variants_tried, bool) or not isinstance(variants_tried, int)
+                                       or variants_tried < 1):
+        raise ValueError(f"variants_tried must be a whole number >= 1, got {variants_tried!r}")
+    if fold_scores is None:
+        return None
+    if not isinstance(fold_scores, dict) or not fold_scores:
+        raise ValueError("fold_scores must be a non-empty {fold: score} mapping")
+    scores = {}
+    for fold, score in fold_scores.items():
+        if score is not None and (isinstance(score, bool) or not isinstance(score, (int, float))
+                                  or not math.isfinite(score)):
+            raise ValueError(f"fold score for {fold!r} must be a finite number or None, got {score!r}")
+        scores[str(fold)] = score
+    return scores
+
+
 def record(round_id, stage, candidate, strategy, label, start, end, symbols, risk, summary,
-           source="", config_files=(), frozen_commit=None, path=LEDGER):
-    """Append one run. Returns the record written."""
+           source="", config_files=(), frozen_commit=None, path=LEDGER, variants_tried=None, fold_scores=None):
+    """Append one run. Returns the record written.
+
+    variants_tried: how many variants the round tried in total up to this run (all candidates,
+    parameter sets and scenarios, kept or dropped). fold_scores: {fold name: score} for this run,
+    None for a fold that could not be scored."""
+    fold_scores = _checked_trials(variants_tried, fold_scores)
     entry = {
         "recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "round": round_id, "stage": stage, "candidate": candidate, "strategy": strategy, "label": label,
@@ -38,6 +64,7 @@ def record(round_id, stage, candidate, strategy, label, start, end, symbols, ris
         "trades": summary.get("completed_trades"), "trades_per_week": trades_per_week(summary, start, end),
         "win_rate_pct": summary.get("win_rate_pct"), "yearly_return_pct": summary.get("yearly_return_pct"),
         "mean_trade_usd_95ci": summary.get("mean_trade_usd_95ci"),
+        "variants_tried": variants_tried, "fold_scores": fold_scores,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
@@ -106,6 +133,25 @@ def note(round_id, lesson, path=LEDGER):
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry) + "\n")
     return entry
+
+
+def variants_tried_by_round(records):
+    """{round: largest declared variants_tried}; rounds that never declared one are left out, so
+    a missing count is never mistaken for a single trial."""
+    counts = {}
+    for r in records:
+        if r.get("variants_tried") is not None:
+            counts[r["round"]] = max(counts.get(r["round"], 0), r["variants_tried"])
+    return counts
+
+
+def fold_matrix(records, round_id):
+    """{candidate label: {fold: score}} for one round's live runs that declared fold scores: the
+    variant x fold matrix PBO/CSCV needs. Void runs are left out."""
+    voided = _voided(records)
+    return {f"{r['candidate']} | {r['label']}": dict(r["fold_scores"]) for i, r in enumerate(records)
+            if r["round"] == round_id and r["stage"] not in ("lesson", "void") and i not in voided
+            and r.get("fold_scores")}
 
 
 def summary_markdown(records):

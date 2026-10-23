@@ -47,3 +47,28 @@ def test_a_void_run_frees_its_data_once(tmp_path):
     with pytest.raises(ValueError):
         ledger.check_untouched(["TRXUSDT"], "2021-01-01", "2026-09-30", records)
     assert len([r for r in records if r["stage"] == "final"]) == 2
+
+
+def test_trials_and_fold_scores_are_recorded_for_later_dsr_and_pbo(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    ledger.record(19, "dev", "A", "s", "a", "2021-01-01", "2021-12-31", ["BTCUSDT"], "1%", SUMMARY, path=path,
+                  variants_tried=3, fold_scores={"F1": 1.5, "F2": -0.25, "F3": None})
+    ledger.record(19, "dev", "B", "s", "b", "2021-01-01", "2021-12-31", ["BTCUSDT"], "1%", SUMMARY, path=path,
+                  variants_tried=4, fold_scores={"F1": 0.5, "F2": 0.75, "F3": 0.0})
+    ledger.record(18, "dev", "C", "s", "c", "2021-01-01", "2021-12-31", ["BTCUSDT"], "1%", SUMMARY, path=path)
+    ledger.void(19, "b", "setup fault", path=path)
+    records = ledger.load(path)
+    assert records[2]["variants_tried"] is None and records[2]["fold_scores"] is None
+    assert ledger.variants_tried_by_round(records) == {19: 4}  # a void run still counts as a trial
+    assert ledger.fold_matrix(records, 19) == {"A | a": {"F1": 1.5, "F2": -0.25, "F3": None}}
+    assert ledger.fold_matrix(records, 18) == {}
+
+
+@pytest.mark.parametrize("trials, folds", [(0, None), (2.0, None), (True, None), (None, {}),
+                                           (None, {"F1": float("nan")}), (None, {"F1": "1.0"})])
+def test_bad_trials_or_fold_scores_are_refused_before_writing(tmp_path, trials, folds):
+    path = tmp_path / "ledger.jsonl"
+    with pytest.raises(ValueError):
+        ledger.record(19, "dev", "A", "s", "a", "2021-01-01", "2021-12-31", ["BTCUSDT"], "1%", SUMMARY, path=path,
+                      variants_tried=trials, fold_scores=folds)
+    assert not path.exists()

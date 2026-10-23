@@ -113,6 +113,35 @@ def funding_settlement_coverage(basket, source_events):
     }
 
 
+# Defaults the paper broker falls back to when a run config has no fees section.
+BROKER_COST_DEFAULTS = {"taker_pct": 0.0005, "maker_pct": 0.0002, "slippage_pct": 0.0003}
+
+
+def execution_assumptions(config):
+    """The execution model a result was produced under, stated next to the numbers so a reader
+    (or a later forward-paper comparison) can see what was assumed rather than measured."""
+    config = config or {}
+    fees = config.get("fees") or {}
+    costs = {key: fees.get(key, default) for key, default in BROKER_COST_DEFAULTS.items()}
+    funding = (config.get("execution") or {}).get("settlement_hours_utc") or (
+        config.get("funding_rate") or {}).get("settlement_hours_utc")
+    return {
+        "mode": "paper_only_simulated",
+        **costs,
+        "cost_source": "run_config" if fees else "broker_defaults",
+        "fill_model": "market fill at next bar open +/- slippage_pct; decisions on closed bars",
+        "slippage_model": "fixed_pct",
+        "order_book_depth": "not_modeled",
+        "mark_price": "bar_open_proxy",
+        "funding": {"modeled": "event_based_at_settlement",
+                    "settlement_hours_utc": list(funding) if funding else "engine_default"},
+        "liquidation": {"model": "isolated_margin_leverage_brackets",
+                        "brackets_symbols": sorted((config.get("leverage_brackets") or {}).keys())},
+        "partial_fills": "not_modeled",
+        "latency": "not_modeled",
+    }
+
+
 def persist_research_run(output, name, config, report):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -132,6 +161,7 @@ def persist_research_run(output, name, config, report):
             "config": canonical,
             "config_hash": compute_config_hash(canonical),
             "report": report,
+            "execution_assumptions": execution_assumptions(config),
         }
     )
     body = json.dumps(payload, sort_keys=True, allow_nan=False, indent=2)
