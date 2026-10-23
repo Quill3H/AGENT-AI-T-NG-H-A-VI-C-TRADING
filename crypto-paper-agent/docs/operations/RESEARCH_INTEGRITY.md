@@ -60,6 +60,9 @@ these statuses is a profitability verdict.
 
 Every new result receives a `run_id`. If two results reuse a label, pass the intended ID to
 `ledger.void(..., run_id=...)`; the ledger rejects an ambiguous label instead of voiding both.
+For a legacy duplicate that predates run IDs, use its exact timestamp with
+`ledger.void(..., target_recorded_at=...)`. Metadata stages `preregister`, `lesson` and `void`
+can only be written through their dedicated functions.
 
 The reported Bonferroni value is `familywise_alpha / declared_variants`. It is a reference for
 the declared search family. The project must not treat it as a valid significance result unless

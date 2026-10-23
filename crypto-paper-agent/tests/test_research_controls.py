@@ -39,8 +39,8 @@ def test_matched_random_entries_reject_signals_outside_or_an_insufficient_pool()
         matched_random_entry_sets(eligible, eligible[:3], 1, 1)
 
 
-@pytest.mark.parametrize("repetitions,seed", [(0, 1), (True, 1), (1, True)])
+@pytest.mark.parametrize("repetitions,seed", [(0, 1), (True, 1), (1, True), (1, -1)])
 def test_matched_random_entries_reject_invalid_repeat_or_seed(repetitions, seed):
     eligible = pd.date_range("2026-01-01", periods=4, freq="15min", tz="UTC")
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises((TypeError, ValueError), match="seed|repetitions"):
         matched_random_entry_sets(eligible, eligible[:1], repetitions, seed)

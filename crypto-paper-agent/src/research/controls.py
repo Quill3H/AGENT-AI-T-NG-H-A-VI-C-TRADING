@@ -28,8 +28,8 @@ def matched_random_entry_sets(eligible_times, signal_times, repetitions, seed):
         raise ValueError("signal_times must be a subset of eligible_times")
     if isinstance(repetitions, bool) or not isinstance(repetitions, Integral) or repetitions < 1:
         raise ValueError("repetitions must be a positive integer")
-    if isinstance(seed, bool) or not isinstance(seed, Integral):
-        raise TypeError("seed must be an integer")
+    if isinstance(seed, bool) or not isinstance(seed, Integral) or seed < 0:
+        raise ValueError("seed must be a non-negative integer")
     pool = eligible.difference(signals)
     if len(pool) < len(signals):
         raise ValueError("insufficient non-signal eligible times for a matched sample")

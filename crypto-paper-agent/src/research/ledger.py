@@ -67,6 +67,8 @@ def _control_specs(controls):
     if not isinstance(controls, Mapping):
         raise TypeError("controls must be a mapping")
     names = _unique_names(controls, "controls", allow_empty=True)
+    if "candidate" in names:
+        raise ValueError("candidate is a reserved run role, not a control")
     specs = {}
     for name in names:
         spec = controls[name]
@@ -76,8 +78,9 @@ def _control_specs(controls):
         if name == "matched_random":
             if set(spec) != {"seed", "repetitions"}:
                 raise ValueError("matched_random control requires exactly seed and repetitions")
-            if isinstance(spec["seed"], bool) or not isinstance(spec["seed"], Integral):
-                raise ValueError("matched_random seed must be an integer")
+            if (isinstance(spec["seed"], bool) or not isinstance(spec["seed"], Integral)
+                    or spec["seed"] < 0):
+                raise ValueError("matched_random seed must be a non-negative integer")
             if (isinstance(spec["repetitions"], bool)
                     or not isinstance(spec["repetitions"], Integral)
                     or spec["repetitions"] <= 0):
@@ -163,6 +166,8 @@ def _requires_preregistration(round_id):
 def record(round_id, stage, candidate, strategy, label, start, end, symbols, risk, summary,
            source="", config_files=(), frozen_commit=None, path=LEDGER, protocol=None):
     """Append one run. Returns the record written."""
+    if stage in ("void", "lesson", "preregister"):
+        raise ValueError(f"{stage} is a reserved metadata stage; use its dedicated API")
     records = load(path)
     registrations = [r for r in records
                      if r.get("round") == round_id and r.get("stage") == "preregister"]
@@ -198,16 +203,19 @@ def load(path=LEDGER):
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def void(round_id, label, reason, path=LEDGER, run_id=None):
+def void(round_id, label, reason, path=LEDGER, run_id=None, target_recorded_at=None):
     """Mark an earlier run void because of a setup fault (not its result). The run stays in
     the ledger; a void run no longer counts as spent final data, so it can be rerun once."""
+    if run_id is not None and target_recorded_at is not None:
+        raise ValueError("provide only one of run_id or target_recorded_at")
     records = load(path)
     already_voided = _voided(records)
     targets = [(i, r) for i, r in enumerate(records)
                if i not in already_voided and r.get("round") == round_id
                and r.get("label") == label
                and r.get("stage") not in ("lesson", "void", "preregister")
-               and (run_id is None or r.get("run_id") == run_id)]
+               and (run_id is None or r.get("run_id") == run_id)
+               and (target_recorded_at is None or r.get("recorded_at") == target_recorded_at)]
     if not targets:
         raise ValueError("void target not found")
     if len(targets) > 1:

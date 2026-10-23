@@ -1,4 +1,6 @@
 """Research ledger (src/research/ledger.py)."""
+import json
+
 import pytest
 
 from src.research import ledger
@@ -81,6 +83,7 @@ def test_protocol_run_rejects_an_undeclared_variant_or_cost_before_writing(tmp_p
 
 @pytest.mark.parametrize("controls", [
     {"matched_random": {"seed": True, "repetitions": 100}},
+    {"matched_random": {"seed": -1, "repetitions": 100}},
     {"matched_random": {"seed": 7, "repetitions": 0}},
     {"matched_random": {"seed": 7}},
 ])
@@ -88,6 +91,13 @@ def test_preregistration_rejects_an_invalid_matched_random_spec(tmp_path, contro
     path = tmp_path / "ledger.jsonl"
     with pytest.raises(ValueError, match="matched_random"):
         ledger.preregister(19, "h19", ["V1"], controls, [1.0], "abc123", path=path)
+    assert not path.exists()
+
+
+def test_preregistration_rejects_candidate_as_a_control_role(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    with pytest.raises(ValueError, match="reserved"):
+        ledger.preregister(19, "h19", ["V1"], {"candidate": {}}, [1.0], "abc123", path=path)
     assert not path.exists()
 
 
@@ -207,3 +217,35 @@ def test_void_requires_an_unambiguous_run_and_targets_only_that_run(tmp_path):
     assert "BTCUSDT" not in spent
     assert spent == {"ETHUSDT": [("2022-01-01", "2022-12-31")]}
     assert first["run_id"] != second["run_id"]
+
+
+@pytest.mark.parametrize("reserved_stage", ["void", "lesson", "preregister"])
+def test_record_rejects_reserved_metadata_stages_without_writing(tmp_path, reserved_stage):
+    path = tmp_path / "ledger.jsonl"
+    ledger.record(18, "final", "V1", "s", "same", "2021-01-01", "2021-12-31",
+                  ["BTCUSDT"], "0.5%", SUMMARY, path=path)
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError, match="reserved"):
+        ledger.record(18, reserved_stage, "V1", "s", "same", "2021-01-01", "2021-12-31",
+                      ["BTCUSDT"], "0.5%", SUMMARY, path=path)
+
+    assert path.read_bytes() == before
+
+
+def test_void_can_target_one_legacy_duplicate_by_recorded_at(tmp_path):
+    path = tmp_path / "ledger.jsonl"
+    rows = [
+        {"recorded_at": "2026-01-01T00:00:00+00:00", "round": 11, "stage": "final",
+         "label": "same", "symbols": ["BTCUSDT"], "window": ["2021-01-01", "2021-12-31"]},
+        {"recorded_at": "2026-01-02T00:00:00+00:00", "round": 11, "stage": "final",
+         "label": "same", "symbols": ["ETHUSDT"], "window": ["2022-01-01", "2022-12-31"]},
+    ]
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+    ledger.void(11, "same", "first legacy run is wrong", path=path,
+                target_recorded_at="2026-01-01T00:00:00+00:00")
+
+    assert ledger.spent_final_data(ledger.load(path)) == {
+        "ETHUSDT": [("2022-01-01", "2022-12-31")],
+    }
