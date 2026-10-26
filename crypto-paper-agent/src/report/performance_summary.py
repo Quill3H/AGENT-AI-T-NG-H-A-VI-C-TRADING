@@ -88,19 +88,20 @@ def curve_summary(equity, start_equity, start, end, trade_pnl):
     final = float(equity.iloc[-1]) if len(equity) else float(start_equity)
     total_return = (final / start_equity - 1.0) * 100.0
     years = yearly_returns(equity, start_equity) if len(equity) else {}
+    drawdown = drawdown_diagnostics(equity, start_equity, start=start)
     return {
         "window": [str(start.date()), str((end - pd.Timedelta(days=1)).date())],
         "start_equity_usd": float(start_equity),
         "final_equity_usd": round(final, 2),
         "total_return_pct": round(total_return, 2),
-        "max_drawdown_pct": max_drawdown_pct(equity),
+        "max_drawdown_pct": round(drawdown["max_drawdown_pct"], 2),
         "yearly_return_pct": years,
         "completed_trades": len(trade_pnl),
         "win_rate_pct": round(100.0 * sum(p > 0 for p in trade_pnl) / len(trade_pnl), 1) if trade_pnl else None,
         "mean_trade_usd": round(float(np.mean(trade_pnl)), 2) if trade_pnl else None,
         "mean_trade_usd_95ci": bootstrap_mean_ci(trade_pnl),
         "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
-        "drawdown_diagnostics": drawdown_diagnostics(equity, start_equity, start=start),
+        "drawdown_diagnostics": drawdown,
         "profit_concentration": profit_concentration(equity, start_equity),
         "verdict": verdict(total_return, years),
     }
@@ -117,12 +118,13 @@ def summarize_run(broker, metrics, start, end):
     trades = completed_lifecycles(broker.trade_history)
     pnl = [float(t["net_pnl"] if isinstance(t, dict) else t.net_pnl) for t in trades]
     total_return = float(metrics["total_return_pct"])
+    drawdown = drawdown_diagnostics(equity, start_equity, start=start)
     return {
         "window": [str(start.date()), str((end - pd.Timedelta(days=1)).date())],
         "start_equity_usd": start_equity,
         "final_equity_usd": round(float(broker.equity), 2),
         "total_return_pct": round(total_return, 2),
-        "max_drawdown_pct": round(float(metrics["max_drawdown_pct"]), 2),
+        "max_drawdown_pct": round(drawdown["max_drawdown_pct"], 2),
         "yearly_return_pct": years,
         "completed_trades": len(pnl),
         "win_rate_pct": round(100.0 * sum(p > 0 for p in pnl) / len(pnl), 1) if pnl else None,
@@ -132,7 +134,7 @@ def summarize_run(broker, metrics, start, end):
         "sharpe_ratio": metrics.get("sharpe_ratio"),
         "rejection_reasons": metrics.get("rejection_reasons"),
         "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
-        "drawdown_diagnostics": drawdown_diagnostics(equity, start_equity, start=start),
+        "drawdown_diagnostics": drawdown,
         "profit_concentration": profit_concentration(equity, start_equity),
         "verdict": verdict(total_return, years),
     }

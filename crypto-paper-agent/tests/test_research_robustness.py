@@ -65,14 +65,24 @@ def test_profit_concentration_uses_additive_equity_changes_by_period():
 
 
 def test_placebo_comparison_reports_empirical_rank_without_claiming_significance():
-    result = placebo_comparison(12.0, [1.0, 5.0, 10.0, 15.0])
+    result = placebo_comparison(12.0, [1.0, 5.0, 10.0, 15.0], higher_is_better=True)
 
     assert result["placebo_runs"] == 4
     assert result["candidate_percentile_pct"] == 75.0
     assert result["one_sided_exceedance_probability"] == 0.4
     assert result["placebo_median"] == 7.5
     assert result["beats_all_placebos"] is False
+    assert result["higher_is_better"] is True
     assert result["interpretation"] == "DIAGNOSTIC_ONLY"
+
+
+def test_placebo_comparison_reverses_rank_for_lower_is_better_metrics():
+    result = placebo_comparison(10.0, [20.0, 30.0], higher_is_better=False)
+
+    assert result["candidate_percentile_pct"] == 100.0
+    assert result["one_sided_exceedance_probability"] == pytest.approx(1 / 3, abs=1e-6)
+    assert result["beats_all_placebos"] is True
+    assert result["higher_is_better"] is False
 
 
 def test_benchmark_dependence_separates_up_and_down_periods():
@@ -89,6 +99,17 @@ def test_benchmark_dependence_separates_up_and_down_periods():
     expected_beta = float(strategy.cov(benchmark) / benchmark.var())
     assert result["beta"] == pytest.approx(expected_beta)
     assert math.isfinite(result["correlation"])
+
+
+def test_benchmark_dependence_reports_flat_periods_in_the_decomposition():
+    strategy = _series([0.10, 0.50, -0.10], pd.date_range("2026-01-01", periods=3))
+    benchmark = _series([0.01, 0.0, -0.01], pd.date_range("2026-01-01", periods=3))
+
+    result = benchmark_dependence(strategy, benchmark)
+
+    assert result["benchmark_flat_observations"] == 1
+    assert result["strategy_return_in_benchmark_flat_pct"] == 50.0
+    assert result["benchmark_return_in_flat_periods_pct"] == 0.0
 
 
 def test_regime_stability_reports_each_caller_supplied_regime():
@@ -113,6 +134,8 @@ def test_robustness_diagnostics_fail_closed_on_misaligned_or_invalid_inputs():
     with pytest.raises(ValueError, match="same index"):
         regime_stability(returns, pd.Series(["bull", "bear"], index=shifted.index))
     with pytest.raises(ValueError, match="finite"):
-        placebo_comparison(1.0, [float("nan")])
+        placebo_comparison(1.0, [float("nan")], higher_is_better=True)
+    with pytest.raises(TypeError, match="higher_is_better"):
+        placebo_comparison(1.0, [0.0], higher_is_better=1)
     with pytest.raises(ValueError, match="sorted"):
         drawdown_diagnostics(returns.sort_index(ascending=False), 100.0)

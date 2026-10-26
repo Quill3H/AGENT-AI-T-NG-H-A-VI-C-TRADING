@@ -15,8 +15,8 @@ Add pure, reusable diagnostics in `src/research/robustness.py`. They consume alr
 
 - `drawdown_diagnostics` reports both the deepest episode and the longest underwater episode. An unrecovered episode is measured to the final observation and explicitly marked open.
 - `profit_concentration` decomposes additive equity changes by month and year and reports how much of gross positive change came from the top one and top three periods.
-- `placebo_comparison` reports the candidate's empirical percentile and a finite-sample one-sided exceedance probability against all preregistered random runs. It does not declare significance.
-- `benchmark_dependence` reports beta, correlation and compounded strategy return during benchmark-up and benchmark-down observations.
+- `placebo_comparison` requires an explicit higher-is-better direction, then reports the candidate's empirical percentile and a finite-sample one-sided exceedance probability against all preregistered random runs. It does not declare significance.
+- `benchmark_dependence` reports beta, correlation and compounded strategy return during benchmark-up, benchmark-down and benchmark-flat observations.
 - `regime_stability` reports count, compounded return, mean return and win rate for caller-supplied causal regime labels. It does not invent a universal stability threshold.
 
 The standard owner-facing curve summary includes drawdown duration and profit concentration automatically. Placebo, benchmark and regime diagnostics require additional inputs from the strategy runner and remain separate evidence blocks.

@@ -91,8 +91,10 @@ and one-position-at-a-time rules applied when converting sampled timestamps into
 entries.
 
 After replaying every placebo, use `src.research.robustness.placebo_comparison(...)` on the same
-metric for the candidate and all random runs. The empirical percentile and one-sided exceedance
-probability are descriptive; they do not replace the registered multiple-testing rule.
+metric for the candidate and all random runs. Set `higher_is_better=True` for return-like metrics
+and `False` for drawdown/loss-like metrics; the API refuses to guess the direction. The empirical
+percentile and one-sided exceedance probability are descriptive; they do not replace the
+registered multiple-testing rule.
 
 ## Worst periods, market dependence and concentration
 
@@ -106,14 +108,18 @@ probability are descriptive; they do not replace the registered multiple-testing
 
 For a benchmark comparison, pass aligned causal periodic returns to
 `benchmark_dependence(strategy_returns, benchmark_returns)`. Report beta and correlation together
-with the strategy's compounded return in benchmark-up and benchmark-down observations. A strategy
-that adds return only when the benchmark rises may be compensated market exposure rather than an
-independent signal.
+with the strategy's compounded return in benchmark-up, benchmark-down and benchmark-flat
+observations. A strategy that adds return only when the benchmark rises may be compensated market
+exposure rather than an independent signal.
 
 For market-condition stability, pass the same strategy-return index and regime labels to
 `regime_stability(...)`. Labels must be available at each timestamp; a later full-period label is
 lookahead. Report every regime, including losing and low-sample regimes, without selecting only
 favorable periods after seeing the result.
+
+For any cross-sectional search, freeze a point-in-time asset universe and run a separate universe
+that retains delisted instruments when the source supports it. A result based only on assets that
+survive to the present must be labelled survivorship-biased and cannot pass as final evidence.
 
 ## Existing evidence
 

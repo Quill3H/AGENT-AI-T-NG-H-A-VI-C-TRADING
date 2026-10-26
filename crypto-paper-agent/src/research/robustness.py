@@ -179,27 +179,32 @@ def profit_concentration(equity, start_equity):
     }
 
 
-def placebo_comparison(candidate_value, placebo_values):
+def placebo_comparison(candidate_value, placebo_values, *, higher_is_better):
     """Rank one candidate metric against all preregistered placebo-run values."""
+    if not isinstance(higher_is_better, bool):
+        raise TypeError("higher_is_better must be boolean")
     candidate = _finite_number(candidate_value, "candidate_value")
     placebos = [_finite_number(value, "placebo value") for value in placebo_values]
     if not placebos:
         raise ValueError("placebo_values must not be empty")
     values = np.asarray(placebos, dtype=float)
-    lower = int(np.sum(values < candidate))
+    beaten = int(np.sum(values < candidate)) if higher_is_better else int(np.sum(values > candidate))
     ties = int(np.sum(values == candidate))
-    exceedances = int(np.sum(values >= candidate))
-    percentile = (lower + 0.5 * ties) / len(values) * 100.0
+    at_least_as_good = int(np.sum(values >= candidate)) if higher_is_better else int(np.sum(values <= candidate))
+    percentile = (beaten + 0.5 * ties) / len(values) * 100.0
     return {
         "candidate_value": candidate,
+        "higher_is_better": higher_is_better,
         "placebo_runs": len(placebos),
         "placebo_mean": round(float(values.mean()), 6),
         "placebo_median": round(float(np.median(values)), 6),
         "placebo_5th_percentile": round(float(np.percentile(values, 5)), 6),
         "placebo_95th_percentile": round(float(np.percentile(values, 95)), 6),
         "candidate_percentile_pct": round(percentile, 6),
-        "one_sided_exceedance_probability": round((1 + exceedances) / (len(values) + 1), 6),
-        "beats_all_placebos": bool(candidate > float(values.max())),
+        "one_sided_exceedance_probability": round((1 + at_least_as_good) / (len(values) + 1), 6),
+        "beats_all_placebos": bool(
+            candidate > float(values.max()) if higher_is_better else candidate < float(values.min())
+        ),
         "interpretation": "DIAGNOSTIC_ONLY",
     }
 
@@ -221,16 +226,20 @@ def benchmark_dependence(strategy_returns, benchmark_returns):
     correlation = float(strategy.corr(benchmark)) if variance > 0 and float(strategy.var()) > 0 else None
     up = benchmark > 0
     down = benchmark < 0
+    flat = benchmark == 0
     return {
         "observations": int(len(strategy)),
         "beta": round(beta, 6) if beta is not None else None,
         "correlation": round(correlation, 6) if correlation is not None else None,
         "benchmark_up_observations": int(up.sum()),
         "benchmark_down_observations": int(down.sum()),
+        "benchmark_flat_observations": int(flat.sum()),
         "strategy_return_in_benchmark_up_pct": _compounded_pct(strategy[up]),
         "strategy_return_in_benchmark_down_pct": _compounded_pct(strategy[down]),
+        "strategy_return_in_benchmark_flat_pct": _compounded_pct(strategy[flat]),
         "benchmark_return_in_up_periods_pct": _compounded_pct(benchmark[up]),
         "benchmark_return_in_down_periods_pct": _compounded_pct(benchmark[down]),
+        "benchmark_return_in_flat_periods_pct": _compounded_pct(benchmark[flat]),
     }
 
 

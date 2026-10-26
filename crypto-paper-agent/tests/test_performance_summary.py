@@ -74,3 +74,13 @@ def test_curve_summary_keeps_empty_runs_reportable():
 
     assert summary["drawdown_diagnostics"]["max_drawdown_pct"] == 0.0
     assert summary["profit_concentration"]["yearly"]["periods"] == 0
+
+
+def test_curve_summary_headline_drawdown_includes_loss_from_initial_capital():
+    equity = _curve([("2021-01-02", 9000.0), ("2021-01-03", 9500.0)])
+    start, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp("2021-01-04", tz="UTC")
+
+    summary = curve_summary(equity, 10000.0, start, end, [])
+
+    assert summary["max_drawdown_pct"] == 10.0
+    assert summary["max_drawdown_pct"] == summary["drawdown_diagnostics"]["max_drawdown_pct"]
