@@ -45,3 +45,32 @@ def test_curve_summary_includes_monthly_block():
     assert summary["monthly"]["months"] == 12
     assert summary["monthly"]["lost_half_of_start"] is False
     assert summary["monthly"]["average_month_pct"] == pytest.approx((1.3 ** (1 / 12) - 1) * 100, abs=0.01)
+    assert summary["drawdown_diagnostics"]["longest_underwater_days"] == 0.0
+    assert summary["profit_concentration"]["yearly"]["top_1_positive_share_pct"] == 100.0
+
+
+def test_curve_summary_reports_recovery_time_and_open_underwater_duration():
+    equity = _curve([
+        ("2021-01-01", 10000.0),
+        ("2021-01-02", 12000.0),
+        ("2021-01-03", 9000.0),
+        ("2021-01-05", 12000.0),
+        ("2021-01-06", 13000.0),
+        ("2021-01-10", 11000.0),
+    ])
+    start, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp("2021-01-11", tz="UTC")
+
+    summary = curve_summary(equity, 10000.0, start, end, [])
+
+    assert summary["drawdown_diagnostics"]["worst_recovery_days"] == 2.0
+    assert summary["drawdown_diagnostics"]["longest_underwater_days"] == 4.0
+    assert summary["drawdown_diagnostics"]["longest_underwater_recovered"] is False
+
+
+def test_curve_summary_keeps_empty_runs_reportable():
+    start, end = pd.Timestamp("2021-01-01", tz="UTC"), pd.Timestamp("2022-01-01", tz="UTC")
+
+    summary = curve_summary(pd.Series(dtype=float), 10000.0, start, end, [])
+
+    assert summary["drawdown_diagnostics"]["max_drawdown_pct"] == 0.0
+    assert summary["profit_concentration"]["yearly"]["periods"] == 0

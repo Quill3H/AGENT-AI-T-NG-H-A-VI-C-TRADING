@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from src.report.lifecycles import completed_lifecycles
+from src.research.robustness import drawdown_diagnostics, profit_concentration
 
 SUCCESS_MIN_RETURN_PCT = 20.0
 SUCCESS_MIN_PROFITABLE_YEAR_SHARE = 0.8
@@ -81,6 +82,8 @@ def max_drawdown_pct(equity):
 
 def curve_summary(equity, start_equity, start, end, trade_pnl):
     """Summary for runs that produce an equity curve and per-trade P&L outside the broker."""
+    if equity.empty and not isinstance(equity.index, pd.DatetimeIndex):
+        equity = pd.Series(index=pd.DatetimeIndex([], tz="UTC"), dtype=float)
     equity = equity[equity.index < end]
     final = float(equity.iloc[-1]) if len(equity) else float(start_equity)
     total_return = (final / start_equity - 1.0) * 100.0
@@ -97,6 +100,8 @@ def curve_summary(equity, start_equity, start, end, trade_pnl):
         "mean_trade_usd": round(float(np.mean(trade_pnl)), 2) if trade_pnl else None,
         "mean_trade_usd_95ci": bootstrap_mean_ci(trade_pnl),
         "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
+        "drawdown_diagnostics": drawdown_diagnostics(equity, start_equity, start=start),
+        "profit_concentration": profit_concentration(equity, start_equity),
         "verdict": verdict(total_return, years),
     }
 
@@ -127,5 +132,7 @@ def summarize_run(broker, metrics, start, end):
         "sharpe_ratio": metrics.get("sharpe_ratio"),
         "rejection_reasons": metrics.get("rejection_reasons"),
         "monthly": monthly_stats(equity, start_equity) if len(equity) else None,
+        "drawdown_diagnostics": drawdown_diagnostics(equity, start_equity, start=start),
+        "profit_concentration": profit_concentration(equity, start_equity),
         "verdict": verdict(total_return, years),
     }

@@ -90,6 +90,31 @@ have hit, or whether an order would later fill. Event-driven strategies also nee
 and one-position-at-a-time rules applied when converting sampled timestamps into executable
 entries.
 
+After replaying every placebo, use `src.research.robustness.placebo_comparison(...)` on the same
+metric for the candidate and all random runs. The empirical percentile and one-sided exceedance
+probability are descriptive; they do not replace the registered multiple-testing rule.
+
+## Worst periods, market dependence and concentration
+
+`curve_summary(...)` and `summarize_run(...)` include:
+
+- `drawdown_diagnostics`: peak, trough, recovery timestamp, decline days, recovery days and total
+  underwater days for the deepest drawdown, plus the longest underwater episode. An open episode
+  is measured through the final observation and marked unrecovered.
+- `profit_concentration`: monthly and yearly equity changes, with the share of gross positive
+  change produced by the best one and best three periods.
+
+For a benchmark comparison, pass aligned causal periodic returns to
+`benchmark_dependence(strategy_returns, benchmark_returns)`. Report beta and correlation together
+with the strategy's compounded return in benchmark-up and benchmark-down observations. A strategy
+that adds return only when the benchmark rises may be compensated market exposure rather than an
+independent signal.
+
+For market-condition stability, pass the same strategy-return index and regime labels to
+`regime_stability(...)`. Labels must be available at each timestamp; a later full-period label is
+lookahead. Report every regime, including losing and low-sample regimes, without selecting only
+favorable periods after seeing the result.
+
 ## Existing evidence
 
 Historical ledger rows, including Round 18, remain unchanged. They cannot be retroactively
