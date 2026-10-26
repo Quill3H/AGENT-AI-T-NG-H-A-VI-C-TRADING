@@ -109,16 +109,19 @@ def curve_summary(equity, start_equity, start, end, trade_pnl):
 
 def summarize_run(broker, metrics, start, end):
     start_equity = float(broker.initial_balance)
-    equity = equity_series(broker.account_snapshots)
+    full_equity = equity_series(broker.account_snapshots)
+    diagnostic_equity = full_equity[full_equity.index <= end].copy()
+    diagnostic_equity.loc[end] = float(broker.equity)
+    diagnostic_equity = diagnostic_equity.sort_index()
     # The final settlement snapshot is stamped at the window end (next year's first instant).
-    equity = equity[equity.index < end]
+    equity = full_equity[full_equity.index < end].copy()
     if len(equity):
         equity.iloc[-1] = float(broker.equity)
     years = yearly_returns(equity, start_equity) if len(equity) else {}
     trades = completed_lifecycles(broker.trade_history)
     pnl = [float(t["net_pnl"] if isinstance(t, dict) else t.net_pnl) for t in trades]
     total_return = float(metrics["total_return_pct"])
-    drawdown = drawdown_diagnostics(equity, start_equity, start=start)
+    drawdown = drawdown_diagnostics(diagnostic_equity, start_equity, start=start)
     return {
         "window": [str(start.date()), str((end - pd.Timedelta(days=1)).date())],
         "start_equity_usd": start_equity,

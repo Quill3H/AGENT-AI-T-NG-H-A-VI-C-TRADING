@@ -1,7 +1,9 @@
+from types import SimpleNamespace
+
 import pandas as pd
 import pytest
 
-from src.report.performance_summary import curve_summary, monthly_stats
+from src.report.performance_summary import curve_summary, monthly_stats, summarize_run
 
 
 def _curve(points):
@@ -84,3 +86,31 @@ def test_curve_summary_headline_drawdown_includes_loss_from_initial_capital():
 
     assert summary["max_drawdown_pct"] == 10.0
     assert summary["max_drawdown_pct"] == summary["drawdown_diagnostics"]["max_drawdown_pct"]
+
+
+def test_summarize_run_preserves_pre_settlement_peak_for_drawdown():
+    start = pd.Timestamp("2021-01-01", tz="UTC")
+    end = pd.Timestamp("2022-01-01", tz="UTC")
+    broker = SimpleNamespace(
+        initial_balance=10000.0,
+        equity=9000.0,
+        trade_history=[],
+        account_snapshots=[
+            SimpleNamespace(timestamp=start, equity=10000.0),
+            SimpleNamespace(timestamp=end - pd.Timedelta(minutes=15), equity=12000.0),
+            SimpleNamespace(timestamp=end, equity=9000.0),
+        ],
+    )
+
+    summary = summarize_run(
+        broker,
+        {"total_return_pct": -10.0, "max_drawdown_pct": 25.0},
+        start,
+        end,
+    )
+
+    assert summary["max_drawdown_pct"] == 25.0
+    assert summary["drawdown_diagnostics"]["max_drawdown_pct"] == 25.0
+    assert summary["drawdown_diagnostics"]["worst_peak_at"].startswith("2021-12-31T23:45")
+    assert summary["drawdown_diagnostics"]["worst_trough_at"].startswith("2022-01-01T00:00")
+    assert summary["drawdown_diagnostics"]["worst_underwater_days"] == pytest.approx(15 / 1440, abs=1e-6)
