@@ -1,5 +1,16 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Research robustness diagnostics — 2026-10-26
+
+**IMPLEMENTED, AUTHOR-TESTED AND INDEPENDENTLY REVIEWED WITH NO BLOCKING FINDING.** Branch `codex/research-qa-hardening`; feature commit `e51dcd8`, direction/benchmark fixes `58a8370`, settlement-path fix `2d931ea`. No signal, fill, cost, funding or risk rule changed; historical strategy conclusions remain unchanged until their stored runs are replayed through the new reporting layer.
+
+- Standard summaries now report the deepest drawdown's peak, trough, recovery time and total underwater time, plus the longest underwater episode. Final-settlement snapshots remain on the diagnostic equity path, so a pre-settlement peak cannot be erased.
+- Monthly/yearly profit concentration reports the share of gross positive equity change from the top one and top three periods.
+- Matched-random results can be ranked with an explicit higher/lower-is-better direction and finite-sample exceedance probability. Benchmark dependence includes up, down and flat observations; causal regime labels receive separate compounded returns and win rates.
+- TDD reviewer regressions reproduced five direction/headline/flat-benchmark failures and one settlement-peak failure before their fixes. Focused robustness/report tests passed 30/30. Final offline suite: 726 passed, 4 skipped, 5 network tests deselected.
+- Final independent review of `edb6104..2d931ea`: no blocking finding; the settlement path and all earlier mathematical/reporting blockers were confirmed closed. This verifies diagnostic correctness, not economic validity.
+- Review of the three self-reported Reddit survivors: `docs/research/2026-10-26-reddit-survivors-review.md`. Operator contract: `docs/operations/RESEARCH_INTEGRITY.md`.
+
 ## Research integrity hardening — 2026-10-23
 
 **IMPLEMENTED AND AUTHOR-TESTED; no trading rule, risk setting or historical result changed.** Branch `codex/research-qa-hardening`, based on `fd466ac`. Feature commit `3ac638d`; reviewer fixes frozen at `efd935b` (`d213462` was the first review fix). This work hardens how future ideas are tested; it does not validate an economic edge. Round 18 remains NO_TRADES / not enough evidence.

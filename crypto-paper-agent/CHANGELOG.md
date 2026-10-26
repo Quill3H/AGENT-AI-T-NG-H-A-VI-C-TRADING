@@ -1,5 +1,13 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Research robustness diagnostics] — 2026-10-26
+
+- Add drawdown peak/trough/recovery and longest-underwater diagnostics while preserving the exact final-settlement equity path.
+- Add monthly/yearly positive-profit concentration, matched-random empirical ranking with explicit metric direction, benchmark up/down/flat decomposition, beta/correlation and causal regime summaries.
+- Include drawdown duration and concentration in standard owner-facing curve summaries; document point-in-time universe and survivorship-bias requirements for cross-sectional research.
+- Review the three user-supplied Reddit survivors without importing their equity rules into the crypto project. The SPY dip rule has the strongest stability claim, but none is validated from raw data or directly transferable to 24/7 crypto.
+- Verification at `2d931ea`: focused robustness/report tests 30 passed; full offline suite 726 passed, 4 skipped and 5 network tests deselected.
+
 ## [Research integrity hardening] — 2026-10-23
 
 - Require causal preregistration from Round 19 onward and bind every result to its declared candidate, variant, role, control specification, cost multiplier and frozen commit.

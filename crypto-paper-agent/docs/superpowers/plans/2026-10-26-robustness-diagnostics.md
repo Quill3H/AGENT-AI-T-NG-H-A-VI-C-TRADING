@@ -6,13 +6,13 @@
 
 ## Task 1: Pure diagnostics
 
-- [ ] Write failing tests for recovered and open drawdowns, monthly/yearly concentration, placebo ranking, market dependence and regime aggregation.
-- [ ] Implement the minimum pure functions in `src/research/robustness.py` with fail-closed input validation.
-- [ ] Run focused tests.
+- [x] Write failing tests for recovered and open drawdowns, monthly/yearly concentration, placebo ranking, market dependence and regime aggregation.
+- [x] Implement the minimum pure functions in `src/research/robustness.py` with fail-closed input validation.
+- [x] Run focused tests.
 
 ## Task 2: Standard summaries and operator contract
 
-- [ ] Add drawdown duration and profit concentration to `curve_summary` and `summarize_run`.
-- [ ] Document how strategy runners must supply matched random, benchmark and causal regime inputs.
-- [ ] Run the full offline suite and request independent review.
-- [ ] Update the project checkpoint and summary report without claiming economic validation.
+- [x] Add drawdown duration and profit concentration to `curve_summary` and `summarize_run`.
+- [x] Document how strategy runners must supply matched random, benchmark and causal regime inputs.
+- [x] Run the full offline suite and request independent review.
+- [x] Update the project checkpoint and summary report without claiming economic validation.
