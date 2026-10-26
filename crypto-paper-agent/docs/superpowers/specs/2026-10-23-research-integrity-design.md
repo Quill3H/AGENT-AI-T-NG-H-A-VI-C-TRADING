@@ -46,4 +46,3 @@ are labelled `LEGACY_UNREGISTERED`; that label is a protocol limitation, not an 
 - Registration must precede the first result for its round.
 - Random controls use only timestamps supplied by the caller and never infer future eligibility.
 - Protocol completeness and strategy profitability remain separate conclusions.
-

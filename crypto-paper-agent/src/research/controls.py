@@ -39,4 +39,3 @@ def matched_random_entry_sets(eligible_times, signal_times, repetitions, seed):
         positions = np.sort(rng.choice(len(pool), size=len(signals), replace=False))
         samples.append(pool[positions])
     return tuple(samples)
-

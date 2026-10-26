@@ -95,4 +95,3 @@ entries.
 Historical ledger rows, including Round 18, remain unchanged. They cannot be retroactively
 preregistered. Their existing frozen configs, controls and review evidence still stand on their
 own terms; the generated integrity table labels the protocol limitation explicitly.
-

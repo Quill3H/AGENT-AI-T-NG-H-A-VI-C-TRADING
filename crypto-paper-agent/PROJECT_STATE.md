@@ -1,5 +1,16 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Research integrity hardening — 2026-10-23
+
+**IMPLEMENTED AND AUTHOR-TESTED; no trading rule, risk setting or historical result changed.** Branch `codex/research-qa-hardening`, based on `fd466ac`. Feature commit `3ac638d`; reviewer fixes frozen at `efd935b` (`d213462` was the first review fix). This work hardens how future ideas are tested; it does not validate an economic edge. Round 18 remains NO_TRADES / not enough evidence.
+
+- Round 19 onward must be preregistered before any result. The declared variant, control configuration, cost multiplier and frozen commit are enforced on every row.
+- Protocol completeness now requires each variant × cost × role cell. The matched-random placebo uses a fixed seed/repetition count and excludes actual signal timestamps.
+- Every new run has a stable `run_id`; ambiguous void requests fail instead of invalidating several same-label runs.
+- TDD evidence: the first reviewer regressions failed 8 cases and the second reviewer regressions failed 7 cases before their fixes; the focused integrity suites then passed 30/30. At code freeze `efd935b`, the full offline suite passed 713 tests, skipped 4 optional-dependency tests and deselected 5 network tests. An earlier unrestricted run reached the full suite; four Binance downloads failed because DNS/network access was unavailable, while all selected offline tests passed.
+- Final independent re-review of `fd466ac..efd935b`: no blocking finding; all earlier P1/P2 bypasses were reproduced as closed. This verdict covers protocol correctness only.
+- Operator contract: `docs/operations/RESEARCH_INTEGRITY.md`. Summary: `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 6-11/BAO_CAO_RESEARCH_INTEGRITY_2026-10-23.md`.
+
 ## Round 18 fix: btc_oi_contraction_reclaim_v1 after Codex review — 2026-10-23
 
 **Codex review complete for F1–F5 (no blocking defect left); not gate acceptance, no economic validation.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `85df7c4` (F1–F4 first fixed at `ff64ed7`); results and records in `8d3898c`. Research verdict: NO_TRADES / not enough evidence. No v2 started and no delayed-entry variant selected. Paper only.
