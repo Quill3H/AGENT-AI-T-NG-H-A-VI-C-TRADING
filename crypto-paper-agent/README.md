@@ -73,6 +73,10 @@ python run_backtest.py --strategy trend_following
 
 ## Chạy backtest 2021–2025 trên dữ liệu Binance chính thức
 
+Để chạy nhiều phương án, dùng lại kết quả trùng và xuất bảng so sánh JSON/CSV/Markdown,
+xem [Backtest Lab](docs/operations/BACKTEST_LAB.md). Tool dùng dữ liệu có sẵn,
+không tải lại và không cần gọi AI cho từng lần thử.
+
 ```bash
 # Tải toàn bộ lưu trữ công khai Binance Vision (không cần key), kiểm checksum từng file
 python scripts/download_vision_history.py --output data/vision --allow-network
