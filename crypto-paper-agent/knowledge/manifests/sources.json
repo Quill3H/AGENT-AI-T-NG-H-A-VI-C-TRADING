@@ -1,0 +1,159 @@
+{
+  "sources": [
+    {
+      "id": "spec",
+      "path": "Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md",
+      "sha256": "d203bbd9a8c5b11eb62d197ae9e577fe5c1a78412729c5fcfbbf999d44289ed1",
+      "locator": "1.2 Nguyên tắc thiết kế cốt lõi",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "state",
+      "path": "crypto-paper-agent/PROJECT_STATE.md",
+      "sha256": "b25f27965b0c2c44f0ef081d8f681ff8158db21dfeeff6f7b7c75b50223f4180",
+      "locator": "ETH–BTC cointegration v1 — 2026-10-22",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "planner",
+      "path": "PLANNER_HANDOVER.md",
+      "sha256": "c0f97a817a2ce41ab17242d5708d54c11972c567a54a909faed8a831a24b870f",
+      "locator": "Current single-main integration — 2026-09-23",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "lab",
+      "path": "crypto-paper-agent/docs/operations/BACKTEST_LAB.md",
+      "sha256": "3a552d3e8782eac2f045166eec45958dc75aa478ac3288d42606b37dc7787941",
+      "locator": "Chế độ batch hiện có",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": true
+    },
+    {
+      "id": "lab-review",
+      "path": "crypto-paper-agent/docs/reviews/BACKTEST_LAB_2026_10_27.md",
+      "sha256": "01ed27f297f20febdd0625dcb10a59c4657c431cedede6369de66a93c69dde0c",
+      "locator": "Author verification on final code",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "method-search",
+      "path": "crypto-paper-agent/docs/research/2026-10-16-method-search.md",
+      "sha256": "256777ad13a78f1e57f1ea692b1e0780613a3811664b6c99d795456722f383f1",
+      "locator": "Result of the frozen candidate",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "pair-adr",
+      "path": "crypto-paper-agent/docs/decisions/0015-eth-btc-cointegration-v1.md",
+      "sha256": "c917f84222d064a2fc55bbc16de0ffa94e8d78d3215ce0939f3bfa007a4f3ee9",
+      "locator": "Decision",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "pair-report",
+      "path": "crypto-paper-agent/docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md",
+      "sha256": "7463939e9131ca252d08f07389433f6dedd1e26a90025d522fcec144867223cd",
+      "locator": "Kết quả cả 12 kịch bản",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "pair-ops",
+      "path": "crypto-paper-agent/docs/operations/ETH_BTC_COINTEGRATION.md",
+      "sha256": "e23e5e0f756b7cf8d5396e10f955699a7968952d260c1c05750cb2c9d8eeba23",
+      "locator": "Reproduce",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": false
+    },
+    {
+      "id": "orb",
+      "path": "crypto-paper-agent/docs/research/crypto-orb-portfolio.md",
+      "sha256": "93e352f32da37d18c78e2233ce20742c10faa988967c912a3321aac6a431f779",
+      "locator": "Execution and input limits",
+      "accessed_at": "2026-10-29",
+      "commit": null,
+      "tracked": false,
+      "dirty": true
+    },
+    {
+      "id": "broker",
+      "path": "crypto-paper-agent/src/execution/paper_broker.py",
+      "sha256": "94bf318830040099ed5e92800214132a4fbab0600fba8590cb601ef1e7ec47dd",
+      "locator": "PaperBroker",
+      "accessed_at": "2026-10-29",
+      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "tracked": true,
+      "dirty": true
+    },
+    {
+      "id": "quantdinger-review",
+      "path": "crypto-paper-agent/docs/research/external-repos/quantdinger/DANH_GIA_QUANTDINGER.md",
+      "sha256": "a352f0f80597960dbf12a6c1b5d356070e293a6c21efad2e264d0b5bbd510db7",
+      "locator": "Kết luận",
+      "accessed_at": "2026-10-29",
+      "commit": null,
+      "tracked": false,
+      "dirty": true,
+      "origin_path": "output/quantdinger-research/DANH_GIA_QUANTDINGER.md",
+      "review_observed_at": "2026-10-23",
+      "upstream_commit": "8c993764ada17e7b2299ec5f0fbb7eac1a508dca",
+      "verification": "AUTHOR_REPORTED",
+      "note": "Preserved review snapshot; not a live upstream refresh or profitability verification."
+    },
+    {
+      "id": "tradingagents-review",
+      "path": "crypto-paper-agent/docs/research/external-repos/tradingagents/DANH_GIA_TRADINGAGENTS.md",
+      "sha256": "a5f9b3f13a5b257ba83f1c0ab0e139cc294f53d1eb3042792dc27b4859c4bd26",
+      "locator": "Kết luận",
+      "accessed_at": "2026-10-29",
+      "commit": null,
+      "tracked": false,
+      "dirty": true,
+      "origin_path": "output/tradingagents-research/DANH_GIA_TRADINGAGENTS.md",
+      "review_observed_at": "2026-10-29",
+      "upstream_commit": "c4544913a14ed3df5f1ed7b9e8483270ce20682a",
+      "verification": "AUTHOR_REPORTED",
+      "note": "Preserved review snapshot; not a live upstream refresh or profitability verification."
+    },
+    {
+      "id": "tradingagents-paper-review",
+      "path": "crypto-paper-agent/docs/research/external-repos/tradingagents/BAO_CAO_BANG_CHUNG.md",
+      "sha256": "0d03dd5beee16c2f83683a8f7e5454dbceab775d1d198c6081e70b0baa66dc9c",
+      "locator": "Kết quả tác giả công bố",
+      "accessed_at": "2026-10-29",
+      "commit": null,
+      "tracked": false,
+      "dirty": true,
+      "origin_path": "output/tradingagents-research/BAO_CAO_BANG_CHUNG.md",
+      "review_observed_at": "2026-10-29",
+      "upstream_commit": "c4544913a14ed3df5f1ed7b9e8483270ce20682a",
+      "verification": "AUTHOR_REPORTED",
+      "note": "Preserved review snapshot; not a live upstream refresh or profitability verification."
+    }
+  ]
+}

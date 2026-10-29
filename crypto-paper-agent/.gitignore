@@ -50,3 +50,14 @@ ehthumbs_vista.db
 *.stackdump
 [Dd]esktop.ini
 .DS_Store
+
+# Rebuildable local navigation graphs and validation output
+/.ua/*.log
+/.ua/freshness-check.json
+/.ua/import-evidence.json
+/.ua/knowledge-graph.json
+/.ua/source-inventory.json
+/.ua/validation.json
+/knowledge/.ua/input-manifest.json
+/knowledge/.ua/knowledge-graph.json
+/knowledge/.ua/meta.json

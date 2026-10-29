@@ -81,3 +81,7 @@ the conflict and ask PM/owner to resolve it before widening scope. Update the
 decision register and affected gate plan after approval; do not erase old
 decisions. Preserve unrelated worktree changes and use separate worktrees for
 independent verification.
+
+
+## Research wiki entrypoint (2026-10-29)
+For strategy research or cross-chat continuation, read `crypto-paper-agent/knowledge/AGENTS.md`, `knowledge/index.md` and `knowledge/handoff/latest.md` (last two relative to the package). Verify live Git identity and source freshness before relying on summaries. Wiki/graphs do not replace the spec, ADRs, user authorization or independent review gates.

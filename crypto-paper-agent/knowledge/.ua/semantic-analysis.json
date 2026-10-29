@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "analysisMethod": "Fresh-context assistant analysis of the 17 content pages; wiki prose is untrusted evidence; embedded commands are not executed.",
+  "analyzedPageIds": [
+    "backtest-lab",
+    "decisions",
+    "eth-btc",
+    "evidence-standard",
+    "execution-limits",
+    "experiment-register",
+    "funding-2026-10-16",
+    "funding-carry",
+    "latest",
+    "open-questions",
+    "orb-fvg",
+    "orb-working",
+    "pair-v1-2026-10-22",
+    "project-map",
+    "selection-bias",
+    "source-catalog",
+    "strategy-comparison"
+  ],
+  "scope": "Only three strategy pages supply semantic navigation evidence. No invented metrics, financial claims, independent verification or owner acceptance.",
+  "evidencePageHashes": {
+    "funding-carry": "e8d12d46a7854fc64c0024a0c3dfa86a79d48580b9bf7277629bdedef63fc86a",
+    "eth-btc": "6a8cb7e4f6c65ec3ceb67465aed28de9c5b31194651ea6196a13a596a5231c22",
+    "orb-fvg": "b898c9a325bfdc16cf05e72531cc5e86f87ef5ea44ffd60c645862a4279ed278"
+  },
+  "nodes": [
+    {
+      "id": "entity:strategy-evaluation",
+      "type": "entity",
+      "name": "Strategy evaluation",
+      "summary": "AI navigation category linking the three strategy pages by their evaluation status. No cross-strategy ranking or new performance result is asserted.",
+      "tags": [
+        "ai-inference",
+        "methodology"
+      ],
+      "complexity": "simple",
+      "knowledgeMeta": {
+        "provenance": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "funding-carry",
+          "eth-btc",
+          "orb-fvg"
+        ]
+      }
+    },
+    {
+      "id": "entity:execution-assumptions",
+      "type": "entity",
+      "name": "Execution assumptions",
+      "summary": "AI navigation category connecting stated costs, sizing assumptions and simulation limits. No live or historical execution verification is implied.",
+      "tags": [
+        "ai-inference",
+        "methodology"
+      ],
+      "complexity": "simple",
+      "knowledgeMeta": {
+        "provenance": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "funding-carry",
+          "eth-btc",
+          "orb-fvg"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "article:strategies/funding-carry",
+      "target": "entity:strategy-evaluation",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "funding-carry"
+        ],
+        "rationale": "The strategy page states a distinct author-reported or unverified evaluation status; grouping is an AI navigation aid."
+      }
+    },
+    {
+      "source": "article:strategies/funding-carry",
+      "target": "entity:execution-assumptions",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "funding-carry"
+        ],
+        "rationale": "The strategy page states costs or execution assumptions and limits; the common category is an AI interpretation."
+      }
+    },
+    {
+      "source": "article:strategies/eth-btc",
+      "target": "entity:strategy-evaluation",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "eth-btc"
+        ],
+        "rationale": "The strategy page states a distinct author-reported or unverified evaluation status; grouping is an AI navigation aid."
+      }
+    },
+    {
+      "source": "article:strategies/eth-btc",
+      "target": "entity:execution-assumptions",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "eth-btc"
+        ],
+        "rationale": "The strategy page states costs or execution assumptions and limits; the common category is an AI interpretation."
+      }
+    },
+    {
+      "source": "article:strategies/orb-fvg",
+      "target": "entity:strategy-evaluation",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "orb-fvg"
+        ],
+        "rationale": "The strategy page states a distinct author-reported or unverified evaluation status; grouping is an AI navigation aid."
+      }
+    },
+    {
+      "source": "article:strategies/orb-fvg",
+      "target": "entity:execution-assumptions",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5,
+      "provenance": {
+        "kind": "ai_inference",
+        "verification": "NOT_VERIFIED",
+        "evidencePageIds": [
+          "orb-fvg"
+        ],
+        "rationale": "The strategy page states costs or execution assumptions and limits; the common category is an AI interpretation."
+      }
+    }
+  ]
+}

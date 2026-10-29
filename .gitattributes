@@ -1,0 +1,16 @@
+# Preserve byte-hashed research wiki inputs across Git checkouts.
+/crypto-paper-agent/knowledge/** -text
+"/Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md" text eol=crlf
+"/crypto-paper-agent/PROJECT_STATE.md" text eol=crlf
+"/PLANNER_HANDOVER.md" text eol=crlf
+"/crypto-paper-agent/docs/operations/BACKTEST_LAB.md" text eol=lf
+"/crypto-paper-agent/docs/reviews/BACKTEST_LAB_2026_10_27.md" text eol=lf
+"/crypto-paper-agent/docs/research/2026-10-16-method-search.md" text eol=crlf
+"/crypto-paper-agent/docs/decisions/0015-eth-btc-cointegration-v1.md" text eol=lf
+"/crypto-paper-agent/docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md" text eol=crlf
+"/crypto-paper-agent/docs/operations/ETH_BTC_COINTEGRATION.md" text eol=lf
+"/crypto-paper-agent/docs/research/crypto-orb-portfolio.md" text eol=lf
+"/crypto-paper-agent/src/execution/paper_broker.py" text eol=crlf
+"/crypto-paper-agent/docs/research/external-repos/quantdinger/DANH_GIA_QUANTDINGER.md" text eol=lf
+"/crypto-paper-agent/docs/research/external-repos/tradingagents/DANH_GIA_TRADINGAGENTS.md" text eol=lf
+"/crypto-paper-agent/docs/research/external-repos/tradingagents/BAO_CAO_BANG_CHUNG.md" text eol=lf

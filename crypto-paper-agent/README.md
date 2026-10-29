@@ -126,3 +126,8 @@ Kết quả và giới hạn: `docs/research/2026-10-16-method-search.md`.
 | 2 | Khoảng backtest | 2021-01-01 → 2026-09-01 |
 | 3 | Circuit breaker recovery | `after_3_wins` (3 lệnh thắng liên tiếp) |
 | 4 | Reinforcement Learning | Chưa ưu tiên, tập trung rule-based |
+
+
+## Kho nghiên cứu và tiếp nối chat
+
+Xem [Research Wiki](knowledge/README.md), [mục lục](knowledge/index.md) và [bàn giao](knowledge/handoff/latest.md). Wiki giữ nguồn cho kết luận chiến lược và trạng thái kiểm chứng; không thay đổi logic trading.
