@@ -7,7 +7,7 @@
 # tối đa với môi trường Python 3.13+ (numpy 1.26.4 không hỗ trợ chính thức Python 3.13).
 
 # --- Data Fetching (public endpoints, no API key needed for OHLCV/OI/funding) ---
-ccxt>=4.4.27
+ccxt==4.5.82
 
 # --- Data Processing ---
 pandas>=2.2.3

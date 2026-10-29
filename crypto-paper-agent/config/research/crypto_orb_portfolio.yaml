@@ -1,0 +1,13 @@
+# Shared account, crypto only. Targets report sample sufficiency, never force entry.
+symbols: [BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, XRPUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, DOTUSDT]
+start: '2026-09-01'
+end: '2026-09-30'
+initial_equity: 10000
+max_concurrent_positions: 4
+risk_per_trade: 0.0025
+position_notional_fraction: 0.25
+weekly_target: 60
+monthly_target: 240
+taker_fee: 0.0005
+slippage: 0.0002
+cost_multiplier: 1

@@ -369,6 +369,19 @@ The Bonferroni value is a reference threshold for a declared search family, not 
 | 18 | validation | OIR1 | btc_oi_contraction_reclaim_v1 | 2024-01-01..2026-09-30 | BTC | 0.5% | 0.0 | 0.0 | 0.0 | None |
 | 18 | validation | OIR1 | btc_oi_contraction_reclaim_v1 | 2024-01-01..2026-09-30 | BTC | 0.5% | 0.0 | 0.0 | 0.0 | None |
 
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2461508810516322 | 0.2568261841460859 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2475871120092954 | 0.25826226140340414 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.2481474773508907 | 0.25683131148177823 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2021-01-01..2023-12-31 | ETH/BTC | 0.5% pair budget | -0.24958370830854282 | 0.25826741740926584 | 0.01 | 0.0 |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+| ETH_BTC_V1_2026_10_22 | retrospective | eth_btc_cointegration_v1 | eth_btc_cointegration_v1 | 2024-01-01..2026-09-30 | ETH/BTC | 0.5% pair budget | 0.0 | 0.0 | 0.0 | None |
+
 ## Lessons
 
 - Round 1: A daily Donchian trend system chosen on 2021-23 lost on 2024-25; 20-50% a month is not realistic.
@@ -405,3 +418,5 @@ The Bonferroni value is a reference threshold for a declared search family, not 
 - Round 18: btc_oi_contraction_reclaim_v1 (owner spec, BTC 1h drop >= 2 ATR + OI contracts -1%, reclaim 25%, target pre-drop close): 0 trades 2021-01..2026-09 at base/2x costs, with or without OI. Binding gate: RR >= 1.5 at a fill above the 25% reclaim level needs drop >= ~A + 4 x lower wick; 61% of accepted events made a new low first. W1 DATA_QUALITY_FAILED (3 shocks without OI snapshots). Delay stress 2 trades +1.2% (sensitivity only). OI raw: /mnt/project-files/market-data/binance-vision-metrics-btcusdt (473 zero rows, 98k exact dups, unsorted files).
 - Round 18: Fix ff64ed7 after Codex review (F1-F4): the OI-reclaim simulator now runs on the project breaker/invariants with event-time cashflows, fails on missing 15m bars or funding settlements, measures DD on a 15m cashflow-ledger curve and reconciles the end-of-window settlement. Rerun on the same data: funnels unchanged, still 0 trades at base/2x costs; W2 delay stress 2 trades +1.24%, DD 0.43% (was 0.31%, hourly sampling hid it). Lesson: a dedicated simulator must reuse the project risk state and a cashflow ledger from day one; reported DD from resampled curves understates risk. 25% reclaim and RR 1.5 are not contradictory: the entry range after a 1h confirmation is narrow.
 - Round 18: F5 fix 85df7c4 (Codex review 2): the OI-reclaim simulator now keeps the stricter of the project and v1 daily-loss limits instead of overwriting the project value with v1's 5%. Rerun at 85df7c4 identical to ff64ed7 (both sides 5%), so the ff64ed7 rows stand; no new run rows. Lesson: when a study config and the project config both set a risk limit, take the stricter, never assign.
+
+- Round ETH_BTC_V1_2026_10_22: Fixed ETH/BTC cointegration v1: 2021-2023 only one losing pair, 2024-Sep2026 no signals. Insufficient evidence; v1 failed after costs in the traded window. No-positive funding baseline -24.758711 USDT; do not tune thresholds, substitute pairs or raise leverage after seeing outcomes. Full report docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md.

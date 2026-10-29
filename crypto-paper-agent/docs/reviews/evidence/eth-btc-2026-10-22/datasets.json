@@ -1,0 +1,38 @@
+{
+  "ETHUSDT_perp_4h.parquet": {
+    "rows": 13326,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 20:00:00+00:00",
+    "sha256": "8482af5ef1394aca521c0bb2cdcda5114d854c902935df47685231b734ccb24b"
+  },
+  "ETHUSDT_perp_15m.parquet": {
+    "rows": 213216,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 23:45:00+00:00",
+    "sha256": "236230c3d4cac46987995b815d940be3ffdf0e3bcd8b852a3c696ab6cb664a3c"
+  },
+  "ETHUSDT_perp_funding.parquet": {
+    "rows": 6663,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 16:00:00.002000+00:00",
+    "sha256": "ecb1f6cf55111995534339ec43b9bbcae106ec859a110d1c0bd1e5b9c6617c72"
+  },
+  "BTCUSDT_perp_4h.parquet": {
+    "rows": 13326,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 20:00:00+00:00",
+    "sha256": "1567179ff74cb5784d417f1212fa036c34eb15387a63c84544b716e856314734"
+  },
+  "BTCUSDT_perp_15m.parquet": {
+    "rows": 213216,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 23:45:00+00:00",
+    "sha256": "22715a9da388348af05587dc87b0e60fa6a4ee31f8ac18fffd43a130607feecd"
+  },
+  "BTCUSDT_perp_funding.parquet": {
+    "rows": 6663,
+    "start": "2020-09-01 00:00:00+00:00",
+    "end": "2026-09-30 16:00:00.002000+00:00",
+    "sha256": "c09660d632f9c2e39501dd6bc3e3c07348abf8afbb11114c90305bdccedafbba"
+  }
+}

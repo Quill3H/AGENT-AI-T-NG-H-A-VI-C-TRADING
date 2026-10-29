@@ -1,0 +1,642 @@
+{
+  "2021-2023-actual-cost1-delay0": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [
+      {
+        "pair_id": "PAIR_000001",
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a",
+        "side": -1,
+        "entry_time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "wallet_before": 10000.0,
+        "closed_legs": [
+          {
+            "symbol": "ETHUSDT",
+            "quantity": 0.357,
+            "gross_pnl": -31.665505486047344,
+            "funding": 0.143108448,
+            "fees": 0.7259746762340236,
+            "reason": "STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          },
+          {
+            "symbol": "BTCUSDT",
+            "quantity": 0.015,
+            "gross_pnl": 8.135025600000025,
+            "funding": -0.045119252235,
+            "fees": 0.45662273865,
+            "reason": "PARTNER_STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          }
+        ],
+        "complete_entry": true,
+        "delayed": null,
+        "risk_budget": 50.0,
+        "holding_deadline": "2023-04-19 08:15:00+00:00",
+        "exit_time": "2023-04-14 00:45:00+00:00",
+        "net_pnl": -24.615088105163522,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "fills": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 1989.193063,
+        "raw_price": 1989.79,
+        "slippage_usd": 0.21310650900000905,
+        "fee": 0.35507096174549996
+      },
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30170.34839,
+        "raw_price": 30161.3,
+        "slippage_usd": 0.1357258499999989,
+        "fee": 0.226277612925
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 2077.8919579189,
+        "raw_price": 2077.2687772857144,
+        "fee": 0.37090371448852366,
+        "slippage_usd": 0.222475486047299,
+        "reason": "STOP"
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30712.68343,
+        "raw_price": 30721.9,
+        "fee": 0.23034512572500002,
+        "slippage_usd": 0.13824855000000752,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "funding": [
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 1996.84,
+        "raw_cashflow": 0.071287188,
+        "cashflow": 0.071287188,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "BTCUSDT",
+        "rate": 0.0001,
+        "mark": 30422.6,
+        "raw_cashflow": -0.0456339,
+        "cashflow": -0.0456339,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 2011.8,
+        "raw_cashflow": 0.07182126,
+        "cashflow": 0.07182126,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "BTCUSDT",
+        "rate": -1.13e-06,
+        "mark": 30362.7,
+        "raw_cashflow": 0.000514647765,
+        "cashflow": 0.000514647765,
+        "pair_id": "PAIR_000001"
+      }
+    ],
+    "rejections": []
+  },
+  "2021-2023-no_positive-cost1-delay0": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [
+      {
+        "pair_id": "PAIR_000001",
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a",
+        "side": -1,
+        "entry_time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "wallet_before": 10000.0,
+        "closed_legs": [
+          {
+            "symbol": "ETHUSDT",
+            "quantity": 0.357,
+            "gross_pnl": -31.665505486047344,
+            "funding": 0.0,
+            "fees": 0.7259746762340236,
+            "reason": "STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          },
+          {
+            "symbol": "BTCUSDT",
+            "quantity": 0.015,
+            "gross_pnl": 8.135025600000025,
+            "funding": -0.0456339,
+            "fees": 0.45662273865,
+            "reason": "PARTNER_STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          }
+        ],
+        "complete_entry": true,
+        "delayed": null,
+        "risk_budget": 50.0,
+        "holding_deadline": "2023-04-19 08:15:00+00:00",
+        "exit_time": "2023-04-14 00:45:00+00:00",
+        "net_pnl": -24.75871120092961,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "fills": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 1989.193063,
+        "raw_price": 1989.79,
+        "slippage_usd": 0.21310650900000905,
+        "fee": 0.35507096174549996
+      },
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30170.34839,
+        "raw_price": 30161.3,
+        "slippage_usd": 0.1357258499999989,
+        "fee": 0.226277612925
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 2077.8919579189,
+        "raw_price": 2077.2687772857144,
+        "fee": 0.37090371448852366,
+        "slippage_usd": 0.222475486047299,
+        "reason": "STOP"
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30712.68343,
+        "raw_price": 30721.9,
+        "fee": 0.23034512572500002,
+        "slippage_usd": 0.13824855000000752,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "funding": [
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 1996.84,
+        "raw_cashflow": 0.071287188,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "BTCUSDT",
+        "rate": 0.0001,
+        "mark": 30422.6,
+        "raw_cashflow": -0.0456339,
+        "cashflow": -0.0456339,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 2011.8,
+        "raw_cashflow": 0.07182126,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "BTCUSDT",
+        "rate": -1.13e-06,
+        "mark": 30362.7,
+        "raw_cashflow": 0.000514647765,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      }
+    ],
+    "rejections": []
+  },
+  "2021-2023-actual-cost2-delay0": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "reason": "HEDGE_ROUNDING_ERROR"
+      }
+    ]
+  },
+  "2021-2023-no_positive-cost2-delay0": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "reason": "HEDGE_ROUNDING_ERROR"
+      }
+    ]
+  },
+  "2021-2023-actual-cost1-delay1": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [
+      {
+        "pair_id": "PAIR_000001",
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a",
+        "side": -1,
+        "entry_time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "wallet_before": 10000.0,
+        "closed_legs": [
+          {
+            "symbol": "ETHUSDT",
+            "quantity": 0.357,
+            "gross_pnl": -31.665505486047344,
+            "funding": 0.143108448,
+            "fees": 0.7259746762340236,
+            "reason": "STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          },
+          {
+            "symbol": "BTCUSDT",
+            "quantity": 0.015,
+            "gross_pnl": 7.935465750000075,
+            "funding": -0.045119252235,
+            "fees": 0.45672251857499996,
+            "reason": "PARTNER_STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          }
+        ],
+        "complete_entry": true,
+        "delayed": null,
+        "risk_budget": 50.0,
+        "holding_deadline": "2023-04-19 08:15:00+00:00",
+        "exit_time": "2023-04-14 00:45:00+00:00",
+        "net_pnl": -24.81474773508853,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "fills": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 1989.193063,
+        "raw_price": 1989.79,
+        "slippage_usd": 0.21310650900000905,
+        "fee": 0.35507096174549996
+      },
+      {
+        "time": "2023-04-13 12:30:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30183.652379999996,
+        "raw_price": 30174.6,
+        "slippage_usd": 0.13578569999996035,
+        "fee": 0.22637739284999994
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 2077.8919579189,
+        "raw_price": 2077.2687772857144,
+        "fee": 0.37090371448852366,
+        "slippage_usd": 0.222475486047299,
+        "reason": "STOP"
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30712.68343,
+        "raw_price": 30721.9,
+        "fee": 0.23034512572500002,
+        "slippage_usd": 0.13824855000000752,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "funding": [
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 1996.84,
+        "raw_cashflow": 0.071287188,
+        "cashflow": 0.071287188,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "BTCUSDT",
+        "rate": 0.0001,
+        "mark": 30422.6,
+        "raw_cashflow": -0.0456339,
+        "cashflow": -0.0456339,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 2011.8,
+        "raw_cashflow": 0.07182126,
+        "cashflow": 0.07182126,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "BTCUSDT",
+        "rate": -1.13e-06,
+        "mark": 30362.7,
+        "raw_cashflow": 0.000514647765,
+        "cashflow": 0.000514647765,
+        "pair_id": "PAIR_000001"
+      }
+    ],
+    "rejections": []
+  },
+  "2021-2023-no_positive-cost1-delay1": {
+    "signals": [
+      {
+        "time": "2023-04-13 12:00:00+00:00",
+        "z": 2.4059481765033803,
+        "side": -1,
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a"
+      }
+    ],
+    "pairs": [
+      {
+        "pair_id": "PAIR_000001",
+        "model_id": "0afe118abd7e5c306fc352e03400be76668f7bfb7f39eb68cf2d8720772bce5a",
+        "side": -1,
+        "entry_time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "wallet_before": 10000.0,
+        "closed_legs": [
+          {
+            "symbol": "ETHUSDT",
+            "quantity": 0.357,
+            "gross_pnl": -31.665505486047344,
+            "funding": 0.0,
+            "fees": 0.7259746762340236,
+            "reason": "STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          },
+          {
+            "symbol": "BTCUSDT",
+            "quantity": 0.015,
+            "gross_pnl": 7.935465750000075,
+            "funding": -0.0456339,
+            "fees": 0.45672251857499996,
+            "reason": "PARTNER_STOP",
+            "exit_time": "2023-04-14 00:45:00+00:00"
+          }
+        ],
+        "complete_entry": true,
+        "delayed": null,
+        "risk_budget": 50.0,
+        "holding_deadline": "2023-04-19 08:15:00+00:00",
+        "exit_time": "2023-04-14 00:45:00+00:00",
+        "net_pnl": -24.95837083085462,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "fills": [
+      {
+        "time": "2023-04-13 12:15:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 1989.193063,
+        "raw_price": 1989.79,
+        "slippage_usd": 0.21310650900000905,
+        "fee": 0.35507096174549996
+      },
+      {
+        "time": "2023-04-13 12:30:00+00:00",
+        "signal_time": "2023-04-13 12:00:00+00:00",
+        "kind": "ENTRY",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30183.652379999996,
+        "raw_price": 30174.6,
+        "slippage_usd": 0.13578569999996035,
+        "fee": 0.22637739284999994
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "ETHUSDT",
+        "quantity": 0.357,
+        "price": 2077.8919579189,
+        "raw_price": 2077.2687772857144,
+        "fee": 0.37090371448852366,
+        "slippage_usd": 0.222475486047299,
+        "reason": "STOP"
+      },
+      {
+        "time": "2023-04-14 00:45:00+00:00",
+        "kind": "EXIT",
+        "pair_id": "PAIR_000001",
+        "symbol": "BTCUSDT",
+        "quantity": 0.015,
+        "price": 30712.68343,
+        "raw_price": 30721.9,
+        "fee": 0.23034512572500002,
+        "slippage_usd": 0.13824855000000752,
+        "reason": "PARTNER_STOP"
+      }
+    ],
+    "funding": [
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 1996.84,
+        "raw_cashflow": 0.071287188,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-13 16:00:00+00:00",
+        "source_time": "2023-04-13 16:00:00+00:00",
+        "symbol": "BTCUSDT",
+        "rate": 0.0001,
+        "mark": 30422.6,
+        "raw_cashflow": -0.0456339,
+        "cashflow": -0.0456339,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "ETHUSDT",
+        "rate": 0.0001,
+        "mark": 2011.8,
+        "raw_cashflow": 0.07182126,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      },
+      {
+        "time": "2023-04-14 00:00:00+00:00",
+        "source_time": "2023-04-14 00:00:00.001000+00:00",
+        "symbol": "BTCUSDT",
+        "rate": -1.13e-06,
+        "mark": 30362.7,
+        "raw_cashflow": 0.000514647765,
+        "cashflow": 0.0,
+        "pair_id": "PAIR_000001"
+      }
+    ],
+    "rejections": []
+  },
+  "2024-2026-actual-cost1-delay0": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  },
+  "2024-2026-no_positive-cost1-delay0": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  },
+  "2024-2026-actual-cost2-delay0": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  },
+  "2024-2026-no_positive-cost2-delay0": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  },
+  "2024-2026-actual-cost1-delay1": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  },
+  "2024-2026-no_positive-cost1-delay1": {
+    "signals": [],
+    "pairs": [],
+    "fills": [],
+    "funding": [],
+    "rejections": []
+  }
+}

@@ -1,0 +1,19 @@
+# Explicit retrospective variants; no automatic tuning or unseen-OOS claim.
+# Config paths are relative to this YAML file. Dates include the full end day, UTC.
+jobs:
+  - name: BTC trend base
+    strategy: trend_following
+    symbol: BTCUSDT
+    start: '2021-01-01'
+    end: '2023-12-31'
+  - name: BTC trend cost2x
+    strategy: trend_following
+    symbol: BTCUSDT
+    start: '2021-01-01'
+    end: '2023-12-31'
+    cost_multiplier: 2
+  - name: ETH trend base
+    strategy: trend_following
+    symbol: ETHUSDT
+    start: '2021-01-01'
+    end: '2023-12-31'
