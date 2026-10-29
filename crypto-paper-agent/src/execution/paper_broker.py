@@ -100,6 +100,9 @@ def _validate_config(config: dict) -> None:
         exc = config["execution"]
         if not isinstance(exc, dict):
             raise TypeError(f"execution section must be dict, got {type(exc).__name__}")
+        capacity = exc.get("max_concurrent_positions")
+        if capacity is not None and (type(capacity) is not int or capacity < 1):
+            raise ValueError("max_concurrent_positions must be a positive integer")
         if "settlement_hours_utc" in exc:
             hours = exc["settlement_hours_utc"]
             if not isinstance(hours, (list, tuple, set)):
@@ -125,6 +128,10 @@ def _validate_config(config: dict) -> None:
         rsk = config["risk"]
         if not isinstance(rsk, dict):
             raise TypeError(f"risk section must be dict, got {type(rsk).__name__}")
+        gross_cap = rsk.get("max_gross_notional_pct_of_equity")
+        if gross_cap is not None and (type(gross_cap) not in (float, int)
+                                      or not math.isfinite(gross_cap) or gross_cap <= 0):
+            raise ValueError("max_gross_notional_pct_of_equity must be finite and positive")
 
 
 
@@ -329,6 +336,19 @@ class PaperBroker:
                 self.order_history.append(rec)
                 return rec
 
+        capacity = self.config.get("execution", {}).get("max_concurrent_positions")
+        reserved = set(self.positions) | {order.symbol for order in self.pending_orders}
+        if capacity is not None and len(reserved) >= capacity:
+            rec = OrderExecutionRecord(
+                order_id=self._next_order_id(request.symbol, request.signal_time),
+                symbol=request.symbol, direction=request.direction, status=OrderStatus.REJECTED,
+                requested_at=request.signal_time, order_type=request.order_type,
+                reference_price=request.signal_price,
+                rejection_reasons=["EXECUTION_REJECT_PORTFOLIO_CAPACITY"], metadata=dict(request.metadata),
+            )
+            self.order_history.append(rec)
+            return rec
+
         rec = OrderExecutionRecord(
             order_id=self._next_order_id(request.symbol, request.signal_time),
             symbol=request.symbol,
@@ -344,6 +364,48 @@ class PaperBroker:
         return rec
 
     def process_candle(self, candle: Union[dict, Any]) -> Dict[str, Any]:
+        phases = self._candle_phases(candle)
+        while True:
+            try:
+                next(phases)
+            except StopIteration as completed:
+                return completed.value
+
+    def process_batch(self, candles: List[dict]) -> List[Dict[str, Any]]:
+        """All opening fills precede all intrabar outcomes in a synchronized batch.
+
+        Validate the entire batch before mutation. Input order is the explicit
+        priority for simultaneous fills; callers submit signals after this returns.
+        """
+        if not candles:
+            raise ValueError("batch must contain candles")
+        if not all(isinstance(c, dict) for c in candles):
+            raise TypeError("batch candles must be dictionaries")
+        opens = [_ensure_utc(c.get("open_time", c.get("timestamp"))) for c in candles]
+        symbols = [str(c.get("symbol", self.config.get("data", {}).get("futures_symbol", "BTCUSDT"))).upper() for c in candles]
+        if len(set(opens)) != 1 or len(set(symbols)) != len(symbols):
+            raise ValueError("batch needs one open time and unique symbols")
+        default_tf = self.config.get("data", {}).get("timeframes", ["1m"])[0]
+        durations = [self._parse_timeframe_duration(c.get("timeframe", default_tf)) for c in candles]
+        if len(set(durations)) != 1:
+            raise ValueError("batch candles must have the same duration")
+        phases = [self._candle_phases(c) for c in candles]
+        for phase in phases:
+            next(phase)  # read-only preflight for every symbol
+        self.last_batch_peak_positions = len(self.positions)
+        while True:
+            results = []
+            for phase in phases:
+                try:
+                    next(phase)
+                except StopIteration as completed:
+                    results.append(completed.value)
+                self.last_batch_peak_positions = max(self.last_batch_peak_positions, len(self.positions))
+            if results:
+                assert len(results) == len(phases), "inconsistent broker phase count"
+                return results
+
+    def _candle_phases(self, candle):
         """
         Xử lý 1 nến theo quy trình 5 pha chống nhìn trước:
         Pha 1: Open time & Gap Exits
@@ -516,6 +578,7 @@ class PaperBroker:
         # =========================================================
         # HẾT PREFLIGHT - TẤT CẢ DỮ LIỆU ĐÃ HỢP LỆ, BẮT ĐẦU CẬP NHẬT TRẠNG THÁI VÀ THỰC THI
         # =========================================================
+        yield
         if self.current_batch_open_time is None or open_time > self.current_batch_open_time:
             self.current_batch_open_time = open_time
             self.symbols_in_current_batch = {symbol}
@@ -526,6 +589,10 @@ class PaperBroker:
         self.last_candle_open_time = open_time
         self.current_time = open_time
         self.last_mark_prices[symbol] = open_p
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            pos._last_unrealized_pnl = pos.calculate_unrealized_pnl(open_p)
+        yield  # all portfolio marks are opening prices before gap/funding/fills
 
         candle_events = []
 
@@ -598,6 +665,7 @@ class PaperBroker:
                 pos.metadata["breakeven_pending"] = True
 
         # PHA 2: Funding Settlement (chỉ cho vị thế còn sống qua Pha 1)
+        yield
         if symbol in self.positions:
             pos = self.positions[symbol]
             if self._is_settlement(open_time, candle):
@@ -616,6 +684,7 @@ class PaperBroker:
 
         # A close decision made after the prior bar closes executes at this open,
         # after gap protection and funding. It cannot evade a due settlement.
+        yield
         close_signal = self.pending_closes.get(symbol)
         if close_signal is not None and close_signal <= open_time:
             self.pending_closes.pop(symbol)
@@ -625,10 +694,16 @@ class PaperBroker:
                 self._execute_exit(pos, price, open_time, ExitReason.MANUAL)
 
         # PHA 3: Pending Market Entry & Admission Gate
+        yield
         pending_to_process = [req for req in self.pending_orders if req.symbol == symbol and req.signal_time <= open_time]
         self.pending_orders = [req for req in self.pending_orders if not (req.symbol == symbol and req.signal_time <= open_time)]
 
         for req in pending_to_process:
+            capacity = self.config.get("execution", {}).get("max_concurrent_positions")
+            if capacity is not None and len(self.positions) >= capacity:
+                self._update_order_record(req, OrderStatus.REJECTED, open_time,
+                                          reasons=["EXECUTION_REJECT_PORTFOLIO_CAPACITY"])
+                continue
             if req.expires_at is not None and open_time >= req.expires_at:
                 self._update_order_record(req, OrderStatus.CANCELLED, open_time, reasons=["LIMIT_EXPIRED"])
                 continue
@@ -781,6 +856,13 @@ class PaperBroker:
             }
 
             is_valid, reasons = check_all_invariants(order_dict, account_state, self.config)
+            gross_cap = self.config.get("risk", {}).get("max_gross_notional_pct_of_equity")
+            if is_valid and gross_cap is not None:
+                existing_gross = sum(p.quantity * self.last_mark_prices.get(s, p.entry_price)
+                                     for s, p in self.positions.items())
+                if existing_gross + calc_notional > self.equity * gross_cap + 1e-8:
+                    is_valid = False
+                    reasons = ["EXECUTION_REJECT_PORTFOLIO_GROSS_NOTIONAL"]
 
             if is_valid and req.partial_exits:
                 sign = 1 if req.direction == OrderDirection.LONG else -1
@@ -874,6 +956,7 @@ class PaperBroker:
                 candle_events.append({"type": "ORDER_REJECTED", "reasons": reasons})
 
         # PHA 4: Intrabar Protection (Liquidation > SL > TP trên [low_p, high_p])
+        yield
         if symbol in self.positions:
             pos = self.positions[symbol]
             intrabar_exit_triggered = False
@@ -942,6 +1025,7 @@ class PaperBroker:
                         pos.metadata["breakeven_pending"] = True
 
         # PHA 5: Close Time & Mark-to-Market
+        yield
         self.current_time = close_time
         self.last_mark_prices[symbol] = close_p
 
@@ -962,6 +1046,7 @@ class PaperBroker:
             self.is_halted = True
             logger.error("[PaperBroker] Tài khoản cạn vốn (equity = {:.2f} <= 0). Halted toàn bộ.", self.equity)
 
+        yield  # snapshots see all symbols' closing marks
         snapshot = AccountSnapshot(
             timestamp=close_time,
             wallet_balance=self.wallet_balance,

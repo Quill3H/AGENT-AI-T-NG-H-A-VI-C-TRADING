@@ -200,7 +200,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--list-strategies', action='store_true')
     parser.add_argument('--data-dir', type=Path)
-    parser.add_argument('--batch', type=Path)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--batch', type=Path)
+    mode.add_argument('--portfolio-config', type=Path, help='crypto ORB/FVG shared-account research YAML')
     parser.add_argument('--cache-dir', type=Path, default=PROJECT_ROOT / 'artifacts' / 'backtest-lab-cache')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
@@ -208,6 +210,11 @@ def main(argv=None):
         print('\n'.join(sorted({*DIRECTIONAL_STRATEGIES, 'funding_arbitrage'})))
         return 0
     try:
+        if args.portfolio_config:
+            if not args.data_dir or not args.output:
+                raise ValueError('--data-dir and --output are required')
+            from scripts.run_crypto_orb_portfolio import execute
+            return execute(args.data_dir, args.portfolio_config, args.output, args.cache_dir)
         if not all((args.data_dir, args.batch, args.output)):
             raise ValueError('--data-dir, --batch and --output are required')
         data, batch, output, cache = map(io_path, (args.data_dir, args.batch, args.output, args.cache_dir))

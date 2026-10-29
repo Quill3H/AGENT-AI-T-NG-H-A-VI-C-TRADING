@@ -1,5 +1,24 @@
 # Backtest Lab — chạy lại tiết kiệm trên dữ liệu cố định
 
+## Danh mục crypto ORB + FVG
+
+Đã có chế độ dùng chung tài khoản cho 10 cặp crypto, nhiều lệnh mỗi ngày,
+tối đa 4 vị thế đồng thời. Lệnh chờ giữ chỗ; các coin xử lý đồng bộ theo
+từng pha để kết quả cuối phút không ảnh hưởng lệnh khớp đầu phút.
+
+```powershell
+python scripts/backtest_lab.py --data-dir <THU_MUC_ZIP_VISION> --portfolio-config config/research/crypto_orb_portfolio.yaml --output <THU_MUC_KET_QUA_MOI> --cache-dir <THU_MUC_CACHE>
+```
+
+Chọn `--portfolio-config` hoặc `--batch`. Chế độ danh mục đọc ZIP 1m/15m,
+funding và CHECKSUM; giữ phí, kế toán và ngắt mạch của PaperBroker. Báo cáo
+60 lệnh/tuần đầy đủ và 240 lệnh/tháng đầy đủ là tiêu chí đủ mẫu; không ép
+vào lệnh hoặc nới bộ lọc để đạt số lượng. Xem [quy tắc, giới hạn mô phỏng và
+đầu ra](../research/crypto-orb-portfolio.md). Các phần bên dưới mô tả chế độ
+`--batch` hiện có, chạy các tài khoản riêng.
+
+## Chế độ batch hiện có
+
 Từ thư mục crypto-paper-agent, dùng Python đã cài các thư viện của dự án:
 
 ```powershell
