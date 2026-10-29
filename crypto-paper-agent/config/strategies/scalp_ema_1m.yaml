@@ -1,0 +1,14 @@
+# scalp_ema_1m.yaml - round-5 1m pilot P1 EMA9/21 cross scalp on 1m (owner 2026-10-17 13:27 UTC: "nếu 1 phút tỷ lệ thắng cao thì cũng oke").
+# Rules: src/strategies/style_suite.py, protocol: docs/research/2026-10-17-trading-styles.md.
+strategy:
+  name: "SCALP_EMA"
+  enabled: true
+  timeframe_signal: "1m"
+  timeframe_execution: "1m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

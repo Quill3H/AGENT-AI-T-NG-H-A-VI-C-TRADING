@@ -750,3 +750,49 @@ class TestInvariantChecks:
         assert is_valid is True
         assert len(reasons) == 0
 
+
+
+class TestMaxNotionalPerOrder:
+    """Hard cap on one order's notional size relative to equity (owner request 2026-10-16)."""
+
+    @staticmethod
+    def _order(size):
+        return {
+            "symbol": "BTCUSDT",
+            "direction": "LONG",
+            "entry_price": 50000.0,
+            "stop_loss_price": 49900.0,
+            "leverage": 3.0,
+            "risk_percent": 0.02,
+            "conviction_tier": "normal",
+            "position_size_usd": size,
+            "timestamp": datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc),
+        }
+
+    @staticmethod
+    def _account():
+        return {
+            "equity": 10000.0,
+            "available_margin": 10000.0,
+            "circuit_breaker_state": CircuitBreakerState(),
+            "news_filter": None,
+            "current_time": datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc),
+        }
+
+    def test_order_above_cap_is_rejected(self, config):
+        config = {**config, "risk": {**config["risk"], "max_notional_pct_of_equity": 2.0}}
+        ok, reasons = check_all_invariants(self._order(25000.0), self._account(), config)
+        assert ok is False
+        assert any("INVARIANT_FAIL_MAX_NOTIONAL_EXCEEDED" in r for r in reasons)
+
+    def test_order_at_cap_passes_that_check(self, config):
+        config = {**config, "risk": {**config["risk"], "max_notional_pct_of_equity": 2.0}}
+        _, reasons = check_all_invariants(self._order(20000.0), self._account(), config)
+        assert not any("MAX_NOTIONAL" in r for r in reasons)
+
+    @pytest.mark.parametrize("bad", [0, -1, float("nan"), True, "2"])
+    def test_invalid_cap_is_a_config_error(self, config, bad):
+        config = {**config, "risk": {**config["risk"], "max_notional_pct_of_equity": bad}}
+        ok, reasons = check_all_invariants(self._order(1000.0), self._account(), config)
+        assert ok is False
+        assert any("max_notional_pct_of_equity" in r for r in reasons)

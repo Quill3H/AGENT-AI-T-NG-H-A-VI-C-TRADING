@@ -1,0 +1,14 @@
+# scalp_rsi_1h.yaml - round-5 amendment candidate C6 RSI(2) pullback on 1h (owner 2026-10-17 13:27 UTC).
+# Rules: src/strategies/style_suite.py, protocol: docs/research/2026-10-17-trading-styles.md.
+strategy:
+  name: "SCALP_RSI_PULLBACK"
+  enabled: true
+  timeframe_signal: "1h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

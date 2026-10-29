@@ -1,0 +1,4 @@
+# WHAT-IF ONLY, NOT ADOPTED: 10% of equity at risk per trade instead of 2%.
+# Leverage (2x), the 2x-equity order cap and every other risk gate stay at their defaults.
+default_conviction: "ultra_high"
+base_risk_percent: 0.10

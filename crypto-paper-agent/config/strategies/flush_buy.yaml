@@ -1,0 +1,15 @@
+# flush_buy.yaml - round-8 candidate C3: Machi/Wynn-style flush buy, long only. Rules: src/strategies/contrarian_suite.py,
+# protocol: docs/research/2026-10-18-round8-plan.md. Fixed before any run, not fitted.
+strategy:
+  name: "EXTREME_FADE"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_long: true
+  allow_short: false

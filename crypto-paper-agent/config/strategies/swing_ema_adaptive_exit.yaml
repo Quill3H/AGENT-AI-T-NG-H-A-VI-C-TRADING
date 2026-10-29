@@ -1,0 +1,14 @@
+# swing_ema_adaptive_exit.yaml - round-12 candidate A2: C1 with an ADX-adaptive exit. Rules: src/strategies/adaptive_suite.py,
+# protocol: docs/research/2026-10-19-round12-adaptive.md. Fixed before any run, not fitted.
+strategy:
+  name: "SWING_EMA_ADAPTIVE_EXIT"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false

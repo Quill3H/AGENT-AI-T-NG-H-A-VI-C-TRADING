@@ -1,5 +1,21 @@
 # CHANGELOG - Crypto Paper-Trading Research Agent
 
+## [Research robustness diagnostics] — 2026-10-26
+
+- Add drawdown peak/trough/recovery and longest-underwater diagnostics while preserving the exact final-settlement equity path.
+- Add monthly/yearly positive-profit concentration, matched-random empirical ranking with explicit metric direction, benchmark up/down/flat decomposition, beta/correlation and causal regime summaries.
+- Include drawdown duration and concentration in standard owner-facing curve summaries; document point-in-time universe and survivorship-bias requirements for cross-sectional research.
+- Review the three user-supplied Reddit survivors without importing their equity rules into the crypto project. The SPY dip rule has the strongest stability claim, but none is validated from raw data or directly transferable to 24/7 crypto.
+- Verification at `2d931ea`: focused robustness/report tests 30 passed; full offline suite 726 passed, 4 skipped and 5 network tests deselected.
+
+## [Research integrity hardening] — 2026-10-23
+
+- Require causal preregistration from Round 19 onward and bind every result to its declared candidate, variant, role, control specification, cost multiplier and frozen commit.
+- Add deterministic matched-random entry sampling that rejects non-UTC, unsorted, duplicate or insufficient timestamp pools and excludes real signals.
+- Audit protocol completeness for every variant × cost × role combination; reserve the candidate role and metadata stages, assign unique run IDs, reject ambiguous void operations and allow exact timestamp selection for legacy rows.
+- Add operator guidance and an integrity table to the generated learning log. Existing strategy/config/result artifacts are unchanged; this is research-process QA, not a profitability result.
+- Verification at code freeze `efd935b`: 30 focused integrity tests passed; full offline suite 713 passed, 4 skipped and 5 network tests deselected.
+
 ## [Owner-directed single-main integration] — 2026-09-23
 
 - Fast-forwarded the latest G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9` into `main` and aligned the primary local branch with GitHub. This documentation-only follow-up records the new one-main workflow; read its full SHA from Git history/final handoff.

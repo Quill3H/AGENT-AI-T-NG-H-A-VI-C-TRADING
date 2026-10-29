@@ -1,0 +1,68 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.16, pytest-9.1.1, pluggy-1.7.0
+rootdir: /tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent
+configfile: pytest.ini
+plugins: platformdirs-4.13.5, anyio-4.15.1, cov-7.1.0
+collected 36 items / 23 deselected / 13 selected
+
+tests/test_oi_reclaim.py .FFFFFFFFFFFF                                   [100%]
+
+=================================== FAILURES ===================================
+E   AttributeError: 'Trade' object has no attribute 'risk_multiplier'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:377: AttributeError: 'Trade' object has no attribute 'risk_multiplier'
+E   AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+      
+      - CIRCUIT_BREAKER_LOCK
+      + TIME_STOP)
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:389: AssertionError: assert ('TIME_STOP' == 'CIRCUIT_BREAKER_LOCK'
+E   AssertionError: assert (['TRADE_TIME_STOP'] == ['REJECT_INVARIANT']
+      
+      At index 0 diff: 'TRADE_TIME_STOP' != 'REJECT_INVARIANT'
+      Use -v to get more diff)
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:398: AssertionError: assert (['TRADE_TIME_STOP'] == ['REJECT_INVARIANT']
+E   AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:408: AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+E   AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:421: AttributeError: module 'src.strategies.oi_reclaim' has no attribute 'DataQualityError'
+E   AttributeError: module 'reproduce_oi_reclaim' has no attribute 'run_scenario'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:440: AttributeError: module 'reproduce_oi_reclaim' has no attribute 'run_scenario'
+E   assert np.float64(0.0) == -3.362865 ± 3.4e-06
+      
+      comparison failed
+      Obtained: 0.0
+      Expected: -3.362865 ± 3.4e-06
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:460: assert np.float64(0.0) == -3.362865 ± 3.4e-06
+E   AttributeError: module 'reproduce_oi_reclaim' has no attribute 'drawdown_pct'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:474: AttributeError: module 'reproduce_oi_reclaim' has no attribute 'drawdown_pct'
+E   AttributeError: 'Trade' object has no attribute 'exit_bar'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:487: AttributeError: 'Trade' object has no attribute 'exit_bar'
+E   assert 9997.31 == 9994.62
+     +  where 9994.62 = round(9994.619416, 2)
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:501: assert 9997.31 == 9994.62
+E   assert 9997.31 == 9994.62
+     +  where 9994.62 = round(9994.619416, 2)
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:501: assert 9997.31 == 9994.62
+E   KeyError: 'cashflows'
+/tmp/claude-0/-home-claude-AGENT-AI-T-NG-H-A-VI-C-TRADING/52f2df84-1798-5be5-a2c4-7e803b569f71/scratchpad/old/crypto-paper-agent/tests/test_oi_reclaim.py:514: KeyError: 'cashflows'
+=============================== warnings summary ===============================
+../../../../../../../usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37
+  /usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37: Pandas4Warning: The 'mode.copy_on_write' option is deprecated. Copy-on-Write can no longer be disabled (it is always enabled with pandas >= 3.0), and setting the option has no impact. This option will be removed in pandas 4.0.
+    from pandas_ta.core import AnalysisIndicators
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_oi_reclaim.py::test_future_bars_do_not_change_a_finished_trade
+FAILED tests/test_oi_reclaim.py::test_f1_three_losses_halve_the_risk_of_the_fourth_trade
+FAILED tests/test_oi_reclaim.py::test_f1_a_funding_payment_that_breaks_the_daily_loss_limit_closes_at_once
+FAILED tests/test_oi_reclaim.py::test_f1_entry_passes_the_project_invariants
+FAILED tests/test_oi_reclaim.py::test_f2_a_missing_15m_bar_fails_the_run_instead_of_missing_the_stop
+FAILED tests/test_oi_reclaim.py::test_f2_missing_or_bad_funding_fails_the_run_instead_of_paying_zero
+FAILED tests/test_oi_reclaim.py::test_f2_cli_keeps_failed_data_apart_from_scored_results
+FAILED tests/test_oi_reclaim.py::test_f3_open_equity_includes_funding_when_it_is_paid
+FAILED tests/test_oi_reclaim.py::test_f3_drawdown_is_measured_on_15m_closes
+FAILED tests/test_oi_reclaim.py::test_f3_an_intrabar_exit_is_stamped_at_the_bar_close
+FAILED tests/test_oi_reclaim.py::test_f4_end_of_window_settlement_is_in_the_reported_equity[2023-12-30]
+FAILED tests/test_oi_reclaim.py::test_f4_end_of_window_settlement_is_in_the_reported_equity[2024-01-30]
+FAILED tests/test_oi_reclaim.py::test_f4_cashflow_ledger_reconciles_with_trades_and_curve
+============ 12 failed, 1 passed, 23 deselected, 1 warning in 4.23s ============

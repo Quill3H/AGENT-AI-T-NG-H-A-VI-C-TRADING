@@ -1,5 +1,45 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
+## Research robustness diagnostics — 2026-10-26
+
+**IMPLEMENTED, AUTHOR-TESTED AND INDEPENDENTLY REVIEWED WITH NO BLOCKING FINDING.** Branch `codex/research-qa-hardening`; feature commit `e51dcd8`, direction/benchmark fixes `58a8370`, settlement-path fix `2d931ea`. No signal, fill, cost, funding or risk rule changed; historical strategy conclusions remain unchanged until their stored runs are replayed through the new reporting layer.
+
+- Standard summaries now report the deepest drawdown's peak, trough, recovery time and total underwater time, plus the longest underwater episode. Final-settlement snapshots remain on the diagnostic equity path, so a pre-settlement peak cannot be erased.
+- Monthly/yearly profit concentration reports the share of gross positive equity change from the top one and top three periods.
+- Matched-random results can be ranked with an explicit higher/lower-is-better direction and finite-sample exceedance probability. Benchmark dependence includes up, down and flat observations; causal regime labels receive separate compounded returns and win rates.
+- TDD reviewer regressions reproduced five direction/headline/flat-benchmark failures and one settlement-peak failure before their fixes. Focused robustness/report tests passed 30/30. Final offline suite: 726 passed, 4 skipped, 5 network tests deselected.
+- Final independent review of `edb6104..2d931ea`: no blocking finding; the settlement path and all earlier mathematical/reporting blockers were confirmed closed. This verifies diagnostic correctness, not economic validity.
+- Review of the three self-reported Reddit survivors: `docs/research/2026-10-26-reddit-survivors-review.md`. Operator contract: `docs/operations/RESEARCH_INTEGRITY.md`.
+
+## Research integrity hardening — 2026-10-23
+
+**IMPLEMENTED AND AUTHOR-TESTED; no trading rule, risk setting or historical result changed.** Branch `codex/research-qa-hardening`, based on `fd466ac`. Feature commit `3ac638d`; reviewer fixes frozen at `efd935b` (`d213462` was the first review fix). This work hardens how future ideas are tested; it does not validate an economic edge. Round 18 remains NO_TRADES / not enough evidence.
+
+- Round 19 onward must be preregistered before any result. The declared variant, control configuration, cost multiplier and frozen commit are enforced on every row.
+- Protocol completeness now requires each variant × cost × role cell. The matched-random placebo uses a fixed seed/repetition count and excludes actual signal timestamps.
+- Every new run has a stable `run_id`; ambiguous void requests fail instead of invalidating several same-label runs.
+- TDD evidence: the first reviewer regressions failed 8 cases and the second reviewer regressions failed 7 cases before their fixes; the focused integrity suites then passed 30/30. At code freeze `efd935b`, the full offline suite passed 713 tests, skipped 4 optional-dependency tests and deselected 5 network tests. An earlier unrestricted run reached the full suite; four Binance downloads failed because DNS/network access was unavailable, while all selected offline tests passed.
+- Final independent re-review of `fd466ac..efd935b`: no blocking finding; all earlier P1/P2 bypasses were reproduced as closed. This verdict covers protocol correctness only.
+- Operator contract: `docs/operations/RESEARCH_INTEGRITY.md`. Summary: `BÁO CÁO TÓM TẮT/GIAI ĐOẠN 6-11/BAO_CAO_RESEARCH_INTEGRITY_2026-10-23.md`.
+
+## Round 18 fix: btc_oi_contraction_reclaim_v1 after Codex review — 2026-10-23
+
+**Codex review complete for F1–F5 (no blocking defect left); not gate acceptance, no economic validation.** Branch `claude/project-thread-ryvuyt` (from `claude/project-thread-uiqlsn` at `ab1ad81`). Code frozen at `85df7c4` (F1–F4 first fixed at `ff64ed7`); results and records in `8d3898c`. Research verdict: NO_TRADES / not enough evidence. No v2 started and no delayed-entry variant selected. Paper only.
+
+- Codex review of `5fdda7c`/`ab1ad81` (REQUEST_CHANGES, F1–F4) fixed without changing any v1 parameter: project `CircuitBreakerState` + `check_all_invariants` with event-time cashflows and a forced close on lock (F1); `DataQualityError` preflight on 15m bars and 8h funding settlements, failed runs kept out of scored results and ledgered as `data-quality-failed` (F2); 15m equity from a cashflow ledger with funding at payment time, DD on 15m closes, intrabar exits stamped at bar close (F3); window-end settlement kept and final equity reconciled (F4).
+- 12 regressions red on `ab1ad81`, green at `ff64ed7`; offline suite 680 passed, 2 skipped, 5 network deselected.
+- Codex review 2 (2026-10-23) closed F1–F4 and found F5 (v1 5% overwrote a stricter project daily-loss limit); fixed at `85df7c4` (stricter limit applies), 9 regressions red/green, offline 689 passed/2 skipped, matrix rerun identical to ff64ed7.
+- Rerun on the same data (same sha256): funnels unchanged; W1 OI scenarios DATA_QUALITY_FAILED (not scored), W2 0 trades at base/2x costs; W2 delay stress 2 trades +1.24%, DD 0.43% (was 0.31%). No v2, no delay variant selected. Details: `docs/research/2026-10-22-btc-oi-reclaim-v1.md`, `docs/reports-vi/vong-18-sua-loi-oi-v1-2026-10-23.md`.
+
+## Core hardening and method search — 2026-10-16
+
+**AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED — NOT GATE ACCEPTANCE.** Owner-directed work on branch `claude/project-thread-uiqlsn` (base `main` `fe1c133`); see the PR for the final SHA. Paper only; no order path, testnet or credential.
+
+- Data: full Binance Vision BTCUSDT archive 2020-09..2026-09, 584 files, all SHA-256 checksums matched; perp 5m/15m/1h/4h/1d with zero missing bars (`scripts/download_vision_history.py`).
+- Policy changes recorded in ADR 0013: funding ms-snap (≤1 s), hedged-basket emergency stop, 2x notional cap, kill switch + 60-minute data-gap stop, SMC risk 2%, fail-closed fetcher.
+- Method search (`docs/research/2026-10-16-method-search.md`): 9 attempts on 2021–2023, frozen candidate = funding carry basket. Owner window 2021–2025: 10,000 → 12,824.61 USDT (+28.25%, max DD 1.74%, every year positive) = owner SUCCESS rule; untouched 2024–2025 alone +6.91%.
+- Offline tests: 435 passed, 4 skipped (pandas-ta ×2, PPO extras ×2), 5 network deselected, Python 3.13, without RL extras installed. Tester/Independent Reviewer still required.
+
 ## Single-main integration and sync — 2026-09-23
 
 **OWNER-AUTHORIZED INTEGRATION, NOT GATE ACCEPTANCE.** The owner requested one visible `main` workflow and matching local/GitHub committed state. `main` was fast-forwarded (no rebase or force push) from `e970337d504563e5987a4db6b5c06c635bf7244b` to the G2 documentation checkpoint `5c191856b4a5877923dabbae5426fffa7f01a9b9`. Local `main`, `origin/main` and GitHub `main` matched at that SHA before this documentation-only update; the final documentation SHA is in Git history and the task handoff. Code-under-test remains `d4afed6d365b3e435e79a772f7de912ee4a39b11`.
