@@ -100,3 +100,14 @@ Fresh Backtest Lab regression: **19 passed**, exit 0, 13.96s. The complete core
 suite above already covers these same runtime bytes, so it was not repeated again.
 PR #8 was retargeted from the old research base to main and marked ready after
 verification. Both branch histories are retained by merge commits.
+
+## Concurrent main documentation — 2026-10-30
+
+Initial push was safely rejected because GitHub main advanced to
+`460ed3702c881d99eb8b0b9fc1e7e80a7c8d10e9`. Fetched and merged that documentation
+commit without conflict or force push, preserving its vision, specification,
+evidence and roadmap updates. Runtime/config/test/requirements bytes are unchanged
+from tested merge `5e28bf5`; the core suite was therefore not repeated.
+Re-read specification U1–U7 and its dependent wiki pages; retained the prior spec
+hash in previous_versions without promoting verification. Added short integration
+notes while retaining the new documents' explicit pre-integration snapshots.

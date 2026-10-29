@@ -29,3 +29,7 @@ Ngày tiếp nhận nguồn: 29/10/2026. Kết quả cũ được giữ nguyên 
 ## Đọc lại nguồn khi tích hợp main
 
 Ngày 29/10/2026 đã đối chiếu state/planner với main 65960bf và các mục lịch sử đã dẫn; đọc broker sau hợp nhất để kiểm guard thời gian và phase barrier; pair-ops đổi hướng dẫn --append-ledger sang từ chối sớm theo governance. Các thay đổi không thay kết luận kinh tế trong wiki. Manifest lưu previous_versions của bốn nguồn; đây là tác giả rà soát nguồn, không nâng mức kiểm chứng hay coi các công bố cũ trên main đã được nghiệm thu lại.
+
+## Đọc lại đặc tả ngày 30/10/2026
+
+Đã đọc phần U1–U7 mới từ main 460ed37; baseline kỹ thuật được giữ lịch sử. Thẩm quyền, paper-only, dữ liệu thật/giả lập và phân biệt software/protocol/economic verdict không cho phép tự mở gate hoặc nâng mức kiểm chứng. Các mô tả chưa tích hợp trong nguồn là snapshot 65960bf; trạng thái tích hợp mới xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.

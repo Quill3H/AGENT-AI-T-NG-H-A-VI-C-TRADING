@@ -1,3 +1,77 @@
+# MASTER SPEC — Hợp đồng đọc hiện tại (29/10/2026)
+
+Phạm vi: crypto futures **paper-only**. Đây là bản cập nhật định hướng và cấu trúc theo tiến độ đã có, không sửa code, cấu hình hoặc duyệt gate mới. [CURRENT_STATUS](CURRENT_STATUS.md) ghi số liệu, nguồn và phần chưa kiểm chứng; [ROADMAP](ROADMAP.md) ghi việc tiếp theo.
+
+## U1. Cách dùng phiên bản này
+
+Phần **U1–U7** tổng hợp hợp đồng hiện tại. Baseline cũ phía dưới được giữ nguyên để các review vẫn tra được mục 4.6 và các giao diện lịch sử. Mặc định cũ chỉ được dùng khi không mâu thuẫn yêu cầu chủ dự án, charter và ADR áp dụng. Không dùng bảng TODO cũ hoặc vai trò Antigravity trong baseline để suy ra tiến độ/phân công hiện nay.
+
+Thứ tự thẩm quyền theo [charter](../crypto-paper-agent/docs/planning/PRODUCT_CHARTER_AND_GATE_SPEC.md): yêu cầu mới nhất của chủ dự án → ADR được duyệt trong đúng phạm vi → hợp đồng sản phẩm → chi tiết master spec → ý tưởng ban đầu. Code và báo cáo phải được đối chiếu với hợp đồng; không tự trở thành quyết định mới.
+
+## U2. Kiến trúc và trách nhiệm
+
+```mermaid
+flowchart TD
+    A[Dữ liệu công khai và manifest] --> B[Kiểm tra integrity và availability]
+    B --> C[Feature nhân quả và regime]
+    C --> D[Rulebook hoặc policy đã khóa]
+    D --> E[Risk admission]
+    E --> F[PaperBroker]
+    F --> G[Ledger và journal]
+    G --> H[Metrics và đối chứng]
+    H --> I[Tester và review độc lập]
+    I --> J[Người dùng quyết định]
+```
+
+| Lớp | Hợp đồng |
+| --- | --- |
+| Data | Giữ venue, spot/perp, symbol, UTC, event/availability/collection time, raw/normalized hash, coverage và gaps |
+| Features | Chỉ dùng dữ liệu đã sẵn có; 4h phải đóng trước quyết định 15m; pivot chỉ có hiệu lực lúc được xác nhận |
+| Strategy | Rulebook/config version rõ ràng, lý do signal/no-trade/reject; PPO giữ model/scaler hash và train-only fitting |
+| Risk | Stops, sizing, leverage, margin, breaker, kill switch theo ADR/config có thẩm quyền; không nới để đạt số lệnh |
+| Execution | Chỉ mô phỏng; khai báo latency, spread/slippage/fees, partial fills, funding provenance và giới hạn OHLCV |
+| Accounting | Funding theo event riêng, idempotency, fee và cashflow không double count; equity khớp ledger |
+| Evaluation | Completed lifecycle khác partial slice; phân biệt software, protocol và economic verdict |
+| Knowledge | Index/graph/wiki giúp tìm nguồn; độ mới phải đối chiếu source hash; không thay source/review |
+
+## U3. Sản phẩm và các nhánh nghiên cứu
+
+Bốn rulebook gốc vẫn là baseline. SynthesizedStrategy là một ứng viên kết hợp regime 4h và tín hiệu 15m trên main, chưa phải “phương pháp tối ưu đã được chứng minh”. Funding carry, OI reclaim, ETH–BTC và ORB/FVG là thí nghiệm có protocol và cỡ mẫu riêng.
+
+Backtest Lab, portfolio ORB và wiki đã được đọc ở nhánh nghiên cứu cục bộ; cây main nguồn của bản cập nhật chưa chứa chúng. Theo dõi tích hợp bằng SHA, không suy từ việc file có trên máy. Xem [sổ nguồn](EVIDENCE_REGISTER.md).
+
+## U4. Dữ liệu thật và dữ liệu giả lập
+
+Synthetic/fixture hợp lệ để test và demo, phải ghi rõ. Một run đánh giá thị trường cần manifest chứng minh nguồn thật và không được âm thầm fallback synthetic hoặc tự tạo funding readiness. Đây là hợp đồng mong đợi; mã loader/runner tổng hợp hiện có điểm khác biệt được ghi ở [CURRENT_STATUS §3](CURRENT_STATUS.md).
+
+Không thay spot bằng perp, không coi mark/index là giá khớp, không forward-fill vô hạn hoặc bịa dữ liệu OI/CVD. Quy tắc funding jitter áp dụng theo ADR cụ thể; timestamp gốc và danh tính event phải còn truy được.
+
+## U5. Chu trình kiểm chứng và chỉ số
+
+Giả thuyết → preregister → khóa code/config/data → development/validation → candidate freeze → untouched historical holdout → prospective paper → báo cáo khóa. Dữ liệu đã mở để chọn phương pháp không trở lại thành untouched khi chạy lần nữa.
+
+Tối thiểu công bố: số vị thế hoàn tất, slices, exposure, net expectancy, PnL và equity sau phí/trượt giá/funding, drawdown và underwater, phân bố tháng/regime/coin, profit concentration, benchmark và matched/random controls cùng mô hình risk/cost. Giữ cả NO_TRADES, DATA_QUALITY_FAILED và kết quả âm. Stress x2 là kịch bản khi protocol đã chọn, không phải bảo đảm an toàn.
+
+Mục tiêu số lệnh không phải mức đủ thống kê hay điều kiện sinh lời. Không cộng kết quả nhiều tài khoản độc lập thành một portfolio vốn chung. Không gọi replay lịch sử là paper forward.
+
+## U6. Vai trò, nghiệm thu và phạm vi
+
+Người dùng quyết định phạm vi và nghiệm thu. Người triển khai cung cấp code và bằng chứng; Tester và Independent Reviewer kiểm tra riêng tại gate. Bản cập nhật này tự đối chiếu tài liệu, không tự nghiệm thu G0–G6.
+
+PPO đã có triển khai theo hồ sơ; nhãn “optional/chưa ưu tiên” của baseline không phủ nhận công việc đó. Chưa có bằng chứng PPO sinh lời. Không thêm order endpoint thật/testnet, trading key, ví hoặc auto-deployment trong yêu cầu tài liệu.
+
+Risk mặc định và cấu hình từng thí nghiệm phải tách biệt. Ví dụ ADR 0014 chỉ áp dụng sleeve directional opt-in; số 10% không trở thành risk chung. Thông số cụ thể phải đọc file ADR đầy đủ vì main có hai file mang số 0013.
+
+## U7. Điều kiện tiếp tục
+
+Ưu tiên khớp nguồn thật/config/artifact và sửa các vi phạm hợp đồng trước tối ưu chiến lược. Đầu ra, điều kiện dừng và thứ tự phụ thuộc ở [ROADMAP](ROADMAP.md). Không có tuyên bố economic acceptance trong bản đặc tả này.
+
+---
+
+# Baseline kỹ thuật lịch sử — giữ nguyên nội dung gốc
+
+**Lưu ý:** các mục và số thứ tự dưới đây thuộc baseline ban đầu. Những mặc định/vai trò/lộ trình đã có quyết định mới phải đọc cùng U1–U7, charter và ADR; kết quả hiện tại chỉ xem ở CURRENT_STATUS.
+
 # MASTER SPEC — Crypto Futures Paper-Trading Research Agent
 
 > **Mục đích của file này:** Đây là bản đặc tả kỹ thuật đầy đủ để đưa trực tiếp cho **Google Antigravity** đọc và sinh mã nguồn. File này KHÔNG chứa hướng dẫn giao dịch thật, không kết nối ví thật, không đặt lệnh thật trên sàn — toàn bộ là **mô phỏng (paper trading / backtest)** trên dữ liệu thị trường thực.

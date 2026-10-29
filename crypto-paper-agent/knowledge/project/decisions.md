@@ -15,3 +15,7 @@ Quy định tích hợp main trong hồ sơ bàn giao và checkout feature hiệ
 ## Đối chiếu khi hợp nhất ngày 29/10/2026
 
 Nguồn planner trên main có thêm checkpoint Synthesized; quy định single-main và paper-only vẫn còn nguyên. Chủ dự án yêu cầu merge phần đủ điều kiện; lượt tích hợp không mở rộng quyền đặt lệnh hoặc tự chấp nhận các gate còn thiếu bằng chứng.
+
+## Đọc lại đặc tả ngày 30/10/2026
+
+Đã đọc phần U1–U7 mới từ main 460ed37; baseline kỹ thuật được giữ lịch sử. Thẩm quyền, paper-only, dữ liệu thật/giả lập và phân biệt software/protocol/economic verdict không cho phép tự mở gate hoặc nâng mức kiểm chứng. Các mô tả chưa tích hợp trong nguồn là snapshot 65960bf; trạng thái tích hợp mới xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.

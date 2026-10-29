@@ -3,12 +3,21 @@
     {
       "id": "spec",
       "path": "Project spec/CRYPTO_PAPER_TRADING_AGENT_MASTER_SPEC.md",
-      "sha256": "d203bbd9a8c5b11eb62d197ae9e577fe5c1a78412729c5fcfbbf999d44289ed1",
+      "sha256": "c2178f265a0f5081f503802805363d4f7b55c6cdbc3a6e38b9471b4a7188d238",
       "locator": "1.2 Nguyên tắc thiết kế cốt lõi",
-      "accessed_at": "2026-10-29",
-      "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+      "accessed_at": "2026-10-30",
+      "commit": "460ed3702c881d99eb8b0b9fc1e7e80a7c8d10e9",
       "tracked": true,
-      "dirty": false
+      "dirty": false,
+      "previous_versions": [
+        {
+          "sha256": "d203bbd9a8c5b11eb62d197ae9e577fe5c1a78412729c5fcfbbf999d44289ed1",
+          "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
+          "accessed_at": "2026-10-29",
+          "dirty": false
+        }
+      ],
+      "review_note": "Read new U1-U7 at remote main 460ed37; historical baseline preserved; no new risk permission or acceptance."
     },
     {
       "id": "state",
