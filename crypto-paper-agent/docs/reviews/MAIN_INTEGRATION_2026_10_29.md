@@ -88,3 +88,15 @@ or performed as part of this integration.
 
 Final merge and push identities are recorded in Git history and the user handoff,
 rather than embedding a self-referential final commit SHA here.
+
+## Backtest Lab publication integration — 2026-10-30
+
+Research merge commit: `488df0a`. Merging publication head `95af0a2` then produced
+two add/add conflicts in the batch runner and its operator guide. Kept the reviewed
+main versions, which contain the original batch behavior plus portfolio dispatch.
+An exact diff confirmed no runtime source, script, config or test changes relative
+to `488df0a`; the publication adds only its historical receipt and this note.
+Fresh Backtest Lab regression: **19 passed**, exit 0, 13.96s. The complete core
+suite above already covers these same runtime bytes, so it was not repeated again.
+PR #8 was retargeted from the old research base to main and marked ready after
+verification. Both branch histories are retained by merge commits.
