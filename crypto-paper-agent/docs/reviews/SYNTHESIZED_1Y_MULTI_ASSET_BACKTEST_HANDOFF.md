@@ -96,3 +96,4 @@ Chạy trên môi trường `D:\v\Scripts\pytest.exe`:
   `11 passed in 38.53s (100% PASS)`
 - **Bộ Kiểm thử Nghiệm thu E2E (`test_e2e_synthesized_backtest.py`)**:
   `20 passed (100% PASS)`
+
