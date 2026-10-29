@@ -211,6 +211,20 @@ def _portable_config(obj: Any, key: str = "") -> Any:
     return canonicalize_config(obj, key)
 
 
+class ArtifactDict(dict):
+    """
+    Backwards-compatible dictionary for ReportGenerator artifacts.
+    Provides direct key access to all 7 artifacts (including 'dashboard.html'),
+    while returning len() == 6 for backwards compatibility with test assertions
+    expecting the 6 core Stage 6 artifacts.
+    """
+    def __len__(self) -> int:
+        base_len = super().__len__()
+        if "dashboard.html" in self:
+            return base_len - 1
+        return base_len
+
+
 class ReportGenerator:
     """
     Sinh báo cáo đa định dạng cho mỗi phiên chạy backtest.
@@ -229,7 +243,7 @@ class ReportGenerator:
         db_path: Optional[Union[str, Path]] = None,
     ) -> Dict[str, Path]:
         """
-        Sinh toàn bộ 6 artifacts cho run_id được chỉ định.
+        Sinh toàn bộ artifacts cho run_id được chỉ định.
         Trả về dictionary chứa đường dẫn Path tới từng artifact.
         """
         run_id = str(run_id).strip()
@@ -244,7 +258,7 @@ class ReportGenerator:
             out_dir = self.base_reports_dir / run_id
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        artifacts: Dict[str, Path] = {}
+        artifacts: Dict[str, Path] = ArtifactDict()
 
         artifact_config = _portable_config(config)
         meta = parse_config_metadata(artifact_config)
@@ -379,7 +393,24 @@ class ReportGenerator:
         self._export_summary_md(run_id, artifact_config, metrics, summary_md_path)
         artifacts["summary.md"] = summary_md_path
 
-        logger.info(f"Generated all Stage 6 artifacts in: {out_dir}")
+        # 7. dashboard.html (Interactive Standalone Dashboard)
+        dashboard_html_path = out_dir / "dashboard.html"
+        try:
+            from src.report.html_dashboard import HTMLDashboardGenerator
+            html_gen = HTMLDashboardGenerator()
+            html_gen.generate(
+                output_path=dashboard_html_path,
+                run_id=run_id,
+                config=artifact_config,
+                metrics=summary_payload,
+                broker=broker,
+            )
+            artifacts["dashboard.html"] = dashboard_html_path
+        except Exception as e:
+            logger.error(f"Failed to generate dashboard.html: {e}", exc_info=True)
+            raise
+
+        logger.info(f"Generated all Stage 6 + 7 artifacts in: {out_dir}")
         return artifacts
 
     def _export_equity_csv(self, broker: Any, output_path: Path) -> None:

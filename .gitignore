@@ -1,0 +1,5 @@
+# Root .gitignore
+data/
+*.parquet
+*.pyc
+__pycache__/

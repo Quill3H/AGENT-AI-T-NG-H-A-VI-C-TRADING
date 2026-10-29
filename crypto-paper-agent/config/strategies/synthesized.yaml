@@ -1,0 +1,192 @@
+# config/strategies/synthesized.yaml
+# ==============================================================================
+# Synthesized Multi-Regime Quantitative Trading Strategy Configuration
+# Optimized for 10 Liquid Perpetual Futures on 15m Execution / 4h Macro Regime
+# Target: >= 2,000 completed trades/year, >50% Win Rate, Positive Net Expectancy
+# Paper-only research & backtesting configuration.
+# ==============================================================================
+
+strategy:
+  name: "SynthesizedStrategy"
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+account:
+  initial_equity_usd: 50000.0
+  base_currency: "USDT"
+
+# Leverage & Position Sizing
+leverage: 2.5
+base_risk_percent: 0.004          # 0.4% base risk per trade (enables multi-asset concurrency & prevents CB lockouts)
+
+risk:
+  max_leverage: 5.0
+  min_liquidation_buffer_pct: 0.30
+  min_stop_distance_pct: 0.008    # 0.8% minimum stop distance floor
+  atr_stop_multiplier: 1.2        # 1.2x ATR14 breathing room
+
+fees:
+  taker_pct: 0.0005               # 0.05% taker fee
+  maker_pct: 0.0002               # 0.02% maker fee
+  slippage_pct: 0.0003            # 0.03% adverse slippage (0.16% round-trip)
+
+circuit_breakers:
+  daily_loss_limit_pct: 0.05      # 5% daily drawdown lockout
+  consecutive_losses_threshold: 3 # Halve risk after 3 consecutive losses
+  risk_reduction_on_streak: 0.5
+  recovery_mode: "after_3_wins"
+  consecutive_wins_to_recover: 3
+
+synthesized:
+  # 1. 4h Macro Regime Classifier
+  macro_regime:
+    ema_fast: 50
+    ema_slow: 200
+    adx_period: 14
+    adx_threshold: 20.0
+    chop_band_pct: 0.015          # 1.5% chop band around EMA200
+
+  # 2. 15m Micro-Trend Pullback Continuation Engine (~150 trades/pair/year)
+  pullback:
+    ema_fast: 20
+    ema_slow: 50
+    rsi_period: 14
+    rsi_bull_threshold: 50.0
+    rsi_bear_threshold: 50.0
+    max_setup_age_bars: 10
+    swing_lookback_bars: 4
+    min_stop_distance_pct: 0.008  # Fee absorption guarantee
+
+  # 3. 15m Dynamic Breakout-Retest Engine (~80 trades/pair/year)
+  breakout:
+    lookback_bars: 18             # 4.5-hour range lookback
+    volume_multiplier: 1.15       # Institutional breakout surge
+    retest_volume_max: 1.20       # Retest volume ceiling
+    max_setup_age_bars: 14        # Retest development window
+    level_tolerance_pct: 0.0025   # 0.25% wick tolerance for altcoins
+    stop_buffer_pct: 0.004        # 0.40% structural stop buffer
+    min_stop_distance_pct: 0.008
+
+  # 4. 15m SMC Liquidity Sweep Engine (~90 trades/pair/year in chop/ranging)
+  smc:
+    swing_n: 3                    # 3-bar swing pivots
+    min_bos_pct: 0.001            # 0.1% BOS threshold
+    displacement_min_atr: 0.25    # Impulsive displacement
+    fvg_min_size_atr: 0.15        # Fair value gap threshold
+    ob_max_distance_atr: 1.8
+    buffer_pct: 0.002
+    max_setup_age_bars: 16
+    min_stop_distance_pct: 0.008
+
+  # 5. 15m Range Mean Reversion Engine (active in CHOP_RANGING)
+  mean_reversion:
+    enabled: true
+
+  # 6. Funding Rate Sentiment Filter
+  funding_filter:
+    enabled: true
+    max_long_funding_rate: 0.0005     # Veto longs when funding > +0.05% / 8h
+    min_short_funding_rate: -0.0005   # Veto shorts when funding < -0.05% / 8h
+
+  # 7. Conviction Arbiter Risk Tiers
+  conviction_arbiter:
+    mode: "heuristic"
+    risk_low: 0.003               # 0.3% equity risk
+    risk_normal: 0.004            # 0.4% equity risk
+    risk_high: 0.005              # 0.5% equity risk
+
+  # 7. Multi-Target Exit & Trailing Runner
+  exit_logic:
+    partial_exits:
+      - [1.0, 0.50]               # 50% closed at +1.0R (bank profit early)
+      - [2.0, 0.25]               # 25% closed at +2.0R
+    move_sl_to_be_after_tp1: true # Immediately move SL to entry price after TP1
+    trailing_runner_ema: 20       # Trail remaining 25% along 15m EMA20
+
+# Full Binance Futures Leverage Brackets for all 10 Liquid Perpetual Pairs
+leverage_brackets:
+  BTCUSDT:
+    - [50000,      0.004, 0]
+    - [250000,     0.005, 50]
+    - [1000000,    0.01,  1300]
+    - [10000000,   0.025, 16300]
+    - [20000000,   0.05,  266300]
+    - [50000000,   0.10,  1266300]
+    - [100000000,  0.125, 2516300]
+    - [200000000,  0.15,  5016300]
+    - [300000000,  0.25,  25016300]
+    - [500000000,  0.50,  100016300]
+
+  ETHUSDT:
+    - [40000,      0.005, 0]
+    - [100000,     0.006, 40]
+    - [500000,     0.010, 440]
+    - [2000000,    0.020, 5440]
+    - [10000000,   0.050, 65440]
+    - [50000000,   0.100, 565440]
+    - [100000000,  0.150, 3065440]
+    - [200000000,  0.250, 13065440]
+
+  SOLUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  BNBUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  XRPUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  DOGEUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  ADAUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  AVAXUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  LINKUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]
+
+  SUIUSDT:
+    - [25000,      0.005, 0]
+    - [100000,     0.010, 125]
+    - [500000,     0.025, 1625]
+    - [1000000,    0.050, 14125]
+    - [5000000,    0.100, 64125]
+    - [20000000,   0.200, 564125]

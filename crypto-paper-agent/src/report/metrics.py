@@ -81,8 +81,7 @@ def calculate_daily_sharpe(
         return None
 
     df = pd.DataFrame(parsed_rows)
-    df.set_index("timestamp", inplace=True)
-    df.sort_index(inplace=True)
+    df = df.set_index("timestamp").sort_index()
 
     # Resample lấy giá trị equity cuối cùng của mỗi ngày UTC
     daily_series = df["equity"].resample("1D").last().dropna()
@@ -118,6 +117,191 @@ def calculate_daily_sharpe(
         return None
 
     return round(sharpe, 4)
+
+
+def calculate_sortino_ratio(
+    snapshots: List[Union[AccountSnapshot, Dict[str, Any]]],
+    target_return: float = 0.0,
+    risk_free_rate: float = 0.0,
+    start_equity: Optional[float] = None,
+) -> Optional[float]:
+    """
+    Tính toán Annualized Sortino Ratio dựa trên chuỗi tỷ suất sinh lời hàng ngày (1D UTC).
+
+    Công thức:
+    1. Resample snapshots thành chuỗi daily equity cuối ngày UTC (1D).
+    2. Daily returns: r_t = (E_t - E_{t-1}) / E_{t-1}.
+    3. Benchmark daily target: tau = max(target_return, risk_free_rate) / 365.0.
+    4. Downside deviations: d_t = min(r_t - tau, 0.0).
+    5. Downside deviation: sigma_down = sqrt(sum(d_t^2) / (N - 1)).
+    6. Sortino = sqrt(365.0) * (mean(r_t) - tau) / sigma_down.
+
+    Quy tắc fail-closed & RFC 8259:
+    - Nếu số ngày quan sát < 2: trả về None.
+    - Nếu sigma_down <= 1e-12:
+        + Nếu mean(r_t) > tau: trả về None (không có rủi ro giảm, tránh vô hạn Inf trong JSON).
+        + Nếu mean(r_t) <= tau: trả về 0.0.
+    - Nếu kết quả là NaN hoặc Inf: trả về None.
+    """
+    if not snapshots:
+        return None
+
+    parsed_rows: List[Dict[str, Any]] = []
+    for s in snapshots:
+        item = s if isinstance(s, dict) else s.__dict__
+        dt = _to_dt(item.get("timestamp"))
+        raw_eq = item.get("equity")
+        if raw_eq is not None:
+            if type(raw_eq) is bool:
+                raise TypeError(f"Snapshot equity cannot be boolean: {raw_eq!r}")
+            eq = float(raw_eq)
+            if math.isnan(eq) or math.isinf(eq):
+                raise ValueError(f"Snapshot equity must be finite numeric, got {eq}")
+            if dt is not None:
+                parsed_rows.append({"timestamp": dt, "equity": eq})
+
+    if not parsed_rows:
+        return None
+
+    df = pd.DataFrame(parsed_rows)
+    df = df.set_index("timestamp").sort_index()
+
+    daily_series = df["equity"].resample("1D").last().dropna()
+
+    if start_equity is not None and len(daily_series) >= 1:
+        first_date = daily_series.index[0]
+        prev_date = first_date - pd.Timedelta(days=1)
+        if prev_date not in daily_series.index:
+            prepend_s = pd.Series([start_equity], index=[prev_date])
+            daily_series = pd.concat([prepend_s, daily_series])
+
+    if len(daily_series) < 2:
+        return None
+
+    daily_returns = daily_series.pct_change().dropna()
+    daily_returns = daily_returns[np.isfinite(daily_returns)]
+
+    if len(daily_returns) < 2:
+        return None
+
+    tau = max(target_return, risk_free_rate) / 365.0
+    downside_diffs = np.minimum(daily_returns.values - tau, 0.0)
+
+    # Downside variance with sample ddof=1
+    n_samples = len(daily_returns)
+    downside_var = float(np.sum(downside_diffs ** 2) / max(n_samples - 1, 1))
+    downside_std = math.sqrt(downside_var)
+
+    mean_ret = float(daily_returns.mean())
+    if downside_std <= 1e-12 or math.isnan(downside_std):
+        return None if mean_ret > tau else 0.0
+
+    sortino = math.sqrt(365.0) * (mean_ret - tau) / downside_std
+
+    if math.isnan(sortino) or math.isinf(sortino):
+        return None
+
+    return round(sortino, 4)
+
+
+def calculate_trade_duration_stats(
+    trades: List[Union[TradeRecord, Dict[str, Any]]],
+    bar_seconds: int = 900,
+) -> Dict[str, Any]:
+    """
+    Tính toán thống kê thời gian nắm giữ vị thế (Duration) theo giờ và theo số nến.
+
+    Phân tách chi tiết:
+    - Tổng thể tất cả lệnh hoàn thành
+    - Lệnh thắng (net_pnl > 0)
+    - Lệnh thua (net_pnl < 0)
+    """
+    if not trades:
+        return {
+            "total_trades_analyzed": 0,
+            "avg_duration_hours": 0.0,
+            "median_duration_hours": 0.0,
+            "max_duration_hours": 0.0,
+            "min_duration_hours": 0.0,
+            "win_avg_duration_hours": 0.0,
+            "win_median_duration_hours": 0.0,
+            "win_max_duration_hours": 0.0,
+            "loss_avg_duration_hours": 0.0,
+            "loss_median_duration_hours": 0.0,
+            "loss_max_duration_hours": 0.0,
+            "avg_duration_bars": 0.0,
+            "median_duration_bars": 0.0,
+            "max_duration_bars": 0.0,
+            "win_avg_duration_bars": 0.0,
+            "loss_avg_duration_bars": 0.0,
+        }
+
+    all_hours: List[float] = []
+    all_bars: List[float] = []
+    win_hours: List[float] = []
+    win_bars: List[float] = []
+    loss_hours: List[float] = []
+    loss_bars: List[float] = []
+
+    for tr in trades:
+        t = tr if isinstance(tr, dict) else tr.__dict__
+        entry_dt = _to_dt(t.get("entry_time"))
+        exit_dt = _to_dt(t.get("exit_time"))
+        net_pnl = float(t.get("net_pnl", 0.0))
+
+        if entry_dt is not None and exit_dt is not None and exit_dt >= entry_dt:
+            sec = max((exit_dt - entry_dt).total_seconds(), 0.0)
+            hrs = round(sec / 3600.0, 4)
+            bars = round(sec / float(bar_seconds), 2)
+
+            all_hours.append(hrs)
+            all_bars.append(bars)
+
+            if net_pnl > 0:
+                win_hours.append(hrs)
+                win_bars.append(bars)
+            elif net_pnl < 0:
+                loss_hours.append(hrs)
+                loss_bars.append(bars)
+
+    if not all_hours:
+        return {
+            "total_trades_analyzed": 0,
+            "avg_duration_hours": 0.0,
+            "median_duration_hours": 0.0,
+            "max_duration_hours": 0.0,
+            "min_duration_hours": 0.0,
+            "win_avg_duration_hours": 0.0,
+            "win_median_duration_hours": 0.0,
+            "win_max_duration_hours": 0.0,
+            "loss_avg_duration_hours": 0.0,
+            "loss_median_duration_hours": 0.0,
+            "loss_max_duration_hours": 0.0,
+            "avg_duration_bars": 0.0,
+            "median_duration_bars": 0.0,
+            "max_duration_bars": 0.0,
+            "win_avg_duration_bars": 0.0,
+            "loss_avg_duration_bars": 0.0,
+        }
+
+    return {
+        "total_trades_analyzed": len(all_hours),
+        "avg_duration_hours": round(float(np.mean(all_hours)), 2),
+        "median_duration_hours": round(float(np.median(all_hours)), 2),
+        "max_duration_hours": round(float(np.max(all_hours)), 2),
+        "min_duration_hours": round(float(np.min(all_hours)), 2),
+        "win_avg_duration_hours": round(float(np.mean(win_hours)), 2) if win_hours else 0.0,
+        "win_median_duration_hours": round(float(np.median(win_hours)), 2) if win_hours else 0.0,
+        "win_max_duration_hours": round(float(np.max(win_hours)), 2) if win_hours else 0.0,
+        "loss_avg_duration_hours": round(float(np.mean(loss_hours)), 2) if loss_hours else 0.0,
+        "loss_median_duration_hours": round(float(np.median(loss_hours)), 2) if loss_hours else 0.0,
+        "loss_max_duration_hours": round(float(np.max(loss_hours)), 2) if loss_hours else 0.0,
+        "avg_duration_bars": round(float(np.mean(all_bars)), 1),
+        "median_duration_bars": round(float(np.median(all_bars)), 1),
+        "max_duration_bars": round(float(np.max(all_bars)), 1),
+        "win_avg_duration_bars": round(float(np.mean(win_bars)), 1) if win_bars else 0.0,
+        "loss_avg_duration_bars": round(float(np.mean(loss_bars)), 1) if loss_bars else 0.0,
+    }
 
 
 def calculate_max_drawdown(
@@ -408,12 +592,28 @@ def calculate_backtest_metrics(
     win_rate_long = (len(long_wins) / len(long_trades) * 100.0) if len(long_trades) > 0 else 0.0
     win_rate_short = (len(short_wins) / len(short_trades) * 100.0) if len(short_trades) > 0 else 0.0
 
+    long_losses = [t for t in long_trades if _get_trade_field(t, "net_pnl", 0.0) < 0]
+    short_losses = [t for t in short_trades if _get_trade_field(t, "net_pnl", 0.0) < 0]
+
+    long_net_pnl = sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in long_trades)
+    short_net_pnl = sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in short_trades)
+    long_win_usd = sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in long_wins)
+    long_loss_usd = abs(sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in long_losses))
+    long_profit_factor = round(long_win_usd / long_loss_usd, 4) if long_loss_usd > 0 else (None if long_win_usd > 0 else 0.0)
+
+    short_win_usd = sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in short_wins)
+    short_loss_usd = abs(sum(float(_get_trade_field(t, "net_pnl", 0.0)) for t in short_losses))
+    short_profit_factor = round(short_win_usd / short_loss_usd, 4) if short_loss_usd > 0 else (None if short_win_usd > 0 else 0.0)
+
+    duration_stats = calculate_trade_duration_stats(completed, bar_seconds=900)
+
     start_equity = float(broker.initial_balance)
     final_equity = float(broker.equity)
     total_return_pct = ((final_equity - start_equity) / start_equity * 100.0) if start_equity > 0 else 0.0
 
     max_dd_usd, max_dd_pct = calculate_max_drawdown(snapshots, initial_capital=start_equity)
     sharpe_ratio = calculate_daily_sharpe(snapshots, risk_free_rate=0.0, start_equity=start_equity)
+    sortino_ratio = calculate_sortino_ratio(snapshots, target_return=0.0, risk_free_rate=0.0, start_equity=start_equity)
 
     # Calmar ratio
     calmar_ratio = None
@@ -523,6 +723,7 @@ def calculate_backtest_metrics(
         "max_drawdown_usd": max_dd_usd,
         "max_drawdown_pct": max_dd_pct,
         "sharpe_ratio": sharpe_ratio,
+        "sortino_ratio": sortino_ratio,
         "calmar_ratio": calmar_ratio,
         # Tín hiệu
         "setup_count": setup_count,
@@ -538,6 +739,14 @@ def calculate_backtest_metrics(
         "loss_rate": trade_stats["loss_rate"],
         "win_rate_long": round(win_rate_long, 2),
         "win_rate_short": round(win_rate_short, 2),
+        "long_net_pnl": round(long_net_pnl, 4),
+        "short_net_pnl": round(short_net_pnl, 4),
+        "long_profit_factor": long_profit_factor,
+        "short_profit_factor": short_profit_factor,
+        "trade_duration_stats": duration_stats,
+        "avg_trade_duration_hours": duration_stats["avg_duration_hours"],
+        "median_trade_duration_hours": duration_stats["median_duration_hours"],
+        "max_trade_duration_hours": duration_stats["max_duration_hours"],
         "profit_factor": trade_stats["profit_factor"],
         "expectancy_usd": trade_stats["expectancy_usd"],
         "expectancy_r": trade_stats["expectancy_r"],

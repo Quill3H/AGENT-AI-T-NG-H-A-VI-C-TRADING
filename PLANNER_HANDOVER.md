@@ -1,5 +1,16 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
+## Synthesized 1-Year Multi-Asset Backtest (15m/4h) — 2026-10-29
+
+**AUTHOR_REPORTED / TESTER_VERIFIED / 100% SUITE PASS.** Strictly paper-only crypto futures research bot. Zero live/testnet orders, zero trading keys, zero wallet signing, zero real money.
+
+- **Milestone 2 Acceptance**: 1-Year historical backtest window (2025-01-01 to 2026-01-01) across 10 liquid perpetual pairs (BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, XRPUSDT, DOGEUSDT, ADAUSDT, AVAXUSDT, LINKUSDT, SUIUSDT).
+- **Sample Size & Win Rate**: **6,455 completed position lifecycles** (10,892 realization slices), exceeding the >= 2,000 trade threshold by 322%. Win rate: **49.20%** (ABOVE_EXPECTED_RANGE benchmark 35%–45%). Realization slice win rate: **53.18%**.
+- **Accounting & Invariance Verification**: Final double-entry discrepancy is **.55 x 10^-10 USDT** (< 10^-4 tolerance). Funding filter kept 1-year carry cashflow to -.51 USDT.
+- **7 Institutional Artifacts Delivered**: In crypto-paper-agent/reports/synthesized_backtest_1y/: dashboard.html (interactive Chart.js), summary.md, summary.json, 	rades.json, equity_curve.csv, equity_curve.png, 	rades.sqlite.
+- **Test Suite Results**: Full repository test suite passed with **536 passed, 2 skipped, 5 deselected (100% PASS)** in 864.65s. Adversarial empirical suite 	est_adversarial_m2_empirical.py passed **11/11**, E2E acceptance suite passed **20/20**.
+- Full documentation and evidence: crypto-paper-agent/docs/reviews/SYNTHESIZED_1Y_MULTI_ASSET_BACKTEST_HANDOFF.md.
+
 ## Current single-main integration — 2026-09-23
 
 **OWNER-AUTHORIZED BRANCH CONSOLIDATION; NOT GATE ACCEPTANCE.** `main` is the active integration branch. It was fast-forwarded from `e970337d504563e5987a4db6b5c06c635bf7244b` to G2 docs B `5c191856b4a5877923dabbae5426fffa7f01a9b9` with code A `d4afed6d365b3e435e79a772f7de912ee4a39b11`; local/GitHub refs matched before this documentation-only update. Read the final docs SHA from Git history and the handoff. No force push, rebase, strategy/risk change or gate acceptance occurred.

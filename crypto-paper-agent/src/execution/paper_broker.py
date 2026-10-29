@@ -504,13 +504,15 @@ class PaperBroker:
 
         self.last_candle_open_time_per_symbol[symbol] = open_time
         self.last_candle_open_time = open_time
-        self.current_time = open_time
+        if self.current_time is None or open_time > self.current_time:
+            self.current_time = open_time
         self.last_mark_prices[symbol] = open_p
 
         candle_events = []
 
         # PHA 1: Open Time & Gap Exits (Gap Liq > Gap SL > Gap TP)
-        self.circuit_breaker.advance_time(open_time)
+        if self.circuit_breaker.last_event_time is None or open_time > self.circuit_breaker.last_event_time:
+            self.circuit_breaker.advance_time(open_time)
 
         if symbol in self.positions:
             pos = self.positions[symbol]
@@ -830,9 +832,10 @@ class PaperBroker:
 
                 # Ghi nhận entry fee vào rolling cashflow ledger ngay sau khi fill (H1)
                 if entry_fee > 0:
+                    cb_entry_time = max(open_time, self.circuit_breaker.last_event_time) if self.circuit_breaker.last_event_time is not None else open_time
                     self.circuit_breaker.record_cashflow(
                         amount=-entry_fee,
-                        timestamp=open_time,
+                        timestamp=cb_entry_time,
                         equity=max(0.0, self.equity),
                         param_name="entry_fee",
                     )
@@ -948,7 +951,10 @@ class PaperBroker:
             open_positions_count=len(self.positions),
             is_halted=self.is_halted,
         )
-        self.account_snapshots.append(snapshot)
+        if self.account_snapshots and self.account_snapshots[-1].timestamp == close_time:
+            self.account_snapshots[-1] = snapshot
+        else:
+            self.account_snapshots.append(snapshot)
 
         # Đối soát kế toán sau nến
         self.verify_accounting_invariants()
@@ -1058,26 +1064,27 @@ class PaperBroker:
         # Ghi nhận kết quả giao dịch vào Circuit Breaker (E4, H1)
         # Chỉ ghi nhận khi không phải forced close do chính CB lock
         exit_cashflow = gross_pnl - exit_fee
+        cb_exit_time = max(exit_time, self.circuit_breaker.last_event_time) if self.circuit_breaker.last_event_time is not None else exit_time
         if remaining is not None:
-            self.circuit_breaker.record_cashflow(exit_cashflow, exit_time, post_close_equity)
+            self.circuit_breaker.record_cashflow(exit_cashflow, cb_exit_time, post_close_equity)
         elif exit_reason != ExitReason.CIRCUIT_BREAKER_LOCK:
             try:
                 self.circuit_breaker.record_trade_result(
                     pnl=net_trade_pnl + previous_slices,
-                    timestamp=exit_time,
+                    timestamp=cb_exit_time,
                     equity=post_close_equity,
                     cashflow=exit_cashflow,
                 )
             except TypeError:
                 self.circuit_breaker.record_trade_result(
                     pnl=net_trade_pnl,
-                    timestamp=exit_time,
+                    timestamp=cb_exit_time,
                     equity=post_close_equity,
                 )
         else:
             self.circuit_breaker.record_cashflow(
                 amount=exit_cashflow,
-                timestamp=exit_time,
+                timestamp=cb_exit_time,
                 equity=post_close_equity,
                 param_name="exit_cashflow",
             )
@@ -1270,9 +1277,10 @@ class PaperBroker:
         self.funding_history.append(event)
 
         # Ghi nhận ngay cashflow vào Circuit Breaker (E3)
+        cb_time = max(timestamp, self.circuit_breaker.last_event_time) if self.circuit_breaker.last_event_time is not None else timestamp
         self.circuit_breaker.record_cashflow(
             amount=cashflow,
-            timestamp=timestamp,
+            timestamp=cb_time,
             equity=max(0.0, self.equity),
             param_name="amount",
         )

@@ -35,6 +35,39 @@ DEFAULT_LEVERAGE_BRACKETS_BTC = [
     [500000000,  0.50,  100016300],
 ]
 
+DEFAULT_LEVERAGE_BRACKETS_ETH = [
+    [40000,      0.005, 0],
+    [100000,     0.006, 40],
+    [500000,     0.010, 440],
+    [2000000,    0.020, 5440],
+    [10000000,   0.050, 65440],
+    [50000000,   0.100, 565440],
+    [100000000,  0.150, 3065440],
+    [200000000,  0.250, 13065440],
+]
+
+DEFAULT_LEVERAGE_BRACKETS_ALT = [
+    [25000,      0.005, 0],
+    [100000,     0.010, 125],
+    [500000,     0.025, 1625],
+    [1000000,    0.050, 14125],
+    [5000000,    0.100, 64125],
+    [20000000,   0.200, 564125],
+]
+
+DEFAULT_LEVERAGE_BRACKETS: Dict[str, List[List[Union[float, int]]]] = {
+    "BTCUSDT": DEFAULT_LEVERAGE_BRACKETS_BTC,
+    "ETHUSDT": DEFAULT_LEVERAGE_BRACKETS_ETH,
+    "SOLUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "BNBUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "XRPUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "DOGEUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "ADAUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "AVAXUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "LINKUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+    "SUIUSDT": DEFAULT_LEVERAGE_BRACKETS_ALT,
+}
+
 
 def _normalize_symbol(symbol: str) -> str:
     """Chuẩn hóa symbol bỏ gạch chéo và in hoa (VD: 'BTC/USDT' -> 'BTCUSDT')."""
@@ -100,9 +133,9 @@ def get_brackets_for_symbol(
         # Nếu truyền bảng brackets nhưng không có symbol này -> Báo lỗi rõ, KHÔNG tự mượn bảng BTC
         raise ValueError(f"Symbol '{symbol}' (normalized: '{norm_sym}') not found in provided leverage brackets configuration.")
 
-    # Nếu hoàn toàn không truyền config brackets, dùng fallback chuẩn BTCUSDT
-    if norm_sym == "BTCUSDT":
-        return _validate_brackets(DEFAULT_LEVERAGE_BRACKETS_BTC, "BTCUSDT")
+    # Nếu hoàn toàn không truyền config brackets, tra trong DEFAULT_LEVERAGE_BRACKETS
+    if norm_sym in DEFAULT_LEVERAGE_BRACKETS:
+        return _validate_brackets(DEFAULT_LEVERAGE_BRACKETS[norm_sym], norm_sym)
     raise ValueError(f"No leverage brackets configured for symbol '{symbol}'.")
 
 

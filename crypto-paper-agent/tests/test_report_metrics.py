@@ -24,6 +24,8 @@ from src.report.metrics import (
     calculate_backtest_metrics,
     calculate_daily_sharpe,
     calculate_max_drawdown,
+    calculate_sortino_ratio,
+    calculate_trade_duration_stats,
     calculate_trade_metrics,
     classify_benchmark_win_rate,
 )
@@ -358,4 +360,136 @@ def test_report_accounting_mismatch_fails_closed():
             bars_15m_count=0,
             bars_4h_count=0,
         )
+
+
+def test_calculate_sortino_ratio():
+    """Kiểm tra Sortino Ratio: tính toán độ lệch chuẩn giảm (downside deviation) chuẩn xác."""
+    t0 = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc)
+
+    # 1. Ít hơn 2 ngày quan sát -> None
+    snap_1day = [
+        {"timestamp": t0, "equity": 10000.0},
+        {"timestamp": t0 + timedelta(hours=12), "equity": 10100.0},
+    ]
+    assert calculate_sortino_ratio(snap_1day) is None
+
+    # 2. Toàn bộ ngày tăng dương (zero downside deviation) -> None (không có rủi ro giảm)
+    snap_all_up = [
+        {"timestamp": t0, "equity": 10000.0},
+        {"timestamp": t0 + timedelta(days=1), "equity": 10200.0},
+        {"timestamp": t0 + timedelta(days=2), "equity": 10400.0},
+        {"timestamp": t0 + timedelta(days=3), "equity": 10600.0},
+    ]
+    assert calculate_sortino_ratio(snap_all_up, target_return=0.0) is None
+
+    # 3. Chuỗi phẳng (equity không đổi) -> 0.0
+    snap_flat = [
+        {"timestamp": t0, "equity": 10000.0},
+        {"timestamp": t0 + timedelta(days=1), "equity": 10000.0},
+        {"timestamp": t0 + timedelta(days=2), "equity": 10000.0},
+        {"timestamp": t0 + timedelta(days=3), "equity": 10000.0},
+    ]
+    assert calculate_sortino_ratio(snap_flat) == 0.0
+
+    # 4. Chuỗi có cả ngày lãi và ngày lỗ
+    snap_mixed = [
+        {"timestamp": t0, "equity": 10000.0},
+        {"timestamp": t0 + timedelta(days=1), "equity": 10200.0},
+        {"timestamp": t0 + timedelta(days=2), "equity": 9996.0},
+        {"timestamp": t0 + timedelta(days=3), "equity": 10295.88},
+        {"timestamp": t0 + timedelta(days=4), "equity": 10192.92},
+    ]
+    sortino = calculate_sortino_ratio(snap_mixed, target_return=0.0)
+    assert sortino is not None
+    assert isinstance(sortino, float)
+    assert sortino > 0.0
+
+
+def test_calculate_trade_duration_stats():
+    """Kiểm tra thống kê thời gian nắm giữ lệnh theo giờ và bars."""
+    t0 = datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc)
+    trades = [
+        # Win: 4 hours (16 bars of 15m)
+        {
+            "net_pnl": 150.0,
+            "entry_time": t0,
+            "exit_time": t0 + timedelta(hours=4),
+        },
+        # Loss: 2 hours (8 bars of 15m)
+        {
+            "net_pnl": -50.0,
+            "entry_time": t0 + timedelta(hours=5),
+            "exit_time": t0 + timedelta(hours=7),
+        },
+        # Win: 6 hours (24 bars of 15m)
+        {
+            "net_pnl": 200.0,
+            "entry_time": t0 + timedelta(hours=8),
+            "exit_time": t0 + timedelta(hours=14),
+        },
+    ]
+
+    stats = calculate_trade_duration_stats(trades, bar_seconds=900)
+
+    assert stats["total_trades_analyzed"] == 3
+    assert math.isclose(stats["avg_duration_hours"], 4.0, abs_tol=1e-2)
+    assert math.isclose(stats["median_duration_hours"], 4.0, abs_tol=1e-2)
+    assert math.isclose(stats["max_duration_hours"], 6.0, abs_tol=1e-2)
+    assert math.isclose(stats["min_duration_hours"], 2.0, abs_tol=1e-2)
+
+    assert math.isclose(stats["win_avg_duration_hours"], 5.0, abs_tol=1e-2)
+    assert math.isclose(stats["loss_avg_duration_hours"], 2.0, abs_tol=1e-2)
+
+
+def test_long_short_pnl_breakdown():
+    """Kiểm tra tách bạch Long Net PnL, Short Net PnL và Long/Short Profit Factor."""
+    trades = [
+        {"direction": OrderDirection.LONG, "net_pnl": 100.0, "gross_price_pnl": 100.0, "entry_fee": 0.0, "exit_fee": 0.0, "funding_cashflow": 0.0},
+        {"direction": OrderDirection.LONG, "net_pnl": -50.0, "gross_price_pnl": -50.0, "entry_fee": 0.0, "exit_fee": 0.0, "funding_cashflow": 0.0},
+        {"direction": OrderDirection.SHORT, "net_pnl": 200.0, "gross_price_pnl": 200.0, "entry_fee": 0.0, "exit_fee": 0.0, "funding_cashflow": 0.0},
+        {"direction": OrderDirection.SHORT, "net_pnl": -20.0, "gross_price_pnl": -20.0, "entry_fee": 0.0, "exit_fee": 0.0, "funding_cashflow": 0.0},
+    ]
+
+    class MockBrokerLS:
+        def __init__(self):
+            self.initial_balance = 10000.0
+            self.equity = 10230.0
+            self.wallet_balance = 10230.0
+            self.available_margin = 10230.0
+            self.trade_history = trades
+            self.order_history = []
+            self.funding_history = []
+            self.positions = {}
+            t0 = datetime(2023, 1, 1, tzinfo=timezone.utc)
+            self.account_snapshots = [
+                AccountSnapshot(timestamp=t0, wallet_balance=10000.0, reserved_collateral=0.0, available_margin=10000.0, unrealized_pnl=0.0, equity=10000.0, open_positions_count=0),
+                AccountSnapshot(timestamp=t0 + timedelta(days=2), wallet_balance=10230.0, reserved_collateral=0.0, available_margin=10230.0, unrealized_pnl=0.0, equity=10230.0, open_positions_count=0),
+            ]
+
+        def verify_accounting_invariants(self):
+            pass
+
+    broker = MockBrokerLS()
+    config = {"symbol": "BTCUSDT", "strategy": "SYNTHESIZED"}
+    t_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
+    t_end = datetime(2023, 1, 3, tzinfo=timezone.utc)
+
+    metrics = calculate_backtest_metrics(
+        broker=broker,
+        config=config,
+        start_time=t_start,
+        end_time=t_end,
+        bars_15m_count=192,
+        bars_4h_count=12,
+    )
+
+    assert metrics["long_trades_count"] == 2
+    assert metrics["short_trades_count"] == 2
+    assert math.isclose(metrics["long_net_pnl"], 50.0, abs_tol=1e-4)
+    assert math.isclose(metrics["short_net_pnl"], 180.0, abs_tol=1e-4)
+    assert math.isclose(metrics["long_profit_factor"], 2.0, abs_tol=1e-4)
+    assert math.isclose(metrics["short_profit_factor"], 10.0, abs_tol=1e-4)
+    assert "sortino_ratio" in metrics
+    assert "trade_duration_stats" in metrics
+
 

@@ -1,0 +1,108 @@
+{
+  "verdict": "CLEAN",
+  "results": {
+    "Check 1 \u2014 Code Authenticity & Zero Hardcoding": {
+      "verdict": "PASS",
+      "passed": true,
+      "details": {
+        "suspicious_hardcoded_literals": [],
+        "artifact_reconciliation": {
+          "sqlite_trade_count": 10892,
+          "trades_json_count": 10892,
+          "summary_total_trades": 6455,
+          "summary_realization_slices": 10892,
+          "sqlite_sum_net": -91280.3343835248,
+          "json_sum_net": -91280.3369,
+          "summary_net_pnl": -91280.3343835248,
+          "counts_match": true,
+          "net_match": true,
+          "fees_match": true,
+          "summary_net_match": true
+        }
+      }
+    },
+    "Check 2 \u2014 Paper-Only Boundary Audit": {
+      "verdict": "PASS",
+      "passed": true,
+      "details": {
+        "flagged_violations": [],
+        "socket_connection_attempts": [],
+        "sim_slice_executed_offline": true
+      }
+    },
+    "Check 3 \u2014 Genuine Multi-Asset Simulation": {
+      "verdict": "PASS",
+      "passed": true,
+      "details": {
+        "symbols_distribution": {
+          "ADAUSDT": 1114,
+          "AVAXUSDT": 1091,
+          "BNBUSDT": 1033,
+          "BTCUSDT": 1141,
+          "DOGEUSDT": 1106,
+          "ETHUSDT": 1121,
+          "LINKUSDT": 1011,
+          "SOLUSDT": 1117,
+          "SUIUSDT": 1051,
+          "XRPUSDT": 1107
+        },
+        "all_10_symbols_present": true,
+        "sufficient_per_symbol": true,
+        "exit_reasons": {
+          "CIRCUIT_BREAKER_LOCK": 190,
+          "MANUAL": 8,
+          "STOP_LOSS": 6257,
+          "TAKE_PROFIT": 4437
+        },
+        "total_orders": 8089,
+        "total_trades": 10892,
+        "distinct_entry_prices": 6454,
+        "distinct_exit_timestamps": 3737,
+        "temporal_span": "2025-01-02T00:15:00+00:00 -> 2025-12-30T02:00:00+00:00",
+        "realistic_diversity": true
+      }
+    },
+    "Check 4 \u2014 Test Suite Authenticity": {
+      "verdict": "PASS",
+      "passed": true,
+      "details": {
+        "test_functions_count": 20,
+        "total_assert_statements": 78,
+        "tautological_assertions": [],
+        "test_function_names": [
+          "test_e2e_cli_help_flag",
+          "test_e2e_cli_execution_clean_exit",
+          "test_e2e_cli_invalid_arguments_graceful_rejection",
+          "test_e2e_completed_trades_threshold",
+          "test_e2e_multi_asset_coverage_all_10_pairs",
+          "test_e2e_bar_counts_and_temporal_continuity",
+          "test_e2e_return_or_favorable_win_rate",
+          "test_e2e_capital_preservation_and_drawdown_bounds",
+          "test_e2e_zero_credentials_and_secrets_ast_scan",
+          "test_e2e_zero_external_network_calls",
+          "test_e2e_strictly_simulated_broker_ledger",
+          "test_e2e_all_seven_artifacts_exist_and_non_empty",
+          "test_e2e_dashboard_html_structure_and_charts",
+          "test_e2e_summary_markdown_and_audit_tables",
+          "test_e2e_json_artifacts_schema_and_rfc8259",
+          "test_e2e_sqlite_database_tables_and_record_counts",
+          "test_e2e_double_entry_accounting_invariance",
+          "test_e2e_accounting_per_trade_net_pnl_conservation",
+          "test_e2e_accounting_finite_numbers_no_boolean_types",
+          "test_e2e_committed_1y_report_artifacts_compliance"
+        ]
+      }
+    },
+    "Check 5 \u2014 Empirical Math & Double-Entry Invariance": {
+      "verdict": "PASS",
+      "passed": true,
+      "details": {
+        "equity_formula_diff": 1.5643308870494366e-10,
+        "tolerance": 0.0001,
+        "trade_conservation_mismatches_count": 0,
+        "recorded_win_rate": 49.2,
+        "calculated_win_rate": 49.20216886134779
+      }
+    }
+  }
+}
