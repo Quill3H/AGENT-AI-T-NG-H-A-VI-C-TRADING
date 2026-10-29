@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("gymnasium") is None,
+    reason="quickstart includes the PPO smoke; pip install -r requirements-rl.txt",
+)
 def test_quickstart_runs_offline_from_external_cwd_and_audits_artifacts(
     tmp_path: Path,
 ) -> None:

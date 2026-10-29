@@ -1,0 +1,15 @@
+# swing_ema_long_half_1r.yaml - round-11 candidate P1: C1 with half taken at 1R. Rules: src/strategies/style_suite.py,
+# protocol: docs/research/2026-10-18-round11-traders.md. Fixed before any run, not fitted.
+strategy:
+  name: "SWING_EMA_PULLBACK"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false
+  partial_exits: [[1.0, 0.5]]  # then the broker moves the stop to break-even

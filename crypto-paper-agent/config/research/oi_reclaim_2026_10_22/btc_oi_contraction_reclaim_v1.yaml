@@ -1,0 +1,31 @@
+# btc_oi_contraction_reclaim_v1 - owner spec 2026-10-22 (PHUONG-AN-MOI-BTC-OI-RECLAIM-V1-GIAO-CLAUDE.md).
+# Rules: src/strategies/oi_reclaim.py; protocol: docs/research/2026-10-22-btc-oi-reclaim-v1.md.
+# Fixed from the spec before any performance run. Not fitted; no grid.
+symbol: BTCUSDT
+initial_equity: 10000.0
+shock_atr: 2.0            # Cprev - close_s >= 2 * A, A = mean of the 14 true ranges before s (1h)
+atr_bars: 14
+oi_change_max: -0.01      # OI(t) / OI(t-1h) - 1 <= -1%, sum_open_interest (contracts)
+oi_lag_minutes: 15        # OI usable at create_time + 15 min (assumption); stress run: 60
+confirm_bars: 2           # 1h bars closing at t+1h and t+2h
+reclaim: 0.25             # close >= close_s + 0.25 * (Cprev - close_s) and close > open
+stop_atr: 0.25            # stop = low_s - 0.25 * A
+min_rr: 1.5               # T - E >= 1.5 * (E - S), target T = Cprev
+cost_gate: 2.0            # gross move to T > 2 x round-trip cost on rounded quantity
+cooldown_hours: 24
+time_stop_hours: 24
+risk_pct: 0.005           # 0.5% of equity at entry, including round-trip fees and slippage to the stop
+max_notional_x_equity: 1.0
+taker_pct: 0.0005
+slippage_pct: 0.0003
+lot_step: 0.001           # current BTCUSDT filters, assumed for the past (not verified historical filters)
+tick: 0.1
+min_notional: 100.0
+daily_loss_pct: 0.05      # project daily-loss breaker
+lock_hours: 24
+entry_delay_bars: 0
+use_oi: true
+funding_mode: actual
+windows:
+  W1: ["2021-01-01", "2023-12-31"]
+  W2: ["2024-01-01", "2026-09-30"]

@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("gymnasium", reason="PPO extras: pip install -r requirements-rl.txt")
+
 import numpy as np, pandas as pd
 from src.research.rl_env import ObservationScaler, RiskAwareTradingEnv
 from src.research.synthetic import smc_config

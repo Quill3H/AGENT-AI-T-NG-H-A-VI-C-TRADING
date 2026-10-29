@@ -1,0 +1,19 @@
+# donchian_trend.yaml - Daily Donchian channel trend following (Turtle System 1 defaults)
+# Rule parameters come from the published Turtle rulebook, not from fitting on our data.
+
+strategy:
+  name: "DONCHIAN_TREND"
+  enabled: true
+  timeframe_signal: "1d"         # closed daily candles
+  timeframe_execution: "15m"     # fill at the next 15m open
+
+default_conviction: "normal"     # 2% of equity lost if the initial stop is hit
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  entry_bars: 20                 # breakout of the previous 20 daily highs/lows
+  exit_bars: 10                  # trailing exit at the 10-day low/high
+  atr_bars: 20
+  stop_atr_multiple: 2.0         # initial stop 2 x ATR(20)
+  allow_short: true

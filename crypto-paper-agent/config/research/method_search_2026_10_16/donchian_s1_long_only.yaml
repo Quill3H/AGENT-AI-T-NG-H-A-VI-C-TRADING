@@ -1,0 +1,4 @@
+rules:
+  entry_bars: 20
+  exit_bars: 10
+  allow_short: false

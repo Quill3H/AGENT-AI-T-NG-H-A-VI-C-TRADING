@@ -1,0 +1,14 @@
+# ichimoku_tk_4h_trail.yaml - round-10 candidate I4-4h: Ichimoku TK cross with Kijun trailing stop. Rules: src/strategies/ichimoku_suite.py,
+# protocol: docs/research/2026-10-18-wyckoff-ichimoku.md. Fixed before any run, not fitted.
+strategy:
+  name: "ICHIMOKU_TK_TRAIL"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

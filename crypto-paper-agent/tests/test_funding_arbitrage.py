@@ -206,3 +206,12 @@ def test_locked_basket_admission_has_no_half_position():
     r = FundingArbitrageSimulator(config(), cb).simulate(quotes().iloc[:3], 10000, 4000)
     assert not r.entered and r.cash == 10000 and not r.ledger
     assert r.rejections
+
+
+def test_hedged_price_move_does_not_trigger_emergency_stop():
+    """Both legs moving together leaves the basket flat; only a basis loss is an emergency."""
+    f = quotes()
+    f.loc[f.index[2]:, "spot_close"] = [105.0, 106.0, 106.0]
+    f.loc[f.index[2]:, "perp_close"] = [105.1, 106.1, 106.2]
+    r = FundingArbitrageSimulator(config()).simulate(f, 10000, 4000)
+    assert r.exit_reason == "NEGATIVE_FUNDING_TWO_CYCLES"

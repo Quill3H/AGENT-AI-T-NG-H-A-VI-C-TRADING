@@ -1,0 +1,15 @@
+# candle_pullback.yaml - round-6 candidate K1 reversal pattern on a trend pullback (Nison candlesticks, owner's file).
+# Rules: src/strategies/style_suite.py + src/strategies/candles.py,
+# protocol: docs/research/2026-10-18-candlesticks.md. Fixed before any run.
+strategy:
+  name: "CANDLE_PULLBACK"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true

@@ -1,0 +1,20 @@
+# pairs_fast_3m_10.yaml - round-14 candidate P3: distance pairs, 3-month formation, 1-month trading, top 10 pairs. Rules: src/strategies/pairs.py,
+# protocol: docs/research/2026-10-19-round14-pairs.md. Fixed before any run, not fitted.
+strategy:
+  name: "PAIRS_DISTANCE"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
+  formation_months: 3
+  trading_months: 1
+  top_pairs: 10
+  entry_sigma: 2.0
+  stop_atr: 3.0
+  universe: [BTCUSDT, ETHUSDT, XRPUSDT, BNBUSDT, SOLUSDT, DOGEUSDT, TRXUSDT, ADAUSDT, LINKUSDT, AVAXUSDT]

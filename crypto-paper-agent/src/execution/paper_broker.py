@@ -202,6 +202,11 @@ class PaperBroker:
         self.last_mark_prices: Dict[str, float] = {}
         self._settled_funding_keys: Set[Tuple[str, datetime]] = set()
         self._is_handling_cb_lock: bool = False
+        self.kill_switch_reason: Optional[str] = None
+        raw_gap = self.config.get("risk", {}).get("max_data_gap_minutes")
+        if raw_gap is not None and (type(raw_gap) is bool or not isinstance(raw_gap, (int, float)) or not math.isfinite(raw_gap) or raw_gap <= 0):
+            raise ValueError(f"risk.max_data_gap_minutes must be positive finite, got {raw_gap!r}")
+        self.max_data_gap: Optional[timedelta] = None if raw_gap is None else timedelta(minutes=float(raw_gap))
 
         # 6. Bộ đếm định danh xác định (Deterministic ID generator)
         self._order_seq: int = 0
@@ -410,8 +415,23 @@ class PaperBroker:
                         f"Duplicate candle for {symbol} at open_time {open_time} in current batch"
                     )
 
+        # 6a. Dữ liệu bị đứt quá lâu: vị thế sẽ được đóng khẩn cấp ở giá open nến này (kill switch)
+        data_gap = (
+            self.max_data_gap is not None
+            and last_sym_open is not None
+            and open_time - last_sym_open > duration + self.max_data_gap
+        )
+
+        # 5b. Owner rule 2026-10-21: a stop is never widened, whoever changed it.
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            first = pos.initial_stop_loss_price
+            if first is not None and (pos.stop_loss_price < first if pos.direction == OrderDirection.LONG
+                                      else pos.stop_loss_price > first):
+                raise ValueError(f"STOP_WIDENED: {symbol} stop {pos.stop_loss_price} is looser than the entry stop {first}")
+
         # 6. Kiểm tra bỏ sót mốc Funding Settlement khi đang có vị thế mở (E1, H3)
-        if last_sym_open is not None and symbol in self.positions:
+        if last_sym_open is not None and symbol in self.positions and not data_gap:
             t_cur = last_sym_open.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
             while t_cur < open_time:
                 if t_cur > last_sym_open and t_cur.hour in self.funding_hours:
@@ -419,8 +439,8 @@ class PaperBroker:
                 t_cur += timedelta(hours=1)
 
         # 7. Kiểm tra Funding Rate, Metadata Provenance và Solver Pre-check (E1, H6, J1, J2)
-        if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
-            if symbol in self.positions:
+        if self._is_settlement(open_time, candle):
+            if symbol in self.positions and not data_gap:
                 pos = self.positions[symbol]
                 # Nếu vị thế sẽ gap exit (TP/SL/Liq) ngay tại Pha 1 thì không cần funding
                 will_gap_exit = False
@@ -513,6 +533,10 @@ class PaperBroker:
         # PHA 1: Open Time & Gap Exits (Gap Liq > Gap SL > Gap TP)
         if self.circuit_breaker.last_event_time is None or open_time > self.circuit_breaker.last_event_time:
             self.circuit_breaker.advance_time(open_time)
+        if data_gap:
+            self.engage_kill_switch(
+                open_time, f"DATA_GAP: no {symbol} candle between {last_sym_open.isoformat()} and {open_time.isoformat()}"
+            )
 
         if symbol in self.positions:
             pos = self.positions[symbol]
@@ -578,7 +602,7 @@ class PaperBroker:
         # PHA 2: Funding Settlement (chỉ cho vị thế còn sống qua Pha 1)
         if symbol in self.positions:
             pos = self.positions[symbol]
-            if open_time.hour in self.funding_hours and open_time.minute == 0 and open_time.second == 0:
+            if self._is_settlement(open_time, candle):
                 f_key = (symbol, f_dt)  # exact source event validated in preflight
                 if f_key not in self._settled_funding_keys:
                     raw_rate = candle.get("funding_rate", 0.0)
@@ -1040,7 +1064,8 @@ class PaperBroker:
             return_pct=return_pct,
             exit_reason=exit_reason,
             intrabar_estimated=intrabar_estimated,
-            metadata=dict(position.metadata) if hasattr(position, "metadata") and position.metadata else {},
+            metadata={**(dict(position.metadata) if getattr(position, "metadata", None) else {}),
+                      "stop_at_exit": position.stop_loss_price},
             initial_stop_loss_price=getattr(position, "initial_stop_loss_price", position.stop_loss_price),
             conviction_tier=getattr(position, "conviction_tier", "normal"),
             estimated_liquidation_price=getattr(
@@ -1095,6 +1120,29 @@ class PaperBroker:
 
         return trade_rec
 
+    def engage_kill_switch(self, timestamp: datetime, reason: str = "MANUAL") -> None:
+        """Emergency stop: cancel pending orders, close every position at the last mark, refuse new orders.
+
+        Irreversible for this broker session; a new session is needed to trade again.
+        """
+        timestamp = _ensure_utc(timestamp)
+        self.kill_switch_reason = str(reason)
+        logger.error(f"[PaperBroker] KILL SWITCH engaged at {timestamp.isoformat()}: {reason}")
+        self._flatten_all(timestamp, "ORDER_CANCELLED_KILL_SWITCH", ExitReason.KILL_SWITCH)
+        self.is_halted = True
+
+    def _flatten_all(self, timestamp: datetime, cancel_reason: str, exit_reason: ExitReason) -> None:
+        for pending in self.pending_orders:
+            self._update_order_record(req=pending, status=OrderStatus.CANCELLED, processed_at=timestamp, reasons=[cancel_reason])
+        self.pending_orders.clear()
+        for sym in list(self.positions.keys()):
+            if sym not in self.positions:  # an exit can trigger a breaker lock that already flattened it
+                continue
+            pos = self.positions[sym]
+            mark_p = self.last_mark_prices.get(sym, pos.entry_price)
+            exit_p = mark_p * (1.0 - self.slippage_pct) if pos.direction == OrderDirection.LONG else mark_p * (1.0 + self.slippage_pct)
+            self._execute_exit(position=pos, exit_price=exit_p, exit_time=timestamp, exit_reason=exit_reason, intrabar_estimated=False)
+
     def _handle_circuit_breaker_lock(self, timestamp: datetime) -> None:
         """
         Cưỡng chế đóng toàn bộ vị thế đang mở và hủy pending orders khi Circuit Breaker bị khóa (E3).
@@ -1104,35 +1152,7 @@ class PaperBroker:
             return
         self._is_handling_cb_lock = True
         try:
-            # 1. Hủy pending orders
-            for pending in self.pending_orders:
-                self._update_order_record(
-                    req=pending,
-                    status=OrderStatus.CANCELLED,
-                    processed_at=timestamp,
-                    reasons=["ORDER_CANCELLED_CIRCUIT_BREAKER_LOCKED"],
-                )
-            self.pending_orders.clear()
-
-            # 2. Đóng toàn bộ positions đang mở theo giá mark từng symbol kèm slippage
-            symbols_to_close = list(self.positions.keys())
-            for sym in symbols_to_close:
-                if sym not in self.positions:
-                    continue
-                pos = self.positions[sym]
-                mark_p = self.last_mark_prices.get(sym, pos.entry_price)
-                if pos.direction == OrderDirection.LONG:
-                    exit_p = mark_p * (1.0 - self.slippage_pct)
-                else:
-                    exit_p = mark_p * (1.0 + self.slippage_pct)
-
-                self._execute_exit(
-                    position=pos,
-                    exit_price=exit_p,
-                    exit_time=timestamp,
-                    exit_reason=ExitReason.CIRCUIT_BREAKER_LOCK,
-                    intrabar_estimated=False,
-                )
+            self._flatten_all(timestamp, "ORDER_CANCELLED_CIRCUIT_BREAKER_LOCKED", ExitReason.CIRCUIT_BREAKER_LOCK)
         finally:
             self._is_handling_cb_lock = False
 
@@ -1194,9 +1214,8 @@ class PaperBroker:
 
                 if not (math.isfinite(candidate_p) and candidate_p >= 0):
                     continue
-                # Long liquidation price must be <= entry price
-                if candidate_p > entry:
-                    continue
+                # Funding can drain isolated collateral below the entry maintenance margin on a
+                # profitable long; the liquidation price then lies above entry, which is valid.
 
                 candidate_notional = q * candidate_p
                 is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
@@ -1214,9 +1233,7 @@ class PaperBroker:
 
                 if not (math.isfinite(candidate_p) and candidate_p >= 0):
                     continue
-                # Short liquidation price must be >= entry price
-                if candidate_p < entry:
-                    continue
+                # Likewise a short's liquidation price may fall below entry once collateral is drained.
 
                 candidate_notional = q * candidate_p
                 is_in_tier = (lower_bound < candidate_notional <= upper_bound) or (idx == 0 and candidate_notional <= upper_bound)
@@ -1229,6 +1246,19 @@ class PaperBroker:
             f"No tier-consistent liquidation price found for position {position_id} "
             f"({direction.value}, qty={q}, entry={entry}, collateral={c})"
         )
+
+    def _is_settlement(self, open_time, candle):
+        """A bar opening on the schedule hours, or exactly on its own funding event. Binance
+        shortens the interval to 4h/2h in stressed markets (SOLUSDT, 2022-11), so an event
+        at another hour is settled too."""
+        if open_time.minute or open_time.second or open_time.microsecond:
+            return False
+        if open_time.hour in self.funding_hours:
+            return True
+        f_time = candle.get("funding_time")
+        if f_time is None or f_time != f_time or type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
+            return False  # f_time != f_time: NaT/NaN before the first event
+        return _ensure_utc(f_time) == open_time
 
     def _apply_funding_settlement(
         self,

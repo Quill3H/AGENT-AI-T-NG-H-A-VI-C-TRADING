@@ -1,0 +1,14 @@
+# swing_ema_pullback_long.yaml - round-8 candidate C1: W1 long only. Rules: src/strategies/style_suite.py,
+# protocol: docs/research/2026-10-18-round8-plan.md. Fixed before any run, not fitted.
+strategy:
+  name: "SWING_EMA_PULLBACK"
+  enabled: true
+  timeframe_signal: "4h"
+  timeframe_execution: "15m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: false  # round-8 loss analysis: W1 shorts netted about zero after costs

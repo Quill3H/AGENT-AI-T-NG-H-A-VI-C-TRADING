@@ -8,7 +8,7 @@ strategy:
   timeframe_signal: "5m"
   timeframe_execution: "1m"
 
-default_conviction: "high"    # 5% risk per trade (SMC setup thường có RRR cao)
+default_conviction: "normal"  # 2% risk per trade: a 5% loss would equal the whole daily breaker limit
 
 # SMC Parameters (theo định nghĩa trong spec mục 4.3)
 smc:

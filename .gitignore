@@ -3,3 +3,7 @@ data/
 *.parquet
 *.pyc
 __pycache__/
+
+# Secrets: never commit keys or local environment files
+.env
+.env.*

@@ -13,6 +13,9 @@ ccxt>=4.4.27
 pandas>=2.2.3
 numpy>=2.1.0
 
+# --- Machine-learning research (src/research/ml; BSD licence, offline models only) ---
+scikit-learn>=1.5.0
+
 # --- Technical Indicators ---
 pandas-ta>=0.3.14b0
 

@@ -1,0 +1,62 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.16, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/claude/AGENT-AI-T-NG-H-A-VI-C-TRADING/crypto-paper-agent
+configfile: pytest.ini
+plugins: platformdirs-4.13.5, anyio-4.15.1, cov-7.1.0
+collected 36 items
+
+tests/test_oi_reclaim.py ....................................            [100%]
+
+=============================== warnings summary ===============================
+../../../../usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37
+  /usr/local/lib/python3.13/dist-packages/pandas_ta/__init__.py:37: Pandas4Warning: The 'mode.copy_on_write' option is deprecated. Copy-on-Write can no longer be disabled (it is always enabled with pandas >= 3.0), and setting the option has no impact. This option will be removed in pandas 4.0.
+    from pandas_ta.core import AnalysisIndicators
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+________________ test_daily_loss_breaker_blocks_the_next_entry _________________
+----------------------------- Captured stderr call -----------------------------
+___________ test_f1_three_losses_halve_the_risk_of_the_fourth_trade ____________
+----------------------------- Captured stderr call -----------------------------
+__ test_f1_a_funding_payment_that_breaks_the_daily_loss_limit_closes_at_once ___
+----------------------------- Captured stderr call -----------------------------
+___________ test_f4_cashflow_ledger_reconciles_with_trades_and_curve ___________
+----------------------------- Captured stderr call -----------------------------
+=========================== short test summary info ============================
+PASSED tests/test_oi_reclaim.py::test_reversed_csv_rows_parse_identically
+PASSED tests/test_oi_reclaim.py::test_duplicates_conflicts_and_bad_values
+PASSED tests/test_oi_reclaim.py::test_coverage_counts_missing_snapshots
+PASSED tests/test_oi_reclaim.py::test_oi_value_falling_with_price_is_not_contraction
+PASSED tests/test_oi_reclaim.py::test_atr_uses_only_the_14_bars_before_the_shock
+PASSED tests/test_oi_reclaim.py::test_event_threshold_edges
+PASSED tests/test_oi_reclaim.py::test_incomplete_hour_is_not_a_bar
+PASSED tests/test_oi_reclaim.py::test_missing_oi_snapshot_is_reported_not_skipped_silently
+PASSED tests/test_oi_reclaim.py::test_signal_fill_strictly_after_and_hand_computed_pnl
+PASSED tests/test_oi_reclaim.py::test_second_confirmation_bar_and_expiry
+PASSED tests/test_oi_reclaim.py::test_a_15m_low_below_the_event_low_cancels
+PASSED tests/test_oi_reclaim.py::test_rejected_at_the_open_is_not_retried
+PASSED tests/test_oi_reclaim.py::test_rr_cost_lot_and_min_notional_gates
+PASSED tests/test_oi_reclaim.py::test_delayed_entry_rechecks_at_the_later_open
+PASSED tests/test_oi_reclaim.py::test_oi_lag_never_uses_a_bar_closed_before_oi_was_available
+PASSED tests/test_oi_reclaim.py::test_cooldown_and_open_position_block_new_events
+PASSED tests/test_oi_reclaim.py::test_an_open_position_blocks_a_new_event_even_after_cooldown
+PASSED tests/test_oi_reclaim.py::test_stop_first_when_stop_and_target_share_a_bar
+PASSED tests/test_oi_reclaim.py::test_gap_through_stop_exits_at_the_worse_open
+PASSED tests/test_oi_reclaim.py::test_target_and_end_of_window
+PASSED tests/test_oi_reclaim.py::test_future_bars_do_not_change_a_finished_trade
+PASSED tests/test_oi_reclaim.py::test_no_positive_drops_received_funding_and_keeps_paid_funding
+PASSED tests/test_oi_reclaim.py::test_paid_funding_shrinks_the_next_trade_size
+PASSED tests/test_oi_reclaim.py::test_daily_loss_breaker_blocks_the_next_entry
+PASSED tests/test_oi_reclaim.py::test_f1_three_losses_halve_the_risk_of_the_fourth_trade
+PASSED tests/test_oi_reclaim.py::test_f1_a_funding_payment_that_breaks_the_daily_loss_limit_closes_at_once
+PASSED tests/test_oi_reclaim.py::test_f1_entry_passes_the_project_invariants
+PASSED tests/test_oi_reclaim.py::test_f2_a_missing_15m_bar_fails_the_run_instead_of_missing_the_stop
+PASSED tests/test_oi_reclaim.py::test_f2_missing_or_bad_funding_fails_the_run_instead_of_paying_zero
+PASSED tests/test_oi_reclaim.py::test_f2_cli_keeps_failed_data_apart_from_scored_results
+PASSED tests/test_oi_reclaim.py::test_f3_open_equity_includes_funding_when_it_is_paid
+PASSED tests/test_oi_reclaim.py::test_f3_drawdown_is_measured_on_15m_closes
+PASSED tests/test_oi_reclaim.py::test_f3_an_intrabar_exit_is_stamped_at_the_bar_close
+PASSED tests/test_oi_reclaim.py::test_f4_end_of_window_settlement_is_in_the_reported_equity[2023-12-30]
+PASSED tests/test_oi_reclaim.py::test_f4_end_of_window_settlement_is_in_the_reported_equity[2024-01-30]
+PASSED tests/test_oi_reclaim.py::test_f4_cashflow_ledger_reconciles_with_trades_and_curve
+======================== 36 passed, 1 warning in 11.75s ========================

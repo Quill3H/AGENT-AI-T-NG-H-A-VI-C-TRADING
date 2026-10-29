@@ -95,3 +95,19 @@ def test_research_manifest_matches_exact_file_and_sqlite_bytes(tmp_path):
     persist_research_run(tmp_path, "fixture", {}, {"result": 12.0})
     with pytest.raises(ValueError, match="identity conflict"):
         persist_research_run(tmp_path, "fixture", {}, {"result": 13.0})
+
+
+def test_research_run_states_its_execution_assumptions(tmp_path):
+    import json
+    from src.research.artifacts import execution_assumptions, persist_research_run
+
+    persist_research_run(tmp_path, "fixture", {}, {"result": 12.0})
+    block = json.loads((tmp_path / "fixture.report.json").read_text(encoding="utf-8"))["execution_assumptions"]
+    assert block["cost_source"] == "broker_defaults" and block["slippage_pct"] == 0.0003
+    assert block["mode"] == "paper_only_simulated" and block["order_book_depth"] == "not_modeled"
+    cfg = {"fees": {"taker_pct": 0.0004, "slippage_pct": 0.001}, "funding_rate": {"settlement_hours_utc": [0, 8, 16]},
+           "leverage_brackets": {"BTCUSDT": [[50000, 0.004, 0]]}}
+    block = execution_assumptions(cfg)
+    assert (block["taker_pct"], block["maker_pct"], block["slippage_pct"]) == (0.0004, 0.0002, 0.001)
+    assert block["cost_source"] == "run_config" and block["funding"]["settlement_hours_utc"] == [0, 8, 16]
+    assert block["liquidation"]["brackets_symbols"] == ["BTCUSDT"]

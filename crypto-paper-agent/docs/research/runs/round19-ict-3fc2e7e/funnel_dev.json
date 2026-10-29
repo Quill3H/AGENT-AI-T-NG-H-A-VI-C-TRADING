@@ -1,0 +1,20 @@
+{
+ "BTCUSDT": {
+  "weekdays": 771,
+  "swept": 373,
+  "htf_held": 179,
+  "target_open_at_nyopen": 124
+ },
+ "ETHUSDT": {
+  "weekdays": 771,
+  "swept": 364,
+  "htf_held": 173,
+  "target_open_at_nyopen": 126
+ },
+ "SOLUSDT": {
+  "weekdays": 771,
+  "swept": 335,
+  "htf_held": 143,
+  "target_open_at_nyopen": 104
+ }
+}

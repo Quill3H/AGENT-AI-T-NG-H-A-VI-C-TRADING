@@ -1,0 +1,3 @@
+# Round 6 exit mode 'pct' (owner 2026-10-18 take-profit list). See CandleExits in src/strategies/style_suite.py.
+rules:
+  exit_mode: "pct"

@@ -1,0 +1,14 @@
+# london_breakout_trend.yaml - round-7 candidate V2. Rules: src/strategies/session_suite.py (W1 rules for V5),
+# protocol: docs/research/2026-10-18-video-sessions.md. Fixed before any run, not fitted.
+strategy:
+  name: "LONDON_BREAKOUT_TREND"
+  enabled: true
+  timeframe_signal: "5m"
+  timeframe_execution: "5m"
+
+default_conviction: "normal"
+leverage: 2.0
+base_risk_percent: 0.02
+
+rules:
+  allow_short: true
