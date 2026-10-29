@@ -21,6 +21,7 @@ def main():
     p.add_argument("--days", type=int, default=3)
     p.add_argument("--retries", type=int, default=2)
     p.add_argument("--allow-network", action="store_true")
+    p.add_argument("--tolerance-ms", type=int, default=0, help="Settlement timestamp jitter tolerance in ms (ADR 0013)")
     args = p.parse_args()
     output = Path(args.output).resolve()
     if not args.allow_network:
@@ -106,13 +107,28 @@ def main():
         )
     funding = pd.concat(funding_parts).sort_index()
     funding["funding_time"] = funding.index
+    aligned_funding = funding.copy()
+    if args.tolerance_ms > 0:
+        aligned_times = []
+        for ts in funding.index:
+            fl = ts.floor("8h")
+            diff_ms = (ts - fl).total_seconds() * 1000.0
+            if 0 < diff_ms <= args.tolerance_ms and fl.hour in (0, 8, 16):
+                aligned_times.append(fl)
+            else:
+                aligned_times.append(ts)
+        aligned_funding.index = pd.DatetimeIndex(aligned_times, tz="UTC")
+        aligned_funding["funding_time"] = aligned_funding.index
+
     perp = frames["perpetual"]
     spot = frames["spot"]
     # Quote columns use opens, which are available at the labelled timestamp.
     merged = pd.merge_asof(
-        perp, funding, left_index=True, right_index=True, direction="backward"
+        perp, aligned_funding, left_index=True, right_index=True, direction="backward"
     )
-    merged["funding_readiness"] = funding_readiness(merged)
+    merged["funding_readiness"] = funding_readiness(
+        merged, tolerance_seconds=args.tolerance_ms / 1000.0
+    )
     lag = pd.merge_asof(
         perp.iloc[:, :0],
         funding,
@@ -146,11 +162,13 @@ def main():
             }
         )
         bars = pd.merge_asof(
-            bars, funding, left_index=True, right_index=True, direction="backward"
+            bars, aligned_funding, left_index=True, right_index=True, direction="backward"
         )
-        bars["funding_readiness"] = funding_readiness(bars)
+        bars["funding_readiness"] = funding_readiness(
+            bars, tolerance_seconds=args.tolerance_ms / 1000.0
+        )
         datasets[tf] = bars
-    coverage = funding_settlement_coverage(basket, funding)
+    coverage = funding_settlement_coverage(basket, funding, tolerance_ms=args.tolerance_ms)
     output.mkdir(parents=True, exist_ok=False)
     manifests = {}
     for name, df in datasets.items():

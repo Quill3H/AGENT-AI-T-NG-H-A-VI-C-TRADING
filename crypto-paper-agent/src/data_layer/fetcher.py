@@ -571,15 +571,20 @@ def _fetch_funding_chunk(
 # Merge & Align
 # ---------------------------------------------------------------------------
 
-def funding_readiness(frame, settlement_hours=(0, 8, 16)):
-    """Past rates are observations; a due cashflow requires an exact source event."""
+def funding_readiness(frame, settlement_hours=(0, 8, 16), tolerance_seconds=0.0):
+    """Past rates are observations; a due cashflow requires an exact or jitter-tolerated source event."""
     ready = (frame["funding_rate"].notna() & np.isfinite(frame["funding_rate"])
              & frame["funding_time"].notna()
-             & (frame["funding_time"] <= frame.index)
+             & (frame["funding_time"] <= frame.index + pd.Timedelta(seconds=tolerance_seconds))
              & (frame["funding_time"] >= frame.index - pd.Timedelta(hours=24)))
     boundary = frame.index.hour.isin(settlement_hours) & (frame.index.minute == 0)
     boundary &= (frame.index.second == 0) & (frame.index.microsecond == 0) & (frame.index.nanosecond == 0)
-    return (ready & (~boundary | (frame["funding_time"] == frame.index))).astype(bool)
+    if tolerance_seconds > 0.0:
+        time_diff = (frame["funding_time"] - frame.index).abs()
+        is_at_boundary = time_diff <= pd.Timedelta(seconds=tolerance_seconds)
+    else:
+        is_at_boundary = frame["funding_time"] == frame.index
+    return (ready & (~boundary | is_at_boundary)).astype(bool)
 
 
 def merge_ohlcv_with_oi_and_funding(

@@ -137,3 +137,54 @@ def test_public_sample_manifest_records_funding_coverage_without_backdating(
     assert basket.loc[idx[480], "funding_time"] == exact
     assert not basket.loc[idx[480], "funding_readiness"]
     assert basket.loc[idx[481], "funding_time"] == late
+
+def test_public_sample_manifest_with_tolerance_ms_allows_complete_coverage(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """ADR 0013: Jitter tolerance allows millisecond-delayed exchange events to be ready."""
+    path = PROJECT_ROOT / "scripts" / "prepare_public_research_sample.py"
+    spec = importlib.util.spec_from_file_location("coverage_sample", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    idx = pd.date_range("2026-08-20", periods=1440, freq="min", tz="UTC")
+    spot = "\n".join(f"{ts.value // 1000},100,101,99,100,1" for ts in idx)
+    perp = "\n".join(f"{ts.value // 1000000},100,101,99,100,1" for ts in idx)
+    exact = idx[0]
+    late = idx[480] + pd.Timedelta(milliseconds=3)
+    absent = idx[960] + pd.Timedelta(milliseconds=2)
+    funding = "calc_time,last_funding_rate\n" + "\n".join(
+        f"{ts.value // 1000000},0.001" for ts in (exact, late, absent)
+    )
+
+    def archive_response(url, timeout):
+        body = funding if "fundingRate" in url else perp if "futures/um/daily" in url else spot
+        buf = BytesIO()
+        with ZipFile(buf, "w") as archive:
+            archive.writestr("source.csv", body)
+        buf.seek(0)
+        return buf
+
+    monkeypatch.setattr(module, "urlopen", archive_response)
+    output = tmp_path / "sample_tolerance"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(path), "--output", str(output), "--start", "2026-08-20",
+            "--days", "1", "--allow-network", "--tolerance-ms", "5000",
+        ],
+    )
+
+    assert module.main() == 0
+    manifest = json.loads((output / "dataset_manifest.json").read_text(encoding="utf-8"))
+    coverage = manifest["funding_settlement_coverage"]
+    assert coverage["expected"] == 3
+    assert coverage["exact_ready"] == 3
+    assert coverage["unready"] == 0
+    assert coverage["exact_funding_coverage_complete"] is True
+    basket = pd.read_parquet(output / "basket.parquet")
+    assert basket.loc[idx[480], "funding_time"] == idx[480]
+    assert bool(basket.loc[idx[480], "funding_readiness"]) is True
+    assert basket.loc[idx[480], "funding_rate"] == 0.001
+

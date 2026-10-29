@@ -137,7 +137,7 @@ def main():
     parser.add_argument(
         "--run-id",
         default=None,
-        help="Mã định danh phiên backtest (default: tự động sinh run_{strategy}_{symbol}_{YYYYMMDD_HHMMSS})",
+        help="Mã định danh phiên backtest (default: tự động sinh run_{strategy}_{symbol}_{deterministic_hash})",
     )
     parser.add_argument(
         "--db-path",

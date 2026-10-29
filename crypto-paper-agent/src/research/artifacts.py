@@ -53,11 +53,11 @@ def dataset_manifest(frame, source, symbol, market_type, timeframe):
     }
 
 
-def funding_settlement_coverage(basket, source_events):
+def funding_settlement_coverage(basket, source_events, tolerance_ms=0):
     """Audit exact 8-hour source coverage without changing settlement availability.
 
     The source-event comparison is retrospective metadata only. A late source
-    event is never made available at the earlier nominal boundary.
+    event is never made available at the earlier nominal boundary unless within tolerance_ms (ADR 0013).
     """
     time_index(basket)
     time_index(source_events)
@@ -75,6 +75,7 @@ def funding_settlement_coverage(basket, source_events):
     max_delay_ms = 0
     for boundary in boundaries:
         source_exact = boundary in source_events.index
+        delay_ms = 0
         if not source_exact:
             next_pos = source_events.index.searchsorted(boundary, side="right")
             if next_pos < len(source_events):
@@ -89,11 +90,15 @@ def funding_settlement_coverage(basket, source_events):
             continue
         row = basket.loc[boundary]
         ready = row["funding_readiness"]
+        is_source_ok = source_exact or (tolerance_ms > 0 and 0 < delay_ms <= tolerance_ms)
+        is_time_ok = (row["funding_time"] == boundary) or (
+            tolerance_ms > 0 and abs((pd.Timestamp(row["funding_time"]) - boundary).total_seconds() * 1000) <= tolerance_ms
+        )
         exact = (
             isinstance(ready, (bool, np.bool_))
             and bool(ready)
-            and row["funding_time"] == boundary
-            and source_exact
+            and is_time_ok
+            and is_source_ok
         )
         if exact:
             continue

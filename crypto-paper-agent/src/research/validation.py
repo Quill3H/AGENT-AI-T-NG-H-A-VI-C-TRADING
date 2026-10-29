@@ -45,7 +45,7 @@ def time_index(frame):
         raise ValueError("timestamps must be sorted, unique, non-missing")
 
 
-def source_time(value, now, name, max_age_hours=24):
+def source_time(value, now, name, max_age_hours=24, tolerance_seconds=5.0):
     if not isinstance(
         value, (pd.Timestamp, __import__("datetime").datetime)
     ) or pd.isna(value):
@@ -53,6 +53,6 @@ def source_time(value, now, name, max_age_hours=24):
     ts = pd.Timestamp(value)
     if ts.tz is None or ts.utcoffset().total_seconds() != 0:
         raise ValueError(f"{name} must be UTC")
-    if ts > now or now - ts > pd.Timedelta(hours=max_age_hours):
+    if ts > now + pd.Timedelta(seconds=tolerance_seconds) or now - ts > pd.Timedelta(hours=max_age_hours):
         raise ValueError(f"{name} is future or stale")
     return ts
