@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="8" time="2.396" timestamp="2026-10-30T01:59:17.720097+07:00" hostname="HCM-SAL-LAP08"><testcase classname="test_review_contracts" name="test_accounting_reconciles_independently" time="0.000" /><testcase classname="test_review_contracts" name="test_even_zero_fees_does_not_rescue_this_trade_path" time="0.000" /><testcase classname="test_review_contracts" name="test_economic_acceptance_rejects_negative_expectancy_and_large_loss" time="0.001"><failure message="Failed: DID NOT RAISE AssertionError">def test_economic_acceptance_rejects_negative_expectancy_and_large_loss():
+        assert SUMMARY['total_net_pnl'] &lt; 0 and SUMMARY['expectancy_usd'] &lt; 0 and SUMMARY['profit_factor'] &lt; 1
+&gt;       with pytest.raises(AssertionError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE AssertionError
+
+test_review_contracts.py:29: Failed</failure></testcase><testcase classname="test_review_contracts" name="test_capital_preservation_gate_rejects_92_percent_drawdown" time="0.000"><failure message="Failed: DID NOT RAISE AssertionError">def test_capital_preservation_gate_rejects_92_percent_drawdown():
+        broker = SimpleNamespace(wallet_balance=SUMMARY['final_equity'], equity=SUMMARY['final_equity'])
+&gt;       with pytest.raises(AssertionError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE AssertionError
+
+test_review_contracts.py:35: Failed</failure></testcase><testcase classname="test_review_contracts" name="test_claimed_historical_inputs_are_not_seed42_synthetic" time="0.000"><failure message="AssertionError: All OHLCV rows exactly match synthetic generator for: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT', 'SUIUSDT']&#10;assert not ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', ...]">def test_claimed_historical_inputs_are_not_seed42_synthetic():
+        matched = [x['symbol'] for x in AUDIT['cache_comparisons']
+                   if x['timeframe'] == '15m' and x.get('exactly_matches_seed42_synthetic')]
+&gt;       assert not matched, f'All OHLCV rows exactly match synthetic generator for: {matched}'
+E       AssertionError: All OHLCV rows exactly match synthetic generator for: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT', 'SUIUSDT']
+E       assert not ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', ...]
+
+test_review_contracts.py:42: AssertionError</failure></testcase><testcase classname="test_review_contracts" name="test_synthetic_provenance_is_disclosed_in_original_summary" time="0.001"><failure message="assert 'synthetic' in '{&quot;exchange&quot;: &quot;binance&quot;, &quot;fetch_mode&quot;: &quot;auto&quot;, &quot;futures_symbol&quot;: &quot;btcusdt&quot;, &quot;raw_data_dir&quot;: &quot;data/raw&quot;}'&#10; +  where '{&quot;exchange&quot;: &quot;binance&quot;, &quot;fetch_mode&quot;: &quot;auto&quot;, &quot;futures_symbol&quot;: &quot;btcusdt&quot;, &quot;raw_data_dir&quot;: &quot;data/raw&quot;}' = &lt;built-in method lower of str object at 0x000002009A29EE50&gt;()&#10; +    where &lt;built-in method lower of str object at 0x000002009A29EE50&gt; = '{&quot;exchange&quot;: &quot;binance&quot;, &quot;fetch_mode&quot;: &quot;auto&quot;, &quot;futures_symbol&quot;: &quot;BTCUSDT&quot;, &quot;raw_data_dir&quot;: &quot;data/raw&quot;}'.lower&#10; +      where '{&quot;exchange&quot;: &quot;binance&quot;, &quot;fetch_mode&quot;: &quot;auto&quot;, &quot;futures_symbol&quot;: &quot;BTCUSDT&quot;, &quot;raw_data_dir&quot;: &quot;data/raw&quot;}' = &lt;function dumps at 0x000002009975E480&gt;({'exchange': 'binance', 'fetch_mode': 'auto', 'futures_symbol': 'BTCUSDT', 'raw_data_dir': 'data/raw'})&#10; +        where &lt;function dumps at 0x000002009975E480&gt; = json.dumps&#10; +        and   {'exchange': 'binance', 'fetch_mode': 'auto', 'futures_symbol': 'BTCUSDT', 'raw_data_dir': 'data/raw'} = &lt;built-in method get of dict object at 0x000002009A275980&gt;('data_provenance', {})&#10; +          where &lt;built-in method get of dict object at 0x000002009A275980&gt; = {'accounting_invariants_verified': True, 'accounting_reconciliation': {'accounting_invariants_verified': True, 'adjust...difference': -1.546140993013978e-10, ...}, 'available_margin': 8719.665616475051, 'average_realized_rrr': -0.1169, ...}.get">def test_synthetic_provenance_is_disclosed_in_original_summary():
+&gt;       assert 'synthetic' in json.dumps(SUMMARY.get('data_provenance', {})).lower()
+E       assert 'synthetic' in '{"exchange": "binance", "fetch_mode": "auto", "futures_symbol": "btcusdt", "raw_data_dir": "data/raw"}'
+E        +  where '{"exchange": "binance", "fetch_mode": "auto", "futures_symbol": "btcusdt", "raw_data_dir": "data/raw"}' = &lt;built-in method lower of str object at 0x000002009A29EE50&gt;()
+E        +    where &lt;built-in method lower of str object at 0x000002009A29EE50&gt; = '{"exchange": "binance", "fetch_mode": "auto", "futures_symbol": "BTCUSDT", "raw_data_dir": "data/raw"}'.lower
+E        +      where '{"exchange": "binance", "fetch_mode": "auto", "futures_symbol": "BTCUSDT", "raw_data_dir": "data/raw"}' = &lt;function dumps at 0x000002009975E480&gt;({'exchange': 'binance', 'fetch_mode': 'auto', 'futures_symbol': 'BTCUSDT', 'raw_data_dir': 'data/raw'})
+E        +        where &lt;function dumps at 0x000002009975E480&gt; = json.dumps
+E        +        and   {'exchange': 'binance', 'fetch_mode': 'auto', 'futures_symbol': 'BTCUSDT', 'raw_data_dir': 'data/raw'} = &lt;built-in method get of dict object at 0x000002009A275980&gt;('data_provenance', {})
+E        +          where &lt;built-in method get of dict object at 0x000002009A275980&gt; = {'accounting_invariants_verified': True, 'accounting_reconciliation': {'accounting_invariants_verified': True, 'adjust...difference': -1.546140993013978e-10, ...}, 'available_margin': 8719.665616475051, 'average_realized_rrr': -0.1169, ...}.get
+
+test_review_contracts.py:46: AssertionError</failure></testcase><testcase classname="test_review_contracts" name="test_unknown_funding_does_not_pass_enabled_filter" time="2.243"><failure message="AssertionError: assert True is False&#10; +  where True = _apply_funding_filter(&lt;OrderDirection.LONG: 'LONG'&gt;, {})&#10; +    where _apply_funding_filter = &lt;src.strategies.synthesized.SynthesizedStrategy object at 0x00000200B83424E0&gt;._apply_funding_filter&#10; +    and   &lt;OrderDirection.LONG: 'LONG'&gt; = &lt;enum 'OrderDirection'&gt;.LONG">def test_unknown_funding_does_not_pass_enabled_filter():
+        from scripts.run_synthesized_backtest import load_strategy_config
+        from src.strategies.synthesized import SynthesizedStrategy
+        from src.execution.order_models import OrderDirection
+        strat = SynthesizedStrategy(load_strategy_config(), symbol='BTCUSDT')
+        assert strat.funding_filter_enabled
+&gt;       assert strat._apply_funding_filter(OrderDirection.LONG, {}) is False
+E       AssertionError: assert True is False
+E        +  where True = _apply_funding_filter(&lt;OrderDirection.LONG: 'LONG'&gt;, {})
+E        +    where _apply_funding_filter = &lt;src.strategies.synthesized.SynthesizedStrategy object at 0x00000200B83424E0&gt;._apply_funding_filter
+E        +    and   &lt;OrderDirection.LONG: 'LONG'&gt; = &lt;enum 'OrderDirection'&gt;.LONG
+
+test_review_contracts.py:55: AssertionError</failure></testcase><testcase classname="test_review_contracts" name="test_reported_35000_fee_saving_matches_stated_fee_rates" time="0.001"><failure message="AssertionError: Actual same-fill saving is 26950.18 USDT&#10;assert 26950.178468729664 &gt; 35000">def test_reported_35000_fee_saving_matches_stated_fee_rates():
+        saving = AUDIT['ledger']['same_fill_fee_sensitivity_only']['savings']
+&gt;       assert saving &gt; 35000, f'Actual same-fill saving is {saving:.2f} USDT'
+E       AssertionError: Actual same-fill saving is 26950.18 USDT
+E       assert 26950.178468729664 &gt; 35000
+
+test_review_contracts.py:60: AssertionError</failure></testcase></testsuite></testsuites>
