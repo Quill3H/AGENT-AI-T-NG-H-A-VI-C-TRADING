@@ -1,0 +1,19 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\tmp\repair-20261030\tester-snapshot
+configfile: pytest.ini
+collected 166 items
+
+tests\test_broker_phase_repairs.py .........................             [ 15%]
+tests\test_funding_drained_collateral.py ...                             [ 16%]
+tests\test_kill_switch.py .......                                        [ 21%]
+tests\test_crypto_orb_portfolio.py ..........................            [ 36%]
+tests\test_synthesized_input_contract.py ............................... [ 55%]
+...                                                                      [ 57%]
+tests\test_economic_evaluation.py ................                       [ 66%]
+tests\test_paper_recovery_review.py ..............................       [ 84%]
+tests\test_paper_main_compatibility.py ..........                        [ 90%]
+tests\test_paper_research_cycle.py ...............                       [100%]
+
+- generated xml file: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\tmp\repair-20261030\independent-tester.xml -
+============================ 166 passed in 10.49s =============================

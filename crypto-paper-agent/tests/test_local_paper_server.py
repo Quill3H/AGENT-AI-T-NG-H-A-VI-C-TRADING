@@ -1,0 +1,158 @@
+from src.paper.local_server import host_allowed, origin_allowed, public_path
+import threading
+import time
+import requests
+import pytest
+from test_local_paper_session import FakeSource
+
+
+def await_operation(server):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        result = server.commands.state()
+        if result and result['status'] not in ('PENDING', 'RUNNING'):
+            return result
+        time.sleep(.01)
+    pytest.fail('paper command did not finish within five seconds')
+
+
+def test_local_api_rejects_cross_site_origins():
+    assert origin_allowed("http://127.0.0.1:8765")
+    assert origin_allowed("http://localhost:5173")
+    assert origin_allowed("http://127.0.0.1:8766", server_port=8766)
+    assert not origin_allowed("https://outside.example")
+    assert not origin_allowed("http://127.0.0.1.evil.example:8765")
+
+
+def test_loopback_host_header_rejects_dns_rebinding():
+    assert host_allowed("127.0.0.1:8765")
+    assert host_allowed("localhost:8765")
+    assert not host_allowed("outside.example:8765")
+    assert not host_allowed("localhost.evil.example:8765")
+    assert not host_allowed("localhost:5173")
+
+
+def test_static_server_does_not_escape_built_web_root(tmp_path):
+    (tmp_path / "index.html").write_text("paper", encoding="utf-8")
+    assert public_path(tmp_path, "/") == tmp_path / "index.html"
+    assert public_path(tmp_path, "/../../config/default_config.yaml") is None
+    assert public_path(tmp_path, "/api/unknown") is None
+
+
+def test_malformed_origin_is_denied_without_crashing_handler():
+    assert not origin_allowed('http://localhost:bad')
+    assert not origin_allowed('http://[broken')
+    assert not origin_allowed('http://user@localhost:8765')
+
+
+@pytest.fixture
+def api(tmp_path):
+    from src.paper.local_server import create_server
+    server = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    worker = threading.Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    yield f'http://127.0.0.1:{server.server_port}', server
+    server.shutdown()
+    server.server_close()
+    worker.join(timeout=5)
+
+
+def test_http_health_recovery_start_stop_and_errors(api, tmp_path):
+    url, server = api
+    health = requests.get(url + '/api/health', timeout=2)
+    assert health.status_code == 200
+    assert health.json()['api_time_utc']
+    assert health.json()['risk_gate']['admission_open'] is False
+    assert requests.post(url + '/api/start', data='bad', timeout=2).status_code == 400
+    assert requests.post(url + '/api/start', headers={'Origin': 'http://localhost:bad'}, timeout=2).status_code == 403
+    # Evidence created after construction must still block the first Start.
+    (tmp_path / 'state.json').write_text('{', encoding='utf-8')
+    for endpoint in ('start', 'start'):
+        reply = requests.post(url + '/api/' + endpoint, timeout=3)
+        assert reply.status_code == 202
+        assert await_operation(server)['status'] == 'FAILED'
+        state = requests.get(url + '/api/state', timeout=2).json()
+        assert state['status'] == 'RECOVERY_REQUIRED'
+        assert state['account']['wallet_usd'] is None
+        assert (tmp_path / 'state.json').read_bytes() == b'{'
+        assert not (tmp_path / 'paper.sqlite3').exists()
+    for endpoint in ('stop', 'stop', 'pause', 'resume'):
+        reply = requests.post(url + '/api/' + endpoint, timeout=3)
+        assert reply.status_code == 503  # No verified account exists to accept a durable intent.
+        state = reply.json()
+        assert state['api_time_utc']
+        assert state['status'] == 'RECOVERY_REQUIRED'
+        assert state['account']['wallet_usd'] is None
+        assert not state['risk_gate']['admission_open']
+        assert (tmp_path / 'state.json').read_bytes() == b'{'
+        assert not (tmp_path / 'paper.sqlite3').exists()
+    assert requests.get(url + '/api/missing', timeout=2).status_code == 404
+
+
+def test_second_server_cannot_bind_same_port(api, tmp_path):
+    from src.paper.local_server import create_server
+    _, first = api
+    with pytest.raises(OSError):
+        duplicate = create_server(port=first.server_port, source=FakeSource(), journal_dir=tmp_path / "other-account")
+        duplicate.server_close()
+
+
+def test_api_source_failure_keeps_state_contract(api):
+    url, server = api
+    def unavailable():
+        raise ValueError('public data unavailable')
+    server.session.source.server_time_ms = unavailable
+    response = requests.post(url + '/api/start', timeout=3)
+    assert response.status_code == 202
+    operation = await_operation(server)
+    assert operation['status'] == 'FAILED'
+    assert 'public data unavailable' in operation['error']
+    state = requests.get(url + '/api/state', timeout=2).json()
+    assert state['status'] == 'WAITING_CONNECTION'
+    assert state['account']['equity_usd'] is None
+    assert state['risk_gate']['admission_open'] is False
+    assert state['api_time_utc']
+
+
+def test_server_startup_attempts_exact_resume_before_accepting_stream(tmp_path):
+    from src.paper.local_server import create_server
+    first = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    assert first.session.start()["status"] == "SCANNING"
+    first.server_close()
+
+    second = create_server(port=0, source=FakeSource(), journal_dir=tmp_path)
+    try:
+        assert await_operation(second)['status'] == 'APPLIED'
+        assert second.session.status == "WAITING_CONNECTION"
+        assert second.session.broker is not None
+        assert second.session.state()["risk_gate"]["admission_open"] is False
+    finally:
+        second.server_close()
+
+
+def test_chart_endpoint_and_validation(api):
+    url, server = api
+    # 1m BTC
+    resp = requests.get(f"{url}/api/chart?symbol=BTCUSDT&interval=1m", timeout=3)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["symbol"] == "BTCUSDT"
+    assert data["interval"] == "1m"
+    assert len(data["candles"]) > 0
+    assert "open" in data["candles"][0]
+
+    # 15m ETH
+    resp = requests.get(f"{url}/api/chart?symbol=ETHUSDT&interval=15m", timeout=3)
+    assert resp.status_code == 200
+    assert resp.json()["symbol"] == "ETHUSDT"
+    assert resp.json()["interval"] == "15m"
+
+    # 4h SOL
+    resp = requests.get(f"{url}/api/chart?symbol=SOLUSDT&interval=4h", timeout=3)
+    assert resp.status_code == 200
+    assert resp.json()["symbol"] == "SOLUSDT"
+    assert resp.json()["interval"] == "4h"
+
+    # Invalid symbol or interval returns 400
+    assert requests.get(f"{url}/api/chart?symbol=DOGEUSDT&interval=1m", timeout=3).status_code == 400
+    assert requests.get(f"{url}/api/chart?symbol=BTCUSDT&interval=1d", timeout=3).status_code == 400

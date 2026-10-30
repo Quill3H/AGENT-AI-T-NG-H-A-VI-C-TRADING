@@ -325,7 +325,15 @@ class ReportGenerator:
             "futures_symbol": meta["symbol"],
             "raw_data_dir": safe_raw_data_dir,
             "fetch_mode": "no_fetch" if metrics.get("no_fetch") else "auto",
+            "mode": "unverified",
+            "historical_verified": False,
         }
+        supplied_provenance = metrics.get("data_provenance", artifact_config.get("data_provenance"))
+        if supplied_provenance is not None:
+            if not isinstance(supplied_provenance, dict):
+                raise ValueError("data_provenance must be a mapping")
+            data_prov = _sanitize_for_json(supplied_provenance)
+        metrics["data_provenance"] = data_prov
 
         candle_counts = {
             "bars_15m_count": int(metrics.get("bars_15m_count", 0)),
@@ -601,6 +609,11 @@ class ReportGenerator:
 
         bars_15m = metrics.get("bars_15m_count", 0)
         bars_4h = metrics.get("bars_4h_count", 0)
+        provenance = metrics.get("data_provenance", {})
+        mode = provenance.get("mode", "unverified") if isinstance(provenance, dict) else "unverified"
+        mode_label = {"synthetic": "SYNTHETIC", "historical": "HISTORICAL"}.get(mode, "UNVERIFIED")
+        evaluation = metrics.get("economic_evaluation", {})
+        economic_verdict = evaluation.get("verdict", "NOT_EVALUATED") if isinstance(evaluation, dict) else "NOT_EVALUATED"
 
         md_content = f"""# Performance Report: {strategy} ({symbol})
 > **Report Status**: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED  
@@ -608,6 +621,8 @@ class ReportGenerator:
 > **Code Commit SHA**: `{code_commit_sha}`  
 > **Config Hash**: `{config_hash}`  
 > **Verification Status**: AUTHOR_REPORTED / REVIEWER_NOT_VERIFIED  
+> **Data Mode**: {mode_label}<br>
+> **Economic Evaluation**: {economic_verdict} (not owner acceptance)<br>
 > **Reproduction Command**: `{reproduction_cmd}`  
 > **Generated At**: `{datetime.now(timezone.utc).isoformat()}`  
 

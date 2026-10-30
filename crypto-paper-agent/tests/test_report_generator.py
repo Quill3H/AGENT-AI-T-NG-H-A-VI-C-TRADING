@@ -90,6 +90,21 @@ class MockFullBroker:
         return True
 
 
+def test_generator_retains_truthful_evidence_labels_in_every_summary(tmp_path):
+    provenance = {'mode': 'synthetic', 'historical_verified': False,
+                  'source': 'synthetic_generator', 'datasets': []}
+    evaluation = {'verdict': 'REJECTED', 'reasons': ['HISTORICAL_PROVENANCE_REQUIRED']}
+    artifacts = ReportGenerator(tmp_path).generate_all(
+        'evidence_test', {'strategy': 'synthesized'},
+        {'data_provenance': provenance, 'economic_evaluation': evaluation}, MockFullBroker())
+    result = json.loads(artifacts['summary.json'].read_text(encoding='utf-8'))
+    assert result['data_provenance'] == provenance
+    assert result['economic_evaluation'] == evaluation
+    for name in ('summary.md', 'dashboard.html'):
+        text = artifacts[name].read_text(encoding='utf-8')
+        assert 'SYNTHETIC' in text and 'REJECTED' in text
+
+
 def test_generator_produces_all_six_artifacts(tmp_path):
     """Kiểm tra tạo đủ 6 file artifact chuẩn xác."""
     run_id = "run_gen_test_01"

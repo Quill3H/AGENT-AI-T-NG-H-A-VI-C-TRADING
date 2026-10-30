@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "source-catalog", "type": "sources", "title": "Danh mục nguồn đã đọc", "updated_at": "2026-10-29", "source_ids": ["spec", "state", "planner", "lab", "lab-review", "method-search", "pair-adr", "pair-report", "pair-ops", "orb", "broker", "quantdinger-review", "tradingagents-review", "tradingagents-paper-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
+<!-- wiki-meta {"id": "source-catalog", "type": "sources", "title": "Danh mục nguồn đã đọc", "updated_at": "2026-10-30", "source_ids": ["spec", "state", "planner", "lab", "lab-review", "method-search", "pair-adr", "pair-report", "pair-ops", "orb", "broker", "quantdinger-review", "tradingagents-review", "tradingagents-paper-review", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
 
 # Danh mục nguồn đã đọc
 
@@ -33,3 +33,9 @@ Ngày 29/10/2026 đã đối chiếu state/planner với main 65960bf và các m
 ## Đọc lại đặc tả ngày 30/10/2026
 
 Đã đọc phần U1–U7 mới từ main 460ed37; baseline kỹ thuật được giữ lịch sử. Thẩm quyền, paper-only, dữ liệu thật/giả lập và phân biệt software/protocol/economic verdict không cho phép tự mở gate hoặc nâng mức kiểm chứng. Các mô tả chưa tích hợp trong nguồn là snapshot 65960bf; trạng thái tích hợp mới xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Đã đọc lại broker, checkpoint state/planner và báo cáo sửa lỗi. Giữ previous_versions trong manifest; bộ artifact tổng hợp cũ là synthetic và bị loại về kinh tế. Mức kiểm chứng của các nghiên cứu khác không đổi. Xem [[synthesized-repair]].
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

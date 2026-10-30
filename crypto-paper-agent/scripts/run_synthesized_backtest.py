@@ -15,6 +15,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+from copy import deepcopy
 import math
 import os
 import sys
@@ -42,6 +45,14 @@ from src.report.generator import ReportGenerator
 from src.report.metrics import calculate_backtest_metrics
 from src.risk.invariant_checks import DEFAULT_LEVERAGE_BRACKETS
 from src.strategies.synthesized import MarketRegime, SetupType, SynthesizedStrategy
+
+
+def source_identity():
+    """Identify all Python replay/report code, including an uncommitted repair."""
+    files = sorted(p for folder in ('src', 'scripts')
+                   for p in (REPO_ROOT / folder).rglob('*.py') if p.is_file())
+    return {p.relative_to(REPO_ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in files}
 
 
 class Causal4hCache:
@@ -88,13 +99,25 @@ class Causal4hCache:
 def load_strategy_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """Loads YAML configuration with fail-safe defaults."""
     default_path = REPO_ROOT / "config" / "strategies" / "synthesized.yaml"
-    path = config_path if config_path and config_path.is_file() else default_path
+    path = config_path if config_path is not None else default_path
+    if not path.is_file():
+        raise ValueError(f"Strategy config missing: {path}")
 
     if path.is_file():
         with open(path, "r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
+            strategy_cfg = yaml.safe_load(f) or {}
     else:
-        cfg = {}
+        strategy_cfg = {}
+
+    with open(REPO_ROOT / "config" / "default_config.yaml", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+    def merge(base, overrides):
+        for key, value in overrides.items():
+            if isinstance(value, dict) and isinstance(base.get(key), dict):
+                merge(base[key], value)
+            else:
+                base[key] = deepcopy(value)
+    merge(cfg, strategy_cfg)
 
     # Merge standard infrastructure defaults
     cfg.setdefault("account", {"initial_equity_usd": 100000.0})
@@ -146,6 +169,8 @@ def run_universe_backtest(
     run_id: Optional[str] = None,
     config_path: Optional[str] = None,
     seed: int = 42,
+    mode: str = "historical",
+    max_drawdown_pct: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Executes the multi-pair 1-year backtest with PaperBroker double-entry accounting.
@@ -153,24 +178,26 @@ def run_universe_backtest(
     start_dt = pd.to_datetime(start_date, utc=True)
     end_dt = pd.to_datetime(end_date, utc=True)
     target_symbols = [s.strip().upper() for s in (symbols or DEFAULT_UNIVERSE)]
+    if mode not in ("historical", "synthetic"):
+        raise ValueError("mode must be historical or synthetic")
+    if (pd.isna(start_dt) or pd.isna(end_dt) or start_dt >= end_dt
+            or start_dt != start_dt.floor('4h') or end_dt != end_dt.floor('4h')):
+        raise ValueError("Input window must increase and align to the 4h/15m clocks")
+    if len(target_symbols) != len(set(target_symbols)) or any(not s.isalnum() for s in target_symbols):
+        raise ValueError("Universe must contain unique valid symbols")
+    if not math.isfinite(initial_equity) or initial_equity <= 0:
+        raise ValueError("initial_equity must be finite and positive")
 
     default_output_dir = "reports/synthesized_backtest_1y"
     target_out_str = output_dir or default_output_dir
     out_path = Path(target_out_str).resolve()
-    out_path.mkdir(parents=True, exist_ok=True)
-
-    # Clean stale SQLite database in output dir to avoid payload hash collision on re-runs
-    stale_db = out_path / "trades.sqlite"
-    if stale_db.is_file():
-        try:
-            stale_db.unlink()
-        except Exception:
-            pass
+    if out_path.exists() and (not out_path.is_dir() or any(out_path.iterdir())):
+        raise ValueError("Output must be an empty/new directory to preserve existing evidence")
 
     if not run_id:
         run_id = out_path.name
 
-    logger.info(f"=== Starting 1-Year Synthesized Universe Backtest [{run_id}] ===")
+    logger.info(f"=== Starting Synthesized Universe Backtest [{run_id}] ===")
     logger.info(f"Window: {start_dt.isoformat()} to {end_dt.isoformat()} ({(end_dt - start_dt).days} days)")
     logger.info(f"Universe ({len(target_symbols)} symbols): {', '.join(target_symbols)}")
     logger.info(f"Initial Equity: ${initial_equity:,.2f} USD")
@@ -179,14 +206,41 @@ def run_universe_backtest(
     cfg_p = Path(config_path) if config_path else None
     config = load_strategy_config(cfg_p)
     config["account"]["initial_equity_usd"] = initial_equity
+    if (config["strategy"].get("timeframe_execution") != "15m"
+            or config["strategy"].get("timeframe_signal") != "4h"):
+        raise ValueError("Synthesized runner supports only configured 15m/4h timeframes")
 
     loader = UniverseDataLoader(
         raw_data_dir=REPO_ROOT / "data" / "raw",
         allow_network=allow_network,
         universe=target_symbols,
+        mode=mode,
+        seed=seed,
     )
     logger.info(f"Loading/preparing multi-timeframe 15m/4h data (allow_network={allow_network})...")
-    universe_data = loader.load_universe(start_dt, end_dt, symbols=target_symbols)
+    # Replay [start, end): the final execution candle closes exactly at end.
+    universe_data = loader.load_universe(start_dt, end_dt - pd.Timedelta(minutes=15), symbols=target_symbols)
+    # Validate every symbol before broker/output mutation. Index-based replay is
+    # safe only when all peers describe the same execution clock.
+    expected_15m = pd.date_range(start_dt, end_dt, freq="15min", inclusive="left")
+    expected_4h = pd.date_range(start_dt, end_dt, freq="4h", inclusive="left")
+    for sym in target_symbols:
+        for tf, expected in (("15m", expected_15m), ("4h", expected_4h)):
+            frame = universe_data[sym][tf]
+            loader.validate_dataset(frame, sym, tf)
+            if not frame.index.equals(expected):
+                raise ValueError(f"Misaligned {tf} clock for {sym}")
+        loader.validate_funding(universe_data[sym]["15m"])
+    provenance = deepcopy(loader.provenance)
+    config["data_provenance"] = provenance
+    config["data"].update({"start_date": start_date, "end_date": end_date,
+                           "timeframes": ["15m", "4h"], "mode": mode,
+                           "exchange": "synthetic" if mode == "synthetic" else "binance",
+                           "futures_symbol": ",".join(target_symbols)})
+    config["backtest"]["random_seed"] = seed
+    # Source hashes supplement the committed SHA when running an uncommitted repair.
+    code_identity = source_identity()
+    config["source_hashes"] = code_identity
 
     # 2. Vectorized Indicator Precomputation & Fast Cache Creation
     logger.info("Precomputing vectorized indicators and causal 4h caches...")
@@ -232,10 +286,7 @@ def run_universe_backtest(
         ema_50s = df_15m["ema_50"].to_numpy(dtype=float)
         atr_14s = df_15m["atr_14"].to_numpy(dtype=float)
         rsi_14s = df_15m["rsi_14"].to_numpy(dtype=float)
-        if "funding_rate" in df_15m.columns:
-            funding_rates = df_15m["funding_rate"].fillna(0.0001).to_numpy(dtype=float)
-        else:
-            funding_rates = np.full(len(df_15m), 0.0001, dtype=float)
+        funding_rates = df_15m["funding_rate"].to_numpy(dtype=float)
 
         sym_candles: List[Dict[str, Any]] = []
         for k in range(len(df_15m)):
@@ -257,12 +308,16 @@ def run_universe_backtest(
                 "atr_14": float(atr_14s[k]),
                 "rsi_14": float(rsi_14s[k]),
                 "funding_rate": float(funding_rates[k]),
-                "funding_readiness": True,
-                "funding_time": dt,
+                "funding_readiness": bool(df_15m["funding_readiness"].iloc[k]),
+                "funding_time": df_15m["funding_time"].iloc[k],
+                "funding_source_time": df_15m["funding_source_time"].iloc[k],
+                "funding_available_time": df_15m["funding_available_time"].iloc[k],
+                "funding_interval_hours": int(df_15m["funding_interval_hours"].iloc[k]),
             })
         prebuilt_candles[sym] = sym_candles
 
     # 3. Setup Strategy Instances & Paper Broker
+    out_path.mkdir(parents=True, exist_ok=True)
     broker = PaperBroker(config=config)
     strategies: Dict[str, SynthesizedStrategy] = {
         sym: SynthesizedStrategy(config=config, symbol=sym) for sym in target_symbols
@@ -290,12 +345,12 @@ def run_universe_backtest(
                 f"Equity: ${broker.equity:,.2f}"
             )
 
+        broker.process_batch([prebuilt_candles[sym][i] for sym in target_symbols])
         for sym in target_symbols:
             candle_15m = prebuilt_candles[sym][i]
             last_15m_close = candle_15m["close_time"]
 
             # Step A: Broker processes candle (Fills pending, trailing stops, SL/TP checks)
-            broker.process_candle(candle_15m)
 
             # Step B: Strategy updates trailing stop
             strat = strategies[sym]
@@ -364,6 +419,23 @@ def run_universe_backtest(
     metrics["total_fees"] = exact_fees
     metrics["total_funding_trades"] = exact_funding
     metrics["total_net_pnl"] = exact_net
+    metrics["data_provenance"] = provenance
+    metrics["source_hashes"] = code_identity
+    if source_identity() != code_identity:
+        raise ValueError("Replay source changed during execution; discard the run and retry")
+    metrics["no_fetch"] = True  # This runner replays verified cache or explicit generated data.
+    metrics["reproduction_command"] = (
+        f"python scripts/run_synthesized_backtest.py --mode {mode} --start-date {start_date} "
+        f"--end-date {end_date} --symbols {','.join(target_symbols)} --seed {seed} "
+        f"--initial-equity {initial_equity} --min-trades {min_trades}"
+        + (f" --config {config_path}" if config_path else "")
+        + (f" --max-drawdown-pct {max_drawdown_pct}" if max_drawdown_pct is not None else "")
+    )
+    from src.research.acceptance import evaluate_acceptance
+    risk_contract = ({"max_drawdown_pct": max_drawdown_pct, "min_completed_trades": min_trades}
+                     if max_drawdown_pct is not None else None)
+    economic_evaluation = evaluate_acceptance(metrics, data_provenance=provenance, risk_contract=risk_contract)
+    metrics["economic_evaluation"] = economic_evaluation
 
     # 7. Generate Full Report & Interactive HTML Dashboard Artifacts
     logger.info(f"Generating 7 institutional report artifacts in {out_path}...")
@@ -395,10 +467,11 @@ def run_universe_backtest(
     sqlite_url = f"file:///{sqlite_path}" if sqlite_path else "N/A"
 
     print("\n" + "=" * 80)
-    print(f"       SYNTHESIZED MULTI-ASSET 1-YEAR BACKTEST PERFORMANCE SCORECARD")
+    print(f"       SYNTHESIZED MULTI-ASSET BACKTEST PERFORMANCE SCORECARD")
     print("=" * 80)
     print(f" Run ID:                  {run_id}")
-    print(f" Period:                  {start_date} -> {end_date} (1 Full Year)")
+    print(f" Period:                  {start_date} -> {end_date}")
+    print(f" Input mode:              {mode} ({provenance['source']})")
     print(f" Universe:                {len(target_symbols)} Pairs ({', '.join(target_symbols)})")
     print(f" Initial Equity:          ${initial_equity:,.2f} USD")
     print(f" Final Portfolio Equity:  ${broker.equity:,.2f} USD")
@@ -428,22 +501,27 @@ def run_universe_backtest(
         "run_id": run_id,
         "start_date": start_date,
         "end_date": end_date,
+        "provenance": provenance,
+        "economic_evaluation": economic_evaluation,
+        "config": config,
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Synthesized 1-Year Multi-Asset Backtest")
+    parser = argparse.ArgumentParser(description="Run Synthesized Multi-Asset Backtest")
     parser.add_argument("--start-date", type=str, default="2025-01-01", help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default="2026-01-01", help="End date (YYYY-MM-DD)")
     parser.add_argument("--symbols", type=str, default=None, help="Comma-separated symbols")
     parser.add_argument("--initial-capital", type=float, default=None, help="Initial capital in USDT")
     parser.add_argument("--initial-equity", type=float, default=None, help="Alias for --initial-capital")
     parser.add_argument("--output-dir", type=str, default="reports/synthesized_backtest_1y", help="Output directory")
-    parser.add_argument("--allow-network", action="store_true", help="Allow public Binance REST fetching")
+    parser.add_argument("--allow-network", action="store_true", help="Compatibility flag; historical replay still requires prevalidated cache")
     parser.add_argument("--config", type=str, default=None, help="Path to custom strategy YAML config")
     parser.add_argument("--min-trades", type=int, default=2000, help="Target minimum trade count")
     parser.add_argument("--run-id", type=str, default=None, help="Custom run identifier")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for synthetic generator")
+    parser.add_argument("--mode", choices=["historical", "synthetic"], default="historical", help="Explicit input mode; historical requires verified cache and funding")
+    parser.add_argument("--max-drawdown-pct", type=float, default=None, help="Declared economic evaluation drawdown contract (does not alter strategy)")
 
     args = parser.parse_args()
     symbols_list = [s.strip() for s in args.symbols.split(",")] if args.symbols else None
@@ -464,6 +542,8 @@ def main():
         run_id=args.run_id,
         config_path=args.config,
         seed=args.seed,
+        mode=args.mode,
+        max_drawdown_pct=args.max_drawdown_pct,
     )
 
 

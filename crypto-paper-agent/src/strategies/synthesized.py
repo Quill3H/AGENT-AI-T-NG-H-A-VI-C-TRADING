@@ -728,14 +728,16 @@ class SynthesizedStrategy(BaseStrategy):
         """
         if not self.funding_filter_enabled:
             return True
+        if "funding_readiness" in candle_15m and candle_15m["funding_readiness"] is not True:
+            return False
 
         raw_fr = candle_15m.get("funding_rate")
         if raw_fr is None or type(raw_fr) is bool or not isinstance(raw_fr, (int, float)):
-            return True  # Fallback: pass through if funding rate not available
+            return False
 
         funding_rate = float(raw_fr)
         if not math.isfinite(funding_rate):
-            return True
+            return False
 
         if direction == OrderDirection.LONG and funding_rate > self.funding_max_long:
             logger.debug(f"[{self.symbol}] Long VETOED by Funding Filter: {funding_rate:.6f} > {self.funding_max_long}")

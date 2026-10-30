@@ -1,0 +1,42 @@
+test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) ...
+  test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='src/sample.py') ... FAIL
+  test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='sample.py') ... FAIL
+  test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='  sample.py  ') ... FAIL
+  test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='   ') ... FAIL
+
+======================================================================
+FAIL: test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='src/sample.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\.ua\tools\test_code_graph.py", line 81, in test_filename_only_docstrings_use_factual_inventory_summary
+    self.assertNotEqual(node["summary"].strip(), node["name"])
+AssertionError: 'src/sample.py' == 'src/sample.py'
+
+======================================================================
+FAIL: test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='sample.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\.ua\tools\test_code_graph.py", line 82, in test_filename_only_docstrings_use_factual_inventory_summary
+    self.assertNotEqual(node["summary"].strip(), "sample.py")
+AssertionError: 'sample.py' == 'sample.py'
+
+======================================================================
+FAIL: test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='  sample.py  ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\.ua\tools\test_code_graph.py", line 82, in test_filename_only_docstrings_use_factual_inventory_summary
+    self.assertNotEqual(node["summary"].strip(), "sample.py")
+AssertionError: 'sample.py' == 'sample.py'
+
+======================================================================
+FAIL: test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) (header='   ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\.ua\tools\test_code_graph.py", line 83, in test_filename_only_docstrings_use_factual_inventory_summary
+    self.assertIn("5 declarations", node["summary"])
+AssertionError: '5 declarations' not found in 'Code file src/sample.py; 10 lines observed.'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.102s
+
+FAILED (failures=4)

@@ -188,13 +188,12 @@ def test_future_data_tampering_causal_invariance(tmp_data_dir: Path, sample_time
     pd.testing.assert_frame_equal(past_15m, past_tampered)
 
 
-def test_offline_fallback_when_no_network(tmp_data_dir: Path, sample_timestamps):
+def test_explicit_offline_synthetic_mode(tmp_data_dir: Path, sample_timestamps):
     """
-    When allow_network=False and cache is empty, load_symbol seamlessly generates
-    deterministic synthetic data without throwing network errors.
+    Synthetic generation is explicit and never masquerades as historical cache.
     """
     start_dt, end_dt = sample_timestamps
-    loader = UniverseDataLoader(raw_data_dir=tmp_data_dir, allow_network=False)
+    loader = UniverseDataLoader(raw_data_dir=tmp_data_dir, allow_network=False, mode="synthetic")
 
     df_btc = loader.load_symbol("BTCUSDT", "15m", start_dt, end_dt)
     assert not df_btc.empty
@@ -205,15 +204,16 @@ def test_offline_fallback_when_no_network(tmp_data_dir: Path, sample_timestamps)
 def test_parquet_cache_save_and_load_roundtrip(tmp_data_dir: Path, sample_timestamps):
     """Verifies that Parquet caching preserves exact timestamps, columns, and precision."""
     start_dt, end_dt = sample_timestamps
-    loader = UniverseDataLoader(raw_data_dir=tmp_data_dir)
+    loader = UniverseDataLoader(raw_data_dir=tmp_data_dir, mode="synthetic", seed=99)
     data = loader.generate_synthetic_universe(start_dt, end_dt, symbols=["BNBUSDT"], seed=99)
 
     df_orig = data["BNBUSDT"]["15m"]
-    saved_path = loader.save_to_cache(df_orig, "BNBUSDT", "15m")
+    saved_path = loader.save_to_cache(df_orig, "BNBUSDT", "15m", provenance={
+        "source": "synthetic_generator", "seed": 99, "source_uri": "test_fixture"})
     assert saved_path.is_file()
 
-    # Load back via load_symbol
-    df_loaded = loader.load_symbol("BNBUSDT", "15m", start_dt, end_dt)
+    # Verify the actual parquet roundtrip; synthetic load_symbol adds labelled funding.
+    df_loaded = pd.read_parquet(saved_path)
     pd.testing.assert_frame_equal(df_orig, df_loaded, check_freq=False)
 
 

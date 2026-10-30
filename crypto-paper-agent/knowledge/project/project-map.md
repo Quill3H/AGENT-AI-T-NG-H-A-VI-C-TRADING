@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "project-map", "type": "project", "title": "Bản đồ dự án", "updated_at": "2026-10-29", "source_ids": ["spec", "state", "planner"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
+<!-- wiki-meta {"id": "project-map", "type": "project", "title": "Bản đồ dự án", "updated_at": "2026-10-30", "source_ids": ["spec", "state", "planner", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
 
 # Bản đồ dự án
 
@@ -17,3 +17,9 @@ Chưa có nghiệm thu kinh tế toàn dự án được xác minh trong tác v�
 ## Đọc lại đặc tả ngày 30/10/2026
 
 Đã đọc phần U1–U7 mới từ main 460ed37; baseline kỹ thuật được giữ lịch sử. Thẩm quyền, paper-only, dữ liệu thật/giả lập và phân biệt software/protocol/economic verdict không cho phép tự mở gate hoặc nâng mức kiểm chứng. Các mô tả chưa tích hợp trong nguồn là snapshot 65960bf; trạng thái tích hợp mới xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Main tích hợp bản sửa broker/data/recovery có chọn lọc sau review. Checkpoint tổng hợp cũ không phải nghiệm thu: artifact synthetic, lỗ và provenance cũ không hợp lệ. Xem [[synthesized-repair]] và báo cáo repair-review; đối chiếu Git hiện hành trước khi tiếp tục.
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

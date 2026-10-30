@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "latest", "type": "handoff", "title": "Điểm vào cho chat tiếp theo", "updated_at": "2026-10-29", "source_ids": ["state", "planner"], "verification": "AUTHOR_REPORTED", "page_ids": [], "git_head": "47fdd6dbd6817ba251c6507186052fae48e51eb2", "git_branch": "codex/eth-btc-cointegration-v1", "git_status_sha256": "ec7fdd36cc465b1854dea088f1b0a84e55499f284132c8f823a5bf9b28420756"} -->
+<!-- wiki-meta {"id": "latest", "type": "handoff", "title": "Điểm vào cho chat tiếp theo", "updated_at": "2026-10-30", "source_ids": ["state", "planner", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": [], "git_head": "56382df63f0a58ba249d39b005ad97e90cd30150", "git_branch": "main", "git_status_sha256": "e4164e002dc335391eb67a001c29905a26a6dab74a83b1fc51d6e261a5eb20b6"} -->
 
 # Điểm vào cho chat tiếp theo
 
@@ -28,3 +28,9 @@ Kiểm chứng lượt nhập: 20 trang/14 nguồn, lint/source/handoff 0 findin
 ## Hợp nhất với main ngày 29/10/2026
 
 Checkpoint và metadata ở trên là lịch sử trước commit. Lượt hiện tại hợp nhất 05a396f với main 65960bf, giữ cả hai phía của bốn xung đột tài liệu/ledger. Chỉ metadata Git thực tế và báo cáo docs/reviews/MAIN_INTEGRATION_2026_10_29.md xác định trạng thái tích hợp mới. Nguồn state/planner/broker/pair-ops đã được đọc lại; cập nhật hash giữ lịch sử phiên bản trong manifest, không nâng nhãn kiểm chứng. CLI cointegration từ chối --append-ledger trước I/O theo quy tắc preregistration hiện hành; chạy không có cờ này vẫn xuất artifact. Không chạy lại thí nghiệm lịch sử để lựa chọn chiến lược.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Main từ 56382df có bản sửa broker/risk/recovery và bằng chứng. Đọc [[synthesized-repair]] cùng docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md từ package trước khi tiếp nối. Báo cáo chứa commands, review độc lập, Tester snapshot, kết quả full core/E2E và giới hạn. Các checkpoint chưa commit/feature ở trên là lịch sử. Không tự chạy market download, reset account hoặc chấp nhận kinh tế; Git identity đầu trang là snapshot trước commit, sau commit phải đối chiếu lịch sử và HEAD hiện hành.
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

@@ -1,0 +1,14 @@
+
+> paper-research-console-preview@0.1.0 build
+> vite build
+
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 19 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.56 kB │ gzip:  0.33 kB
+dist/assets/index-DnOwrrQa.css    6.50 kB │ gzip:  2.09 kB
+dist/assets/index-bk9Sys-h.js   236.53 kB │ gzip: 73.79 kB
+
+✓ built in 95ms

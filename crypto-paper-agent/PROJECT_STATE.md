@@ -1,6 +1,17 @@
 # PROJECT_STATE.md - Trạng thái Sống của Dự án
 
-## Synthesized 1-Year Multi-Asset Backtest (15m/4h) — 2026-10-29
+## Broker/recovery và bằng chứng tổng hợp — 2026-10-30
+
+Đã xác minh bản sửa trên main từ `56382df63f0a58ba249d39b005ad97e90cd30150`:
+offline 1.385 pass/5 skip/5 network deselect; E2E synthetic năm 19 pass/1 skip;
+Tester độc lập 166 pass; frontend 13 pass và build thành công.
+Kết quả tổng hợp cũ được xác định là synthetic, lỗ ròng 91.280,33 USDT,
+DD 92,6019%; **không nghiệm thu backtest thị trường hay lợi thế kinh tế**.
+Đã sửa lịch pha broker, đường dữ liệu fail closed, provenance/đánh giá kinh tế
+và tích hợp recovery/API có giữ các guard hiện tại. Lệnh/kết quả và giới hạn
+ở [báo cáo sửa lỗi](docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md).
+
+## Synthesized 1-Year Multi-Asset Backtest (15m/4h) — 2026-10-29 (lịch sử; diễn giải nghiệm thu đã bị đính chính)
 
 **AUTHOR_REPORTED / TESTER_VERIFIED / 100% SUITE PASS.** Strictly paper-only crypto futures research bot. Zero live/testnet orders, zero trading keys, zero wallet signing, zero real money.
 

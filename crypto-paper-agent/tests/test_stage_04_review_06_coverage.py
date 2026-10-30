@@ -169,21 +169,19 @@ def test_h3_batch_order_independence():
 
     # Kịch bản A: BTC trước, ETH sau
     broker_a = PaperBroker(config=cfg)
-    broker_a.process_candle(make_candle(T - timedelta(minutes=1), symbol="BTCUSDT"))
-    broker_a.process_candle(make_candle(T - timedelta(minutes=1), symbol="ETHUSDT"))
+    broker_a.process_batch([make_candle(T - timedelta(minutes=1), symbol="BTCUSDT"),
+                            make_candle(T - timedelta(minutes=1), symbol="ETHUSDT")])
     broker_a.submit_order(make_req(t=T - timedelta(minutes=1), symbol="BTCUSDT"))
     broker_a.submit_order(make_req(t=T - timedelta(minutes=1), symbol="ETHUSDT"))
-    broker_a.process_candle(make_candle(T, symbol="BTCUSDT"))
-    broker_a.process_candle(make_candle(T, symbol="ETHUSDT"))
+    broker_a.process_batch([make_candle(T, symbol="BTCUSDT"), make_candle(T, symbol="ETHUSDT")])
 
     # Kịch bản B: ETH trước, BTC sau
     broker_b = PaperBroker(config=cfg)
-    broker_b.process_candle(make_candle(T - timedelta(minutes=1), symbol="ETHUSDT"))
-    broker_b.process_candle(make_candle(T - timedelta(minutes=1), symbol="BTCUSDT"))
+    broker_b.process_batch([make_candle(T - timedelta(minutes=1), symbol="ETHUSDT"),
+                            make_candle(T - timedelta(minutes=1), symbol="BTCUSDT")])
     broker_b.submit_order(make_req(t=T - timedelta(minutes=1), symbol="ETHUSDT"))
     broker_b.submit_order(make_req(t=T - timedelta(minutes=1), symbol="BTCUSDT"))
-    broker_b.process_candle(make_candle(T, symbol="ETHUSDT"))
-    broker_b.process_candle(make_candle(T, symbol="BTCUSDT"))
+    broker_b.process_batch([make_candle(T, symbol="ETHUSDT"), make_candle(T, symbol="BTCUSDT")])
 
     assert broker_a.wallet_balance == pytest.approx(broker_b.wallet_balance)
     assert broker_a.equity == pytest.approx(broker_b.equity)

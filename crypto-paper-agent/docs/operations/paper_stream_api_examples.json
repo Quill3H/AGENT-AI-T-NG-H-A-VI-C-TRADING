@@ -1,0 +1,461 @@
+{
+  "normal": {
+    "api_version": 2,
+    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "mode": "PAPER_RESEARCH",
+    "status": "SCANNING",
+    "error": null,
+    "session_id": "20260927T162904-82c1d345",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "venue": "Binance USD-M perpetual public data",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "source_time_utc": "2026-09-27T04:16:00+00:00",
+    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "connection": {
+      "connected": true,
+      "error": null,
+      "reconnect_required": false,
+      "last_event_received_at_utc": "2026-09-27T04:16:00+00:00",
+      "source": "Binance USD-M public kline WebSocket"
+    },
+    "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+    "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
+    "chart": [
+      {
+        "time_utc": "2026-09-27T03:58:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T03:59:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:00:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      }
+    ],
+    "markets": {
+      "BTCUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "ETHUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "SOLUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      }
+    },
+    "account": {
+      "initial_equity_usd": 10000.0,
+      "wallet_usd": 10000.0,
+      "equity_usd": 10000.0,
+      "available_margin_usd": 10000.0,
+      "reserved_collateral_usd": 0,
+      "unrealized_pnl_usd": 0,
+      "breaker_locked": false
+    },
+    "open_positions": [],
+    "completed_trades": 0,
+    "trades": [],
+    "orders": [],
+    "pending_orders": [],
+    "funding_events": [],
+    "risk_gate": {
+      "admission_open": true,
+      "reason": null,
+      "halted": false
+    },
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+    "recovery": {
+      "required": false,
+      "account_known": true,
+      "reconciled": true,
+      "view": "CURRENT_PROCESS"
+    }
+  },
+  "disconnected": {
+    "api_version": 2,
+    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "mode": "PAPER_RESEARCH",
+    "status": "WAITING_CONNECTION",
+    "error": null,
+    "session_id": "20260927T162904-82c1d345",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "venue": "Binance USD-M perpetual public data",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "source_time_utc": "2026-09-27T04:16:00+00:00",
+    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "connection": {
+      "connected": false,
+      "error": "synthetic disconnect",
+      "reconnect_required": true,
+      "last_event_received_at_utc": "2026-09-27T04:16:00+00:00",
+      "source": "Binance USD-M public kline WebSocket"
+    },
+    "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+    "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
+    "chart": [
+      {
+        "time_utc": "2026-09-27T03:58:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T03:59:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:00:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      }
+    ],
+    "markets": {
+      "BTCUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "ETHUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "SOLUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      }
+    },
+    "account": {
+      "initial_equity_usd": 10000.0,
+      "wallet_usd": 10000.0,
+      "equity_usd": 10000.0,
+      "available_margin_usd": 10000.0,
+      "reserved_collateral_usd": 0,
+      "unrealized_pnl_usd": 0,
+      "breaker_locked": false
+    },
+    "open_positions": [],
+    "completed_trades": 0,
+    "trades": [],
+    "orders": [],
+    "pending_orders": [],
+    "funding_events": [],
+    "risk_gate": {
+      "admission_open": false,
+      "reason": "synthetic disconnect",
+      "halted": false
+    },
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+    "recovery": {
+      "required": false,
+      "account_known": true,
+      "reconciled": true,
+      "view": "CURRENT_PROCESS"
+    }
+  },
+  "blocked_data": {
+    "api_version": 2,
+    "api_time_utc": "2026-09-27T16:29:04.912266+00:00",
+    "mode": "PAPER_RESEARCH",
+    "status": "QUARANTINED",
+    "error": "synthetic funding provenance unavailable",
+    "session_id": "20260927T162904-82c1d345",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "venue": "Binance USD-M perpetual public data",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "source_time_utc": "2026-09-27T04:16:00+00:00",
+    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "connection": {
+      "connected": true,
+      "error": "awaiting fresh market events after reconnect",
+      "reconnect_required": false,
+      "last_event_received_at_utc": "2026-09-27T04:16:00+00:00",
+      "source": "Binance USD-M public kline WebSocket"
+    },
+    "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+    "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
+    "chart": [
+      {
+        "time_utc": "2026-09-27T03:58:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T03:59:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:00:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      },
+      {
+        "time_utc": "2026-09-27T04:01:00+00:00",
+        "open": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "close": 100.0,
+        "provisional": false
+      }
+    ],
+    "markets": {
+      "BTCUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "ETHUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      },
+      "SOLUSDT": {
+        "last_closed_15m_price": 100.0,
+        "as_of_utc": "2026-09-27T04:15:00+00:00"
+      }
+    },
+    "account": {
+      "initial_equity_usd": 10000.0,
+      "wallet_usd": 10000.0,
+      "equity_usd": 10000.0,
+      "available_margin_usd": 10000.0,
+      "reserved_collateral_usd": 0,
+      "unrealized_pnl_usd": 0,
+      "breaker_locked": false
+    },
+    "open_positions": [],
+    "completed_trades": 0,
+    "trades": [],
+    "orders": [],
+    "pending_orders": [],
+    "funding_events": [],
+    "risk_gate": {
+      "admission_open": false,
+      "reason": "synthetic funding provenance unavailable",
+      "halted": false
+    },
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+    "recovery": {
+      "required": false,
+      "account_known": true,
+      "reconciled": true,
+      "view": "CURRENT_PROCESS"
+    }
+  },
+  "after_restart": {
+    "account": {
+      "available_margin_usd": 10000.0,
+      "breaker_locked": false,
+      "equity_usd": 10000.0,
+      "initial_equity_usd": 10000.0,
+      "reserved_collateral_usd": 0,
+      "unrealized_pnl_usd": 0,
+      "wallet_usd": 10000.0
+    },
+    "api_time_utc": "2026-09-27T16:29:04.938955+00:00",
+    "api_version": 2,
+    "chart": [
+      {
+        "close": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "open": 100.0,
+        "provisional": false,
+        "time_utc": "2026-09-27T03:58:00+00:00"
+      },
+      {
+        "close": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "open": 100.0,
+        "provisional": false,
+        "time_utc": "2026-09-27T03:59:00+00:00"
+      },
+      {
+        "close": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "open": 100.0,
+        "provisional": false,
+        "time_utc": "2026-09-27T04:00:00+00:00"
+      },
+      {
+        "close": 100.0,
+        "high": 101.0,
+        "low": 99.0,
+        "open": 100.0,
+        "provisional": false,
+        "time_utc": "2026-09-27T04:01:00+00:00"
+      }
+    ],
+    "completed_trades": 0,
+    "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
+    "connection": {
+      "connected": false,
+      "error": "restart requires exact broker recovery",
+      "last_event_received_at_utc": null,
+      "reconnect_required": false
+    },
+    "error": "Saved account is read-only; exact broker/risk/funding recovery is required.",
+    "funding_events": [],
+    "last_processed_open_utc": "2026-09-27T04:00:00+00:00",
+    "markets": {
+      "BTCUSDT": {
+        "as_of_utc": "2026-09-27T04:15:00+00:00",
+        "last_closed_15m_price": 100.0
+      },
+      "ETHUSDT": {
+        "as_of_utc": "2026-09-27T04:15:00+00:00",
+        "last_closed_15m_price": 100.0
+      },
+      "SOLUSDT": {
+        "as_of_utc": "2026-09-27T04:15:00+00:00",
+        "last_closed_15m_price": 100.0
+      }
+    },
+    "mode": "PAPER_RESEARCH",
+    "open_positions": [],
+    "orders": [],
+    "pending_orders": [],
+    "received_at_utc": "2026-09-27T16:29:04.871754+00:00",
+    "recovery": {
+      "required": true,
+      "account_known": true,
+      "reconciled": false,
+      "view": "LAST_DURABLE_SNAPSHOT"
+    },
+    "risk_gate": {
+      "admission_open": false,
+      "reason": "Saved account is read-only; exact broker/risk/funding recovery is required.",
+      "halted": true
+    },
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+    "session_id": "20260927T162904-82c1d345",
+    "source_time_utc": "2026-09-27T04:16:00+00:00",
+    "status": "RECOVERY_REQUIRED",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "trades": [],
+    "venue": "Binance USD-M perpetual public data"
+  },
+  "unknown_account": {
+    "api_version": 2,
+    "api_time_utc": "2026-09-27T16:29:04.956906+00:00",
+    "mode": "PAPER_RESEARCH",
+    "status": "RECOVERY_REQUIRED",
+    "error": "Account evidence is incomplete or inconsistent: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
+    "session_id": null,
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "venue": "Binance USD-M perpetual public data",
+    "strategy": "Trend Following 4h/15m fixed rules",
+    "source_time_utc": null,
+    "received_at_utc": null,
+    "connection": {
+      "connected": false,
+      "error": "public stream not connected",
+      "reconnect_required": false,
+      "last_event_received_at_utc": null,
+      "source": "Binance USD-M public kline WebSocket"
+    },
+    "last_processed_open_utc": null,
+    "config_sha256": "cef9da4753e541bff374ddb237348861b82013c47e47ede9d203d0594c6bf63f",
+    "chart": [],
+    "markets": {},
+    "account": {
+      "initial_equity_usd": null,
+      "wallet_usd": null,
+      "equity_usd": null,
+      "available_margin_usd": null,
+      "reserved_collateral_usd": null,
+      "unrealized_pnl_usd": null,
+      "breaker_locked": null
+    },
+    "open_positions": [],
+    "completed_trades": 0,
+    "trades": [],
+    "orders": [],
+    "pending_orders": [],
+    "funding_events": [],
+    "risk_gate": {
+      "admission_open": false,
+      "reason": "Account evidence is incomplete or inconsistent: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
+      "halted": true
+    },
+    "risk_note": "ETH/SOL use conservative simulated maintenance brackets, not venue-verified Binance brackets.",
+    "recovery": {
+      "required": true,
+      "account_known": false,
+      "reconciled": false,
+      "view": "UNKNOWN"
+    }
+  },
+  "_note": "Full synthetic fixtures generated by tests/test_paper_api_examples.py. Not public market or performance evidence."
+}

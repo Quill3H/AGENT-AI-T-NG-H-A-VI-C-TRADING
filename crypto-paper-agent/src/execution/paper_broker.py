@@ -21,6 +21,7 @@ import re
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from loguru import logger
 
+from src.execution.funding_model import FixedFundingModel, settlement_terms
 from src.execution.order_models import (
     AccountSnapshot,
     ExitReason,
@@ -134,6 +135,9 @@ def _validate_config(config: dict) -> None:
             raise ValueError("max_gross_notional_pct_of_equity must be finite and positive")
 
 
+    # Explicit simulated funding is a separate opt-in contract, never a public fallback.
+    FixedFundingModel.from_config(config)
+
 
 class PaperBroker:
     """
@@ -178,6 +182,9 @@ class PaperBroker:
         else:
             self.funding_hours = {0, 8, 16}
 
+        if FixedFundingModel.from_config(self.config) is not None and self.funding_hours != {0, 8, 16}:
+            raise ValueError("Fixed simulated funding requires settlement hours {0, 8, 16}")
+
         # 3. Quản lý rủi ro & Ngắt mạch
         if circuit_breaker is not None:
             self.circuit_breaker: CircuitBreakerState = circuit_breaker
@@ -204,11 +211,13 @@ class PaperBroker:
         self.last_candle_open_time_per_symbol: Dict[str, datetime] = {}
         self.current_batch_open_time: Optional[datetime] = None
         self.symbols_in_current_batch: Set[str] = set()
+        self.last_batch_peak_positions: int = 0
         self.is_halted: bool = False
         self.is_finalized: bool = False
         self.last_mark_prices: Dict[str, float] = {}
         self._settled_funding_keys: Set[Tuple[str, datetime]] = set()
         self._is_handling_cb_lock: bool = False
+        self._defer_cb_lock_for_batch: bool = False
         self.kill_switch_reason: Optional[str] = None
         raw_gap = self.config.get("risk", {}).get("max_data_gap_minutes")
         if raw_gap is not None and (type(raw_gap) is bool or not isinstance(raw_gap, (int, float)) or not math.isfinite(raw_gap) or raw_gap <= 0):
@@ -219,6 +228,10 @@ class PaperBroker:
         self._order_seq: int = 0
         self._trade_seq: int = 0
         self._funding_seq: int = 0
+
+    def fork(self) -> "PaperBroker":
+        """Isolate all mutable execution, risk and metadata state for atomic replay."""
+        return deepcopy(self)
 
     @property
     def reserved_collateral(self) -> float:
@@ -359,17 +372,14 @@ class PaperBroker:
             reference_price=request.signal_price,
             metadata=dict(request.metadata) if getattr(request, "metadata", None) else {},
         )
+        rec.metadata.pop("broker_entry", None)
+        rec.metadata["broker_request"] = deepcopy({k: v for k, v in vars(request).items() if k != "metadata"})
         self.pending_orders.append(request)
         self.order_history.append(rec)
         return rec
 
     def process_candle(self, candle: Union[dict, Any]) -> Dict[str, Any]:
-        phases = self._candle_phases(candle)
-        while True:
-            try:
-                next(phases)
-            except StopIteration as completed:
-                return completed.value
+        return self.process_batch([candle])[0]
 
     def process_batch(self, candles: List[dict]) -> List[Dict[str, Any]]:
         """All opening fills precede all intrabar outcomes in a synchronized batch.
@@ -393,17 +403,33 @@ class PaperBroker:
         for phase in phases:
             next(phase)  # read-only preflight for every symbol
         self.last_batch_peak_positions = len(self.positions)
-        while True:
+        # Lock state changes immediately and blocks subsequent admissions. Defer
+        # only peer flattening: all legitimate gaps precede all due funding,
+        # and every intrabar protection precedes a close-time breaker unwind.
+        # Opening cashflows never see closing marks or future intrabar proceeds.
+        stages = ("open_marks", "gaps", "funding", "manual_closes", "entries",
+                  "protection", "close_marks")
+        try:
+            for stage in stages:
+                self._defer_cb_lock_for_batch = True
+                for phase in phases:
+                    next(phase)
+                    self.last_batch_peak_positions = max(self.last_batch_peak_positions, len(self.positions))
+                if stage in ("funding", "manual_closes", "entries", "close_marks"):
+                    self._defer_cb_lock_for_batch = False
+                    if self.circuit_breaker.is_locked:
+                        timestamp = opens[0] + durations[0] if stage == "close_marks" else opens[0]
+                        self._handle_circuit_breaker_lock(timestamp)
             results = []
             for phase in phases:
                 try:
                     next(phase)
                 except StopIteration as completed:
                     results.append(completed.value)
-                self.last_batch_peak_positions = max(self.last_batch_peak_positions, len(self.positions))
-            if results:
-                assert len(results) == len(phases), "inconsistent broker phase count"
-                return results
+            assert len(results) == len(phases), "inconsistent broker phase count"
+            return results
+        finally:
+            self._defer_cb_lock_for_batch = False
 
     def _candle_phases(self, candle):
         """
@@ -466,6 +492,13 @@ class PaperBroker:
                 f"Time reversal or duplicate in candle sequence for {symbol}: {open_time} <= {last_sym_open}"
             )
 
+        # A completed interval has already exposed its close/range. A later
+        # call cannot add an earlier opening fill, even for a different symbol;
+        # simultaneous symbols must use process_batch's atomic preflight.
+        for watermark in (self.current_time, self.circuit_breaker.last_event_time):
+            if watermark is not None and open_time < watermark:
+                raise ValueError(f"Candle time overlap: open_time {open_time} < completed event time {watermark}")
+
         if self.current_batch_open_time is not None:
             if open_time < self.current_batch_open_time:
                 raise ValueError(
@@ -516,42 +549,46 @@ class PaperBroker:
                         will_gap_exit = True
 
                 if not will_gap_exit:
-                    raw_rate = candle.get("funding_rate")
-                    if raw_rate is None or type(raw_rate) is bool or not isinstance(raw_rate, (int, float)):
-                        raise ValueError(f"Missing or invalid funding rate at settlement boundary {open_time.isoformat()}: {raw_rate!r}")
-                    f_rate = float(raw_rate)
-                    if not math.isfinite(f_rate):
-                        raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
+                    fixed_model = FixedFundingModel.from_config(self.config)
+                    if fixed_model is not None:
+                        f_rate, f_dt = settlement_terms(self.config, candle, symbol, open_time, _ensure_utc)
+                    else:
+                        raw_rate = candle.get("funding_rate")
+                        if raw_rate is None or type(raw_rate) is bool or not isinstance(raw_rate, (int, float)):
+                            raise ValueError(f"Missing or invalid funding rate at settlement boundary {open_time.isoformat()}: {raw_rate!r}")
+                        f_rate = float(raw_rate)
+                        if not math.isfinite(f_rate):
+                            raise ValueError(f"Non-finite funding rate at settlement boundary {open_time.isoformat()}: {f_rate}")
 
-                    # J1 & K1: Bắt buộc funding_readiness is True (kiểu bool) vô điều kiện
-                    if "funding_readiness" not in candle:
-                        raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
-                    raw_readiness = candle.get("funding_readiness")
-                    if type(raw_readiness) is not bool:
-                        raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
-                    if raw_readiness is False:
-                        raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
-                    if raw_readiness is not True:
-                        raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
+                        # J1 & K1: Bắt buộc funding_readiness is True (kiểu bool) vô điều kiện
+                        if "funding_readiness" not in candle:
+                            raise ValueError(f"Missing funding_readiness at settlement boundary {open_time.isoformat()} for {symbol}")
+                        raw_readiness = candle.get("funding_readiness")
+                        if type(raw_readiness) is not bool:
+                            raise TypeError(f"Invalid funding_readiness type: expected bool, got {type(raw_readiness).__name__} ({raw_readiness!r})")
+                        if raw_readiness is False:
+                            raise ValueError(f"Funding data marked not ready at settlement boundary {open_time.isoformat()} for {symbol}")
+                        if raw_readiness is not True:
+                            raise ValueError(f"Funding readiness must be True at settlement boundary {open_time.isoformat()} for {symbol}")
 
-                    # J1 & K1: Bắt buộc source timestamp hợp lệ vô điều kiện
-                    f_time = candle.get("funding_time")
-                    if f_time is None:
-                        f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
-                    if f_time is None:
-                        raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
-                    if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
-                        raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
-                    f_dt = _ensure_utc(f_time)
-                    if f_dt > open_time:
-                        raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
-                    if f_dt < open_time - timedelta(hours=24):
-                        raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
-                    if f_dt != open_time:
-                        raise ValueError(
-                            f"FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary {open_time.isoformat()}; "
-                            f"received {f_dt.isoformat()} (observation is not a settlement event)"
-                        )
+                        # J1 & K1: Bắt buộc source timestamp hợp lệ vô điều kiện
+                        f_time = candle.get("funding_time")
+                        if f_time is None:
+                            f_time = candle.get("funding_timestamp") or candle.get("funding_source_time")
+                        if f_time is None:
+                            raise ValueError(f"Missing funding source timestamp at settlement boundary {open_time.isoformat()} for {symbol}")
+                        if type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
+                            raise TypeError(f"Invalid funding timestamp type: {type(f_time).__name__} ({f_time!r})")
+                        f_dt = _ensure_utc(f_time)
+                        if f_dt > open_time:
+                            raise ValueError(f"Funding source time {f_dt.isoformat()} is in future relative to open_time {open_time.isoformat()} (lookahead bias)")
+                        if f_dt < open_time - timedelta(hours=24):
+                            raise ValueError(f"Funding source time {f_dt.isoformat()} is excessively stale (>24h before {open_time.isoformat()})")
+                        if f_dt != open_time:
+                            raise ValueError(
+                                f"FUNDING_SOURCE_EVENT_MISMATCH: source time must match settlement boundary {open_time.isoformat()}; "
+                                f"received {f_dt.isoformat()} (observation is not a settlement event)"
+                            )
 
                     # J2: Pre-check liquidation solver với candidate collateral (zero mutation if solver fails)
                     direction_sign = 1.0 if pos.direction == OrderDirection.LONG else -1.0
@@ -671,15 +708,16 @@ class PaperBroker:
         if symbol in self.positions:
             pos = self.positions[symbol]
             if self._is_settlement(open_time, candle):
-                f_key = (symbol, f_dt)  # exact source event validated in preflight
+                fixed_model = FixedFundingModel.from_config(self.config)
+                fixed_event_id = fixed_model.event_id(pos.position_id, symbol, open_time) if fixed_model else None
+                f_key = (fixed_event_id or symbol, f_dt)  # model identity or exact public source event
                 if f_key not in self._settled_funding_keys:
-                    raw_rate = candle.get("funding_rate", 0.0)
-                    f_rate = float(raw_rate)
                     funding_evt = self._apply_funding_settlement(
                         position=pos,
                         timestamp=open_time,
                         funding_rate=f_rate,
                         mark_price=open_p,
+                        event_id=fixed_event_id,
                     )
                     self._settled_funding_keys.add(f_key)
                     candle_events.append({"type": "FUNDING", "event": funding_evt})
@@ -921,6 +959,7 @@ class PaperBroker:
                     initial_liquidation_price=liq_price,
                     metadata=position_metadata,
                 )
+                new_pos.metadata["lifecycle_id"] = new_pos.position_id
                 self.positions[symbol] = new_pos
 
                 self._update_order_record(
@@ -1233,7 +1272,7 @@ class PaperBroker:
         Cưỡng chế đóng toàn bộ vị thế đang mở và hủy pending orders khi Circuit Breaker bị khóa (E3).
         Không gọi đệ quy.
         """
-        if self._is_handling_cb_lock:
+        if self._is_handling_cb_lock or self._defer_cb_lock_for_batch:
             return
         self._is_handling_cb_lock = True
         try:
@@ -1340,6 +1379,8 @@ class PaperBroker:
             return False
         if open_time.hour in self.funding_hours:
             return True
+        if FixedFundingModel.from_config(self.config) is not None:
+            return False  # fixed paper schedule cannot inherit an exchange event
         f_time = candle.get("funding_time")
         if f_time is None or f_time != f_time or type(f_time) is bool or not isinstance(f_time, (datetime, str, int, float)):
             return False  # f_time != f_time: NaT/NaN before the first event
@@ -1351,6 +1392,7 @@ class PaperBroker:
         timestamp: datetime,
         funding_rate: float,
         mark_price: float,
+        event_id: Optional[str] = None,
     ) -> FundingEvent:
         """
         Tính và áp dụng cashflow funding tại mốc 00/08/16 UTC.
@@ -1378,8 +1420,9 @@ class PaperBroker:
         position.cumulative_funding += cashflow
         position.liquidation_price = new_liq
 
+        generated_id = self._next_funding_id(position.symbol, timestamp)
         event = FundingEvent(
-            event_id=self._next_funding_id(position.symbol, timestamp),
+            event_id=event_id or generated_id,
             timestamp=timestamp,
             symbol=position.symbol,
             position_id=position.position_id,
@@ -1431,7 +1474,18 @@ class PaperBroker:
                 rec.notional_usd = notional_usd
                 rec.fee_usd = fee_usd
                 if getattr(req, "metadata", None):
-                    rec.metadata.update(req.metadata)
+                    rec.metadata.update(deepcopy({k: v for k, v in req.metadata.items()
+                                                  if k not in {"broker_request", "broker_entry"}}))
+                if status == OrderStatus.FILLED:
+                    pos = self.positions[req.symbol]
+                    rec.metadata["broker_entry"] = deepcopy({
+                        "lifecycle_id": pos.position_id, "leverage": pos.leverage,
+                        "initial_stop_loss_price": pos.initial_stop_loss_price,
+                        "initial_liquidation_price": pos.initial_liquidation_price,
+                        "take_profit_price": pos.take_profit_price,
+                        "conviction_tier": pos.conviction_tier,
+                        "partial_targets": pos.metadata.get("partial_targets", []),
+                    })
                 if reasons:
                     rec.rejection_reasons = list(reasons)
                 break

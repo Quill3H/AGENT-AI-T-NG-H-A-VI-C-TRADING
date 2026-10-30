@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "open-questions", "type": "project", "title": "Câu hỏi còn mở", "updated_at": "2026-10-29", "source_ids": ["state", "lab-review", "orb"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
+<!-- wiki-meta {"id": "open-questions", "type": "project", "title": "Câu hỏi còn mở", "updated_at": "2026-10-30", "source_ids": ["state", "lab-review", "orb", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
 
 # Câu hỏi còn mở
 
@@ -15,3 +15,9 @@ Không tự chạy tải dữ liệu hay thí nghiệm dài để trả lời. D
 - [state](<../../PROJECT_STATE.md>), mục `ETH–BTC cointegration v1 — 2026-10-22`; đã tracked ở snapshot; xem SHA trong manifest.
 - [lab-review](<../../docs/reviews/BACKTEST_LAB_2026_10_27.md>), mục `Author verification on final code`; đã tracked ở snapshot; xem SHA trong manifest.
 - [orb](<../../docs/research/crypto-orb-portfolio.md>), mục `Execution and input limits`; chưa commit hoặc đang sửa; xem SHA trong manifest.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Bảy artifact cũ đã đối soát và được xác định synthetic; câu hỏi tiếp theo là chuẩn bị nguồn thị trường có thể truy vết cùng hợp đồng đánh giá, không phải ép bộ mô phỏng cũ thành backtest thật. Chưa xác minh prospective paper/reboot/soak. Xem [[synthesized-repair]].
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

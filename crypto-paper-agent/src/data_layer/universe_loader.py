@@ -13,15 +13,17 @@ Timeframes:
     - 4h:  Macro regime time series (2,190 bars/year)
 
 Key Capabilities:
-    1. Public Binance Futures REST API Ingestion (/fapi/v1/klines) without API keys.
-    2. Local Parquet Caching under data/raw/binance/<symbol>/<timeframe>.parquet.
-    3. Deterministic Synthetic Fallback Generator for offline testing & CI/CD.
+    1. Historical replay from explicitly sourced local perpetual OHLCV/funding caches.
+    2. SHA-bound cache manifests; missing/unproven historical inputs fail closed.
+    3. Explicit deterministic synthetic mode in a separate cache namespace.
     4. Rigorous Mathematical Invariant Validation matching BacktestEngine requirements.
     5. Anti-Lookahead Causal Alignment for multi-timeframe 15m/4h strategy execution.
 """
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -125,6 +127,8 @@ class UniverseConfig:
     rate_limit_delay_sec: float = 0.08
     min_cache_coverage_pct: float = 0.99
     compression: str = "snappy"
+    mode: str = "historical"
+    seed: int = 42
 
 
 # ---------------------------------------------------------------------------
@@ -142,8 +146,10 @@ class UniverseDataLoader:
         self,
         config: Optional[Union[Dict[str, Any], UniverseConfig]] = None,
         raw_data_dir: Optional[Union[str, Path]] = None,
-        allow_network: bool = False,
+        allow_network: Optional[bool] = None,
         universe: Optional[List[str]] = None,
+        mode: Optional[str] = None,
+        seed: Optional[int] = None,
     ):
         if isinstance(config, UniverseConfig):
             self.cfg = config
@@ -159,12 +165,14 @@ class UniverseDataLoader:
                 raw_data_dir=Path(data_dir),
                 exchange=exchange,
                 allow_network=net_allowed,
+                mode=config.get("mode", "historical"),
+                seed=config.get("seed", 42),
             )
         else:
             self.cfg = UniverseConfig(
                 symbols=list(universe) if universe else list(DEFAULT_UNIVERSE),
                 raw_data_dir=Path(raw_data_dir) if raw_data_dir else Path("data/raw"),
-                allow_network=allow_network,
+                allow_network=bool(allow_network),
             )
 
         if raw_data_dir:
@@ -173,6 +181,14 @@ class UniverseDataLoader:
             self.cfg.allow_network = allow_network
         if universe:
             self.cfg.symbols = list(universe)
+        if mode is not None:
+            self.cfg.mode = mode
+        if seed is not None:
+            self.cfg.seed = seed
+        if self.cfg.mode not in ("historical", "synthetic"):
+            raise ValueError("mode must be historical or synthetic")
+        self.provenance: Dict[str, Any] = {}
+        self._synthetic_window = "unloaded"
 
         self.root_dir = self.cfg.raw_data_dir.resolve()
         self.session = requests.Session()
@@ -190,14 +206,17 @@ class UniverseDataLoader:
         Returns canonical path: data/raw/<exchange>/<symbol>/<timeframe>.parquet.
         """
         safe_symbol = symbol.replace("/", "").replace(":", "").upper()
-        return self.root_dir / self.cfg.exchange / safe_symbol / f"{timeframe}.parquet"
+        root = self.root_dir
+        if self.cfg.mode == "synthetic":
+            root = root / "synthetic" / "v1" / f"seed-{self.cfg.seed}" / self._synthetic_window
+        return root / self.cfg.exchange / safe_symbol / f"{timeframe}.parquet"
 
     def get_legacy_cache_path(self, symbol: str, timeframe: str) -> Path:
         """
         Returns legacy subfolder path: data/raw/<exchange>/<symbol>/<timeframe>/ohlcv.parquet.
         """
         safe_symbol = symbol.replace("/", "").replace(":", "").upper()
-        return self.root_dir / self.cfg.exchange / safe_symbol / timeframe / "ohlcv.parquet"
+        return self.get_cache_path(safe_symbol, timeframe).parent / timeframe / "ohlcv.parquet"
 
     def is_cached(
         self,
@@ -566,10 +585,14 @@ class UniverseDataLoader:
     # Primary Ingestion & Caching Orchestrator
     # -----------------------------------------------------------------------
 
-    def save_to_cache(self, df: pd.DataFrame, symbol: str, timeframe: str) -> Path:
+    def save_to_cache(self, df: pd.DataFrame, symbol: str, timeframe: str,
+                      provenance: Optional[Dict[str, Any]] = None) -> Path:
         """
         Atomically saves DataFrame to Parquet under data/raw/<exchange>/<symbol>/<timeframe>.parquet.
         """
+        # A cache writer must declare its source; old unlabelled files are never upgraded.
+        if provenance is None:
+            raise ValueError("cache write requires explicit source provenance")
         dest_path = self.get_cache_path(symbol, timeframe)
         dest_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -585,6 +608,13 @@ class UniverseDataLoader:
         try:
             pq.write_table(table, temp_path, compression=self.cfg.compression)
             os.replace(temp_path, dest_path)
+            manifest = dict(provenance, schema_version=1, mode=self.cfg.mode,
+                            symbol=symbol, timeframe=timeframe,
+                            sha256=hashlib.sha256(dest_path.read_bytes()).hexdigest())
+            manifest_path = dest_path.with_suffix(dest_path.suffix + ".source.json")
+            temp_manifest = manifest_path.with_suffix(".tmp")
+            temp_manifest.write_text(json.dumps(manifest, sort_keys=True, allow_nan=False), encoding="utf-8")
+            os.replace(temp_manifest, manifest_path)
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -603,34 +633,94 @@ class UniverseDataLoader:
         Loads symbol data from cache, Binance public API, or synthetic fallback generator.
         """
         safe_symbol = symbol.replace("/", "").replace(":", "").upper()
-
-        if not force_synthetic and self.is_cached(safe_symbol, timeframe, start_dt, end_dt):
-            path = self.get_cache_path(safe_symbol, timeframe)
-            if not path.is_file():
-                path = self.get_legacy_cache_path(safe_symbol, timeframe)
-            df = pq.read_table(path).to_pandas()
-            if "__index_level_0__" in df.columns:
-                df = df.rename(columns={"__index_level_0__": "timestamp"})
-            df = ensure_utc_index(df)
-            df_slice = df.loc[start_dt:end_dt]
-            self.validate_dataset(df_slice, safe_symbol, timeframe)
-            return df_slice
-
-        if self.cfg.allow_network and not force_synthetic:
+        if force_synthetic or self.cfg.mode == "synthetic":
+            return self.load_universe(start_dt, end_dt, [timeframe], [safe_symbol], force_synthetic)[safe_symbol][timeframe]
+        paths = [p for p in (self.get_cache_path(safe_symbol, timeframe),
+                             self.get_legacy_cache_path(safe_symbol, timeframe)) if p.is_file()]
+        if not paths:
+            # This pipeline requires independently sourced funding as well as bars.
+            # Public OHLCV alone cannot satisfy that historical input contract.
+            raise ValueError(f"historical cache missing for {safe_symbol}:{timeframe}; prepare verified bars and funding")
+        manifests, cache_bytes = [], []
+        for path in paths:
             try:
-                df_net = self.fetch_binance_klines(safe_symbol, timeframe, start_dt, end_dt)
-                if not df_net.empty:
-                    self.validate_dataset(df_net, safe_symbol, timeframe)
-                    self.save_to_cache(df_net, safe_symbol, timeframe)
-                    return df_net
-            except Exception as err:
-                logger.warning(f"Network fetch failed for {safe_symbol} {timeframe}: {err}. Falling back to synthetic.")
+                manifest = json.loads(path.with_suffix(path.suffix + ".source.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                raise ValueError(f"historical provenance missing or corrupt: {path}") from exc
+            raw = path.read_bytes()
+            if (manifest.get("mode") != "historical" or manifest.get("source") != "binance_usdm"
+                    or manifest.get("market") != "perpetual" or not manifest.get("source_uri")
+                    or manifest.get("symbol") != safe_symbol or manifest.get("timeframe") != timeframe
+                    or manifest.get("sha256") != hashlib.sha256(raw).hexdigest()):
+                raise ValueError(f"historical provenance identity/hash mismatch: {path}")
+            if timeframe == "15m" and manifest.get("funding_source") != "binance_usdm":
+                raise ValueError(f"historical funding provenance missing: {path}")
+            manifests.append(manifest)
+            cache_bytes.append(raw)
+        if len({m['sha256'] for m in manifests}) != 1:
+            raise ValueError(f"historical cache conflict for {safe_symbol}:{timeframe}")
+        try:
+            # Parse exactly the bytes whose hash was checked, even if a cache writer races us.
+            df = pq.read_table(pa.BufferReader(cache_bytes[0])).to_pandas()
+            df = ensure_utc_index(df)
+            df = df.loc[start_dt:end_dt].copy()
+            self.validate_dataset(df, safe_symbol, timeframe)
+            expected = pd.date_range(start_dt, end_dt, freq=timeframe_to_timedelta(timeframe), name=df.index.name)
+            if not df.index.equals(expected):
+                raise ValueError("missing/misaligned historical timestamps")
+            if timeframe == "15m":
+                self.validate_funding(df)
+        except Exception as exc:
+            raise ValueError(f"invalid historical input {safe_symbol}:{timeframe}: {exc}") from exc
+        self.provenance.setdefault("datasets", []).append(manifests[0])
+        return df
 
-        # Deterministic synthetic fallback
-        synth_data = self.generate_synthetic_universe(start_dt, end_dt, symbols=[safe_symbol])
-        df_synth = synth_data[safe_symbol][timeframe]
-        self.save_to_cache(df_synth, safe_symbol, timeframe)
-        return df_synth
+    @staticmethod
+    def validate_funding(df: pd.DataFrame) -> None:
+        """Validate settled-event identity without converting observations to events.
+
+        A source timestamp may lag its normalized settlement by at most one second,
+        matching vision_dataset. This tolerance never admits a later decision input.
+        """
+        required = ('funding_rate', 'funding_time', 'funding_readiness',
+                    'funding_source_time', 'funding_available_time', 'funding_interval_hours')
+        if any(c not in df for c in required):
+            raise ValueError("funding event/source/availability columns required")
+        rates = df['funding_rate']
+        if any(type(v) is bool or not isinstance(v, (int, float)) for v in rates):
+            raise ValueError("invalid funding rate type")
+        if not np.isfinite(rates.to_numpy(dtype=float)).all():
+            raise ValueError("nonfinite funding rate")
+        if not all(isinstance(v, (bool, np.bool_)) and bool(v) for v in df['funding_readiness']):
+            raise ValueError("funding not ready")
+        intervals = df['funding_interval_hours']
+        if any(type(v) is bool or not isinstance(v, (int, float)) or v not in (1, 2, 4, 8) for v in intervals):
+            raise ValueError("unsupported funding interval; explicit 1/2/4/8h schedule required")
+        event = pd.to_datetime(df['funding_time'], utc=True, errors='coerce')
+        source = pd.to_datetime(df['funding_source_time'], utc=True, errors='coerce')
+        available = pd.to_datetime(df['funding_available_time'], utc=True, errors='coerce')
+        if event.isna().any() or source.isna().any() or available.isna().any():
+            raise ValueError("invalid funding timestamps")
+        if ((event > df.index) | (event < df.index - pd.to_timedelta(intervals.to_numpy(), unit='h'))).any():
+            raise ValueError("missing/stale/future funding event")
+        if not ((event.dt.hour % intervals == 0) & (event == event.dt.floor('h'))).all():
+            raise ValueError("invalid funding settlement event")
+        if ((source < event) | (source > event + pd.Timedelta(seconds=1)) | (available < source)).any():
+            raise ValueError("funding source/event/availability mismatch")
+        if (available > df.index + pd.Timedelta(minutes=15)).any():
+            raise ValueError("funding unavailable at decision time")
+        settlements = (df.index.hour % intervals.to_numpy() == 0) & (df.index == df.index.floor('h'))
+        if (event.loc[settlements].array != df.index[settlements]).any():
+            raise ValueError("missing funding settlement")
+        # Settlement cashflow precedes open-time admissions. Close-time availability
+        # alone cannot make a later observation available at that earlier phase.
+        if (available.loc[settlements] > event.loc[settlements] + pd.Timedelta(seconds=1)).any():
+            raise ValueError("funding settlement availability exceeds declared jitter")
+        # Repeated as-of observations are legal; conflicting records for one event are not.
+        events = pd.DataFrame({'event': event, 'rate': rates, 'source': source, 'available': available,
+                               'interval': intervals})
+        if (events.groupby('event').nunique() > 1).any().any():
+            raise ValueError("duplicate/conflicting funding event")
 
     def load_universe(
         self,
@@ -647,9 +737,43 @@ class UniverseDataLoader:
         target_symbols = symbols if symbols else self.cfg.symbols
         target_tfs = timeframes if timeframes else self.cfg.timeframes
 
+        if force_synthetic and self.cfg.mode != "synthetic":
+            loader = UniverseDataLoader(raw_data_dir=self.root_dir, mode="synthetic", seed=self.cfg.seed)
+            result = loader.load_universe(start_dt, end_dt, target_tfs, target_symbols)
+            self.provenance = loader.provenance
+            return result
+        self.provenance = {'mode': self.cfg.mode, 'historical_verified': False,
+                           'source': 'synthetic_generator' if self.cfg.mode == 'synthetic' else 'binance_usdm',
+                           'funding_source': 'synthetic_constant' if self.cfg.mode == 'synthetic' else 'binance_usdm',
+                           'datasets': []}
+        if self.cfg.mode == 'synthetic':
+            self.provenance['seed'] = self.cfg.seed
+            self._synthetic_window = hashlib.sha256(f'{start_dt}|{end_dt}|{target_symbols}'.encode()).hexdigest()[:16]
+            generated = self.generate_synthetic_universe(start_dt, end_dt, target_symbols, seed=self.cfg.seed)
+            results = {}
+            for sym in target_symbols:
+                results[sym] = {}
+                for tf in target_tfs:
+                    df = generated[sym][tf]
+                    if tf == '15m':
+                        event = df.index.floor('8h')
+                        df['funding_rate'] = 0.0001
+                        df['funding_time'] = event
+                        df['funding_source_time'] = event
+                        df['funding_available_time'] = event
+                        df['funding_readiness'] = True
+                        df['funding_source'] = 'synthetic_constant'
+                        df['funding_interval_hours'] = 8
+                    path = self.save_to_cache(df, sym, tf, provenance={'source': 'synthetic_generator',
+                        'market': 'synthetic_perpetual', 'funding_source': 'synthetic_constant', 'seed': self.cfg.seed})
+                    self.provenance['datasets'].append(json.loads(path.with_suffix(path.suffix + '.source.json').read_text()))
+                    results[sym][tf] = df
+            return results
+
         results: Dict[str, Dict[str, pd.DataFrame]] = {}
         for sym in target_symbols:
             results[sym] = {}
             for tf in target_tfs:
                 results[sym][tf] = self.load_symbol(sym, tf, start_dt, end_dt, force_synthetic=force_synthetic)
+        self.provenance['historical_verified'] = True
         return results

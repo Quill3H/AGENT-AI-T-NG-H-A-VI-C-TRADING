@@ -1,0 +1,25 @@
+{
+  "scriptCompleted": true,
+  "issues": [],
+  "warnings": [
+    "Node at index 1259 (\"function:src/strategies/indicator_suite.py:rsi@40\") has a short summary (under 20 characters)",
+    "Node at index 1260 (\"function:src/strategies/indicator_suite.py:adx@49\") has a short summary (under 20 characters)"
+  ],
+  "stats": {
+    "totalNodes": 1486,
+    "totalEdges": 1884,
+    "totalLayers": 13,
+    "tourSteps": 5,
+    "nodeTypes": {
+      "class": 127,
+      "config": 113,
+      "file": 155,
+      "function": 1078,
+      "module": 13
+    },
+    "edgeTypes": {
+      "contains": 1473,
+      "imports": 411
+    }
+  }
+}

@@ -25,6 +25,7 @@ Bắt đầu ở [[latest]], [[project-map]] và [[strategy-comparison]].
 
 ## Thí nghiệm
 
+- [[experiments/synthesized-repair]] — Đính chính synthetic và sửa broker/recovery ngày 30/10
 - [[experiments/funding-2026-10-16]] — Thí nghiệm funding carry ngày 16/10
 - [[experiments/pair-v1-2026-10-22]] — Thí nghiệm ETH/BTC ngày 22/10
 - [[experiments/orb-working]] — Thí nghiệm ORB: trạng thái chưa xác minh

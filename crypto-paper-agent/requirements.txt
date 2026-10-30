@@ -8,6 +8,7 @@
 
 # --- Data Fetching (public endpoints, no API key needed for OHLCV/OI/funding) ---
 ccxt==4.5.82
+websocket-client>=1.8,<2  # public read-only PAPER stream
 
 # --- Data Processing ---
 pandas>=2.2.3
@@ -28,6 +29,7 @@ pyyaml>=6.0.2
 # --- Testing ---
 pytest>=8.3.3
 pytest-cov>=5.0.0        # coverage reports
+jsonschema>=4,<5         # PAPER API/recovery contract checks
 
 # --- Visualization (optional, for equity curve) ---
 matplotlib>=3.9.2

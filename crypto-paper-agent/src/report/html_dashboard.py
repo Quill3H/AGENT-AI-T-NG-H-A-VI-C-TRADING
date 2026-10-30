@@ -333,6 +333,12 @@ class HTMLDashboardGenerator:
         exp_usd = float(metrics.get("expectancy_usd", 0.0))
         exp_r = metrics.get("expectancy_r")
         exp_r_str = f"{exp_r:+.2f}R" if exp_r is not None else "N/A"
+        provenance = metrics.get("data_provenance", {})
+        mode = provenance.get("mode") if isinstance(provenance, dict) else None
+        mode_label = {"synthetic": "SYNTHETIC", "historical": "HISTORICAL"}.get(mode, "UNVERIFIED")
+        evaluation = metrics.get("economic_evaluation", {})
+        verdict = evaluation.get("verdict") if isinstance(evaluation, dict) else None
+        economic_label = verdict if verdict in {"REJECTED", "NOT_EVALUATED", "ELIGIBLE_FOR_REVIEW"} else "NOT_EVALUATED"
 
         # Trade count threshold badge
         if total_trades >= 2000:
@@ -536,6 +542,7 @@ class HTMLDashboardGenerator:
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <p role="status">Data: {mode_label} | Economic evaluation: {economic_label}. Engineering replay is not owner acceptance.</p>
 
   <!-- Header -->
   <div class="header">

@@ -71,6 +71,18 @@ class CodeGraphContracts(unittest.TestCase):
         graph_path.write_text("{}", encoding="utf-8")
         self.assertTrue(builder.check(self.root)["graphChanged"])
 
+    def test_filename_only_docstrings_use_factual_inventory_summary(self):
+        original = self.source.read_text(encoding="utf-8")
+        for header in ("src/sample.py", "sample.py", "  sample.py  ", "   "):
+            with self.subTest(header=header):
+                self.source.write_text(f'"""{header}"""\n' + original, encoding="utf-8")
+                _, graph, _ = self.graph()
+                node = next(n for n in graph["nodes"] if n["id"] == "file:src/sample.py")
+                self.assertNotEqual(node["summary"].strip(), node["name"])
+                self.assertNotEqual(node["summary"].strip(), "sample.py")
+                self.assertIn("5 declarations", node["summary"])
+                self.assertIn("1 import", node["summary"])
+
     def test_parse_failure_does_not_replace_previous_graph(self):
         self.assertEqual(self.run_build(), 0)
         target = self.root / ".ua" / "knowledge-graph.json"

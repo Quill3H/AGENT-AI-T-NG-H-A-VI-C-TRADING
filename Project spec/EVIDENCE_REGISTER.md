@@ -1,5 +1,11 @@
 # Sổ nguồn và khác biệt — 29/10/2026
 
+**Checkpoint bổ sung 30/10/2026:** [xác minh độc lập](../crypto-paper-agent/docs/reviews/UNMERGED_AND_ARTIFACT_VERIFICATION_2026_10_30.md)
+và [sửa broker/recovery/evidence](../crypto-paper-agent/docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md)
+đính chính các công bố S2/S3 cũ: synthetic, funding giả định và kết quả kinh tế
+bị loại. Giữ các khác biệt lịch sử bên dưới để truy vết; chúng không thay thế
+checkpoint mới hoặc xác nhận một lượt dữ liệu thị trường mới.
+
 ## 1. Snapshot
 
 - Nguồn GitHub chính: `65960bff7341637557d8158c2440dcc087ce1a41` trên main lúc đọc.

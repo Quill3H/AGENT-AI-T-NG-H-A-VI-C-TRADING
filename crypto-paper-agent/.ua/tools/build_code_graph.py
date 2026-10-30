@@ -141,8 +141,14 @@ def build_graph(root, rows, now, identity):
         if row["language"] == "python":
             tree = ast.parse((root / path).read_bytes(), filename=path)
             doc = ast.get_docstring(tree)
-            if doc:
-                summary = doc.strip().splitlines()[0][:350]
+            doc_summary = doc.strip().splitlines()[0][:350] if doc and doc.strip() else ""
+            if doc_summary and doc_summary not in {path, Path(path).name}:
+                summary = doc_summary
+            else:
+                declarations = sum(isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for item in ast.walk(tree))
+                import_count = sum(isinstance(item, (ast.Import, ast.ImportFrom)) for item in ast.walk(tree))
+                summary = (f"Python file {path}; {row['lines']} lines observed, "
+                           f"{declarations} declarations and {import_count} import statements in static AST.")
         nodes.append({"id": fid, "type": kind, "name": path, "filePath": path,
                       "lineRange": [1, max(row["lines"], 1)], "summary": summary,
                       "tags": [row["fileCategory"], row["language"], "static"],

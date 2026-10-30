@@ -1,0 +1,10 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent
+configfile: pytest.ini
+collected 20 items
+
+tests\test_e2e_synthesized_backtest.py ...................s              [100%]
+
+- generated xml file: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\tmp\repair-year.xml -
+================== 19 passed, 1 skipped in 774.16s (0:12:54) ==================

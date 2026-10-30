@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "experiment-register", "type": "project", "title": "Sổ thí nghiệm và bước tiếp theo", "updated_at": "2026-10-29", "source_ids": ["method-search", "pair-report", "orb"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
+<!-- wiki-meta {"id": "experiment-register", "type": "project", "title": "Sổ thí nghiệm và bước tiếp theo", "updated_at": "2026-10-30", "source_ids": ["method-search", "pair-report", "orb", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
 
 # Sổ thí nghiệm và bước tiếp theo
 
@@ -15,3 +15,9 @@ Bước tiếp theo đề xuất: kiểm tra snapshot ORB đang làm và bằng 
 - [method-search](<../../docs/research/2026-10-16-method-search.md>), mục `Result of the frozen candidate`; đã tracked ở snapshot; xem SHA trong manifest.
 - [pair-report](<../../docs/reports-vi/2026-10-22-eth-btc-cointegration-v1.md>), mục `Kết quả cả 12 kịch bản`; đã tracked ở snapshot; xem SHA trong manifest.
 - [orb](<../../docs/research/crypto-orb-portfolio.md>), mục `Execution and input limits`; chưa commit hoặc đang sửa; xem SHA trong manifest.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Đã lưu hồ sơ [[synthesized-repair]] và giữ nguyên artifact/probe thất bại cũ. Không có lần tuning, dữ liệu thị trường mới hoặc prospective paper mới; E2E explicit synthetic chỉ kiểm luồng phần mềm. Xem báo cáo nguồn để lấy lệnh và kết quả chính xác.
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

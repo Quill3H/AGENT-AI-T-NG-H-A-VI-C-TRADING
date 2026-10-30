@@ -1,0 +1,11 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent
+configfile: pytest.ini
+collected 2 items
+
+tests\test_paper_windows_lifecycle.py .                                  [ 50%]
+tests\test_stage_06_integration.py .                                     [100%]
+
+- generated xml file: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent\tmp\repair-core-followup.xml -
+============================== 2 passed in 5.18s ==============================

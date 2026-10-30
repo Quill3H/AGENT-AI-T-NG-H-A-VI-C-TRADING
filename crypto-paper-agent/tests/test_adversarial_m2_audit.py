@@ -28,6 +28,7 @@ import ast
 import csv
 import json
 import math
+import os
 from pathlib import Path
 import sqlite3
 from typing import Any, Dict, List
@@ -35,7 +36,7 @@ import pytest
 from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-REPORT_DIR = REPO_ROOT / "reports" / "synthesized_backtest_1y"
+REPORT_DIR = Path(os.environ.get('PAPER_ARTIFACT_DIR', REPO_ROOT / "reports" / "synthesized_backtest_1y"))
 TOLERANCE = 1e-4
 
 
@@ -458,22 +459,16 @@ def test_audit_multi_asset_coverage_all_ten_pairs(sqlite_connection):
     assert len(pairs) == 10, f"Expected exactly 10 pairs with trades, got {len(pairs)}"
 
 
-def test_audit_favorable_win_rate_or_positive_return(summary_json_data: Dict[str, Any]):
-    """
-    Requirement R1/AC 3:
-    Backtested strategy produces a positive net return OR favorable win rate aligned with risk/reward structure.
-    Here, favorable win rate > 40% (reported: 49.20% lifecycle, 53.18% slice).
-    """
-    win_rate = float(summary_json_data["win_rate"])
-    total_net_pnl = float(summary_json_data["total_net_pnl"])
-
-    # Must satisfy at least one
-    passes_win_rate = win_rate >= 40.0
-    passes_positive_return = total_net_pnl > 0.0
-
-    assert passes_win_rate or passes_positive_return, (
-        f"Neither positive return nor favorable win rate met! Win rate: {win_rate}%, Net PnL: {total_net_pnl}"
-    )
+def test_audit_original_losing_artifact_is_economically_rejected(summary_json_data: Dict[str, Any]):
+    """Frozen original evidence must fail eligibility despite its favorable win rate."""
+    from src.research.acceptance import evaluate_acceptance
+    assert summary_json_data['win_rate'] >= 40
+    assert summary_json_data['total_net_pnl'] < 0
+    result = evaluate_acceptance(summary_json_data,
+        data_provenance=summary_json_data.get('data_provenance'))
+    assert result['verdict'] == 'REJECTED'
+    assert 'NONPOSITIVE_NET_PNL' in result['reasons']
+    assert 'HISTORICAL_PROVENANCE_REQUIRED' in result['reasons']
 
 
 def test_audit_paper_only_compliance_and_zero_credentials():

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { evidence } from './data/evidence'
 import { buildOfflineReplay, toPolyline } from './lib/replay'
+import { LocalPaperPanel } from './LocalPaperPanel'
 
 function Status({ children, tone = 'neutral' }) {
   return <span className={`status status--${tone}`}>{children}</span>
@@ -98,7 +99,7 @@ function AuditRail() {
         <div className="control-list">{evidence.controls.map((control) => (
           <div className="control-row" key={control.label}><span>{control.label}</span><Status tone={control.tone}>{control.value}</Status></div>
         ))}</div>
-        <p className="note">UI is read-only. No exchange client, wallet, API key, order endpoint or webhook is included.</p>
+        <p className="note">Archived evidence is read-only. Local PAPER controls affect only the simulator. No exchange order client, wallet or trading API key is included.</p>
       </section>
       <section className="rail-section">
         <p className="section-index">05</p><h2>Artifact integrity</h2>
@@ -128,7 +129,7 @@ export function App() {
   return (
     <div className="app-shell">
       <Header />
-      <div className="notice"><strong>Read-only preview.</strong> Archived and synthetic evidence only. Not financial advice; no exchange connection or order submission.</div>
+      <div className="notice"><strong>Paper research preview.</strong> Archived and synthetic evidence below; the local PAPER panel connects only when requested. No exchange order submission.</div>
       <main className="layout">
         <div className="primary">
           <section className="section replay" aria-labelledby="replay-title">
@@ -154,6 +155,7 @@ export function App() {
           </section>
           <FundingCoverage />
           <StrategyTable />
+          <LocalPaperPanel />
         </div>
         <AuditRail />
       </main>

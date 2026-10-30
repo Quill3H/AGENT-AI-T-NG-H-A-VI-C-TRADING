@@ -1,4 +1,4 @@
-<!-- wiki-meta {"id": "decisions", "type": "project", "title": "Quyết định và ranh giới", "updated_at": "2026-10-29", "source_ids": ["spec", "pair-adr", "planner"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
+<!-- wiki-meta {"id": "decisions", "type": "project", "title": "Quyết định và ranh giới", "updated_at": "2026-10-30", "source_ids": ["spec", "pair-adr", "planner", "repair-review"], "verification": "AUTHOR_REPORTED", "page_ids": []} -->
 
 # Quyết định và ranh giới
 
@@ -19,3 +19,9 @@ Nguồn planner trên main có thêm checkpoint Synthesized; quy định single-
 ## Đọc lại đặc tả ngày 30/10/2026
 
 Đã đọc phần U1–U7 mới từ main 460ed37; baseline kỹ thuật được giữ lịch sử. Thẩm quyền, paper-only, dữ liệu thật/giả lập và phân biệt software/protocol/economic verdict không cho phép tự mở gate hoặc nâng mức kiểm chứng. Các mô tả chưa tích hợp trong nguồn là snapshot 65960bf; trạng thái tích hợp mới xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.
+
+## Checkpoint sửa lỗi ngày 30/10/2026
+
+Quyền sửa/commit/push và tích hợp main do chủ dự án yêu cầu không tự chấp nhận gate kinh tế. Không thêm ngưỡng drawdown của người dùng; thiếu risk/evidence contract thì không đánh giá hoặc từ chối. Automatic promotion với funding giả lập vẫn bị chặn. Xem [[synthesized-repair]].
+
+- [repair-review](../../docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md), các mục correction, implemented behavior và verification.

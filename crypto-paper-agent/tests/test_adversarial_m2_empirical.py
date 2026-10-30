@@ -24,6 +24,7 @@ Verifies:
 """
 import json
 import math
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,7 +35,7 @@ import pandas as pd
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-REPORT_DIR = REPO_ROOT / "reports" / "synthesized_backtest_1y"
+REPORT_DIR = Path(os.environ.get('PAPER_ARTIFACT_DIR', REPO_ROOT / "reports" / "synthesized_backtest_1y"))
 SUMMARY_JSON_PATH = REPORT_DIR / "summary.json"
 TRADES_JSON_PATH = REPORT_DIR / "trades.json"
 EQUITY_CSV_PATH = REPORT_DIR / "equity_curve.csv"
@@ -309,6 +310,7 @@ def test_causal_4h_cache_strict_anti_lookahead_guarantee():
     loader = UniverseDataLoader(
         raw_data_dir=REPO_ROOT / "data" / "raw",
         allow_network=False,
+        mode="synthetic",
         universe=["BTCUSDT", "ETHUSDT"],
     )
     start_dt = pd.to_datetime("2025-01-01", utc=True)
@@ -360,6 +362,7 @@ def test_indicator_truncation_invariance_zero_future_leakage():
     loader = UniverseDataLoader(
         raw_data_dir=REPO_ROOT / "data" / "raw",
         allow_network=False,
+        mode="synthetic",
         universe=["BTCUSDT"],
     )
     start_dt = pd.to_datetime("2025-01-01", utc=True)

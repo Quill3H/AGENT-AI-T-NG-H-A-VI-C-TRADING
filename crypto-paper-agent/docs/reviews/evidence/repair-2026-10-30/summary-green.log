@@ -1,0 +1,11 @@
+test_filename_only_docstrings_use_factual_inventory_summary (__main__.CodeGraphContracts.test_filename_only_docstrings_use_factual_inventory_summary) ... ok
+test_graph_tampering_and_utf8_source (__main__.CodeGraphContracts.test_graph_tampering_and_utf8_source) ... ok
+test_inventory_change_detection_includes_additions_and_removals (__main__.CodeGraphContracts.test_inventory_change_detection_includes_additions_and_removals) ... ok
+test_linked_source_is_refused (__main__.CodeGraphContracts.test_linked_source_is_refused) ... skipped "host does not allow fixture symlink creation: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\hungpham\\\\.codex\\\\.chatgpt-projects\\\\g-p-6aad6c5b00008191be801aa63f2dd210\\\\eth-btc-research\\\\crypto-paper-agent\\\\.ua\\\\tools\\\\fixture-tmp\\\\code-graph-fixture-qryfl4ik\\\\external.py' -> 'C:\\\\Users\\\\hungpham\\\\.codex\\\\.chatgpt-projects\\\\g-p-6aad6c5b00008191be801aa63f2dd210\\\\eth-btc-research\\\\crypto-paper-agent\\\\.ua\\\\tools\\\\fixture-tmp\\\\code-graph-fixture-qryfl4ik\\\\src\\\\linked.py'"
+test_observed_symbols_relative_imports_and_no_inferred_calls (__main__.CodeGraphContracts.test_observed_symbols_relative_imports_and_no_inferred_calls) ... ok
+test_parse_failure_does_not_replace_previous_graph (__main__.CodeGraphContracts.test_parse_failure_does_not_replace_previous_graph) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.127s
+
+OK (skipped=1)

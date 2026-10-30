@@ -16,3 +16,4 @@ Kiểm tra nhập: lint/check-sources/handoff-check đều 0 findings (20 trang/
 
 - 2026-10-29, tích hợp main: giữ lịch sử hai phía, rà soát lại state/planner/broker/pair-ops và các trang phụ thuộc; lưu hash trước trong previous_versions, giữ verification. Chỉnh CLI legacy ledger theo governance bằng regression RED/GREEN. Kết quả test/merge và phần chưa tích hợp xem docs/reviews/MAIN_INTEGRATION_2026_10_29.md từ package.
 - 2026-10-30: giữ commit tài liệu đồng thời 460ed37, đọc lại U1–U7 và các trang phụ thuộc spec; lưu hash trước trong manifest. Không đổi code/config/test hoặc mức kiểm chứng.
+- 2026-10-30, sửa broker/recovery/evidence: đọc lại nguồn và giữ hash trước; đính chính artifact synthetic/lỗ; thêm synthesized-repair và kết quả kiểm chứng có phạm vi. Không nâng nghiệm thu kinh tế; xem báo cáo repair-review.

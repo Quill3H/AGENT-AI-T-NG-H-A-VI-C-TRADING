@@ -1,0 +1,12 @@
+
+> paper-research-console-preview@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.1 C:/Users/hungpham/.codex/.chatgpt-projects/g-p-6aad6c5b00008191be801aa63f2dd210/eth-btc-research/crypto-paper-agent/web-preview
+
+
+ Test Files  2 passed (2)
+      Tests  13 passed (13)
+   Start at  12:25:52
+   Duration  1.29s (environment 55%, tests 26%, setup 11%, transform 5%, import 3%, worker 1%)

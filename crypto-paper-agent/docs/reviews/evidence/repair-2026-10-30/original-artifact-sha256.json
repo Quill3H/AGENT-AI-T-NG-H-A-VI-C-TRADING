@@ -1,0 +1,9 @@
+{
+  "dashboard.html": "35ef62beb3a245868dd88d729a3e336c550f5ded4727de05f15c1d47f815db7a",
+  "equity_curve.csv": "9c0a0c61b0b0d331e5caf4767085b715f1b434b996595f64635dd2c9cc5eae46",
+  "equity_curve.png": "73463c13deb05d901fdb3f88c24c44f6f736cb990dc8861d45e9d61cfee9a0a0",
+  "summary.json": "2c78c18b544e13f15c48436e5aec7cf91ba446cc5091cb8f39e5096eb790fab6",
+  "summary.md": "c25ee30414bb4ee75018f8b4c03b179994f0345fc4b35521c31ab087e08f9d7d",
+  "trades.json": "21275bf80ac61804de3e87df11adc0955b2abfe909cf4bf0f0f0604653cd0824",
+  "trades.sqlite": "173a23e610b35f7dc4bf1559828037199b502deb878de4d6d90e815cc5d3ea6e"
+}

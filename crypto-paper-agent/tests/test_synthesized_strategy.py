@@ -143,7 +143,7 @@ def make_history_df(prices: List[float], vols: Optional[List[float]] = None) -> 
         "low": lows,
         "close": closes,
         "volume": volumes,
-    }, index=ts)
+     "funding_rate": 0.0}, index=ts)
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ def test_macro_regime_classification_bull(default_config):
         "low": base_price - 200,
         "close": base_price,
         "volume": 500.0,
-    }, index=ts)
+     "funding_rate": 0.0}, index=ts)
 
     candle_4h = {"close": 70000.0, "adx": 28.0}
     regime = strategy.classify_macro_regime(candle_4h, df_4h)
@@ -201,7 +201,7 @@ def test_macro_regime_classification_bear(default_config):
         "low": base_price - 300,
         "close": base_price,
         "volume": 500.0,
-    }, index=ts)
+     "funding_rate": 0.0}, index=ts)
 
     candle_4h = {"close": 50000.0, "adx": 30.0}
     regime = strategy.classify_macro_regime(candle_4h, df_4h)
@@ -222,7 +222,7 @@ def test_macro_regime_classification_chop(default_config):
         "low": base_price - 50,
         "close": base_price,
         "volume": 500.0,
-    }, index=ts)
+     "funding_rate": 0.0}, index=ts)
 
     # Case A: Low ADX (14.0 < 20.0)
     candle_low_adx = {"close": 60000.0, "adx": 14.0}
@@ -246,7 +246,7 @@ def test_macro_regime_causal_persistence(default_config):
         "low": base_price - 100,
         "close": base_price,
         "volume": 500.0,
-    }, index=ts)
+     "funding_rate": 0.0}, index=ts)
 
     candle_4h = {"close": 70000.0, "adx": 26.0, "timestamp": ts[-1]}
     history_15m = make_history_df([69000.0] * 60)
@@ -286,7 +286,7 @@ def test_micro_trend_pullback_long_trigger(default_config):
         "close": prices[-1],
         "volume": 200.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
 
     req = strategy.on_candle_close(current_candle, history)
     assert req is not None
@@ -316,7 +316,7 @@ def test_micro_trend_pullback_short_trigger(default_config):
         "close": prices[-1],
         "volume": 200.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
 
     req = strategy.on_candle_close(current_candle, history)
     assert req is not None
@@ -344,10 +344,10 @@ def test_breakout_retest_long_trigger(default_config):
         "close": bo_close,
         "volume": 250.0,
         "timestamp": pd.to_datetime("2025-01-01 12:00:00", utc=True),
-    }
+     "funding_rate": 0.0}
     history_bo = pd.concat([history, pd.DataFrame([{
         "open": 59800.0, "high": 60600.0, "low": 59700.0, "close": bo_close, "volume": 250.0
-    }], index=[candle_bo["timestamp"]])])
+    , "funding_rate": 0.0}], index=[candle_bo["timestamp"]])])
 
     req_bo = strategy.on_candle_close(candle_bo, history_bo)
     # Breakout is armed, no entry yet
@@ -364,10 +364,10 @@ def test_breakout_retest_long_trigger(default_config):
         "close": retest_close,
         "volume": 80.0,
         "timestamp": pd.to_datetime("2025-01-01 12:15:00", utc=True),
-    }
+     "funding_rate": 0.0}
     history_retest = pd.concat([history_bo, pd.DataFrame([{
         "open": 60400.0, "high": 60450.0, "low": 59800.0, "close": retest_close, "volume": 80.0
-    }], index=[candle_retest["timestamp"]])])
+    , "funding_rate": 0.0}], index=[candle_retest["timestamp"]])])
 
     req_entry = strategy.on_candle_close(candle_retest, history_retest)
     assert req_entry is not None
@@ -409,7 +409,7 @@ def test_smc_liquidity_sweep_chop_trigger(default_config):
         "close": 58650.0,
         "volume": 150.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
 
     req = strategy.on_candle_close(candle, history)
     assert req is not None
@@ -433,7 +433,7 @@ def test_counter_trend_suppression(default_config):
         "close": 59150.0,
         "volume": 100.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
     candidate = strategy._evaluate_pullback_setup(current_candle, history, strategy.current_regime)
     assert candidate is None
 
@@ -507,7 +507,7 @@ def test_multi_target_partial_exits_metadata(default_config):
         "close": prices[-1],
         "volume": 200.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
 
     req = strategy.on_candle_close(candle, history)
     assert req is not None
@@ -599,7 +599,7 @@ def test_concurrency_and_active_position_gate(default_config):
         "close": prices[-1],
         "volume": 200.0,
         "timestamp": history.index[-1],
-    }
+     "funding_rate": 0.0}
 
     # Case 1: Active position exists
     broker_with_pos = MagicMock()

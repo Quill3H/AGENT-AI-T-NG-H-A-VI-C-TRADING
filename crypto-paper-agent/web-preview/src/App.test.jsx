@@ -16,7 +16,7 @@ describe('paper research console', () => {
   it('contains no control for exchange order submission', () => {
     render(<App />)
     const buttons = screen.getAllByRole('button').map((button) => button.textContent.toLowerCase())
-    expect(buttons).toEqual(['run offline demo replay'])
+    expect(buttons).toEqual(['run offline demo replay', 'connect local paper view'])
     expect(buttons.join(' ')).not.toMatch(/buy|sell|submit order|connect exchange|wallet/)
   })
 

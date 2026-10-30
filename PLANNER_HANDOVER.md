@@ -1,6 +1,18 @@
 # PLANNER_HANDOVER — Hồ sơ tiếp nối cho GPT Reviewer và Codex Implementation Engineer
 
-## Synthesized 1-Year Multi-Asset Backtest (15m/4h) — 2026-10-29
+## Broker/recovery và bằng chứng tổng hợp — 2026-10-30
+
+Checkpoint sửa lỗi trên main từ `56382df63f0a58ba249d39b005ad97e90cd30150`.
+Đã chạy offline 1.385 pass/5 skip/5 network deselect; E2E synthetic năm 19 pass/1
+skip; Tester độc lập 166 pass; frontend 13 pass/build thành công. Review độc lập
+broker/data và recovery/API/frontend không còn finding trong phạm vi đã xem.
+Kết quả cũ là synthetic và bị loại về kinh tế; test pass không xác nhận dữ liệu
+thị trường hoặc lợi nhuận. Các số và lời nghiệm thu ngày 29/10 dưới đây giữ làm
+lịch sử, không dùng làm kết luận hiện hành. Xem
+[báo cáo sửa lỗi](crypto-paper-agent/docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md)
+để lấy lệnh, kết quả, review độc lập và phần chưa xác minh trước khi tiếp tục.
+
+## Synthesized 1-Year Multi-Asset Backtest (15m/4h) — 2026-10-29 (historical; acceptance interpretation corrected)
 
 **AUTHOR_REPORTED / TESTER_VERIFIED / 100% SUITE PASS.** Strictly paper-only crypto futures research bot. Zero live/testnet orders, zero trading keys, zero wallet signing, zero real money.
 

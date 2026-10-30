@@ -1,5 +1,13 @@
 # Trạng thái hiện tại — 29/10/2026
 
+**Đính chính sau xác minh 30/10/2026:** bảy artifact tổng hợp cũ đã được đối soát:
+dữ liệu synthetic, funding giả định, lỗ ròng 91.280,33 USDT, DD 92,6019%.
+Các mục “chưa xác minh” bên dưới là snapshot trước audit, không còn là kết luận
+hiện hành về bộ artifact này. Bản sửa chặn fallback ngầm, đồng bộ broker,
+tách verdict kỹ thuật/kinh tế và tích hợp recovery giữ guard hiện tại; xem
+[báo cáo và giới hạn](../crypto-paper-agent/docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md).
+Chưa có backtest thị trường hợp lệ hoặc nghiệm thu sinh lời mới.
+
 **Bổ sung 30/10/2026:** phạm vi Backtest Lab, ETH–BTC, ORB và wiki đã được tích hợp; [báo cáo merge](../crypto-paper-agent/docs/reviews/MAIN_INTEGRATION_2026_10_29.md) ghi kiểm thử, review và phần chưa xác minh. Phần dưới giữ snapshot trước tích hợp; các kết quả kinh tế vẫn giữ mức bằng chứng cũ.
 
 ## Phạm vi và mức bằng chứng

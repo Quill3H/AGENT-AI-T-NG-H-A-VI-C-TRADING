@@ -22,10 +22,10 @@
     {
       "id": "state",
       "path": "crypto-paper-agent/PROJECT_STATE.md",
-      "sha256": "12498dd56ee2f10c0cfc3b49482823b20e2ffaa546014e577d81a3527a8d1c53",
+      "sha256": "a353806b9a15927f166d6b5a7072ee2b9fd949a11a93d8c51f5b657e766b9564",
       "locator": "ETH–BTC cointegration v1 — 2026-10-22",
-      "accessed_at": "2026-10-29",
-      "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+      "accessed_at": "2026-10-30",
+      "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
       "tracked": true,
       "dirty": true,
       "previous_versions": [
@@ -34,28 +34,58 @@
           "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
           "accessed_at": "2026-10-29",
           "dirty": false
+        },
+        {
+          "sha256": "12498dd56ee2f10c0cfc3b49482823b20e2ffaa546014e577d81a3527a8d1c53",
+          "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+          "accessed_at": "2026-10-29",
+          "dirty": true
+        },
+        {
+          "sha256": "cda95bc724c3b89bd6742bf6cca88d348ab44522c4e19fc45ff6a0f717a0f2ba",
+          "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
+          "accessed_at": "2026-10-30",
+          "dirty": true
+        },
+        {
+          "sha256": "7bbdae667131a5a784bab7a7a23e2a751044007b8f59c29f4025c52627b523f8",
+          "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
+          "accessed_at": "2026-10-30",
+          "dirty": true
         }
       ],
-      "review_note": "Reviewed merged working bytes against main 65960bf and feature 05a396f; no verification promotion."
+      "review_note": "Re-read causal broker repairs, original synthetic errata and current checkpoint; engineering review does not grant economic or owner acceptance."
     },
     {
       "id": "planner",
       "path": "PLANNER_HANDOVER.md",
-      "sha256": "581972934245287c295610feea94d97f8b8b5a34879ffdd2af3a764059cd816e",
+      "sha256": "b87d05b7b38b78031a0c6b9bbfba216389a90e2eed2a9b9f9f6b65b97fdd3f4e",
       "locator": "Current single-main integration — 2026-09-23",
-      "accessed_at": "2026-10-29",
-      "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+      "accessed_at": "2026-10-30",
+      "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
       "tracked": true,
-      "dirty": false,
+      "dirty": true,
       "previous_versions": [
         {
           "sha256": "c0f97a817a2ce41ab17242d5708d54c11972c567a54a909faed8a831a24b870f",
           "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
           "accessed_at": "2026-10-29",
           "dirty": false
+        },
+        {
+          "sha256": "581972934245287c295610feea94d97f8b8b5a34879ffdd2af3a764059cd816e",
+          "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+          "accessed_at": "2026-10-29",
+          "dirty": false
+        },
+        {
+          "sha256": "476d01fe6c45e0078f083df5aa6141ed57ada45ddd90d5b1e70654bd17376b01",
+          "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
+          "accessed_at": "2026-10-30",
+          "dirty": true
         }
       ],
-      "review_note": "Reviewed merged working bytes against main 65960bf and feature 05a396f; no verification promotion."
+      "review_note": "Re-read causal broker repairs, original synthetic errata and current checkpoint; engineering review does not grant economic or owner acceptance."
     },
     {
       "id": "lab",
@@ -139,10 +169,10 @@
     {
       "id": "broker",
       "path": "crypto-paper-agent/src/execution/paper_broker.py",
-      "sha256": "a2710d533cffc40273436cbb1934d5e3bab0bfe2b4bebd5019f2b8def7eb0d0b",
+      "sha256": "6c9e5f5cd071aeecface20aa5fd5b7e4698279dc69ff54c3ca0374926248d334",
       "locator": "PaperBroker",
-      "accessed_at": "2026-10-29",
-      "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+      "accessed_at": "2026-10-30",
+      "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
       "tracked": true,
       "dirty": true,
       "previous_versions": [
@@ -151,9 +181,15 @@
           "commit": "47fdd6dbd6817ba251c6507186052fae48e51eb2",
           "accessed_at": "2026-10-29",
           "dirty": true
+        },
+        {
+          "sha256": "a2710d533cffc40273436cbb1934d5e3bab0bfe2b4bebd5019f2b8def7eb0d0b",
+          "commit": "65960bff7341637557d8158c2440dcc087ce1a41",
+          "accessed_at": "2026-10-29",
+          "dirty": true
         }
       ],
-      "review_note": "Reviewed merged working bytes against main 65960bf and feature 05a396f; no verification promotion."
+      "review_note": "Re-read causal broker repairs, original synthetic errata and current checkpoint; engineering review does not grant economic or owner acceptance."
     },
     {
       "id": "quantdinger-review",
@@ -199,6 +235,25 @@
       "upstream_commit": "c4544913a14ed3df5f1ed7b9e8483270ce20682a",
       "verification": "AUTHOR_REPORTED",
       "note": "Preserved review snapshot; not a live upstream refresh or profitability verification."
+    },
+    {
+      "id": "repair-review",
+      "path": "crypto-paper-agent/docs/reviews/CAUSAL_RECOVERY_EVIDENCE_REPAIR_2026_10_30.md",
+      "sha256": "1343837b6b27b9302c1f10d21df8bd58ae9c44c8500a0a0a5cf3e8757dee3a9f",
+      "locator": "Original synthesized evidence: correction",
+      "accessed_at": "2026-10-30",
+      "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
+      "tracked": false,
+      "dirty": true,
+      "review_note": "Re-read causal broker repairs, original synthetic errata and current checkpoint; engineering review does not grant economic or owner acceptance.",
+      "previous_versions": [
+        {
+          "sha256": "a61bf2b390ae3a1c596b1df9cec37452831ccd6a06b3d7d5510e4fe39d105a75",
+          "commit": "56382df63f0a58ba249d39b005ad97e90cd30150",
+          "accessed_at": "2026-10-30",
+          "dirty": true
+        }
+      ]
     }
   ]
 }

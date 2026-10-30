@@ -261,15 +261,13 @@ def test_j3_finalize_force_close_mixed_long_short_nested_breaker():
     b = PaperBroker(config=get_config())
     t0 = T_BASE
     # Nến 1: Submit LONG cho BTC, SHORT cho ETH
-    b.process_candle(make_candle(t0, symbol="BTCUSDT"))
+    b.process_batch([make_candle(t0, symbol="BTCUSDT"), make_candle(t0, symbol="ETHUSDT")])
     b.submit_order(make_req(t0, symbol="BTCUSDT", direction=OrderDirection.LONG, qty=10.0))
-    b.process_candle(make_candle(t0, symbol="ETHUSDT"))
     b.submit_order(make_req(t0, symbol="ETHUSDT", direction=OrderDirection.SHORT, qty=10.0, sl=105.0, tp=90.0))
 
     # Nến 2: Khớp cả 2 lệnh
     t1 = t0 + timedelta(minutes=1)
-    b.process_candle(make_candle(t1, symbol="BTCUSDT"))
-    b.process_candle(make_candle(t1, symbol="ETHUSDT"))
+    b.process_batch([make_candle(t1, symbol="BTCUSDT"), make_candle(t1, symbol="ETHUSDT")])
     assert len(b.positions) == 2
 
     # Giảm giá mark của cả 2 để LONG lỗ nặng (> daily limit)
@@ -294,13 +292,12 @@ def test_j3_finalize_force_close_three_symbols_nested_breaker_at_second():
     b = PaperBroker(config=get_config())
     t0 = T_BASE
     symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    b.process_batch([make_candle(t0, symbol=sym) for sym in symbols])
     for sym in symbols:
-        b.process_candle(make_candle(t0, symbol=sym))
         b.submit_order(make_req(t0, symbol=sym, direction=OrderDirection.LONG, qty=5.0))
 
     t1 = t0 + timedelta(minutes=1)
-    for sym in symbols:
-        b.process_candle(make_candle(t1, symbol=sym))
+    b.process_batch([make_candle(t1, symbol=sym) for sym in symbols])
     assert len(b.positions) == 3
 
     # Mark price: BTC lãi nhỏ (không khóa CB), ETH lỗ nặng (khóa CB và đóng SOL), SOL đang mở
