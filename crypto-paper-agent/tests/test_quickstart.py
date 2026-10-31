@@ -14,7 +14,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("gymnasium") is None,
+    any(importlib.util.find_spec(name) is None
+        for name in ('gymnasium', 'stable_baselines3', 'torch')),
     reason="quickstart includes the PPO smoke; pip install -r requirements-rl.txt",
 )
 def test_quickstart_runs_offline_from_external_cwd_and_audits_artifacts(

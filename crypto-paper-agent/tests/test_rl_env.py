@@ -73,6 +73,7 @@ def test_actions_cannot_bypass_risk_and_realized_reward_matches_ledger():
 
 
 def test_real_ppo_train_save_load_and_final_holdout(tmp_path):
+    pytest.importorskip('stable_baselines3', reason='optional PPO training runtime')
     from src.research.rl_env import train_ppo
 
     f = data(320)
@@ -90,8 +91,6 @@ def test_real_ppo_train_save_load_and_final_holdout(tmp_path):
         tmp_path, f.iloc[240:], smc_config(), tmp_path / "eval"
     )
     assert evaluated["evaluation"] == report["final_holdout"]
-    import pytest
-
     with pytest.raises(ValueError, match="after the training"):
         evaluate_saved_ppo(tmp_path, f.iloc[:80], smc_config(), tmp_path / "bad")
     assert report["save_load_equal"]
