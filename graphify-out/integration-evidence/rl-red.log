@@ -1,0 +1,74 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent
+configfile: pytest.ini
+collected 7 items
+
+tests\test_rl_interval_boundaries.py FFFFFFF                             [100%]
+
+================================== FAILURES ===================================
+__________________ test_episode_rejects_overlapping_candles ___________________
+tests\test_rl_interval_boundaries.py:40: in test_episode_rejects_overlapping_candles
+    with pytest.raises(ValueError, match='overlap'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+___ test_training_rejects_candle_interval_leakage_before_model_work[parts0] ___
+tests\test_rl_interval_boundaries.py:49: in test_training_rejects_candle_interval_leakage_before_model_work
+    train_ppo(*(frame(p) for p in parts), smc_config(), tmp_path,
+src\research\rl_env.py:289: in train_ppo
+    check_env(env, warn=True)
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+___ test_training_rejects_candle_interval_leakage_before_model_work[parts1] ___
+tests\test_rl_interval_boundaries.py:49: in test_training_rejects_candle_interval_leakage_before_model_work
+    train_ppo(*(frame(p) for p in parts), smc_config(), tmp_path,
+src\research\rl_env.py:289: in train_ppo
+    check_env(env, warn=True)
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+___ test_training_rejects_candle_interval_leakage_before_model_work[parts2] ___
+tests\test_rl_interval_boundaries.py:49: in test_training_rejects_candle_interval_leakage_before_model_work
+    train_ppo(*(frame(p) for p in parts), smc_config(), tmp_path,
+src\research\rl_env.py:289: in train_ppo
+    check_env(env, warn=True)
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+__ test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes0] __
+tests\test_rl_interval_boundaries.py:73: in test_evaluation_rejects_validation_overlap_and_overlapping_bars
+    evaluate_saved_ppo(tmp_path / 'model', frame(minutes), config,
+src\research\rl_env.py:398: in evaluate_saved_ppo
+    model = PPO.load(model_path, device="cpu")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+__ test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes1] __
+tests\test_rl_interval_boundaries.py:73: in test_evaluation_rejects_validation_overlap_and_overlapping_bars
+    evaluate_saved_ppo(tmp_path / 'model', frame(minutes), config,
+src\research\rl_env.py:398: in evaluate_saved_ppo
+    model = PPO.load(model_path, device="cpu")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+__ test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes2] __
+tests\test_rl_interval_boundaries.py:73: in test_evaluation_rejects_validation_overlap_and_overlapping_bars
+    evaluate_saved_ppo(tmp_path / 'model', frame(minutes), config,
+src\research\rl_env.py:398: in evaluate_saved_ppo
+    model = PPO.load(model_path, device="cpu")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_rl_interval_boundaries.py:27: in forbidden
+    raise AssertionError('Invalid/overlapping input reached training or model loading')
+E   AssertionError: Invalid/overlapping input reached training or model loading
+=========================== short test summary info ===========================
+FAILED tests/test_rl_interval_boundaries.py::test_episode_rejects_overlapping_candles
+FAILED tests/test_rl_interval_boundaries.py::test_training_rejects_candle_interval_leakage_before_model_work[parts0]
+FAILED tests/test_rl_interval_boundaries.py::test_training_rejects_candle_interval_leakage_before_model_work[parts1]
+FAILED tests/test_rl_interval_boundaries.py::test_training_rejects_candle_interval_leakage_before_model_work[parts2]
+FAILED tests/test_rl_interval_boundaries.py::test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes0]
+FAILED tests/test_rl_interval_boundaries.py::test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes1]
+FAILED tests/test_rl_interval_boundaries.py::test_evaluation_rejects_validation_overlap_and_overlapping_bars[minutes2]
+============================== 7 failed in 0.88s ==============================

@@ -1,0 +1,26 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\crypto-paper-agent
+configfile: pytest.ini
+collected 33 items
+
+tests\test_cache_integrity.py ...................                        [ 57%]
+tests\test_rl_interval_boundaries.py ........                            [ 81%]
+tests\test_rl_env.py ...s.                                               [ 96%]
+tests\test_quickstart.py s                                               [100%]
+
+============================== warnings summary ===============================
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\.venv\Lib\site-packages\gymnasium\utils\env_checker.py:373: UserWarning: [33mWARN: `check_env(warn=...)` parameter is now ignored.[0m
+    logger.warn("`check_env(warn=...)` parameter is now ignored.")
+
+tests/test_rl_env.py::test_gym_reset_step_checker_contract
+  C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\eth-btc-research\.venv\Lib\site-packages\gymnasium\utils\env_checker.py:440: UserWarning: [33mWARN: Not able to test alternative render modes due to the environment not having a spec. Try instantiating the environment through `gymnasium.make`[0m
+    logger.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: C:\Users\hungpham\.codex\.chatgpt-projects\g-p-6aad6c5b00008191be801aa63f2dd210\tmp\graphify-20261030\independent-integration-tests.xml -
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_rl_env.py:76: optional PPO training runtime
+SKIPPED [1] tests\test_quickstart.py:16: quickstart includes the PPO smoke; pip install -r requirements-rl.txt
+================== 31 passed, 2 skipped, 2 warnings in 3.24s ==================

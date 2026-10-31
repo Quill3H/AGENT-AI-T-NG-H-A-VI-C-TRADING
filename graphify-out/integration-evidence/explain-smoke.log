@@ -1,0 +1,51 @@
+Node: PaperBroker
+  ID:        crypto_paper_agent_src_execution_paper_broker_paperbroker
+  Source:    crypto-paper-agent/src/execution/paper_broker.py L142
+  Type:      code
+  Community: Execution And Accounting
+  Degree:    197
+
+Connections (197):
+  --> OrderDirection [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L524
+  --> OrderRequest [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L201
+  <-- paper_broker.py [contains] [EXTRACTED] crypto-paper-agent/src/execution/paper_broker.py:L142
+  <-- LocalPaperSession [uses] [INFERRED] crypto-paper-agent/src/paper/live_session.py:L461
+  --> .process_candle() [method] [EXTRACTED] crypto-paper-agent/src/execution/paper_broker.py:L381
+  --> OrderStatus [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L294
+  --> ExitReason [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L654
+  <-- live_session.py [imports] [EXTRACTED] crypto-paper-agent/src/paper/live_session.py:L19
+  --> .submit_order() [method] [EXTRACTED] crypto-paper-agent/src/execution/paper_broker.py:L284
+  --> CircuitBreakerState [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L150
+  <-- causal_runner.py [imports] [EXTRACTED] crypto-paper-agent/src/paper/causal_runner.py:L8
+  <-- test_stage_04_review_07_coverage.py [imports] [EXTRACTED] crypto-paper-agent/tests/test_stage_04_review_07_coverage.py:L17
+  --> NewsCalendarFilter [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L151
+  <-- test_style_suite.py [imports] [EXTRACTED] crypto-paper-agent/tests/test_style_suite.py:L10
+  --> AccountSnapshot [uses] [INFERRED] crypto-paper-agent/src/execution/paper_broker.py:L206
+  <-- test_synthesized_input_contract.py [imports] [EXTRACTED] crypto-paper-agent/tests/test_synthesized_input_contract.py:L224
+  <-- rl_env.py [imports] [EXTRACTED] crypto-paper-agent/src/research/rl_env.py:L18
+  <-- test_g0_settlement_lifecycle.py [imports] [EXTRACTED] crypto-paper-agent/tests/test_g0_settlement_lifecycle.py:L21
+  <-- engine.py [imports] [EXTRACTED] crypto-paper-agent/src/backtest/engine.py:L34
+  <-- test_adversarial_m1.py [imports] [EXTRACTED] crypto-paper-agent/tests/test_adversarial_m1.py:L24
+  ... and 177 more (--all lists all 197)
+  Grouped by file:
+    --> crypto-paper-agent/src/execution/paper_broker.py: 35 connections
+    <-- crypto-paper-agent/tests/test_stage_04_review_07_coverage.py: 16 connections
+    <-- crypto-paper-agent/tests/test_broker_phase_repairs.py: 14 connections
+    <-- crypto-paper-agent/tests/test_stage_04_review_06_coverage.py: 12 connections
+    <-- crypto-paper-agent/docs/reviews/test_stage_04_review_05.py: 10 connections
+    <-- crypto-paper-agent/tests/test_fixed_simulated_funding.py: 8 connections
+    <-- crypto-paper-agent/docs/reviews/test_stage_04_review_06.py: 7 connections
+    <-- crypto-paper-agent/tests/test_partial_execution.py: 7 connections
+    <-- crypto-paper-agent/tests/test_paper_broker.py: 6 connections
+    <-- crypto-paper-agent/tests/test_execution_accounting.py: 4 connections
+    <-- crypto-paper-agent/tests/test_execution_no_lookahead.py: 4 connections
+    <-- crypto-paper-agent/docs/reviews/test_stage_04_review_07.py: 3 connections
+    <-- crypto-paper-agent/scripts/simulate_paper_execution.py: 3 connections
+    <-- crypto-paper-agent/src/execution/pair_account.py: 3 connections
+    <-- crypto-paper-agent/src/paper/causal_runner.py: 3 connections
+    <-- crypto-paper-agent/tests/test_backtest_engine.py: 3 connections
+    <-- crypto-paper-agent/tests/test_breakout_retest.py: 3 connections
+    <-- crypto-paper-agent/tests/test_crypto_orb_portfolio.py: 3 connections
+    <-- crypto-paper-agent/tests/test_g0_settlement_lifecycle.py: 3 connections
+    <-- crypto-paper-agent/tests/test_kill_switch.py: 3 connections
+    ... and 16 more files

@@ -1,0 +1,13 @@
+Graph: graphify-out/graph.json (7889 nodes) | Traversal: BFS depth=2 | Start: ['PaperBroker', 'recovery', '_funding()'] | 971 nodes found
+
+[!] TRUNCATED: showing 8 of 971 nodes (~350-token budget). The answer may be among the 963 cut nodes — raise the token budget to 46006 to get all 971 (CLI: --budget 46006, MCP: token_budget=46006) or narrow the query (e.g. context_filter=['call'], or get_node for a specific symbol).
+
+NODE PaperBroker [src=crypto-paper-agent/src/execution/paper_broker.py loc=L142 community=Execution And Accounting]
+NODE recovery [src=crypto-paper-agent/docs/operations/paper_replay_state_v3.schema.json loc=L36 community=Research Evidence Documents]
+NODE _funding() [src=crypto-paper-agent/tests/test_vision_dataset.py loc=L8 community=Market Data Inputs]
+NODE OrderDirection [src=crypto-paper-agent/src/execution/order_models.py loc=L24 community=Regression Test Contracts]
+NODE paper_replay_state_v3.schema.json [src=crypto-paper-agent/docs/operations/paper_replay_state_v3.schema.json loc=L1 community=Research Evidence Documents]
+NODE OrderRequest [src=crypto-paper-agent/src/execution/order_models.py loc=L91 community=Regression Test Contracts]
+NODE paper_broker.py [src=crypto-paper-agent/src/execution/paper_broker.py loc=L1 community=Execution And Accounting]
+NODE LocalPaperSession [src=crypto-paper-agent/src/paper/live_session.py loc=L133 community=Regression Test Contracts]
+... (truncated — 963 more nodes cut by ~350-token budget. Narrow with context_filter=['call'] or use get_node for a specific symbol)

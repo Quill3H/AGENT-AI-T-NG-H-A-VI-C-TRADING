@@ -1,0 +1,201 @@
+{
+  "node_count": 8313,
+  "unverified_node_count": 0,
+  "raw_edge_count": 25553,
+  "non_object_edges": 0,
+  "missing_endpoint_edges": 0,
+  "dangling_endpoint_edges": 2493,
+  "external_reference_edges": 2,
+  "self_loop_edges": 12,
+  "valid_candidate_edges": 23058,
+  "exact_duplicate_edges": 0,
+  "directed_unique_endpoint_pairs": 22254,
+  "directed_same_endpoint_collapsed_edges": 804,
+  "undirected_unique_endpoint_pairs": 22241,
+  "undirected_same_endpoint_collapsed_edges": 817,
+  "same_endpoint_group_count": 798,
+  "relation_variant_groups": 705,
+  "source_file_variant_groups": 0,
+  "source_location_variant_groups": 26,
+  "context_variant_groups": 70,
+  "post_build_graph_type": "Graph",
+  "post_build_node_count": 7965,
+  "post_build_edge_count": 21826,
+  "post_build_error": "",
+  "producer_suppression": {
+    "path": "C:\\Users\\hungpham\\AppData\\Roaming\\uv\\tools\\graphifyy\\Lib\\site-packages\\graphify\\extract.py",
+    "total_sites": 12,
+    "sites": [
+      {
+        "line": 1829,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2393,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2395,
+        "name": "seen_doc_refs",
+        "tuple_arity": 0,
+        "sample": "seen_doc_refs: set[str] = set()"
+      },
+      {
+        "line": 3062,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 3209,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n.get(\"id\") for n in nodes}"
+      },
+      {
+        "line": 4350,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 4536,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 7947,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8055,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8134,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8659,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 8660,
+        "name": "seen_edges",
+        "tuple_arity": 4,
+        "sample": "seen_edges: set[tuple[str, str, str, str | None]] = set()"
+      }
+    ],
+    "error": ""
+  },
+  "examples": [
+    {
+      "source": "crypto_paper_agent_config_research_backtest_lab_example_jobs",
+      "target": "crypto_paper_agent_config_research_backtest_lab_example_jobs_name",
+      "edge_count": 3,
+      "relations": [
+        "contains"
+      ],
+      "source_files": [
+        "crypto-paper-agent/config/research/backtest_lab.example.yaml"
+      ],
+      "source_locations": [
+        "L15",
+        "L4",
+        "L9"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "crypto_paper_agent_config_research_backtest_lab_example_jobs",
+      "target": "crypto_paper_agent_config_research_backtest_lab_example_jobs_strategy",
+      "edge_count": 3,
+      "relations": [
+        "contains"
+      ],
+      "source_files": [
+        "crypto-paper-agent/config/research/backtest_lab.example.yaml"
+      ],
+      "source_locations": [
+        "L10",
+        "L16",
+        "L5"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "crypto_paper_agent_config_research_backtest_lab_example_jobs",
+      "target": "crypto_paper_agent_config_research_backtest_lab_example_jobs_symbol",
+      "edge_count": 3,
+      "relations": [
+        "contains"
+      ],
+      "source_files": [
+        "crypto-paper-agent/config/research/backtest_lab.example.yaml"
+      ],
+      "source_locations": [
+        "L11",
+        "L17",
+        "L6"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "crypto_paper_agent_config_research_backtest_lab_example_jobs",
+      "target": "crypto_paper_agent_config_research_backtest_lab_example_jobs_start",
+      "edge_count": 3,
+      "relations": [
+        "contains"
+      ],
+      "source_files": [
+        "crypto-paper-agent/config/research/backtest_lab.example.yaml"
+      ],
+      "source_locations": [
+        "L12",
+        "L18",
+        "L7"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "crypto_paper_agent_config_research_backtest_lab_example_jobs",
+      "target": "crypto_paper_agent_config_research_backtest_lab_example_jobs_end",
+      "edge_count": 3,
+      "relations": [
+        "contains"
+      ],
+      "source_files": [
+        "crypto-paper-agent/config/research/backtest_lab.example.yaml"
+      ],
+      "source_locations": [
+        "L13",
+        "L19",
+        "L8"
+      ],
+      "contexts": [
+        ""
+      ]
+    }
+  ]
+}

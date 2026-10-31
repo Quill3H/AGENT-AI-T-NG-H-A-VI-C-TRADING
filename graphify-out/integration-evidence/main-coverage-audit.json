@@ -1,0 +1,419 @@
+{
+  "base_main": "3f76782ca49626dc14daed6afd2fc36998fecead",
+  "remote_fetch_completed": true,
+  "scope": "Read-only ancestry and actual selective composition coverage; no source/GitHub mutations",
+  "refs": [
+    {
+      "ref": "origin/claude/project-thread-bla4me",
+      "sha": "c0ca8dd95789f10bf18bf0e2745719d07e7a5c50",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "49",
+        "2"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_base_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_base_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_cost2x_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_cost2x_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_delay15m_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_delay15m_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_oi_lag60_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W1_price_only_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_base_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_base_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_cost2x_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_cost2x_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_delay15m_actual_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_delay15m_actual_trades.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_delay15m_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_delay15m_no_positive_trades.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_oi_lag60_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/W2_price_only_no_positive_cashflows.csv",
+        "crypto-paper-agent/docs/research/runs/oi-reclaim-v1-ce7ce67/regression_red_at_5fdda7c.log",
+        "crypto-paper-agent/docs/reviews/OI_RECLAIM_V1_FIX_HANDOFF_2026-10-23.md"
+      ]
+    },
+    {
+      "ref": "origin/claude/project-thread-hz26f3",
+      "sha": "d5a42ce478f68b8d932b5bb33a85d99e59dd736f",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "35",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/claude/project-thread-jrmpfx",
+      "sha": "7bebd39a473dd5f6758f09015c6ca63a71dbbf44",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "38",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/claude/project-thread-ryvuyt",
+      "sha": "fd466ace0b021e25155e6e5bcd6dabe30cf0a9d7",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "44",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/claude/project-thread-secv2t",
+      "sha": "1ce0e3e40dac8a5ce8877017ec0fbf9791b4c847",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "41",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/claude/project-thread-uiqlsn",
+      "sha": "ab1ad81ea8f8275e34803298ea1c7ad5c222a45a",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "49",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/codex/backtest-lab",
+      "sha": "95af0a28d25b9dbcb7bdef83d33d01af025073b9",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "47",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/codex/eth-btc-cointegration-v1",
+      "sha": "05a396f1f1568639e7fb86524c27c861e829386e",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "46",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/codex/external-repo-research",
+      "sha": "89f16afa5616d3ed601fb8d224458f114b34f6a0",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "122",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/codex/local-paper-futures-app",
+      "sha": "d1cd95a726e12245ede22326e05b09990975ccd6",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "34"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/README.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json",
+        "crypto-paper-agent/web-preview/src/lib/paperEngine.js",
+        "docs/INDEX.md",
+        "docs/PROJECT_STATE.md",
+        "docs/architecture/SYSTEM_ARCHITECTURE.md",
+        "docs/architecture/architecture-and-task-tree.md",
+        "docs/history/evidence/review-high-priority-fixes/ui-example.json",
+        "docs/history/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "docs/operations/LOCAL_PAPER_WEB.md",
+        "docs/planning/2026-09-28-branch-consolidation.md",
+        "docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-futures-app.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "docs/superpowers/plans/2026-09-28-local-paper-safe-integration.md"
+      ]
+    },
+    {
+      "ref": "origin/codex/paper-futures-api-contract",
+      "sha": "cfc65046c13efd05d5a99eb63ace7368af0be73b",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "35"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/README.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json",
+        "crypto-paper-agent/web-preview/src/lib/paperEngine.js",
+        "docs/INDEX.md",
+        "docs/PROJECT_STATE.md",
+        "docs/architecture/SYSTEM_ARCHITECTURE.md",
+        "docs/architecture/architecture-and-task-tree.md",
+        "docs/history/evidence/review-high-priority-fixes/ui-example.json",
+        "docs/history/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "docs/operations/LOCAL_PAPER_WEB.md",
+        "docs/planning/2026-09-28-branch-consolidation.md",
+        "docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-futures-app.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "docs/superpowers/plans/2026-09-28-local-paper-safe-integration.md",
+        "docs/superpowers/plans/2026-09-28-paper-futures-api-contract.md"
+      ]
+    },
+    {
+      "ref": "origin/codex/paper-futures-integration",
+      "sha": "2118e2cae327b005b314fc801db1a9fcafcc6149",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "18"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/architecture/architecture-and-task-tree.md",
+        "crypto-paper-agent/docs/operations/LOCAL_PAPER_WEB.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_STREAM_BACKEND_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/PAPER_RECOVERY_INTEGRATION_REVIEW_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/evidence/review-high-priority-fixes/ui-example.json",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-recovery-review-repair.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-stream-backend.md",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json"
+      ]
+    },
+    {
+      "ref": "origin/codex/paper-stream-backend",
+      "sha": "37bf75796ade54c18827811dbd58a0b629539f25",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "14"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/architecture/architecture-and-task-tree.md",
+        "crypto-paper-agent/docs/operations/LOCAL_PAPER_WEB.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_STREAM_BACKEND_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/evidence/review-high-priority-fixes/ui-example.json",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-recovery-review-repair.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-stream-backend.md",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json"
+      ]
+    },
+    {
+      "ref": "origin/codex/paper-windows-recovery",
+      "sha": "829ccaf4b18b2d5a1eb73c1433567513ebd5297e",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "22"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/architecture/architecture-and-task-tree.md",
+        "crypto-paper-agent/docs/operations/LOCAL_PAPER_WEB.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_STREAM_BACKEND_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/PAPER_RECOVERY_INTEGRATION_REVIEW_HANDOFF.md",
+        "crypto-paper-agent/docs/reviews/PAPER_WINDOWS_RECOVERY_2026-09-28.md",
+        "crypto-paper-agent/docs/reviews/evidence/review-high-priority-fixes/ui-example.json",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-recovery-review-repair.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-paper-stream-backend.md",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-28-windows-paper-resume.md",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json"
+      ]
+    },
+    {
+      "ref": "origin/codex/research-qa-hardening",
+      "sha": "f7650e3b7406a27fa64845b43bb0e9b06350c442",
+      "ancestor_of_main": true,
+      "main_only_branch_only_commits": [
+        "35",
+        "0"
+      ],
+      "branch_only_added_paths": []
+    },
+    {
+      "ref": "origin/codex/review-high-priority-data-fixes",
+      "sha": "ffbc14b23435a673b29e9268103d4eef4ae15166",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "2"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/reviews/2026-09-27-high-priority-input-fixes.md",
+        "crypto-paper-agent/docs/reviews/evidence/review-high-priority-fixes/ui-example.json",
+        "crypto-paper-agent/docs/superpowers/plans/2026-09-27-review-high-priority-data-fixes.md"
+      ]
+    },
+    {
+      "ref": "origin/codex/web-chart-timeframes-and-signals",
+      "sha": "1876b134684be6e925d954c4bd3635b61d33fcdc",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "35"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/README.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json",
+        "crypto-paper-agent/web-preview/src/lib/paperEngine.js",
+        "docs/INDEX.md",
+        "docs/PROJECT_STATE.md",
+        "docs/architecture/SYSTEM_ARCHITECTURE.md",
+        "docs/architecture/architecture-and-task-tree.md",
+        "docs/history/evidence/review-high-priority-fixes/ui-example.json",
+        "docs/history/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "docs/operations/LOCAL_PAPER_WEB.md",
+        "docs/planning/2026-09-28-branch-consolidation.md",
+        "docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-futures-app.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "docs/superpowers/plans/2026-09-28-local-paper-safe-integration.md"
+      ]
+    },
+    {
+      "ref": "origin/codex/windows-paper-replay",
+      "sha": "b293ee1ce7a69fce6068816161e4c459e4b719b9",
+      "ancestor_of_main": false,
+      "main_only_branch_only_commits": [
+        "124",
+        "44"
+      ],
+      "branch_only_added_paths": [
+        "crypto-paper-agent/docs/README.md",
+        "crypto-paper-agent/docs/operations/PAPER_REPLAY_API_V3.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_API.md",
+        "crypto-paper-agent/docs/operations/PAPER_STREAM_RECOVERY_V2.md",
+        "crypto-paper-agent/docs/operations/paper_replay_api_examples_v3.json",
+        "crypto-paper-agent/scripts/verify_paper_integration.py",
+        "crypto-paper-agent/scripts/verify_paper_public_runtime.py",
+        "crypto-paper-agent/scripts/windows/install-paper-task.ps1",
+        "crypto-paper-agent/scripts/windows/uninstall-paper-task.ps1",
+        "crypto-paper-agent/tests/test_cache_integrity.py",
+        "crypto-paper-agent/web-preview/src/CandlestickChart.jsx",
+        "crypto-paper-agent/web-preview/src/PaperReplay.test.jsx",
+        "crypto-paper-agent/web-preview/src/data/artifact_audit.json",
+        "crypto-paper-agent/web-preview/src/data/backend_contract.js",
+        "crypto-paper-agent/web-preview/src/data/long_equity_curve.csv",
+        "crypto-paper-agent/web-preview/src/data/public_dataset_manifest.json",
+        "crypto-paper-agent/web-preview/src/data/walk_forward.report.json",
+        "crypto-paper-agent/web-preview/src/lib/paperEngine.js",
+        "docs/INDEX.md",
+        "docs/PROJECT_STATE.md",
+        "docs/adr/0013-windows-paper-replay-and-trials.md",
+        "docs/architecture/SYSTEM_ARCHITECTURE.md",
+        "docs/architecture/architecture-and-task-tree.md",
+        "docs/handover/2026-10-17-github-checkpoint.md",
+        "docs/history/evidence/review-high-priority-fixes/ui-example.json",
+        "docs/history/reviews/LOCAL_PAPER_WEB_HANDOFF.md",
+        "docs/operations/LOCAL_PAPER_WEB.md",
+        "docs/planning/2026-09-28-branch-consolidation.md",
+        "docs/reviews/2026-09-30-project-assessment.md",
+        "docs/reviews/2026-09-30-project-audit-probes.py",
+        "docs/reviews/2026-10-01-paper-s0-repair.md",
+        "docs/superpowers/plans/2026-09-27-architecture-task-tree-alignment.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-futures-app.md",
+        "docs/superpowers/plans/2026-09-27-local-paper-scanner.md",
+        "docs/superpowers/plans/2026-09-28-local-paper-safe-integration.md",
+        "docs/superpowers/plans/2026-09-30-project-workflow.md",
+        "docs/superpowers/plans/2026-10-01-paper-causal-runner.md",
+        "docs/superpowers/plans/2026-10-01-paper-compact-store.md",
+        "docs/superpowers/plans/2026-10-01-paper-funding-identity.md",
+        "docs/superpowers/plans/2026-10-01-paper-input-ownership-repair.md",
+        "docs/superpowers/plans/2026-10-01-paper-trials-research.md",
+        "docs/superpowers/plans/2026-10-01-paper-windows-api.md",
+        "docs/superpowers/specs/2026-10-01-windows-paper-replay-design.md"
+      ]
+    }
+  ],
+  "open_prs": [
+    {
+      "number": 5,
+      "head": "cfc65046c13efd05d5a99eb63ace7368af0be73b",
+      "base": "codex/local-paper-futures-app",
+      "draft": false
+    },
+    {
+      "number": 6,
+      "head": "b293ee1ce7a69fce6068816161e4c459e4b719b9",
+      "base": "codex/local-paper-futures-app",
+      "draft": true
+    }
+  ],
+  "original_cache_probe": {
+    "tests": 19,
+    "passed": 2,
+    "failed": 17,
+    "log": "cache-integrity-main.log",
+    "production_changed": false
+  }
+}

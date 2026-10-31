@@ -16,3 +16,7 @@ crypto-paper-agent/artifacts/
 crypto-paper-agent/market-data/
 /*.log
 /tmp/
+
+# Graphify machine state; share only portable graph/report/evidence outputs.
+/graphify-out/.*
+/graphify-out/cache/
