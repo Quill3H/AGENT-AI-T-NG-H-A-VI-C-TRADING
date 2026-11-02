@@ -54,3 +54,15 @@ Created separate durable branch paper-state-okx at5aea45b with the owner-authori
 Pending: owner approval of PR12 main integration/schedule activation, first durable production cycle and dashboard verification, and any local-heartbeat pause. Main integration was previously rejected by automatic approval review as lacking specific owner publication authorization; do not bypass that rejection.
 
 Independent artifact review reconciled the source context hash bd4644cf4b642cabf951bd5952ffa20c5ebb60a0512e05a820638768d0201319, four instruments with81closed contiguous15m candles, rounded SMA/ATR figures, context validity and entry accounting. No blocker to preparing a separate fresh ledger was found. Raw replay rows/provider response are not retained in this artifact, so recorded native replay identity cannot be reauthenticated offline from it. Funding settlement and closure remain unexercised live.
+
+## Owner-approved activation and first production persistence
+
+Owner explicitly approved PR12 main merge and15minute activation. Merge df07280de7dc5fb19c334d17a4d356ed102902e4 was verified against GitHub and both local main checkouts; unrelated reference-audit changes were preserved. Workflow schedule is minutes02,17,32,47. Original Binance ledger and local heartbeat remain unchanged.
+
+Production run [41420089050](https://github.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/actions/runs/41420089050), job125193277158, passed85tests/0skip. Signed cycle returned Quantity outside exchange limits for ETH LONG allocation0.05. No trade was accepted. The recovery publication step succeeded and advanced paper-state-okx from5aea45b to fcf035c37f7ede53919ffd458957d5b6c9b4274a, retaining context, model intent/decision, rejection, state and view. All three balances remain100USD. Do not retry the same-cycle intent or weaken quantity rules. Execution-time rejected quote is not retained, so exact cause within that quantity gate is not established.
+
+Author verified public /api/state HTTP200 with venueOKX, all three wallets and cloudUpdatedAt1793611413627. Browser dashboard rendered the same committed300USD total and rejection. This verifies rejected-cycle durability and dashboard publication, not a successful production fill or continuous uptime. Future scheduled cycles have not yet been observed at this checkpoint.
+# Current checkpoint — owner-approved OKX activation
+
+PR12 merged at df07280de7dc5fb19c334d17a4d356ed102902e4 and15minute schedule activated with explicit owner approval. First production run41420089050 persisted a fail-closed quantity rejection at ledger fcf035c; all three wallets remain100USD, and public dashboard matches. This is operational activation, not economic acceptance or proof of a production fill. Earlier draft/pending/migration sections below are historical and superseded by the activation section at the end.
+

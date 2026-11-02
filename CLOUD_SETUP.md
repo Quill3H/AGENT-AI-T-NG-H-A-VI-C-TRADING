@@ -1,4 +1,14 @@
-# Paper Bot Studio cloud candidate — NOT DEPLOYED
+# OKX Paper Bot Studio — current operation
+
+Owner approved PR12 merge and schedule activation on2026-11-02. Main integration commit: df07280de7dc5fb19c334d17a4d356ed102902e4. The approved workflow runs at minutes02,17,32,47 each hour and supports manual dispatch. Render currently runs the reviewed runtime at e9eef3e; subsequent commits through this merge only changed documentation/workflow configuration. Render remains sourced from codex/paper-cloud-probe, so future runtime changes on main require an explicit corresponding deployment.
+
+Dashboard: https://paper-studio-connectivity.onrender.com/ . Authoritative durable ledger: paper-state-okx. Three fresh OKX wallets started at100USD each; original Binance history and local automation remain separate and unchanged. Never copy the isolated smoke position into the production ledger, reinitialize this branch, or replace its state with a stale local checkout.
+
+First production run41420089050 passed85offline checks, but Gemini's ETH LONG was rejected by the unchanged quantity gate. The execution-time quote is not retained for this rejected entry, so its exact quantity-limit cause cannot be reconstructed from the artifact. The signed rejection, context and intent were successfully committed at fcf035c37f7ede53919ffd458957d5b6c9b4274a; all balances remain100and there are zero trades. Public /api/state returned200and the dashboard rendered the committed ledger. This verifies persistence on a rejected cycle, not a successful production fill, funding debit or closure. The earlier isolated smoke did exercise a paper entry and replay.
+
+Funding is an approved estimate from actual realizedRate and the confirmed1m mark close immediately before settlement, with source/method metadata. Runtime and dashboard retain PAPER_ONLY. Cron can be late; missed entry boundaries are skipped. TP/SL is reconciled on each cloud run, not monitored continuously. Credential configuration and successful inference do not establish billing tier or guarantee future quota/uptime. No billing upgrade is authorized.
+
+The sections below are historical setup notes, superseded by the current operation above and CLOUD_VERIFICATION_2026_11_02.md. In particular, the earlier migration/paper-state/manual-only instructions do not apply to the owner-selected fresh OKX ledger.
 
 ## Current Render transport (supersedes direct Actions execution below)
 
