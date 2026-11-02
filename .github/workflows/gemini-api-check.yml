@@ -34,4 +34,14 @@ jobs:
           console.log('VERIFIED: Gemini structured inference; model='+model);
           console.log('No paper ledger or trading action was accessed. Billing tier is not established by this check.');
           JS
+      - name: Verify public futures data from this runner
+        run: |
+          node --input-type=module <<'JS'
+          const r = await fetch('https://fapi.binance.com/fapi/v1/time', {signal:AbortSignal.timeout(15000)});
+          console.log('Binance public futures HTTP '+r.status);
+          if (!r.ok) process.exit(1);
+          const data = await r.json();
+          if (!Number.isSafeInteger(data.serverTime)) throw Error('Invalid exchange clock');
+          console.log('VERIFIED: public futures clock available');
+          JS
 
