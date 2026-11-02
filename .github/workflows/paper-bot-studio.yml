@@ -1,6 +1,8 @@
 name: OKX Paper Bot Studio (Gemini)
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '2,17,32,47 * * * *'
 permissions:
   contents: write
 concurrency:
@@ -24,7 +26,7 @@ jobs:
         run: |
           test -n "$GEMINI_API_KEY" || { echo 'Missing GEMINI_API_KEY secret'; exit 1; }
           test -n "$GEMINI_MODEL" || { echo 'Missing GEMINI_MODEL variable'; exit 1; }
-      - name: Load migrated ledger (never initialize replacement wallets)
+      - name: Load existing OKX ledger (never reset wallets)
         uses: actions/checkout@v4
         with:
           ref: paper-state-okx
