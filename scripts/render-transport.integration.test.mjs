@@ -10,6 +10,14 @@ import {sign,verify,safeFile} from './cloud-transport.mjs';
 import {newState} from '../paper-bot-studio/engine.mjs';
 
 const key='fixture-only-not-a-real-key',revision='a'.repeat(40);
+test('cold health503 is retried before a single signed cycle request',async t=>{
+ const f=await setup(t,async()=>{});let health=0,posts=0;
+ const result=await invokeCloud({...options(f),warmupDelayMs:0,fetcher:async(url,opts)=>{
+  if(url.endsWith('/health')&&health++===0)return new Response('',{status:503});
+  if(url.endsWith('/run'))posts++;return fetch(url,opts);
+ }});
+ assert.equal(result.ok,true);assert.equal(health,2);assert.equal(posts,1);
+});
 async function setup(t,cycle){
  const root=path.join(path.dirname(fileURLToPath(import.meta.url)),'.test-data');await fs.mkdir(root,{recursive:true});
  const directory=await fs.mkdtemp(path.join(root,'transport-'));

@@ -6,12 +6,18 @@ import {execFileSync} from 'node:child_process';
 import {sign,verify,safeFile,validateState} from './cloud-transport.mjs';
 import {newState,FRAMES} from '../paper-bot-studio/engine.mjs';
 
-export async function invokeCloud({directory,key,endpoint='https://paper-studio-connectivity.onrender.com',baseRevision,runId=randomUUID(),fetcher=fetch,testEndpoint=false}={}){
+export async function invokeCloud({directory,key,endpoint='https://paper-studio-connectivity.onrender.com',baseRevision,runId=randomUUID(),fetcher=fetch,testEndpoint=false,warmupDelayMs=3000}={}){
  if(!key?.trim())throw Error('Missing GEMINI_API_KEY');
  if(!testEndpoint&&endpoint!=='https://paper-studio-connectivity.onrender.com')throw Error('Unapproved cloud endpoint');
  await fs.rm(path.join(directory,'.cloud-ready'),{force:true});
- const health=await fetcher(endpoint+'/health',{signal:AbortSignal.timeout(120000),redirect:'error'});
- if(!health.ok)throw Error('Render warmup failed');
+ const warmUntil=Date.now()+120000;
+ for(let attempt=0;;attempt++){
+  const left=warmUntil-Date.now();if(left<=0||attempt>=40)throw Error('Render warmup deadline reached');
+  const health=await fetcher(endpoint+'/health',{signal:AbortSignal.timeout(Math.min(left,15000)),redirect:'error'});
+  if(health.ok)break;
+  if(![502,503,504].includes(health.status))throw Error(`Render warmup HTTP ${health.status}`);
+  await new Promise(resolve=>setTimeout(resolve,Math.min(warmupDelayMs,Math.max(0,warmUntil-Date.now()))));
+ }
  const state=validateState(JSON.parse(await fs.readFile(path.join(directory,'state.json'),'utf8'))),intents={};
  for(const [frame,ms] of Object.entries(FRAMES)){
   const name=`decisions/intent-${frame}-${Math.floor(Date.now()/ms)*ms}.json`;
