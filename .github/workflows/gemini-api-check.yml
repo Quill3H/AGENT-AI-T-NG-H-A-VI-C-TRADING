@@ -6,8 +6,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 12
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -34,4 +35,24 @@ jobs:
           console.log('VERIFIED: Gemini structured inference; model='+model);
           console.log('No paper ledger or trading action was accessed. Billing tier is not established by this check.');
           JS
+      - name: Offline transport and paper checks
+        run: node --test scripts/cloud-transport.test.mjs scripts/render-transport.integration.test.mjs scripts/gemini-paper*.test.mjs paper-bot-studio/*.test.mjs
+      - name: Verify isolated paper cycle on Render (not original wallets)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PAPER_VALIDATION: 'true'
+          PAPER_DATA_DIR: cloud-validation
+        run: |
+          node scripts/render-cycle.mjs
+      - name: Isolated validation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-validation
+          path: |
+            cloud-validation/state.json
+            cloud-validation/state-view.json
+            cloud-validation/decisions/*.json
+            cloud-validation/contexts/*.json
+          retention-days: 7
 
