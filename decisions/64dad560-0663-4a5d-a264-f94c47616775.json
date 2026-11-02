@@ -1,0 +1,13 @@
+{
+  "contextId": "64dad560-0663-4a5d-a264-f94c47616775",
+  "frame": "15m",
+  "action": "LONG",
+  "symbol": "ETHUSDT",
+  "allocationPct": 0.05,
+  "sl": 2284,
+  "tp": 2320,
+  "method": "SMA_CROSSOVER_RECOVERY",
+  "reason": "1. Giá ETH đã cắt lên trên cả SMA20 (2290.28) và SMA50 (2283.89) trên khung 15m. 2. Xuất hiện lực mua chủ động đẩy giá từ vùng hỗ trợ 2280 lên mức 2297. 3. Cấu trúc thị trường ngắn hạn đang chuyển dịch sang xu hướng tăng với các nến thân dài.",
+  "invalidation": "Giá đóng cửa dưới ngưỡng hỗ trợ tâm lý và SMA50 tại 2283",
+  "modelVersion": "gemini-3-flash-preview"
+}
