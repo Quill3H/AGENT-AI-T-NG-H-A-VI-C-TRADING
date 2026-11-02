@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "mode": "PAPER_ONLY",
+  "venue": "OKX",
+  "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
+  "createdAt": 1793611142037,
+  "updatedAt": 1793611142037,
+  "wallets": [
+    {
+      "frame": "15m",
+      "initial": 100,
+      "balance": 100,
+      "enabled": true,
+      "trades": [],
+      "decisions": [],
+      "reviews": [],
+      "curve": [
+        {
+          "time": 1793611142037,
+          "value": 100
+        }
+      ]
+    },
+    {
+      "frame": "1h",
+      "initial": 100,
+      "balance": 100,
+      "enabled": true,
+      "trades": [],
+      "decisions": [],
+      "reviews": [],
+      "curve": [
+        {
+          "time": 1793611142037,
+          "value": 100
+        }
+      ]
+    },
+    {
+      "frame": "4h",
+      "initial": 100,
+      "balance": 100,
+      "enabled": true,
+      "trades": [],
+      "decisions": [],
+      "reviews": [],
+      "curve": [
+        {
+          "time": 1793611142037,
+          "value": 100
+        }
+      ]
+    }
+  ],
+  "contexts": [],
+  "rejections": [],
+  "worker": {
+    "startedAt": 1793611142037,
+    "lastTick": null,
+    "lastSuccess": null,
+    "error": null
+  },
+  "quotes": {}
+}
