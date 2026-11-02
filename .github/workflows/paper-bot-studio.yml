@@ -1,0 +1,61 @@
+name: Paper Bot Studio Gemini (manual validation)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: paper-bot-studio-state
+  cancel-in-progress: false
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline checks
+        run: node --test scripts/gemini-paper*.test.mjs paper-bot-studio/*.test.mjs
+      - name: Require explicit free-tier model and key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: |
+          test -n "$GEMINI_API_KEY" || { echo 'Missing GEMINI_API_KEY secret'; exit 1; }
+          test -n "$GEMINI_MODEL" || { echo 'Missing GEMINI_MODEL variable'; exit 1; }
+      - name: Load migrated ledger (never initialize replacement wallets)
+        uses: actions/checkout@v4
+        with:
+          ref: paper-state
+          path: paper-state
+      - name: Run Gemini paper cycle
+        id: cycle
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          PAPER_DATA_DIR: paper-state
+          PAPER_MAX_RUN_MS: '480000'
+        run: timeout --signal=TERM --kill-after=30s 9m node scripts/gemini-paper.mjs
+      - name: Preserve ledger even after partial cycle failure
+        if: ${{ always() && steps.cycle.outcome != 'skipped' && steps.cycle.outcome != '' }}
+        run: |
+          test -f paper-state/state.json
+          git -C paper-state config user.name 'paper-bot-studio[bot]'
+          git -C paper-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C paper-state add -- state.json
+          if test -d paper-state/decisions; then git -C paper-state add -- decisions; fi
+          if ! git -C paper-state diff --cached --quiet; then
+            git -C paper-state commit -m 'chore: persist paper ledger'
+            git -C paper-state push origin HEAD:paper-state
+          fi
+      - name: Preserve recovery evidence without worker credentials
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-cycle-evidence
+          path: |
+            paper-state/state.json
+            paper-state/contexts/*.json
+            paper-state/decisions/*.json
+          retention-days: 7
