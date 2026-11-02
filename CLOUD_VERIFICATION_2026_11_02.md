@@ -1,6 +1,6 @@
 # Cloud verification — 2026-11-02
 
-Status: DRAFT, NOT ACCEPTED FOR CUTOVER. Local heartbeat, worker, wallets and ledger remain unchanged.
+Current status: owner-approved PR12 merged at df07280; OKX15minute schedule activated. First production run41420089050 persisted a quantity rejection at ledger fcf035c, leaving three100USD wallets with zero trades. Public dashboard matches. This is operational activation, not economic acceptance or proof of a production fill. The older draft/pending/migration sections below are historical and superseded by the activation section near the end. Original Binance ledger and local automation remain unchanged.
 
 - Gemini secret exists on GitHub; model variable is gemini-3-flash-preview.
 - Manual API-only probe passed on main commit 30ff761d0580de8cb0bf40acd174654b45ababa8, run 41389284512.
