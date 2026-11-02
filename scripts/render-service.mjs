@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {runCycle} from './gemini-paper.mjs';
 import {sign,verify,validateState,safeFile} from './cloud-transport.mjs';
 import {probeOkx} from './probe-okx.mjs';
+import {OkxMarket} from '../paper-bot-studio/okx-market.mjs';
 
 export async function loadKey(){
  const key=process.env.GEMINI_API_KEY??await fs.readFile('/etc/secrets/GEMINI_API_KEY','utf8');
@@ -27,7 +28,7 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
   if(req.method==='GET'&&req.url==='/api/state'){
    try{
     if(!publicView||clock()-publicView.fetchedAt>30000){
-     const r=await fetch('https://raw.githubusercontent.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/paper-state/state-view.json',{signal:AbortSignal.timeout(15000)});
+     const r=await fetch('https://raw.githubusercontent.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/paper-state-okx/state-view.json',{signal:AbortSignal.timeout(15000)});
      if(!r.ok)throw Error('No committed cloud snapshot');publicView={fetchedAt:clock(),value:await r.json()};
     }
     const view=structuredClone(publicView.value);view.serverTime=clock();
@@ -67,7 +68,7 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
      await fs.mkdir(path.join(directory,'decisions'));
      for(const [name,text] of Object.entries(input.intents))await fs.writeFile(path.join(directory,name),text);
      let error=null;
-     try{await cycle({directory,maxRunMs:360000});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
+     try{await cycle({directory,maxRunMs:360000,market:new OkxMarket({allowEstimatedFunding:input.state.fundingPolicy==='MARK_1M_PRE_EVENT_PROXY'})});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
      const files={};
      for(const file of ['state.json','state-view.json'])try{files[file]=await fs.readFile(path.join(directory,file),'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}
      for(const sub of ['contexts','decisions']){

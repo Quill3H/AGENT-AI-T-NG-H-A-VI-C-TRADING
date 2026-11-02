@@ -32,3 +32,13 @@ Branch commit c53f58b6697f4cd7e9ef81cfad6e87c462f40163 workflow run41415685703: 
 Binance documents418 as an IP ban after rate limiting, with IP-based limits and variable ban duration. Current run did not capture Retry-After; exact unblock time is unknown. Stop requests rather than repeat, change endpoints/IPs or fabricate candles. A clock-only200earlier did not establish reliable access for the full cycle. Draft PR12records the candidate; hosting/data availability remains unaccepted.
 
 Cold-start regression was reproduced from Render503loading page and fixed by safe GET-only warm-up retries (120s/40attempts cap). POST remains one attempt; subsequent transport/helper review14passed. Original-wallet migration/scheduling requires a successful source-backed cycle and explicit main-publication/cutover approval.
+
+## OKX isolated candidate
+
+Owner approved three new $100 OKX paper wallets, retaining the Binance ledger separately, and explicitly accepted funding estimated from realizedRate and the confirmed 1m mark candle immediately before settlement. No Binance position is valued or closed using OKX data.
+
+OKX adapter converts contract lots into base quantities, retains native trade IDs as strings, requires bounded historical replay coverage, and fails closed on missing or malformed input. Independent review found two wire-coercion bugs (missing realized rate becoming zero, missing timestamps falsely proving coverage); both were fixed and independently verified closed. Reviewer independently reran 16 OKX tests, zero skipped, and permits isolated smoke only.
+
+Author verification: 73 paper/runner/signature tests passed, zero skipped; separately 13 transport/probe tests passed, zero skipped. git diff --check passed. PowerShell emits an InitializeDefaultDrives warning, but isolated Node sentinel and isolated two-test execution both exited 0 and produced expected output; the warning does not prevent execution.
+
+The candidate uses a separate paper-state-okx branch and OKX dashboard labels. Scheduled activation, main integration, and full Render decision/persistence verification remain pending. No original ledger or automation was changed.

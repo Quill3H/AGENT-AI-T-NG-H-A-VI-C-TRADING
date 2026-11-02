@@ -1,10 +1,10 @@
-name: Paper Bot Studio Gemini (manual validation)
+name: OKX Paper Bot Studio (Gemini)
 on:
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: paper-bot-studio-state
+  group: paper-bot-studio-okx-state
   cancel-in-progress: false
 jobs:
   paper:
@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '22'
       - name: Offline checks
-        run: node --test scripts/gemini-paper*.test.mjs paper-bot-studio/*.test.mjs
+        run: node --test scripts/cloud-transport.test.mjs scripts/render-transport.integration.test.mjs scripts/gemini-paper*.test.mjs paper-bot-studio/*.test.mjs
       - name: Require explicit free-tier model and key
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -27,7 +27,7 @@ jobs:
       - name: Load migrated ledger (never initialize replacement wallets)
         uses: actions/checkout@v4
         with:
-          ref: paper-state
+          ref: paper-state-okx
           path: paper-state
       - name: Run Gemini paper cycle on Render
         id: cycle
@@ -48,7 +48,7 @@ jobs:
           if test -f paper-state/state-view.json; then git -C paper-state add -- state-view.json; fi
           if ! git -C paper-state diff --cached --quiet; then
             git -C paper-state commit -m 'chore: persist paper ledger'
-            git -C paper-state push origin HEAD:paper-state
+            git -C paper-state push origin HEAD:paper-state-okx
           fi
       - name: Preserve recovery evidence without worker credentials
         if: ${{ always() }}

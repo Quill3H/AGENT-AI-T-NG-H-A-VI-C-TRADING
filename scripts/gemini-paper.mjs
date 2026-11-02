@@ -37,7 +37,8 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
  const deadline=wallClock()+maxRunMs;
  function remaining(){const ms=deadline-wallClock();if(ms<=0)throw Error('Application deadline reached; preserving ledger for recovery');return ms;}
  async function analyzeWithinDeadline(payload){const timeoutMs=Math.min(90000,remaining());const result=await analyze(payload,{timeoutMs});remaining();return result;}
- await requireState(path.join(directory,'state.json'));
+ const initialState=await requireState(path.join(directory,'state.json'));
+ if(market?.venue&&(initialState.venue!==market.venue||initialState.wallets.some(w=>w.trades.some(t=>t.venue!==market.venue))))throw Error('Ledger venue mismatch; original positions cannot switch providers');
  if(analyze===geminiJson&&(!process.env.GEMINI_API_KEY||!process.env.GEMINI_MODEL))throw Error('Configure GEMINI_API_KEY and GEMINI_MODEL before running');
  remaining();const runtime=await createRuntime({directory,market,clock});
  try{
@@ -49,7 +50,7 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
    const data=await r.json();if(!r.ok)throw Error(data.error??`Worker HTTP ${r.status}`);return data;
   }
   async function tick(){
-   for(let attempt=0;attempt<16;attempt++){
+   for(let attempt=0;attempt<(market?.venue==='OKX'?64:16);attempt++){
     remaining();const result=await runtime.tick();remaining();if(result.ok)return;
     const current=await request('/api/state');
     const pending=current.wallets.flatMap(w=>{

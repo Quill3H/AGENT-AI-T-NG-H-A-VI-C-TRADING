@@ -53,7 +53,7 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   if(validation){
    if(path.basename(directory)!=='cloud-validation')throw Error('Validation must use isolated cloud-validation directory');
    await fs.mkdir(directory,{recursive:true});
-   await fs.writeFile(path.join(directory,'state.json'),JSON.stringify(newState()));
+   await fs.writeFile(path.join(directory,'state.json'),JSON.stringify(newState(Date.now(),'OKX')));
   }
   const baseRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',cwd:validation?process.cwd():directory}).trim();
   const result=await invokeCloud({directory,key:process.env.GEMINI_API_KEY,baseRevision,runId:`${process.env.GITHUB_RUN_ID??randomUUID()}-${process.env.GITHUB_RUN_ATTEMPT??1}`});

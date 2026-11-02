@@ -4,8 +4,9 @@ export const LEVERAGE=Object.freeze({BTCUSDT:15,ETHUSDT:10,SOLUSDT:7,HYPEUSDT:5}
 export const FEE=.0005, SLIPPAGE=.0002;
 const requireValue=(condition,message)=>{if(!condition)throw Error(message);};
 const finite=(n)=>typeof n==='number'&&Number.isFinite(n);
-export function newState(now=Date.now()){
- return {version:1,mode:'PAPER_ONLY',createdAt:now,updatedAt:now,wallets:Object.keys(FRAMES).map(frame=>({frame,initial:100,balance:100,enabled:true,trades:[],decisions:[],reviews:[],curve:[{time:now,value:100}]})),contexts:[],rejections:[],worker:{startedAt:now,lastTick:null,lastSuccess:null,error:null},quotes:{}};
+export function newState(now=Date.now(),venue='BINANCE'){
+ requireValue(['BINANCE','OKX'].includes(venue),'Invalid venue');
+ return {version:1,mode:'PAPER_ONLY',venue,...(venue==='OKX'?{fundingPolicy:'MARK_1M_PRE_EVENT_PROXY'}:{}),createdAt:now,updatedAt:now,wallets:Object.keys(FRAMES).map(frame=>({frame,initial:100,balance:100,enabled:true,trades:[],decisions:[],reviews:[],curve:[{time:now,value:100}]})),contexts:[],rejections:[],worker:{startedAt:now,lastTick:null,lastSuccess:null,error:null},quotes:{}};
 }
 export function cycleFor(frame,now){requireValue(FRAMES[frame]&&finite(now),'Invalid frame or time');return Math.floor(now/FRAMES[frame])*FRAMES[frame];}
 export function acceptDecision(state,d,c,q,r,now){
@@ -23,21 +24,24 @@ export function acceptDecision(state,d,c,q,r,now){
  requireValue(d.riskPct===undefined&&d.riskBudgetPct===undefined,'Use allocationPct, not the previous SL-risk fields');
  requireValue(finite(wallet.balance)&&wallet.balance>0,'Nonpositive booked balance; new entries blocked');
  requireValue(q&&q.symbol===d.symbol&&finite(q.bid)&&finite(q.ask)&&q.bid>0&&q.ask>=q.bid&&finite(q.time)&&now-q.time>=0&&now-q.time<=15000,'Stale or invalid quote');
- requireValue(r&&['tickSize','stepSize','minQty','maxQty','minNotional'].every(k=>finite(r[k])&&r[k]>0),'Invalid exchange rules');
+ requireValue((q.venue??'BINANCE')===(state.venue??'BINANCE'),'Quote venue mismatch');
+ requireValue(r&&['tickSize','stepSize','minQty','maxQty'].every(k=>finite(r[k])&&r[k]>0)&&finite(r.minNotional)&&(r.minNotional>0||r.minNotional===0&&r.venue==='OKX'&&r.notionalRule==='CONTRACT_LOT_ONLY'),'Invalid exchange rules');
  const sign=d.action==='LONG'?1:-1,entry=(sign>0?q.ask:q.bid)*(1+sign*SLIPPAGE);
  requireValue(finite(d.sl)&&finite(d.tp)&&d.sl>0&&d.tp>0&&sign*(entry-d.sl)>0&&sign*(d.tp-entry)>0,'Invalid TP/SL direction');
  for(const price of [d.sl,d.tp])requireValue(Math.abs(price/r.tickSize-Math.round(price/r.tickSize))<.000001,'TP/SL must match tick size');
  const stopExit=d.sl*(1-sign*SLIPPAGE),stopCost=sign*(entry-stopExit)+FEE*(entry+stopExit);
  const leverage=LEVERAGE[d.symbol];
  const qty=Number((Math.floor((wallet.balance*d.allocationPct*leverage/entry+1e-12)/r.stepSize)*r.stepSize).toPrecision(12));
- requireValue(qty>=r.minQty&&qty<=r.maxQty,'Quantity outside Binance limits');
+ requireValue(qty>=r.minQty&&qty<=r.maxQty,'Quantity outside exchange limits');
  const notional=entry*qty,entryFee=notional*FEE,plannedLoss=qty*stopCost,initialMargin=notional/leverage;
  requireValue(initialMargin+entryFee<=wallet.balance+1e-9,'Insufficient per-trade capital for initial margin plus entry fee');
  requireValue(notional>=r.minNotional,'Below minimum notional');
  requireValue(initialMargin/wallet.balance>=.03-1e-10&&initialMargin/wallet.balance<=d.allocationPct+1e-10,'Rounded allocation outside 3–5% per-trade limit');
  const freshQuotes=Object.fromEntries(Object.entries(state.quotes??{}).filter(([,v])=>now-v.time>=0&&now-v.time<=30000));freshQuotes[q.symbol]=q;
  const trade={id:`AI-${d.frame}-${c.cycleAt}`,frame:d.frame,symbol:d.symbol,side:d.action,entry,sl:d.sl,tp:d.tp,qty,notional,entryFee,plannedLoss,riskPct:plannedLoss/wallet.balance,allocationRequested:d.allocationPct,allocationPct:initialMargin/wallet.balance,leverage,initialMargin,riskPolicy:'MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE',riskBasis:'BOOKED_BALANCE_BEFORE_ENTRY',balanceAtEntry:wallet.balance,equityAtEntry:walletMetrics(wallet,freshQuotes).equity,openedAt:now,status:'OPEN',method:d.method,reason:d.reason,invalidation:d.invalidation,contextId:c.id,quote:{...q},rules:{...r},lastAggId:null,replayTime:now,funding:0,fundingEvents:[]};
- wallet.balance-=entryFee;wallet.trades.push(trade);record.tradeId=trade.id;wallet.decisions.push(record);return record;
+ trade.venue=q.venue??'BINANCE';trade.instId=q.instId??d.symbol;
+ if(trade.venue==='OKX'){requireValue(r.venue==='OKX'&&r.instId===trade.instId&&finite(r.contractSize)&&r.contractSize>0,'Invalid OKX contract identity');trade.contractSize=r.contractSize;trade.contracts=qty/r.contractSize;trade.lastVenueTradeId=null;}
+ wallet.balance-=entryFee;wallet.trades.push(trade);record.tradeId=trade.id;record.venue=trade.venue;wallet.decisions.push(record);return record;
 }
 function settleTrade(wallet,trade,exit,status,time,triggerPrice,bookedAt){
  const sign=trade.side==='LONG'?1:-1;
@@ -47,6 +51,7 @@ function settleTrade(wallet,trade,exit,status,time,triggerPrice,bookedAt){
  wallet.curve.push({time:bookedAt,eventTime:time,value:wallet.balance,tradeId:trade.id});
 }
 export function manageTrade(wallet,trade,body,q,r,now){
+ if(trade.venue==='OKX')requireValue(q?.venue==='OKX'&&q.instId===trade.instId,'OKX management quote venue mismatch');
  requireValue(typeof body.managementId==='string'&&body.managementId.length>0&&body.managementId.length<=128,'Missing managementId');
  const duplicate=trade.managementEvents?.find(e=>e.id===body.managementId);if(duplicate)return duplicate;
  requireValue(trade.status==='OPEN'&&!trade.replayBehind,'Trade is not verified open');
@@ -80,7 +85,8 @@ export function replayTrades(wallet,trade,events,bookedAt){
   requireValue(Number.isSafeInteger(e.a)&&finite(price)&&price>0&&Number.isSafeInteger(time),'Malformed aggregate trade');
   if(time<=trade.openedAt||trade.lastAggId!==null&&e.a<=trade.lastAggId)continue;
   if(trade.lastAggId!==null&&e.a!==trade.lastAggId+1)throw Error('Gap in aggregate trade replay');
-  trade.lastAggId=e.a;trade.replayTime=time;
+  if(trade.venue==='OKX')requireValue(e.venue==='OKX'&&typeof e.venueId==='string'&&/^\d+$/.test(e.venueId),'OKX replay provenance missing');
+  trade.lastAggId=e.a;trade.replayTime=time;if(e.venueId!==undefined)trade.lastVenueTradeId=e.venueId;
   const changes=(trade.managementEvents??[]).filter(e=>e.action==='UPDATE_LEVELS');
   let levels=changes[0]?.before??trade;
   for(const change of changes)if(time>change.time)levels=change.after;
@@ -97,7 +103,8 @@ export function applyFunding(wallet,trade,events,through=Date.now(),bookedAt=thr
   requireValue(Number.isSafeInteger(time)&&finite(rate)&&finite(price)&&price>0,'Invalid funding event');
   if(time<=trade.openedAt||time>until||trade.fundingEvents.some(x=>x.time===time))continue;
   const amount=-(trade.side==='LONG'?1:-1)*trade.qty*price*rate;
-  trade.fundingEvents.push({time,rate,price,amount});trade.funding+=amount;wallet.balance+=amount;
+  if(trade.venue==='OKX')requireValue(e.venue==='OKX'&&e.estimated===true&&e.priceMethod==='MARK_1M_PRE_EVENT_PROXY','OKX funding provenance missing');
+  trade.fundingEvents.push({time,rate,price,amount,...(e.venue?{venue:e.venue,estimated:e.estimated,priceMethod:e.priceMethod,priceWindow:e.priceWindow,source:e.source,priceSource:e.priceSource}:{})});trade.funding+=amount;wallet.balance+=amount;
   if(trade.pnl!==undefined){trade.pnl+=amount;trade.r=trade.pnl/trade.plannedLoss;wallet.curve.push({time:bookedAt,eventTime:time,value:wallet.balance,reason:'Funding reconciliation',tradeId:trade.id});}
  }
 }

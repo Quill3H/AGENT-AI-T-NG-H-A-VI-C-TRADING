@@ -11,10 +11,10 @@ function currentRisk(t){return t.currentPlannedLoss===undefined?t.riskPct:t.curr
 function managementLog(t){return (t.managementEvents??[]).map(e=>'<p>'+time(e.recordedAt??e.time)+' · '+(e.action==='CLOSE'?'Chốt sớm @ '+price(e.exit):'TP '+price(e.before.tp)+' → '+price(e.after.tp)+' · SL '+price(e.before.sl)+' → '+price(e.after.sl))+'<br>'+esc(e.reason)+'</p>').join('');}
 function render(){
  const expanded=[...document.querySelectorAll('details[data-key][open]')].map(el=>el.dataset.key);
- const now=Date.now(),healthy=state.worker.healthy&&now-state.worker.lastSuccess<45000;
+ const now=Date.now(),healthy=state.worker.healthy&&now-state.worker.lastSuccess<(state.venue==='OKX'?1200000:45000);
  $('clock').textContent=time(state.serverTime);$('worker-label').textContent=healthy?'Worker đang chạy':'Cần kiểm tra worker';
  $('status').textContent=healthy?'Theo dõi thị trường đang chạy':'Worker chưa sẵn sàng';
- $('status-detail').textContent=state.worker.error??'AI ra quyết định 15m / 1h / 4h · Worker liên tục theo dõi TP/SL.';
+ $('status-detail').textContent=state.worker.error??(state.venue==='OKX'?'OKX · AI 15m / 1h / 4h · TP/SL đối soát theo từng lượt cloud.':'AI ra quyết định 15m / 1h / 4h · Worker liên tục theo dõi TP/SL.');
  $('worker-dot').className=$('status-dot').className='dot '+(healthy?'green':'amber');
  $('last-poll').textContent='Cập nhật: '+time(now);
  $('bots').innerHTML=state.wallets.map((w,i)=>{
