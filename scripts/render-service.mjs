@@ -5,16 +5,21 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {runCycle} from './gemini-paper.mjs';
 import {sign,verify,validateState,safeFile} from './cloud-transport.mjs';
+import {probeOkx} from './probe-okx.mjs';
 
 export async function loadKey(){
  const key=process.env.GEMINI_API_KEY??await fs.readFile('/etc/secrets/GEMINI_API_KEY','utf8');
  if(!key.trim())throw Error('Missing Gemini credential');return key.trim();
 }
 export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
- const cache=new Map();let busy=false,publicView=null;
+ const cache=new Map();let busy=false,publicView=null,okxProbe=null,okxProbeAt=0;
  const server=http.createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
   const send=(status,value)=>{res.writeHead(status);res.end(JSON.stringify(value));};
+  if(req.url==='/okx-probe'&&req.method==='GET'){
+   if(!okxProbe||clock()-okxProbeAt>300000){okxProbeAt=clock();okxProbe=probeOkx();}
+   try{send(200,await okxProbe);}catch{send(502,{ok:false,error:'OKX diagnostic unavailable'});}return;
+  }
   if(req.method==='GET'&&['/','/dashboard.js','/style.css'].includes(req.url)){
    const asset={'/':['index.html','text/html'],'/dashboard.js':['dashboard.js','text/javascript'],'/style.css':['style.css','text/css']}[req.url];
    try{res.setHeader('Content-Type',asset[1]);res.end(await fs.readFile(new URL('../paper-bot-studio/'+asset[0],import.meta.url)));}catch{send(500,{error:'Dashboard unavailable'});}return;
