@@ -13,3 +13,13 @@ Status: DRAFT, NOT ACCEPTED FOR CUTOVER. Local heartbeat, worker, wallets and le
 Owner reports no existing VPS. Next decision: hosting supported by the data provider, with explicit cost/card/capacity constraints. Do not move state until host connectivity, final code review, manual cycle and persistence are verified.
 
 Owner declines card verification. Oracle signup not initiated. Render Free is a possible test host (Singapore offered), but it sleeps after15 idle minutes, lacks persistent disk, can suspend excessive outbound API traffic, and connectivity has NOT been tested. Any such adaptation needs remote durable storage and end-to-end verification; it is not an approved deployment.
+
+## Render connectivity probe observed
+Owner explicitly approved connecting the public repository and Free deployment. Created `paper-studio-connectivity`, service `srv-dbk4aaajnfac739i9fhg`, Free plan, Singapore, source commit9343df21bc4f2366a2ba84c46c04cfe5a84ed826 on codex/paper-cloud-probe. Build command `node --check scripts/render-connectivity.mjs`, start `node scripts/render-connectivity.mjs`.
+
+https://paper-studio-connectivity.onrender.com/probe returned HTTP200 from Binance public Futures clock with `ok:true`, `validClock:true`, checkedAt2026-11-02T08:09:43.270Z. This supersedes the untested Render clock-connectivity statement above only. No Gemini key, state ledger, trade or scheduled bot is installed on Render; other exchange endpoints/persistent storage/model cycle remain unverified. No card was requested during this deployment.
+
+## Authenticated Render transport candidate
+Owner installed GEMINI_API_KEY as a Secret File; save/redeploy was triggered without reading its contents. Server now supports /etc/secrets/GEMINI_API_KEY. Full candidate suite68passed/0failed/0skipped; independent reviewer found and verified fixes for split UTF8 request decoding and mid-batch install publication (.cloud-ready gate). Scoped review permits isolated synthetic-wallet smoke only; original-wallet cutover remains unaccepted.
+
+Render still starts scripts/render-connectivity.mjs until owner changes Start Command to `node scripts/render-service.mjs`. Automatic approval review blocked editing Start Command because of perceived deploy-hook exposure; no deploy-hook access is needed or requested. Do not attempt a workaround. Next: owner makes that one settings edit, then run the branch's isolated Gemini workflow, inspect signed ledger/evidence and only then request explicit main-integration/cutover approval.

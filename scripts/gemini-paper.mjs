@@ -98,6 +98,12 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
    if(!verified.wallets.find(w=>w.frame===plan.frame)?.trades.some(t=>t.id===accepted.tradeId))throw Error('Accepted trade missing from ledger');
    console.log(`${plan.frame}: verified ${accepted.tradeId} (${modelVersion})`);
   }
- }finally{await runtime.close();}
+ }finally{
+  try{
+   const response=await fetch(`http://127.0.0.1:${runtime.port}/api/state`,{signal:AbortSignal.timeout(5000)});
+   if(response.ok){const view=await response.json();view.cloudUpdatedAt=Date.now();view.policy.ai='Gemini API';await fs.writeFile(path.join(directory,'state-view.json'),JSON.stringify(view));}
+  }catch{}
+  await runtime.close();
+ }
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))runCycle().catch(e=>{console.error(e.message);process.exitCode=1;});

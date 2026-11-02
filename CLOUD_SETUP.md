@@ -1,5 +1,13 @@
 # Paper Bot Studio cloud candidate — NOT DEPLOYED
 
+## Current Render transport (supersedes direct Actions execution below)
+
+Render Singapore public clock probe succeeds; direct GitHub EastUS Binance returns451. Server scripts/render-service.mjs loads GEMINI_API_KEY environment or /etc/secrets/GEMINI_API_KEY Secret File. It stages an authenticated paper run; scripts/render-cycle.mjs on GitHub verifies the response and installs the whole batch before creating .cloud-ready. Only a full authenticated batch is eligible for state-branch commit. A signed cycle error can still return partial progress, which is preserved; an absent/invalid response or failed install cannot publish state.
+
+Render never receives a GitHub write credential. Key-derived domain-separated HMAC authenticates transport; raw API key is never sent. Runtime auth-token/worker.lock are excluded. A response lost on restart is provisional and void, not a committed paper trade. The client must start from a fresh checkout after any failed install; dirty artifact evidence is not the authoritative ledger.
+
+Initial workflow validation uses synthetic wallets under cloud-validation, never original state. For final activation: owner approves main integration, manual production run, one-way cutover with local heartbeat/worker paused and consistent state captured, then schedule. Original wallets must not be reset. Hosted startup sleeps, cron lateness/drop, quota and no guaranteed uptime remain explicit limits. No billing upgrade is performed.
+
 Owner selected Gemini API free tier. Implementation lives in scripts/gemini-paper.mjs; manual workflow in .github/workflows/paper-bot-studio.yml. Original runtime and ledger were not modified. No local state/auth-token was copied or published.
 
 Required before activation:

@@ -29,22 +29,23 @@ jobs:
         with:
           ref: paper-state
           path: paper-state
-      - name: Run Gemini paper cycle
+      - name: Run Gemini paper cycle on Render
         id: cycle
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           PAPER_DATA_DIR: paper-state
-          PAPER_MAX_RUN_MS: '480000'
-        run: timeout --signal=TERM --kill-after=30s 9m node scripts/gemini-paper.mjs
+        run: timeout --signal=TERM --kill-after=30s 9m node scripts/render-cycle.mjs
       - name: Preserve ledger even after partial cycle failure
         if: ${{ always() && steps.cycle.outcome != 'skipped' && steps.cycle.outcome != '' }}
         run: |
+          test -f paper-state/.cloud-ready || { echo 'No complete authenticated response; committed ledger remains authoritative'; exit 1; }
           test -f paper-state/state.json
           git -C paper-state config user.name 'paper-bot-studio[bot]'
           git -C paper-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C paper-state add -- state.json
           if test -d paper-state/decisions; then git -C paper-state add -- decisions; fi
+          if test -d paper-state/contexts; then git -C paper-state add -- contexts; fi
+          if test -f paper-state/state-view.json; then git -C paper-state add -- state-view.json; fi
           if ! git -C paper-state diff --cached --quiet; then
             git -C paper-state commit -m 'chore: persist paper ledger'
             git -C paper-state push origin HEAD:paper-state

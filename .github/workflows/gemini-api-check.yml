@@ -6,8 +6,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 12
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -34,14 +35,24 @@ jobs:
           console.log('VERIFIED: Gemini structured inference; model='+model);
           console.log('No paper ledger or trading action was accessed. Billing tier is not established by this check.');
           JS
-      - name: Verify public futures data from this runner
+      - name: Offline transport and paper checks
+        run: node --test scripts/cloud-transport.test.mjs scripts/render-transport.integration.test.mjs scripts/gemini-paper*.test.mjs paper-bot-studio/*.test.mjs
+      - name: Verify isolated paper cycle on Render (not original wallets)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PAPER_VALIDATION: 'true'
+          PAPER_DATA_DIR: cloud-validation
         run: |
-          node --input-type=module <<'JS'
-          const r = await fetch('https://fapi.binance.com/fapi/v1/time', {signal:AbortSignal.timeout(15000)});
-          console.log('Binance public futures HTTP '+r.status);
-          if (!r.ok) process.exit(1);
-          const data = await r.json();
-          if (!Number.isSafeInteger(data.serverTime)) throw Error('Invalid exchange clock');
-          console.log('VERIFIED: public futures clock available');
-          JS
+          node scripts/render-cycle.mjs
+      - name: Isolated validation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-validation
+          path: |
+            cloud-validation/state.json
+            cloud-validation/state-view.json
+            cloud-validation/decisions/*.json
+            cloud-validation/contexts/*.json
+          retention-days: 7
 
