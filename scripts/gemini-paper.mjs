@@ -3,6 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRuntime} from '../paper-bot-studio/server.mjs';
 import {packContext,nextFrame} from '../paper-bot-studio/analysis-pack.mjs';
+import {validateForecast} from './kronos-advisory.mjs';
 
 export async function requireState(filename){
  let state;try{state=JSON.parse(await fs.readFile(filename,'utf8'));}catch{throw Error('An existing migrated state.json is required; refusing to reset wallets');}
@@ -32,7 +33,7 @@ export async function geminiJson(payload,{key=process.env.GEMINI_API_KEY,model=p
  const text=candidate.content?.parts?.filter(p=>!p.thought).map(p=>p.text??'').join('');
  return {value:JSON.parse(text),modelVersion:result.modelVersion??model};
 }
-export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DIR??'paper-state'),market,clock,analyze=geminiJson,maxRunMs=Number(process.env.PAPER_MAX_RUN_MS??480000),wallClock=Date.now}={}){
+export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DIR??'paper-state'),market,clock,analyze=geminiJson,maxRunMs=Number(process.env.PAPER_MAX_RUN_MS??480000),wallClock=Date.now,requireKronos=false,kronosForecasts=[]}={}){
  if(!Number.isSafeInteger(maxRunMs)||maxRunMs<=0)throw Error('Invalid PAPER_MAX_RUN_MS');
  const deadline=wallClock()+maxRunMs;
  function remaining(){const ms=deadline-wallClock();if(ms<=0)throw Error('Application deadline reached; preserving ledger for recovery');return ms;}
@@ -40,6 +41,7 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
  const initialState=await requireState(path.join(directory,'state.json'));
  if(market?.venue&&(initialState.venue!==market.venue||initialState.wallets.some(w=>w.trades.some(t=>t.venue!==market.venue))))throw Error('Ledger venue mismatch; original positions cannot switch providers');
  if(analyze===geminiJson&&(!process.env.GEMINI_API_KEY||!process.env.GEMINI_MODEL))throw Error('Configure GEMINI_API_KEY and GEMINI_MODEL before running');
+ const advisoryStatus={},blockedFrames=new Set();
  remaining();const runtime=await createRuntime({directory,market,clock});
  try{
   await runtime.listen(0);
@@ -73,25 +75,36 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
    for(const r of value.reviews)await request('/api/review',{frame:w.frame,tradeId:r.tradeId,lesson:`[Gemini ${modelVersion}] ${r.lesson}`});
   }
   for(let count=0;count<3;count++){
-   await tick();state=await request('/api/state');const plan=nextFrame(state);
+   await tick();state=await request('/api/state');const planning=structuredClone(state);for(const w of planning.wallets)if(blockedFrames.has(w.frame))w.enabled=false;const plan=nextFrame(planning);
    if(plan.status==='WORKER_ERROR')throw Error(plan.error);
    if(!plan.frame){console.log(JSON.stringify(plan));break;}
    let context=await request('/api/context',{frame:plan.frame});
    const original=await fs.readFile(context.snapshotPath,'utf8'),pack=packContext(context,original);
+   const checkAdvisory=()=>{if(pack.kronos)validateForecast(pack.kronos,context.market,context.cycleAt,(clock??Date.now)());};
+   if(requireKronos){
+    try{
+     const matches=kronosForecasts.filter(f=>f.frame===plan.frame);if(matches.length!==1)throw Error('missing or duplicate forecast');
+     pack.kronos=validateForecast(matches[0],context.market,context.cycleAt,(clock??Date.now)());
+     advisoryStatus[plan.frame]={status:'AVAILABLE',model:pack.kronos.model,modelRevision:pack.kronos.modelRevision,generatedAt:pack.kronos.generatedAt};
+     await fs.writeFile(path.join(directory,'contexts','kronos-'+context.id+'.json'),JSON.stringify(pack.kronos),{flag:'wx'});
+    }catch(e){advisoryStatus[plan.frame]={status:'UNAVAILABLE',error:e.message};blockedFrames.add(plan.frame);continue;}
+   }
    const intents=path.join(directory,'decisions');await fs.mkdir(intents,{recursive:true});
    const intentPath=path.join(intents,`intent-${plan.frame}-${plan.cycleAt}.json`);
    try{await fs.access(intentPath);throw Error('Unfinished cycle intent exists; manual reconciliation required before retry');}catch(e){if(e.code!=='ENOENT')throw e;}
    const {value,modelVersion}=await analyzeWithinDeadline({task:'Assess OPEN positions first; optionally return management [{tradeId,action:"UPDATE_LEVELS"|"CLOSE",sl?,tp?,reason}]. Then entry {action:"LONG"|"SHORT",symbol,allocationPct:0.03..0.05,sl,tp,method,reason,invalidation}. Exactly one new entry for a valid cycle. Reason has 3-5 short numbered Vietnamese sentences grounded in data. Leverage fixed BTC15/ETH10/SOL7/HYPE5. Allocation is nominal initial margin/booked balance, not stop risk. No retrospective entries, no invented lot sizes. If unable, return entry:null and technicalError. Do not copy lower-frame decisions. Never change code or risk policy.',context:pack});
-   validateManagement(value,pack.wallet.open);
+   checkAdvisory();validateManagement(value,pack.wallet.open);
    await fs.writeFile(intentPath,JSON.stringify({context,modelVersion,value},null,2),{flag:'wx'});
    for(const [i,m] of (value.management??[]).entries()){
+    checkAdvisory();
     await request('/api/manage',{frame:plan.frame,tradeId:m.tradeId,managementId:`gemini-${context.id}-${i}`,action:m.action,...(m.sl!==undefined?{sl:m.sl}:{}),...(m.tp!==undefined?{tp:m.tp}:{}),reason:`[Gemini ${modelVersion}] ${m.reason}`});
    }
    // Retain the model's original context. Slow management must not renew stale analysis.
    if(!value.entry)throw Error('NOT_EXECUTED: Gemini returned no executable entry');
    await tick();
+   checkAdvisory();
    const d=value.entry;
-   const decision={contextId:context.id,frame:plan.frame,action:d.action,symbol:d.symbol,allocationPct:d.allocationPct,sl:d.sl,tp:d.tp,method:d.method,reason:d.reason,invalidation:d.invalidation,modelVersion};
+   const decision={contextId:context.id,frame:plan.frame,action:d.action,symbol:d.symbol,allocationPct:d.allocationPct,sl:d.sl,tp:d.tp,method:d.method,reason:d.reason,invalidation:d.invalidation,modelVersion,...(pack.kronos?{kronos:{...advisoryStatus[plan.frame],evidence:'contexts/kronos-'+context.id+'.json',inputHashes:pack.kronos.symbols.map(s=>({symbol:s.symbol,sha256:s.inputSha256}))}}:{})};
    await fs.mkdir(path.join(directory,'decisions'),{recursive:true});
    await fs.writeFile(path.join(directory,'decisions',context.id+'.json'),JSON.stringify(decision,null,2));
    const accepted=await request('/api/decision',decision);
@@ -99,10 +112,11 @@ export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DI
    if(!verified.wallets.find(w=>w.frame===plan.frame)?.trades.some(t=>t.id===accepted.tradeId))throw Error('Accepted trade missing from ledger');
    console.log(`${plan.frame}: verified ${accepted.tradeId} (${modelVersion})`);
   }
+  if(blockedFrames.size)throw Error('Kronos unavailable: '+[...blockedFrames].join(', '));
  }finally{
   try{
    const response=await fetch(`http://127.0.0.1:${runtime.port}/api/state`,{signal:AbortSignal.timeout(5000)});
-   if(response.ok){const view=await response.json();view.cloudUpdatedAt=Date.now();view.policy.ai='Gemini API';await fs.writeFile(path.join(directory,'state-view.json'),JSON.stringify(view));}
+   if(response.ok){const view=await response.json();view.cloudUpdatedAt=Date.now();view.policy.ai=requireKronos?'Gemini + Kronos-small':'Gemini API';view.kronos={required:requireKronos,frames:advisoryStatus};await fs.writeFile(path.join(directory,'state-view.json'),JSON.stringify(view));}
   }catch{}
   await runtime.close();
  }

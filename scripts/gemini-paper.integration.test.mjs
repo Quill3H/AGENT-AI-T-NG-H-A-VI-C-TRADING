@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {runCycle} from './gemini-paper.mjs';
 import {newState,acceptDecision,FRAMES} from '../paper-bot-studio/engine.mjs';
+import {makeKronosInput,MODEL,ARTIFACTS} from './kronos-advisory.mjs';
 
 const start=Date.UTC(2026,10,1,12),rules={stepSize:.001,minQty:.001,maxQty:10000,minNotional:5,tickSize:.01};
 const entry={action:'LONG',symbol:'SOLUSDT',allocationPct:.04,sl:95,tp:110,method:'Fixture',reason:'1. Observed support.\n2. Entry at support.\n3. Stop below support.',invalidation:'Support fails'};
@@ -28,6 +29,40 @@ async function fixture(t,{oldTrade=false,higher=false}={}){
  return {directory,market,clock:()=>now,advance:n=>now+=n,read:async()=>JSON.parse(await fs.readFile(path.join(directory,'state.json'),'utf8'))};
 }
 const result=value=>({value,modelVersion:'fixture-model'});
+
+test('Kronos missing blocks new analysis but still reconciles open positions',async t=>{
+ const f=await fixture(t,{oldTrade:true});let replay=0,calls=0;
+ f.market.replay=async()=>{replay++;return {events:[],complete:true,through:f.clock()};};
+ await assert.rejects(runCycle({...f,requireKronos:true,kronosForecasts:[],analyze:async()=>{calls++;return result({entry});}}),/Kronos unavailable/);
+ assert.equal(calls,0);assert.ok(replay>0);assert.equal((await f.read()).wallets[0].trades.length,1);
+});
+test('matched Kronos enters Gemini prompt, decision and persisted evidence',async t=>{
+ const f=await fixture(t);const capture=f.market.capture.bind(f.market);
+ f.market.capture=async(...args)=>({...await capture(...args),venue:'OKX'});
+ const input=makeKronosInput(await f.market.capture('15m',start),start);
+ const advice={...MODEL,artifacts:ARTIFACTS,version:1,frame:'15m',venue:'OKX',cycleAt:start,generatedAt:f.clock(),symbols:input.symbols.map(s=>({symbol:s.symbol,inputSha256:s.inputSha256,forecast:Array.from({length:4},(_,i)=>({openTime:start+i*900000,closeTime:start+(i+1)*900000-1,open:100,high:102,low:98,close:101,volume:100,amount:10000}))}))};
+ await runCycle({...f,requireKronos:true,kronosForecasts:[advice],analyze:async p=>{assert.equal(p.context.kronos.model,MODEL.model);return result({entry});}});
+ const s=await f.read();assert.equal(s.wallets[0].decisions[0].kronos.modelRevision,MODEL.modelRevision);
+ const files=await fs.readdir(path.join(f.directory,'contexts'));assert.ok(files.some(n=>n.startsWith('kronos-')));
+});
+test('forecast expiring during capture cannot enter Gemini prompt',async t=>{
+ const f=await fixture(t);const capture=f.market.capture.bind(f.market);
+ const m={...await capture('15m',start),venue:'OKX'},input=makeKronosInput(m,start);
+ const advice={...MODEL,artifacts:ARTIFACTS,version:1,frame:'15m',venue:'OKX',cycleAt:start,generatedAt:f.clock(),symbols:input.symbols.map(s=>({symbol:s.symbol,inputSha256:s.inputSha256,forecast:Array.from({length:4},(_,i)=>({openTime:start+i*900000,closeTime:start+(i+1)*900000-1,open:100,high:102,low:98,close:101,volume:100,amount:10000}))}))};
+ f.advance(230000);let calls=0;
+ f.market.capture=async()=>{f.advance(20000);return m;};
+ await assert.rejects(runCycle({...f,requireKronos:true,kronosForecasts:[advice],analyze:async()=>{calls++;return result({entry});}}),/Kronos unavailable/);
+ assert.equal(calls,0);assert.equal((await f.read()).wallets[0].trades.length,0);
+});
+test('forecast expiring during Gemini inference cannot submit an entry',async t=>{
+ const f=await fixture(t);const capture=f.market.capture.bind(f.market);
+ f.market.capture=async(...args)=>({...await capture(...args),venue:'OKX'});
+ const input=makeKronosInput(await f.market.capture('15m',start),start);
+ const advice={...MODEL,artifacts:ARTIFACTS,version:1,frame:'15m',venue:'OKX',cycleAt:start,generatedAt:f.clock(),symbols:input.symbols.map(s=>({symbol:s.symbol,inputSha256:s.inputSha256,forecast:Array.from({length:4},(_,i)=>({openTime:start+i*900000,closeTime:start+(i+1)*900000-1,open:100,high:102,low:98,close:101,volume:100,amount:10000}))}))};
+ f.advance(230000);
+ await assert.rejects(runCycle({...f,requireKronos:true,kronosForecasts:[advice],analyze:async()=>{f.advance(20000);return result({entry});}}),/stale|expired/);
+ assert.equal((await f.read()).wallets[0].trades.length,0);
+});
 test('management then entry persists audit, balance and original context',async t=>{
  const f=await fixture(t,{oldTrade:true});
  await runCycle({...f,analyze:async p=>result({management:[{tradeId:p.context.wallet.open[0].id,action:'UPDATE_LEVELS',sl:96,reason:'Observed support moved higher.'}],entry})});

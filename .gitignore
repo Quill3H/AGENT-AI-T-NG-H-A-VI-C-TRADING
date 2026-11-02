@@ -16,6 +16,7 @@ crypto-paper-agent/artifacts/
 crypto-paper-agent/market-data/
 /*.log
 /tmp/
+/.kronos/
 
 # Graphify machine state; share only portable graph/report/evidence outputs.
 /graphify-out/.*

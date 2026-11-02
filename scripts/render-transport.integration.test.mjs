@@ -10,6 +10,17 @@ import {sign,verify,safeFile} from './cloud-transport.mjs';
 import {newState} from '../paper-bot-studio/engine.mjs';
 
 const key='fixture-only-not-a-real-key',revision='a'.repeat(40);
+test('Kronos endpoint authenticates read-only capture and signs source data',async t=>{
+ const root=Date.now(),cycleAt=Math.floor(root/900000)*900000;let calls=0;
+ const market={async capture(frame,cutoff){calls++;return {venue:'OKX',frame,closedThrough:cutoff-1,symbols:[{symbol:'SOLUSDT',candles:Array.from({length:40},(_,i)=>({openTime:cutoff-(40-i)*900000,closeTime:cutoff-(39-i)*900000-1,o:100,h:102,l:98,c:101,v:100}))}]};}};
+ const server=createCloudServer({key,clock:()=>cycleAt+1000,forecastMarket:market,cycle:async()=>assert.fail('No account cycle on capture')});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>{server.closeAllConnections();server.close(r);}));
+ const body=JSON.stringify({task:'KRONOS_INPUT_V1',frames:['15m']}),url=`http://127.0.0.1:${server.address().port}/kronos/input`,time=cycleAt+1000;
+ assert.equal((await fetch(url,{method:'POST',body})).status,401);assert.equal(calls,0);
+ const response=await fetch(url,{method:'POST',body,headers:{'x-paper-time':String(time),'x-paper-signature':sign(key,'request',time,body)}});
+ assert.equal(response.status,200);const raw=await response.text();assert.ok(verify(key,'response',Number(response.headers.get('x-paper-time')),raw,response.headers.get('x-paper-signature'),time));
+ assert.equal(JSON.parse(raw).frames[0].cycleAt,cycleAt);assert.equal(calls,1);
+});
 test('cold health503 is retried before a single signed cycle request',async t=>{
  const f=await setup(t,async()=>{});let health=0,posts=0;
  const result=await invokeCloud({...options(f),warmupDelayMs:0,fetcher:async(url,opts)=>{
