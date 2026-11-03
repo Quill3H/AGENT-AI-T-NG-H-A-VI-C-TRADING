@@ -30,11 +30,11 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now,forecastMar
   if(req.method==='GET'&&req.url==='/api/state'){
    try{
     if(!publicView||clock()-publicView.fetchedAt>30000){
-     const r=await fetch('https://raw.githubusercontent.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/paper-state-okx/state-view.json',{signal:AbortSignal.timeout(15000)});
+     const r=await fetch('https://raw.githubusercontent.com/Quill3H/AGENT-AI-T-NG-H-A-VI-C-TRADING/paper-state-okx/state-view.json?snapshot='+Math.floor(clock()/30000),{signal:AbortSignal.timeout(15000)});
      if(!r.ok)throw Error('No committed cloud snapshot');publicView={fetchedAt:clock(),value:await r.json()};
     }
     const view=structuredClone(publicView.value);view.serverTime=clock();
-    view.worker.healthy=clock()-view.cloudUpdatedAt<1200000&&!view.worker.error;view.policy.ai=view.kronos?.required?'Gemini + Kronos-small':'Gemini API scheduled';view.policy.monitorMs=900000;
+    view.worker.healthy=clock()-view.cloudUpdatedAt<1200000&&!view.worker.error;view.policy.ai=view.kronos?.required?'Gemini + Kronos-small':'Gemini API scheduled';view.policy.monitorMs=300000;
     send(200,view);
    }catch{send(503,{error:'No committed cloud ledger available yet'});}return;
   }
