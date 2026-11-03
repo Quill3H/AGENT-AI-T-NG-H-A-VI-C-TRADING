@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {sign,verify,safeFile,validateState} from './cloud-transport.mjs';
 import {newState,FRAMES} from '../paper-bot-studio/engine.mjs';
 
-export async function invokeCloud({directory,key,endpoint='https://paper-studio-connectivity.onrender.com',baseRevision,runId=randomUUID(),fetcher=fetch,testEndpoint=false,warmupDelayMs=3000}={}){
+export async function invokeCloud({directory,key,endpoint='https://paper-studio-connectivity.onrender.com',baseRevision,runId=randomUUID(),fetcher=fetch,testEndpoint=false,warmupDelayMs=3000,kronosForecasts=[]}={}){
  if(!key?.trim())throw Error('Missing GEMINI_API_KEY');
  if(!testEndpoint&&endpoint!=='https://paper-studio-connectivity.onrender.com')throw Error('Unapproved cloud endpoint');
  await fs.rm(path.join(directory,'.cloud-ready'),{force:true});
@@ -23,7 +23,7 @@ export async function invokeCloud({directory,key,endpoint='https://paper-studio-
   const name=`decisions/intent-${frame}-${Math.floor(Date.now()/ms)*ms}.json`;
   try{intents[name]=await fs.readFile(path.join(directory,name),'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}
  }
- const body=JSON.stringify({state,intents,runId,baseRevision,model:'gemini-3-flash-preview'}),time=Date.now();
+ const body=JSON.stringify({state,intents,runId,baseRevision,model:'gemini-3-flash-preview',kronosForecasts}),time=Date.now();
  const response=await fetcher(endpoint+'/run',{method:'POST',headers:{'Content-Type':'application/json','x-paper-time':String(time),'x-paper-signature':sign(key,'request',time,body)},body,redirect:'error',signal:AbortSignal.timeout(420000)});
  if(!response.ok)throw Error(`Cloud HTTP ${response.status}; keep committed state, do not automatically retry`);
  const raw=await response.text();
@@ -56,7 +56,8 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
    await fs.writeFile(path.join(directory,'state.json'),JSON.stringify(newState(Date.now(),'OKX')));
   }
   const baseRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',cwd:validation?process.cwd():directory}).trim();
-  const result=await invokeCloud({directory,key:process.env.GEMINI_API_KEY,baseRevision,runId:`${process.env.GITHUB_RUN_ID??randomUUID()}-${process.env.GITHUB_RUN_ATTEMPT??1}`});
+  let kronosForecasts=[];if(process.env.KRONOS_FORECAST_PATH)try{const advisory=JSON.parse(await fs.readFile(process.env.KRONOS_FORECAST_PATH,'utf8'));if(Array.isArray(advisory.frames))kronosForecasts=advisory.frames;}catch{console.error('No Kronos bundle; cloud will reconcile existing positions and block new entries');}
+  const result=await invokeCloud({directory,key:process.env.GEMINI_API_KEY,baseRevision,kronosForecasts,runId:`${process.env.GITHUB_RUN_ID??randomUUID()}-${process.env.GITHUB_RUN_ATTEMPT??1}`});
   console.log(JSON.stringify({...result,error:result.error?String(result.error).replaceAll(process.env.GEMINI_API_KEY??'REDACTED','[redacted]'):null,validation,commitRequired:!validation}));
   if(!result.ok)process.exitCode=1;
  }catch(e){console.error(String(e.message).replaceAll(process.env.GEMINI_API_KEY??'REDACTED','[redacted]'));process.exitCode=1;}

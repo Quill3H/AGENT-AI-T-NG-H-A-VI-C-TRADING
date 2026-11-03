@@ -7,13 +7,15 @@ import {runCycle} from './gemini-paper.mjs';
 import {sign,verify,validateState,safeFile} from './cloud-transport.mjs';
 import {probeOkx} from './probe-okx.mjs';
 import {OkxMarket} from '../paper-bot-studio/okx-market.mjs';
+import {makeKronosInput} from './kronos-advisory.mjs';
+import {FRAMES} from '../paper-bot-studio/engine.mjs';
 
 export async function loadKey(){
  const key=process.env.GEMINI_API_KEY??await fs.readFile('/etc/secrets/GEMINI_API_KEY','utf8');
  if(!key.trim())throw Error('Missing Gemini credential');return key.trim();
 }
-export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
- const cache=new Map();let busy=false,publicView=null,okxProbe=null,okxProbeAt=0;
+export function createCloudServer({key,cycle=runCycle,clock=Date.now,forecastMarket=new OkxMarket()}={}){
+ const cache=new Map();let busy=false,forecastBusy=false,publicView=null,okxProbe=null,okxProbeAt=0;
  const server=http.createServer(async(req,res)=>{
   res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
   const send=(status,value)=>{res.writeHead(status);res.end(JSON.stringify(value));};
@@ -32,15 +34,15 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
      if(!r.ok)throw Error('No committed cloud snapshot');publicView={fetchedAt:clock(),value:await r.json()};
     }
     const view=structuredClone(publicView.value);view.serverTime=clock();
-    view.worker.healthy=clock()-view.cloudUpdatedAt<1200000&&!view.worker.error;view.policy.ai='Gemini API scheduled';view.policy.monitorMs=900000;
+    view.worker.healthy=clock()-view.cloudUpdatedAt<1200000&&!view.worker.error;view.policy.ai=view.kronos?.required?'Gemini + Kronos-small':'Gemini API scheduled';view.policy.monitorMs=900000;
     send(200,view);
    }catch{send(503,{error:'No committed cloud ledger available yet'});}return;
   }
-  if(req.url==='/health'){send(200,{ok:true,mode:'PAPER_CLOUD',credentialConfigured:!!key});return;}
+  if(req.url==='/health'){send(200,{ok:true,mode:'PAPER_CLOUD',credentialConfigured:!!key,kronosProtocol:1});return;}
   if(req.url==='/probe'&&req.method==='GET'){
    try{const r=await fetch('https://fapi.binance.com/fapi/v1/time',{signal:AbortSignal.timeout(15000)});send(200,{status:r.status,ok:r.ok});}catch{send(502,{ok:false});}return;
   }
-  if(req.url!=='/run'||req.method!=='POST'){send(404,{error:'Not found'});return;}
+  if(!['/run','/kronos/input'].includes(req.url)||req.method!=='POST'){send(404,{error:'Not found'});return;}
   let raw='';
   try{
    const chunks=[];let bytes=0;
@@ -48,7 +50,17 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
    raw=Buffer.concat(chunks).toString('utf8');
    const time=Number(req.headers['x-paper-time']);
    if(!key||!verify(key,'request',time,raw,req.headers['x-paper-signature'],clock())){send(401,{error:'Unauthorized or expired request'});return;}
-   const input=JSON.parse(raw);validateState(input.state);
+   const input=JSON.parse(raw);
+   if(req.url==='/kronos/input'){
+    if(input.task!=='KRONOS_INPUT_V1'||!Array.isArray(input.frames)||input.frames.length>3||new Set(input.frames).size!==input.frames.length||input.frames.some(f=>!Object.hasOwn(FRAMES,f)))throw Error('Invalid forecast request');
+    if(forecastBusy){send(409,{error:'Forecast capture busy'});return;}forecastBusy=true;
+    try{
+     const frames=[],errors={};
+     for(const frame of input.frames){try{const cycleAt=Math.floor(clock()/FRAMES[frame])*FRAMES[frame];if(clock()-cycleAt>600000)throw Error('Missed cycle');frames.push(makeKronosInput(await forecastMarket.capture(frame,cycleAt),cycleAt));}catch(e){errors[frame]=String(e.message).replaceAll(key,'[redacted]');}}
+     const body=JSON.stringify({version:1,capturedAt:clock(),frames,errors}),time=clock();res.writeHead(200,{'x-paper-time':String(time),'x-paper-signature':sign(key,'response',time,body)});res.end(body);
+    }finally{forecastBusy=false;}return;
+   }
+   validateState(input.state);
    if(!/^[a-zA-Z0-9_-]{1,100}$/.test(input.runId??'')||!/^[a-f0-9]{40}$/.test(input.baseRevision??''))throw Error('Invalid request identity');
    if(input.model!=='gemini-3-flash-preview')throw Error('Unapproved model');
    if(!input.intents||typeof input.intents!=='object'||Array.isArray(input.intents))throw Error('Invalid intents');
@@ -68,7 +80,7 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now}={}){
      await fs.mkdir(path.join(directory,'decisions'));
      for(const [name,text] of Object.entries(input.intents))await fs.writeFile(path.join(directory,name),text);
      let error=null;
-     try{await cycle({directory,maxRunMs:360000,market:new OkxMarket({allowEstimatedFunding:input.state.fundingPolicy==='MARK_1M_PRE_EVENT_PROXY'})});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
+     try{await cycle({directory,maxRunMs:360000,requireKronos:true,kronosForecasts:Array.isArray(input.kronosForecasts)?input.kronosForecasts:[],market:new OkxMarket({allowEstimatedFunding:input.state.fundingPolicy==='MARK_1M_PRE_EVENT_PROXY'})});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
      const files={};
      for(const file of ['state.json','state-view.json'])try{files[file]=await fs.readFile(path.join(directory,file),'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}
      for(const sub of ['contexts','decisions']){
