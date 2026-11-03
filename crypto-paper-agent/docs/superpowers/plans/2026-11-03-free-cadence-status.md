@@ -1,0 +1,3 @@
+# Free cadence and honest dashboard status
+
+Owner requests improvement within the existing free deployment. Increase schedule opportunities to every5minutes off the hour; retain cycle idempotency, missed-cycle rules, single-writer serialization and all risk settings. Show successful last update, waiting, overdue data and actual worker errors distinctly; show ledger time rather than browser polling time. Refresh public GitHub snapshot with a30second URL cache bucket to avoid a fixed raw URL serving old state. No uptime guarantee, new service, credential or paid plan. Verify existing duplicate-cycle tests and full Node suite, independently review, publish via PR, deploy and verify one actual run plus dashboard.

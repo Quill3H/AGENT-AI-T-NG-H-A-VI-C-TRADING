@@ -12,11 +12,14 @@ function managementLog(t){return (t.managementEvents??[]).map(e=>'<p>'+time(e.re
 function render(){
  const expanded=[...document.querySelectorAll('details[data-key][open]')].map(el=>el.dataset.key);
  const now=Date.now(),healthy=state.worker.healthy&&now-state.worker.lastSuccess<(state.venue==='OKX'?1200000:45000);
- $('clock').textContent=time(state.serverTime);$('worker-label').textContent=healthy?'Worker đang chạy':'Cần kiểm tra worker';
- $('status').textContent=healthy?'Theo dõi thị trường đang chạy':'Worker chưa sẵn sàng';
+ const updated=state.cloudUpdatedAt??state.worker.lastSuccess,age=updated?Math.max(0,now-updated):Infinity;
+ const status=state.worker.error?'Lỗi xử lý lượt gần nhất':!healthy?'Dữ liệu quá hạn — chưa có lượt cập nhật mới':age>420000?'Đang chờ lượt cập nhật tiếp theo':'Lượt cập nhật gần nhất thành công';
+ $('clock').textContent=time(state.serverTime);$('worker-label').textContent=status;
+ $('status').textContent=status;
  $('status-detail').textContent=state.worker.error??(state.kronos?.required?'Gemini + Kronos · dự báo nến cho 15m / 1h / 4h · '+Object.entries(state.kronos.frames??{}).map(([f,v])=>f+': '+(v.status==='AVAILABLE'?'đã có dự báo':'chặn entry vì thiếu dự báo')).join(' · '):state.venue==='OKX'?'OKX · AI 15m / 1h / 4h · TP/SL đối soát theo từng lượt cloud.':'AI ra quyết định 15m / 1h / 4h · Worker liên tục theo dõi TP/SL.');
  $('worker-dot').className=$('status-dot').className='dot '+(healthy?'green':'amber');
- $('last-poll').textContent='Cập nhật: '+time(now);
+ $('status-detail').textContent='Sổ cập nhật: '+time(updated)+' · '+(Number.isFinite(age)?Math.floor(age/60000)+' phút trước · ':'')+$('status-detail').textContent;
+ $('last-poll').textContent='Sổ cập nhật: '+time(updated);
  $('bots').innerHTML=state.wallets.map((w,i)=>{
   const m=w.metrics,d=w.decisions.at(-1),open=w.trades.find(t=>t.status==='OPEN');
   const lastReject=state.rejections.filter(r=>r.frame===w.frame&&r.time>(d?.decidedAt??0)).at(-1);
@@ -41,7 +44,7 @@ function render(){
  for(const el of document.querySelectorAll('details[data-key]'))if(expanded.includes(el.dataset.key))el.open=true;
  $('errors').textContent=state.rejections.length?'Từ chối gần nhất: '+state.rejections.at(-1).error:'';
 }
-async function refresh(){try{const response=await fetch('/api/state');if(!response.ok)throw Error('HTTP '+response.status);state=await response.json();render();}catch(e){$('status').textContent='Mất kết nối worker';$('status-detail').textContent='Mở lại Start-Studio.ps1 để khởi động; sổ đã lưu trên máy. '+e.message;$('worker-label').textContent='Mất kết nối';$('worker-dot').className=$('status-dot').className='dot amber';}}
+async function refresh(){try{const response=await fetch('/api/state');if(!response.ok)throw Error('HTTP '+response.status);state=await response.json();render();}catch(e){$('status').textContent='Mất kết nối worker';$('status-detail').textContent='Chưa tải được sổ cloud; thử tải lại và kiểm tra lịch sử chạy trên GitHub. '+e.message;$('worker-label').textContent='Mất kết nối';$('worker-dot').className=$('status-dot').className='dot amber';}}
 $('refresh').addEventListener('click',refresh);$('filter').addEventListener('change',()=>state&&render());
 $('export').addEventListener('click',()=>{if(!state)return;const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='paper-ai-ledger.json';a.click();URL.revokeObjectURL(url);});
 await refresh();setInterval(refresh,5000);
