@@ -48,7 +48,8 @@ test('invalid request signature never executes a cloud cycle',async t=>{
  const r=await post(f.endpoint,requestBody(f.state),'0'.repeat(64));assert.equal(r.status,401);assert.equal(calls,0);
 });
 test('signed cloud result installs state and evidence but excludes runtime credentials',async t=>{
- const f=await setup(t,async({directory})=>{
+ const f=await setup(t,async({directory,maxRunMs})=>{
+  assert.ok(maxRunMs<=180000,'cloud cycle must leave recovery time before the HTTP header timeout');
   const state=JSON.parse(await fs.readFile(path.join(directory,'state.json'),'utf8'));state.wallets[0].balance=99;
   await fs.writeFile(path.join(directory,'state.json'),JSON.stringify(state));
   await fs.writeFile(path.join(directory,'auth-token'),'private-worker-token');await fs.writeFile(path.join(directory,'worker.lock'),'123');
