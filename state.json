@@ -4,7 +4,7 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1793670724129,
+  "updatedAt": 1793677434277,
   "wallets": [
     {
       "frame": "15m",
@@ -63,17 +63,17 @@
             "minNotional": 0,
             "notionalRule": "CONTRACT_LOT_ONLY"
           },
-          "lastAggId": 3309,
-          "replayTime": 1793670723583,
+          "lastAggId": 55143,
+          "replayTime": 1793672703583,
           "funding": 0,
           "fundingEvents": [],
           "venue": "OKX",
           "instId": "BTC-USDT-SWAP",
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
-          "lastVenueTradeId": "3039506617",
-          "lastFundingCheckedAt": 1793670724129,
-          "replayBehind": false
+          "lastVenueTradeId": "3039558451",
+          "lastFundingCheckedAt": 1793677431293,
+          "replayBehind": true
         }
       ],
       "decisions": [
@@ -103,7 +103,7 @@
           "value": 100
         }
       ],
-      "blocked": null
+      "blocked": "AI-15m-1793670300000: The operation was aborted due to timeout"
     },
     {
       "frame": "1h",
@@ -168,58 +168,58 @@
     }
   ],
   "worker": {
-    "startedAt": 1793670707687,
-    "lastTick": 1793670722683,
+    "startedAt": 1793677254280,
+    "lastTick": 1793677431298,
     "lastSuccess": 1793670724129,
-    "error": null
+    "error": "15m: AI-15m-1793670300000: The operation was aborted due to timeout"
   },
   "quotes": {
     "BTCUSDT": {
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 77214.5,
-      "ask": 77214.6,
-      "bidQty": 13.247300000000001,
-      "askQty": 0.7955,
-      "time": 1793670721862,
-      "fetchedAt": 1793670722843,
+      "bid": 76727.5,
+      "ask": 76727.6,
+      "bidQty": 1.6225,
+      "askQty": 11.355699999999999,
+      "time": 1793677431274,
+      "fetchedAt": 1793677431533,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2260.25,
-      "ask": 2260.26,
-      "bidQty": 268.39000000000004,
-      "askQty": 44.803,
-      "time": 1793670722969,
-      "fetchedAt": 1793670723084,
+      "bid": 2245.11,
+      "ask": 2245.12,
+      "bidQty": 77.57900000000001,
+      "askQty": 146.691,
+      "time": 1793677431359,
+      "fetchedAt": 1793677431772,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 92.47,
-      "ask": 92.48,
-      "bidQty": 662.74,
-      "askQty": 1952.77,
-      "time": 1793670722571,
-      "fetchedAt": 1793670723332,
+      "bid": 91.74,
+      "ask": 91.75,
+      "bidQty": 1932.56,
+      "askQty": 342.88,
+      "time": 1793677431569,
+      "fetchedAt": 1793677432030,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 84.266,
-      "ask": 84.267,
-      "bidQty": 63,
-      "askQty": 36.5,
-      "time": 1793670722371,
-      "fetchedAt": 1793670723583,
+      "bid": 83,
+      "ask": 83.001,
+      "bidQty": 86.60000000000001,
+      "askQty": 12.3,
+      "time": 1793677431451,
+      "fetchedAt": 1793677432268,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
