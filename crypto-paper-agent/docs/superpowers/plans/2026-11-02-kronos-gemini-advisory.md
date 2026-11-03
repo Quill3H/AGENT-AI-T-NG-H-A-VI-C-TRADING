@@ -48,3 +48,9 @@ Files: .github/workflows/paper-bot-studio.yml, paper-bot-studio/dashboard.js, op
 
 - Started from clean separate cloud checkout main df07280de7dc5fb19c334d17a4d356ed102902e4 on codex/kronos-gemini-advisory. Primary research checkout's unrelated uncommitted files preserved.
 - Ruling: use seed123 matching installed smoke, an explicit reproducibility setting; no economic parameter selection implied.
+# Cloud recovery follow-up — 2026-11-03
+
+Owner explicitly requested applying Kronos and running the existing free bots. PR14 integrated at b59872f and Render bb87caf reports kronosProtocol1. Linux dependency installation and95Node/3Python checks passed. First real run41572263004 failed waiting for /run headers after300seconds; no authenticated batch or ledger commit occurred. The360second application budget allowed this transport timeout to discard provisional catch-up progress.
+
+Scope of follow-up: cap cloud cycle at180seconds and propagate its deadline into every queued/paced/in-flight OKX request, preserving the last completed replay checkpoint and signed recovery response. Add meaningful queued-deadline and in-flight abort tests; independently review/test, deploy matching runtime and verify a signed partial/success batch actually commits before declaring recovery fixed. Existing state must not be reset or manually advanced. Linux model inference and advisory entry evidence remain separately required.
+

@@ -3,16 +3,18 @@ const ROOT='https://www.okx.com';
 const positive=n=>Number.isFinite(n)&&n>0;
 const wireTime=v=>typeof v==='string'&&/^\d+$/.test(v)&&Number.isSafeInteger(Number(v))&&Number(v)>0;
 export class OkxMarket {
- constructor({fetcher=fetch,clock=Date.now,pause=ms=>new Promise(r=>setTimeout(r,ms)),allowEstimatedFunding=false}={}){
+ constructor({fetcher=fetch,clock=Date.now,pause=ms=>new Promise(r=>setTimeout(r,ms)),allowEstimatedFunding=false,deadline=Infinity}={}){
   this.venue='OKX';this.fetcher=fetcher;this.clock=clock;this.pause=pause;this.allowEstimatedFunding=allowEstimatedFunding;
-  this.queue=Promise.resolve();this.lastRequest=0;this.blockedUntil=0;this.instruments=new Map();this.fundingCache=new Map();this.replayCache=new Map();
+  this.deadline=deadline;this.queue=Promise.resolve();this.lastRequest=0;this.blockedUntil=0;this.instruments=new Map();this.fundingCache=new Map();this.replayCache=new Map();
  }
  instId(symbol){if(!SYMBOLS.includes(symbol))throw Error('Unknown OKX symbol');return symbol.replace('USDT','-USDT-SWAP');}
  async get(endpoint,params={}){
   const request=async()=>{
+   if(this.clock()>=this.deadline)throw Error('OKX cycle deadline reached; preserve replay progress');
    if(this.clock()<this.blockedUntil)throw Error('OKX public API cooldown; wait until '+this.blockedUntil);
    await this.pause(Math.max(0,250-(this.clock()-this.lastRequest)));this.lastRequest=this.clock();
-   const r=await this.fetcher(ROOT+endpoint+'?'+new URLSearchParams(params),{signal:AbortSignal.timeout(15000)});
+   const remaining=this.deadline-this.clock();if(remaining<=0)throw Error('OKX cycle deadline reached; preserve replay progress');
+   const r=await this.fetcher(ROOT+endpoint+'?'+new URLSearchParams(params),{signal:AbortSignal.timeout(Math.min(15000,remaining))});
    if(!r.ok){if([418,429].includes(r.status))this.blockedUntil=this.clock()+Math.max(60000,(Number(r.headers?.get('retry-after'))||0)*1000);throw Error('OKX HTTP '+r.status+': '+endpoint);}
    const body=await r.json();if(body.code!=='0'||!Array.isArray(body.data))throw Error('OKX API '+String(body.code)+': '+endpoint);return body.data;
   };
