@@ -81,7 +81,7 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now,forecastMar
      for(const [name,text] of Object.entries(input.intents))await fs.writeFile(path.join(directory,name),text);
      let error=null;
      // Leave time for the signed recovery batch before the client's default five-minute header timeout.
-     try{await cycle({directory,maxRunMs:180000,requireKronos:true,kronosForecasts:Array.isArray(input.kronosForecasts)?input.kronosForecasts:[],market:new OkxMarket({deadline:Date.now()+180000,allowEstimatedFunding:input.state.fundingPolicy==='MARK_1M_PRE_EVENT_PROXY'})});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
+     try{await cycle({directory,maxRunMs:180000,requireKronos:true,kronosForecasts:Array.isArray(input.kronosForecasts)?input.kronosForecasts:[],market:new OkxMarket({allowCandleCoverage:true,deadline:Date.now()+180000,allowEstimatedFunding:input.state.fundingPolicy==='MARK_1M_PRE_EVENT_PROXY'})});}catch(e){error=String(e.message).replaceAll(key,'[redacted]');}
      const files={};
      for(const file of ['state.json','state-view.json'])try{files[file]=await fs.readFile(path.join(directory,file),'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}
      for(const sub of ['contexts','decisions']){

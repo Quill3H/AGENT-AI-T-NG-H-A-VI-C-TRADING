@@ -54,3 +54,7 @@ Owner explicitly requested applying Kronos and running the existing free bots. P
 
 Scope of follow-up: cap cloud cycle at180seconds and propagate its deadline into every queued/paced/in-flight OKX request, preserving the last completed replay checkpoint and signed recovery response. Add meaningful queued-deadline and in-flight abort tests; independently review/test, deploy matching runtime and verify a signed partial/success batch actually commits before declaring recovery fixed. Existing state must not be reset or manually advanced. Linux model inference and advisory entry evidence remain separately required.
 
+# Exact no-touch replay coverage follow-up — 2026-11-03
+
+Observed100BTC native trades span roughly0.8seconds, making a100minute backlog impractical within a free cloud request. Use closed confirmed1m OKX trade-price OHLC solely as a no-touch proof for positions with no management history: require contiguous full coverage, valid prices and strict containment between unchanged TP/SL; retain source/bars/window. Stop before the first candle that could touch either level and use the original chronological native replay for that minute/current open minute. Missing coverage uses native replay, malformed confirmed data fails closed, and positions with management events keep native replay throughout. No fill, order, funding, strategy or risk calculation is inferred from candles. Independent tests and review are required before rollout.
+

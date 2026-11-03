@@ -93,6 +93,7 @@ export async function createRuntime({directory=path.join(ROOT,'data'),market=new
      const cutoff=clock(),result=await market.replay(trade,cutoff);
      if(!result.events.every(e=>e.T<=cutoff))throw Error('Future trade in replay');
      replayTrades(wallet,trade,result.events,clock());
+     if(result.proof)trade.replayProof=result.proof;
      const through=trade.closedAt??result.through;
      applyFunding(wallet,trade,await market.funding(trade,through),through,clock());trade.lastFundingCheckedAt=clock();
      trade.replayBehind=trade.status==='OPEN'&&!result.complete;
