@@ -1,0 +1,38 @@
+{
+  "contextId": "8bb5957c-5760-4bff-9749-4227d7caaf0e",
+  "frame": "15m",
+  "action": "SHORT",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.05,
+  "sl": 76880,
+  "tp": 76100,
+  "method": "SMA_RESISTANCE_REJECTION",
+  "reason": "1. Đường SMA20 (76754) nằm dưới SMA50 (76850) xác nhận cấu trúc thị trường đang trong xu hướng giảm. 2. Giá đóng cửa nến 15m gần nhất tại 76634 cho thấy sự từ chối rõ rệt tại vùng kháng cự động SMA. 3. Chỉ số ATR14 đạt mức 199.8 điểm cung cấp biên độ biến động đủ để thiết lập tỷ lệ R:R mục tiêu 1.5. 4. Dự báo từ Kronos cho thấy giá tiếp tục duy trì áp lực bán với mục tiêu đóng cửa ở mức thấp hơn vùng hiện tại.",
+  "invalidation": "Giá đóng cửa nến 15m trên mức 76950 hoặc phá vỡ hoàn toàn dải SMA50 với khối lượng lớn.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1793694868109,
+    "evidence": "contexts/kronos-8bb5957c-5760-4bff-9749-4227d7caaf0e.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "c82409cbae817669a82c9d5dd061f6446ec518130a7a20e2e5f337275996254b"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "5ed55059f71b4081c08d347922c125857fffe7a460e05f10a011813524113844"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "06a84b400645f061746460788b440cf9bf2036bdee7ecf30afbf9809363ba923"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "a7f35c11799a781eede19cb3d6c9042609e641b3692b2e59442b6fa191ca6544"
+      }
+    ]
+  }
+}
