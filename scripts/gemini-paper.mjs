@@ -31,7 +31,9 @@ export async function geminiJson(payload,{key=process.env.GEMINI_API_KEY,model=p
  const result=await response.json(),candidate=result.candidates?.[0];
  if(candidate?.finishReason!=='STOP')throw Error('Gemini output blocked or incomplete');
  const text=candidate.content?.parts?.filter(p=>!p.thought).map(p=>p.text??'').join('');
- return {value:JSON.parse(text),modelVersion:result.modelVersion??model};
+ const parsed=JSON.parse(text),value=Array.isArray(parsed)&&parsed.length===1?parsed[0]:parsed;
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Gemini must return one JSON object');
+ return {value,modelVersion:result.modelVersion??model};
 }
 export async function runCycle({directory=path.resolve(process.env.PAPER_DATA_DIR??'paper-state'),market,clock,analyze=geminiJson,maxRunMs=Number(process.env.PAPER_MAX_RUN_MS??480000),wallClock=Date.now,requireKronos=false,kronosForecasts=[]}={}){
  if(!Number.isSafeInteger(maxRunMs)||maxRunMs<=0)throw Error('Invalid PAPER_MAX_RUN_MS');

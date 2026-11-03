@@ -1,6 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {geminiJson,requireState,validateManagement} from './gemini-paper.mjs';
+
+test('one provider object may have a singleton array wrapper but ambiguous outputs fail closed',async()=>{
+ const infer=text=>geminiJson({}, {key:'fixture',model:'fixture',fetcher:async()=>({ok:true,json:async()=>({candidates:[{finishReason:'STOP',content:{parts:[{text}]}}]})})});
+ assert.deepEqual((await infer('[{"management":[],"entry":null}]')).value,{management:[],entry:null});
+ for(const text of ['[]','[{},{}]','[[{}]]','null','42'])await assert.rejects(infer(text),/one JSON object/);
+});
 test('malformed management rationale cannot be decorated into a valid reason',()=>{
  assert.throws(()=>validateManagement({management:[{tradeId:'a',action:'CLOSE'}]},[{id:'a',status:'OPEN'}]),/reason/);
  assert.throws(()=>validateManagement({management:[{tradeId:'a',action:'UPDATE_LEVELS',reason:'test',sl:'12'}]},[{id:'a',status:'OPEN'}]),/levels/);
