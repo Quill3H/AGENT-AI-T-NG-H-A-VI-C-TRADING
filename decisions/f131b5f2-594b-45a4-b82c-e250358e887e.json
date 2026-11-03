@@ -1,0 +1,38 @@
+{
+  "contextId": "f131b5f2-594b-45a4-b82c-e250358e887e",
+  "frame": "1h",
+  "action": "SHORT",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.04,
+  "sl": 77450,
+  "tp": 75800,
+  "method": "Trend Continuation / SMA Rejection",
+  "reason": "1. Giá BTC (76908.9) đang nằm dưới cả SMA20 (77337.4) và SMA50 (77748.8) xác nhận xu hướng giảm. 2. Lực bán mạnh được duy trì sau khi giá không thể bứt phá lên trên vùng SMA20. 3. Chỉ số ATR14 đạt 452.6 điểm hỗ trợ việc đặt khoảng cách dừng lỗ an toàn. 4. Cấu trúc nến 1H đang tạo các đáy thấp dần, ủng hộ việc tiếp diễn đà giảm về vùng 75800.",
+  "invalidation": "Giá đóng cửa nến 1H trên mức SMA20 tại 77337.5.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1793678472518,
+    "evidence": "contexts/kronos-f131b5f2-594b-45a4-b82c-e250358e887e.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "d2e37b24915e0865cc10b01c5153a0d3d928f94d0d57570d145065f86be418cd"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "3f7bbc04d910d1f8bf0d1acc49ceee32a0c5a8dea08c5dadc231861cbcbe9808"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "07abe9c03a162178d965d86978c79682a5144bf5a29462f8484999b5b758f279"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "f31f32bdaba76a9f41265d4488ea717256a690cb2cadfe16517e1de5b92c0ed3"
+      }
+    ]
+  }
+}

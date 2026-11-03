@@ -1,0 +1,38 @@
+{
+  "contextId": "131f7114-025d-4bce-9fcf-b42dd460105e",
+  "frame": "4h",
+  "action": "SHORT",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.04,
+  "sl": 78500,
+  "tp": 74000,
+  "method": "Trend Continuation",
+  "reason": "1. Giá BTC đang duy trì ổn định dưới các đường SMA20 và SMA50 trên khung 4h, xác nhận xu hướng giảm. 2. Cấu trúc thị trường liên tục tạo ra các mức đỉnh và đáy thấp hơn trong các phiên gần đây. 3. Dự báo từ mô hình cho thấy áp lực bán vẫn còn duy trì với mục tiêu hướng tới vùng hỗ trợ tâm lý phía dưới.",
+  "invalidation": "Giá đóng cửa nến 4h trên mức 78500 hoặc phá vỡ cấu trúc giảm hiện tại.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1793678473464,
+    "evidence": "contexts/kronos-131f7114-025d-4bce-9fcf-b42dd460105e.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "e6523505badcf5e7f1169a2044b4f49fad85a2991ef1a9b43c602a4c6c8bd1ac"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "5034b55b1a491db7fccd853dd8374a7d04689fafeece6f399b0652b8d6beb43a"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "2d8745ffd3704fade1bf115d340357fae42aaa71faedec2fa1e4603fa0a866ef"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "7bfc2be936a6ef0879689bc42d0d216c1da22c0fef7be31960f9019e947cd4b9"
+      }
+    ]
+  }
+}

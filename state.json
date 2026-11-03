@@ -4,12 +4,12 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1793677945727,
+  "updatedAt": 1793678537762,
   "wallets": [
     {
       "frame": "15m",
       "initial": 100,
-      "balance": 99.48262152079499,
+      "balance": 99.44805709506299,
       "enabled": true,
       "trades": [
         {
@@ -72,7 +72,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3039651135",
-          "lastFundingCheckedAt": 1793677772739,
+          "lastFundingCheckedAt": 1793678476411,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -362,6 +362,85 @@
           "exitFee": 0.0267871415,
           "pnl": -0.5173784792049991,
           "r": -0.9999999999999998
+        },
+        {
+          "id": "AI-15m-1793678400000",
+          "frame": "15m",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "entry": 76809.83496,
+          "sl": 77130,
+          "tp": 76360,
+          "qty": 0.0009,
+          "notional": 69.128851464,
+          "entryFee": 0.034564425732,
+          "plannedLoss": 0.37131180343199943,
+          "riskPct": 0.003732428817774807,
+          "allocationRequested": 0.05,
+          "allocationPct": 0.04632557955498448,
+          "leverage": 15,
+          "initialMargin": 4.6085900976,
+          "riskPolicy": "MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE",
+          "riskBasis": "BOOKED_BALANCE_BEFORE_ENTRY",
+          "balanceAtEntry": 99.48262152079499,
+          "equityAtEntry": 99.48262152079499,
+          "openedAt": 1793678497201,
+          "status": "OPEN",
+          "method": "SMA_REJECTION",
+          "reason": "1. Giá hiện tại 76822.8 thấp hơn SMA20 (76938.3) và SMA50 (77013.5), cho thấy xu hướng giảm đang chiếm ưu thế. 2. Chỉ số ATR14 ở mức 203.3 cung cấp biên độ dao động đủ để thiết lập các ngưỡng chốt lời và dừng lỗ an toàn. 3. Hệ thống Kronos dự báo giá sẽ suy yếu về vùng 76809.6 trong các phiên tới, ủng hộ chiến lược bán khống. 4. Cấu trúc thị trường hiện tại không thể vượt qua ngưỡng kháng cự tâm lý 77000, củng cố thêm áp lực bán.",
+          "invalidation": "Giá đóng cửa nến 15 phút trên mức 77250.0 (vùng SMA50).",
+          "contextId": "f7c48135-268d-49a4-b0ee-d4dedffc6ef9",
+          "quote": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "symbol": "BTCUSDT",
+            "bid": 76825.2,
+            "ask": 76825.3,
+            "bidQty": 14.378699999999998,
+            "askQty": 4.7625,
+            "time": 1793678496270,
+            "fetchedAt": 1793678497201,
+            "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
+          },
+          "rules": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "quantityUnit": "BASE_COIN",
+            "contractSize": 0.01,
+            "tickSize": 0.1,
+            "stepSize": 0.0001,
+            "minQty": 0.0001,
+            "maxQty": 14.378699999999998,
+            "minNotional": 0,
+            "notionalRule": "CONTRACT_LOT_ONLY"
+          },
+          "lastAggId": 568,
+          "replayTime": 1793678534749,
+          "funding": 0,
+          "fundingEvents": [],
+          "venue": "OKX",
+          "instId": "BTC-USDT-SWAP",
+          "contractSize": 0.01,
+          "contracts": 0.09,
+          "lastVenueTradeId": "3039754177",
+          "lastFundingCheckedAt": 1793678535758,
+          "replayBehind": false,
+          "replayProof": {
+            "venue": "OKX",
+            "source": "https://www.okx.com/api/v5/market/history-candles",
+            "method": "CONFIRMED_NO_TOUCH",
+            "from": 1793678516713,
+            "through": 1793678519999,
+            "bars": [
+              [
+                "1793678460000",
+                "76849.3",
+                "76849.3",
+                "76814.2",
+                "76815"
+              ]
+            ]
+          }
         }
       ],
       "decisions": [
@@ -381,6 +460,49 @@
           "decidedAt": 1793670505667,
           "capturedAt": 1793670496249,
           "tradeId": "AI-15m-1793670300000",
+          "venue": "OKX"
+        },
+        {
+          "contextId": "f7c48135-268d-49a4-b0ee-d4dedffc6ef9",
+          "frame": "15m",
+          "action": "SHORT",
+          "symbol": "BTCUSDT",
+          "allocationPct": 0.05,
+          "sl": 77130,
+          "tp": 76360,
+          "method": "SMA_REJECTION",
+          "reason": "1. Giá hiện tại 76822.8 thấp hơn SMA20 (76938.3) và SMA50 (77013.5), cho thấy xu hướng giảm đang chiếm ưu thế. 2. Chỉ số ATR14 ở mức 203.3 cung cấp biên độ dao động đủ để thiết lập các ngưỡng chốt lời và dừng lỗ an toàn. 3. Hệ thống Kronos dự báo giá sẽ suy yếu về vùng 76809.6 trong các phiên tới, ủng hộ chiến lược bán khống. 4. Cấu trúc thị trường hiện tại không thể vượt qua ngưỡng kháng cự tâm lý 77000, củng cố thêm áp lực bán.",
+          "invalidation": "Giá đóng cửa nến 15 phút trên mức 77250.0 (vùng SMA50).",
+          "modelVersion": "gemini-3-flash-preview",
+          "kronos": {
+            "status": "AVAILABLE",
+            "model": "NeoQuasar/Kronos-small",
+            "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+            "generatedAt": 1793678471571,
+            "evidence": "contexts/kronos-f7c48135-268d-49a4-b0ee-d4dedffc6ef9.json",
+            "inputHashes": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "3c0dc1e5e9ef343b85e13a983b99ba4f1eabe0d501978cf69bd6de18165f1583"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "400055b349c266b216ccc0ebe233ee162e61356818ffa342f2ef2fb7f570806b"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "09d3a96ee833d8900399c13ee21ae3c36cc4ea4ceb35655749fedbf4e90f49f2"
+              },
+              {
+                "symbol": "HYPEUSDT",
+                "sha256": "633a510af073c15fea32a86deabf0a448ada1d1cd39869b3c399ac03498cfb78"
+              }
+            ]
+          },
+          "cycleAt": 1793678400000,
+          "decidedAt": 1793678497201,
+          "capturedAt": 1793678481705,
+          "tradeId": "AI-15m-1793678400000",
           "venue": "OKX"
         }
       ],
@@ -408,10 +530,134 @@
     {
       "frame": "1h",
       "initial": 100,
-      "balance": 100,
+      "balance": 99.973117852505,
       "enabled": true,
-      "trades": [],
-      "decisions": [],
+      "trades": [
+        {
+          "id": "AI-1h-1793678400000",
+          "frame": "1h",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "entry": 76806.1357,
+          "sl": 77450,
+          "tp": 75800,
+          "qty": 0.0007,
+          "notional": 53.764294989999996,
+          "entryFee": 0.026882147494999998,
+          "plannedLoss": 0.5155430789950044,
+          "riskPct": 0.005155430789950044,
+          "allocationRequested": 0.04,
+          "allocationPct": 0.03584286332666666,
+          "leverage": 15,
+          "initialMargin": 3.5842863326666663,
+          "riskPolicy": "MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE",
+          "riskBasis": "BOOKED_BALANCE_BEFORE_ENTRY",
+          "balanceAtEntry": 100,
+          "equityAtEntry": 100,
+          "openedAt": 1793678515725,
+          "status": "OPEN",
+          "method": "Trend Continuation / SMA Rejection",
+          "reason": "1. Giá BTC (76908.9) đang nằm dưới cả SMA20 (77337.4) và SMA50 (77748.8) xác nhận xu hướng giảm. 2. Lực bán mạnh được duy trì sau khi giá không thể bứt phá lên trên vùng SMA20. 3. Chỉ số ATR14 đạt 452.6 điểm hỗ trợ việc đặt khoảng cách dừng lỗ an toàn. 4. Cấu trúc nến 1H đang tạo các đáy thấp dần, ủng hộ việc tiếp diễn đà giảm về vùng 75800.",
+          "invalidation": "Giá đóng cửa nến 1H trên mức SMA20 tại 77337.5.",
+          "contextId": "f131b5f2-594b-45a4-b82c-e250358e887e",
+          "quote": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "symbol": "BTCUSDT",
+            "bid": 76821.5,
+            "ask": 76821.6,
+            "bidQty": 9.4113,
+            "askQty": 9.557,
+            "time": 1793678514738,
+            "fetchedAt": 1793678515725,
+            "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
+          },
+          "rules": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "quantityUnit": "BASE_COIN",
+            "contractSize": 0.01,
+            "tickSize": 0.1,
+            "stepSize": 0.0001,
+            "minQty": 0.0001,
+            "maxQty": 9.4113,
+            "minNotional": 0,
+            "notionalRule": "CONTRACT_LOT_ONLY"
+          },
+          "lastAggId": 601,
+          "replayTime": 1793678535758,
+          "funding": 0,
+          "fundingEvents": [],
+          "venue": "OKX",
+          "instId": "BTC-USDT-SWAP",
+          "contractSize": 0.01,
+          "contracts": 0.06999999999999999,
+          "lastVenueTradeId": "3039754483",
+          "lastFundingCheckedAt": 1793678537513,
+          "replayBehind": false,
+          "replayProof": {
+            "venue": "OKX",
+            "source": "https://www.okx.com/api/v5/market/history-candles",
+            "method": "CONFIRMED_NO_TOUCH",
+            "from": 1793678517473,
+            "through": 1793678519999,
+            "bars": [
+              [
+                "1793678460000",
+                "76849.3",
+                "76849.3",
+                "76814.2",
+                "76815"
+              ]
+            ]
+          }
+        }
+      ],
+      "decisions": [
+        {
+          "contextId": "f131b5f2-594b-45a4-b82c-e250358e887e",
+          "frame": "1h",
+          "action": "SHORT",
+          "symbol": "BTCUSDT",
+          "allocationPct": 0.04,
+          "sl": 77450,
+          "tp": 75800,
+          "method": "Trend Continuation / SMA Rejection",
+          "reason": "1. Giá BTC (76908.9) đang nằm dưới cả SMA20 (77337.4) và SMA50 (77748.8) xác nhận xu hướng giảm. 2. Lực bán mạnh được duy trì sau khi giá không thể bứt phá lên trên vùng SMA20. 3. Chỉ số ATR14 đạt 452.6 điểm hỗ trợ việc đặt khoảng cách dừng lỗ an toàn. 4. Cấu trúc nến 1H đang tạo các đáy thấp dần, ủng hộ việc tiếp diễn đà giảm về vùng 75800.",
+          "invalidation": "Giá đóng cửa nến 1H trên mức SMA20 tại 77337.5.",
+          "modelVersion": "gemini-3-flash-preview",
+          "kronos": {
+            "status": "AVAILABLE",
+            "model": "NeoQuasar/Kronos-small",
+            "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+            "generatedAt": 1793678472518,
+            "evidence": "contexts/kronos-f131b5f2-594b-45a4-b82c-e250358e887e.json",
+            "inputHashes": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "d2e37b24915e0865cc10b01c5153a0d3d928f94d0d57570d145065f86be418cd"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "3f7bbc04d910d1f8bf0d1acc49ceee32a0c5a8dea08c5dadc231861cbcbe9808"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "07abe9c03a162178d965d86978c79682a5144bf5a29462f8484999b5b758f279"
+              },
+              {
+                "symbol": "HYPEUSDT",
+                "sha256": "f31f32bdaba76a9f41265d4488ea717256a690cb2cadfe16517e1de5b92c0ed3"
+              }
+            ]
+          },
+          "cycleAt": 1793678400000,
+          "decidedAt": 1793678515725,
+          "capturedAt": 1793678502964,
+          "tradeId": "AI-1h-1793678400000",
+          "venue": "OKX"
+        }
+      ],
       "reviews": [],
       "curve": [
         {
@@ -424,10 +670,116 @@
     {
       "frame": "4h",
       "initial": 100,
-      "balance": 100,
+      "balance": 99.973126320811,
       "enabled": true,
-      "trades": [],
-      "decisions": [],
+      "trades": [
+        {
+          "id": "AI-4h-1793678400000",
+          "frame": "4h",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "entry": 76781.94054000001,
+          "sl": 78500,
+          "tp": 74000,
+          "qty": 0.0007,
+          "notional": 53.74735837800001,
+          "entryFee": 0.026873679189000004,
+          "plannedLoss": 1.2679857961889907,
+          "riskPct": 0.012679857961889907,
+          "allocationRequested": 0.04,
+          "allocationPct": 0.035831572252,
+          "leverage": 15,
+          "initialMargin": 3.5831572252000004,
+          "riskPolicy": "MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE",
+          "riskBasis": "BOOKED_BALANCE_BEFORE_ENTRY",
+          "balanceAtEntry": 100,
+          "equityAtEntry": 100,
+          "openedAt": 1793678537762,
+          "status": "OPEN",
+          "method": "Trend Continuation",
+          "reason": "1. Giá BTC đang duy trì ổn định dưới các đường SMA20 và SMA50 trên khung 4h, xác nhận xu hướng giảm. 2. Cấu trúc thị trường liên tục tạo ra các mức đỉnh và đáy thấp hơn trong các phiên gần đây. 3. Dự báo từ mô hình cho thấy áp lực bán vẫn còn duy trì với mục tiêu hướng tới vùng hỗ trợ tâm lý phía dưới.",
+          "invalidation": "Giá đóng cửa nến 4h trên mức 78500 hoặc phá vỡ cấu trúc giảm hiện tại.",
+          "contextId": "131f7114-025d-4bce-9fcf-b42dd460105e",
+          "quote": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "symbol": "BTCUSDT",
+            "bid": 76797.3,
+            "ask": 76797.4,
+            "bidQty": 0.2115,
+            "askQty": 16.1548,
+            "time": 1793678537074,
+            "fetchedAt": 1793678537762,
+            "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
+          },
+          "rules": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "quantityUnit": "BASE_COIN",
+            "contractSize": 0.01,
+            "tickSize": 0.1,
+            "stepSize": 0.0001,
+            "minQty": 0.0001,
+            "maxQty": 0.2115,
+            "minNotional": 0,
+            "notionalRule": "CONTRACT_LOT_ONLY"
+          },
+          "lastAggId": null,
+          "replayTime": 1793678537762,
+          "funding": 0,
+          "fundingEvents": [],
+          "venue": "OKX",
+          "instId": "BTC-USDT-SWAP",
+          "contractSize": 0.01,
+          "contracts": 0.06999999999999999,
+          "lastVenueTradeId": null
+        }
+      ],
+      "decisions": [
+        {
+          "contextId": "131f7114-025d-4bce-9fcf-b42dd460105e",
+          "frame": "4h",
+          "action": "SHORT",
+          "symbol": "BTCUSDT",
+          "allocationPct": 0.04,
+          "sl": 78500,
+          "tp": 74000,
+          "method": "Trend Continuation",
+          "reason": "1. Giá BTC đang duy trì ổn định dưới các đường SMA20 và SMA50 trên khung 4h, xác nhận xu hướng giảm. 2. Cấu trúc thị trường liên tục tạo ra các mức đỉnh và đáy thấp hơn trong các phiên gần đây. 3. Dự báo từ mô hình cho thấy áp lực bán vẫn còn duy trì với mục tiêu hướng tới vùng hỗ trợ tâm lý phía dưới.",
+          "invalidation": "Giá đóng cửa nến 4h trên mức 78500 hoặc phá vỡ cấu trúc giảm hiện tại.",
+          "modelVersion": "gemini-3-flash-preview",
+          "kronos": {
+            "status": "AVAILABLE",
+            "model": "NeoQuasar/Kronos-small",
+            "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+            "generatedAt": 1793678473464,
+            "evidence": "contexts/kronos-131f7114-025d-4bce-9fcf-b42dd460105e.json",
+            "inputHashes": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "e6523505badcf5e7f1169a2044b4f49fad85a2991ef1a9b43c602a4c6c8bd1ac"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "5034b55b1a491db7fccd853dd8374a7d04689fafeece6f399b0652b8d6beb43a"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "2d8745ffd3704fade1bf115d340357fae42aaa71faedec2fa1e4603fa0a866ef"
+              },
+              {
+                "symbol": "HYPEUSDT",
+                "sha256": "7bfc2be936a6ef0879689bc42d0d216c1da22c0fef7be31960f9019e947cd4b9"
+              }
+            ]
+          },
+          "cycleAt": 1793678400000,
+          "decidedAt": 1793678537762,
+          "capturedAt": 1793678522232,
+          "tradeId": "AI-4h-1793678400000",
+          "venue": "OKX"
+        }
+      ],
       "reviews": [],
       "curve": [
         {
@@ -474,6 +826,33 @@
       "expiresAt": 1793678185722,
       "bootstrap": false,
       "snapshotPath": "/tmp/paper-cloud-wRf7YY/contexts/8b30f6ed-e19d-4acd-9777-00afdfc99bc1.json"
+    },
+    {
+      "id": "f7c48135-268d-49a4-b0ee-d4dedffc6ef9",
+      "frame": "15m",
+      "cycleAt": 1793678400000,
+      "capturedAt": 1793678481705,
+      "expiresAt": 1793678721705,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-HjyxXi/contexts/f7c48135-268d-49a4-b0ee-d4dedffc6ef9.json"
+    },
+    {
+      "id": "f131b5f2-594b-45a4-b82c-e250358e887e",
+      "frame": "1h",
+      "cycleAt": 1793678400000,
+      "capturedAt": 1793678502964,
+      "expiresAt": 1793678742964,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-HjyxXi/contexts/f131b5f2-594b-45a4-b82c-e250358e887e.json"
+    },
+    {
+      "id": "131f7114-025d-4bce-9fcf-b42dd460105e",
+      "frame": "4h",
+      "cycleAt": 1793678400000,
+      "capturedAt": 1793678522232,
+      "expiresAt": 1793678762232,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-HjyxXi/contexts/131f7114-025d-4bce-9fcf-b42dd460105e.json"
     }
   ],
   "rejections": [
@@ -486,9 +865,9 @@
     }
   ],
   "worker": {
-    "startedAt": 1793677938590,
-    "lastTick": 1793677940448,
-    "lastSuccess": 1793677941440,
+    "startedAt": 1793678474295,
+    "lastTick": 1793678533760,
+    "lastSuccess": 1793678537513,
     "error": null
   },
   "quotes": {
@@ -496,48 +875,48 @@
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 76887.9,
-      "ask": 76888,
-      "bidQty": 15.7621,
-      "askQty": 1.4277000000000002,
-      "time": 1793677939731,
-      "fetchedAt": 1793677940696,
+      "bid": 76797.3,
+      "ask": 76797.4,
+      "bidQty": 0.2115,
+      "askQty": 16.1548,
+      "time": 1793678537074,
+      "fetchedAt": 1793678537762,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2251.66,
-      "ask": 2251.67,
-      "bidQty": 128.39200000000002,
-      "askQty": 55.865,
-      "time": 1793677940173,
-      "fetchedAt": 1793677940944,
+      "bid": 2249.42,
+      "ask": 2249.43,
+      "bidQty": 130.403,
+      "askQty": 62.71000000000001,
+      "time": 1793678533270,
+      "fetchedAt": 1793678534250,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 92.06,
-      "ask": 92.07,
-      "bidQty": 1173.18,
-      "askQty": 1047.79,
-      "time": 1793677940469,
-      "fetchedAt": 1793677941188,
+      "bid": 92,
+      "ask": 92.01,
+      "bidQty": 1132.94,
+      "askQty": 1316.15,
+      "time": 1793678533967,
+      "fetchedAt": 1793678534505,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 83.159,
-      "ask": 83.16,
-      "bidQty": 96.80000000000001,
-      "askQty": 1.9000000000000001,
-      "time": 1793677940363,
-      "fetchedAt": 1793677941440,
+      "bid": 83.054,
+      "ask": 83.055,
+      "bidQty": 45.400000000000006,
+      "askQty": 71,
+      "time": 1793678534365,
+      "fetchedAt": 1793678534749,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
