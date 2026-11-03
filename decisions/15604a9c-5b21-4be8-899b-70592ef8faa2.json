@@ -1,0 +1,13 @@
+{
+  "contextId": "15604a9c-5b21-4be8-899b-70592ef8faa2",
+  "frame": "15m",
+  "action": "LONG",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.04,
+  "sl": 76550,
+  "tp": 78000,
+  "method": "Mean Reversion / Support Reclaim",
+  "reason": "1. Giá tạo một bẫy giảm giá (fakeout) dưới 76700 và nhanh chóng hồi phục. 2. Nến đóng cửa gần nhất đã vượt lên trên đường SMA20, xác nhận đà phục hồi ngắn hạn. 3. Áp lực bán suy giảm tại vùng hỗ trợ giúp giá có mục tiêu kiểm tra lại SMA50.",
+  "invalidation": "Nến 15m đóng cửa dưới mức 76550.0",
+  "modelVersion": "gemini-3-flash-preview"
+}
