@@ -3,9 +3,9 @@ const ROOT='https://www.okx.com';
 const positive=n=>Number.isFinite(n)&&n>0;
 const wireTime=v=>typeof v==='string'&&/^\d+$/.test(v)&&Number.isSafeInteger(Number(v))&&Number(v)>0;
 export class OkxMarket {
- constructor({fetcher=fetch,clock=Date.now,pause=ms=>new Promise(r=>setTimeout(r,ms)),allowEstimatedFunding=false,deadline=Infinity}={}){
+ constructor({fetcher=fetch,clock=Date.now,pause=ms=>new Promise(r=>setTimeout(r,ms)),allowEstimatedFunding=false,deadline=Infinity,allowCandleCoverage=false}={}){
   this.venue='OKX';this.fetcher=fetcher;this.clock=clock;this.pause=pause;this.allowEstimatedFunding=allowEstimatedFunding;
-  this.deadline=deadline;this.queue=Promise.resolve();this.lastRequest=0;this.blockedUntil=0;this.instruments=new Map();this.fundingCache=new Map();this.replayCache=new Map();
+  this.allowCandleCoverage=allowCandleCoverage;this.coverageCache=new Map();this.deadline=deadline;this.queue=Promise.resolve();this.lastRequest=0;this.blockedUntil=0;this.instruments=new Map();this.fundingCache=new Map();this.replayCache=new Map();
  }
  instId(symbol){if(!SYMBOLS.includes(symbol))throw Error('Unknown OKX symbol');return symbol.replace('USDT','-USDT-SWAP');}
  async get(endpoint,params={}){
@@ -61,6 +61,26 @@ export class OkxMarket {
   const from=trade.replayTime??trade.openedAt;
   if(cutoff<from||cutoff-from>89*86400000)throw Error('OKX replay outside retained public history');
   if(cutoff===from)return {events:[],complete:true,through:cutoff};
+  // A closed trade-price candle strictly inside unchanged levels proves no touch.
+  // Candles that might touch still require chronological native-trade replay.
+  const end=Math.floor(cutoff/60000)*60000,start=Math.floor(from/60000)*60000;
+  if(this.allowCandleCoverage&&!(trade.managementEvents?.length)&&positive(trade.sl)&&positive(trade.tp)&&end>from&&end-start<=299*60000){
+   let cached=this.coverageCache.get(trade.symbol);
+   if(!cached||cached.end!==end){
+    const rows=await this.get('/api/v5/market/history-candles',{instId:trade.instId,bar:'1m',after:String(end),limit:'300'});
+    const bars=rows.filter(b=>b[8]==='1').map(b=>{
+     if(!wireTime(b[0])||Number(b[0])%60000||![1,2,3,4].every(i=>positive(Number(b[i])))||Number(b[2])<Math.max(Number(b[1]),Number(b[3]),Number(b[4]))||Number(b[3])>Math.min(Number(b[1]),Number(b[2]),Number(b[4])))throw Error('Malformed OKX coverage candle');
+     return b.slice(0,5);
+    });
+    cached={end,bars};this.coverageCache.set(trade.symbol,cached);
+   }
+   const bars=cached.bars.filter(b=>Number(b[0])>=start&&Number(b[0])<end).sort((a,b)=>Number(a[0])-Number(b[0]));
+   if(bars.length===(end-start)/60000&&bars.every((b,i)=>Number(b[0])===start+i*60000)){
+    const touched=bars.findIndex(b=>Number(b[3])<=Math.min(trade.sl,trade.tp)||Number(b[2])>=Math.max(trade.sl,trade.tp));
+    const safe=touched<0?bars:bars.slice(0,touched),through=safe.length?Number(safe.at(-1)[0])+59999:from;
+    if(through>from)return {events:[],complete:through===cutoff,through,proof:{venue:'OKX',source:ROOT+'/api/v5/market/history-candles',method:'CONFIRMED_NO_TOUCH',from,through,bars:safe}};
+   }
+  }
   const target=Math.min(cutoff,from+60000),cache=this.replayCache.get(trade.symbol);
   let rows;
   if(cache&&cache.from<=from&&cache.through>=target)rows=cache.rows;
