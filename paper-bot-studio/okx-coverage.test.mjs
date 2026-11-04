@@ -1,9 +1,28 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {OkxMarket} from './okx-market.mjs';
+
+test('a long backlog advances through consecutive bounded closed-candle windows',async()=>{
+ const m=new OkxMarket({allowCandleCoverage:true});let calls=0;
+ m.get=async(endpoint,q)=>{assert.match(endpoint,/history-candles/);assert.equal(q.limit,'300');calls++;const end=Number(q.after);return Array.from({length:300},(_,i)=>[String(end-(i+1)*60000),'100','105','95','101','1','1','1','1']);};
+ const old={venue:'OKX',symbol:'BTCUSDT',instId:'BTC-USDT-SWAP',openedAt:601000,replayTime:601000,sl:90,tp:110};
+ const cutoff=601000+900*60000,r=await m.replay(old,cutoff);
+ assert.ok(r.through>old.replayTime+298*60000);assert.ok(r.through<cutoff);assert.equal(r.proof.bars.length,299);
+ const next=await m.replay({...old,replayTime:r.through},cutoff);assert.ok(next.through>r.through+297*60000);assert.equal(calls,2);
+});
 const from=601000,cutoff=841500;
 const position={venue:'OKX',symbol:'BTCUSDT',instId:'BTC-USDT-SWAP',openedAt:from,replayTime:from,sl:90,tp:110};
 const bars=()=>[600000,660000,720000,780000].map(t=>[String(t),'100','105','95','101','1','1','1','1']);
+test('long-window boundaries retain native touches and missing candles cannot prove coverage',async()=>{
+ for(const gap of [false,true]){
+  const m=new OkxMarket({allowCandleCoverage:true});let native=0;
+  m.get=async(endpoint,q)=>{if(endpoint.includes('history-trades')){native++;return [{tradeId:'2',ts:'602000',px:'90'},{tradeId:'1',ts:'601000',px:'100'}];}
+   const end=Number(q.after),rows=Array.from({length:300},(_,i)=>[String(end-(i+1)*60000),'100','105','95','101','1','1','1','1']);
+   if(gap)rows.splice(20,1);else rows.find(b=>b[0]==='600000')[3]='90';return rows;
+  };
+  const r=await m.replay(position,cutoff+900*60000);assert.equal(native,1);assert.equal(r.proof,undefined);assert.equal(r.events[0].T,602000);
+ }
+});
 function fixture(rows=bars()){
  const m=new OkxMarket({allowCandleCoverage:true});let native=0;
  m.get=async endpoint=>{if(endpoint.includes('history-candles'))return rows;native++;return [{tradeId:'1',ts:String(from),px:'100'}];};

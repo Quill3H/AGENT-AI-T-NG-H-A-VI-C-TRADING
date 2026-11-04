@@ -30,6 +30,16 @@ async function fixture(t,{oldTrade=false,higher=false}={}){
 }
 const result=value=>({value,modelVersion:'fixture-model'});
 
+test('deadline diagnostics persist the measured replay stage without changing admission',async t=>{
+ const f=await fixture(t);let elapsed=0;
+ f.market.quote=async symbol=>{elapsed+=20;return {symbol,bid:99.99,ask:100,time:f.clock()};};
+ await assert.rejects(runCycle({...f,maxRunMs:10,wallClock:()=>elapsed,analyze:async()=>assert.fail('No analysis after exhausted market tick')}),/deadline.*market_tick/);
+ const view=JSON.parse(await fs.readFile(path.join(f.directory,'state-view.json'),'utf8'));
+ assert.equal(view.cycleDiagnostics.phase,'market_tick');assert.ok(view.cycleDiagnostics.stages.market_tick.elapsedMs>=80);assert.match(view.cycleDiagnostics.error,/deadline/);
+ assert.equal((await f.read()).wallets[0].trades.length,0);
+ const names=await fs.readdir(path.join(f.directory,'decisions'));assert.ok(names.some(n=>n.startsWith('run-diagnostics-')));
+});
+
 test('Kronos missing blocks new analysis but still reconciles open positions',async t=>{
  const f=await fixture(t,{oldTrade:true});let replay=0,calls=0;
  f.market.replay=async()=>{replay++;return {events:[],complete:true,through:f.clock()};};
