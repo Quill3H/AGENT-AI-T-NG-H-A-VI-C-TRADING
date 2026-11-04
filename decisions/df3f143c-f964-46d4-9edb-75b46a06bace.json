@@ -1,0 +1,38 @@
+{
+  "contextId": "df3f143c-f964-46d4-9edb-75b46a06bace",
+  "frame": "15m",
+  "action": "LONG",
+  "symbol": "HYPEUSDT",
+  "allocationPct": 0.05,
+  "sl": 83.2,
+  "tp": 85.5,
+  "method": "SMA_RECLAMATION_FORECAST_ALIGNMENT",
+  "reason": "1. HYPE đang cho thấy dấu hiệu tạo đáy quanh vùng 83.00 và bắt đầu nhịp hồi phục ngắn hạn. 2. Giá đã cắt lên trên đường SMA20 (83.92) với lực mua cải thiện trong các nến gần nhất. 3. Dự báo từ Kronos xác nhận khả năng giá sẽ tiếp tục hướng tới vùng 84.30 trong các nến tới. 4. Thiết lập lệnh mua với điểm dừng lỗ tại 83.20 để tối ưu tỷ lệ rủi ro trên lợi nhuận.",
+  "invalidation": "Giá phá vỡ vùng hỗ trợ 83.00 hoặc đường SMA20 bị mất mốc hỗ trợ.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1793832769128,
+    "evidence": "contexts/kronos-df3f143c-f964-46d4-9edb-75b46a06bace.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "95acdeaff175ca38ca50a25a24ea54043da84e2969475b69e7d69fb6131641c8"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "1aa613a43354f7b479e6f070cae410c329ab2f3261e743b0aa66480bb32a176c"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "b1e3b9e3e869b6bb41f2ef2c6f8abbc215aa598bb70fbdfb2714741327e87807"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "1df1df6b716f2bf69a8797169e161b4783e22ea8e908a89de66974ab7de54557"
+      }
+    ]
+  }
+}

@@ -4,12 +4,12 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1793813829238,
+  "updatedAt": 1793832830133,
   "wallets": [
     {
       "frame": "15m",
       "initial": 100,
-      "balance": 99.43020060287098,
+      "balance": 99.42179512211098,
       "enabled": true,
       "trades": [
         {
@@ -72,7 +72,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3039651135",
-          "lastFundingCheckedAt": 1793813795800,
+          "lastFundingCheckedAt": 1793832772135,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -423,7 +423,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3039940165",
-          "lastFundingCheckedAt": 1793813796047,
+          "lastFundingCheckedAt": 1793832772386,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1418,7 +1418,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3040210057",
-          "lastFundingCheckedAt": 1793813796295,
+          "lastFundingCheckedAt": 1793832772639,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1659,6 +1659,69 @@
           "exitFee": 0.034602919200000005,
           "pnl": -0.37459428379199927,
           "r": -1
+        },
+        {
+          "id": "AI-15m-1793832300000",
+          "frame": "15m",
+          "symbol": "HYPEUSDT",
+          "side": "LONG",
+          "entry": 84.05480759999999,
+          "sl": 83.2,
+          "tp": 85.5,
+          "qty": 0.2,
+          "notional": 16.81096152,
+          "entryFee": 0.00840548076,
+          "plannedLoss": 0.1910133367599964,
+          "riskPct": 0.0019210796679664049,
+          "allocationRequested": 0.05,
+          "allocationPct": 0.033814598417926944,
+          "leverage": 5,
+          "initialMargin": 3.3621923039999997,
+          "riskPolicy": "MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE",
+          "riskBasis": "BOOKED_BALANCE_BEFORE_ENTRY",
+          "balanceAtEntry": 99.43020060287098,
+          "equityAtEntry": 99.43020060287098,
+          "openedAt": 1793832828629,
+          "status": "OPEN",
+          "method": "SMA_RECLAMATION_FORECAST_ALIGNMENT",
+          "reason": "1. HYPE đang cho thấy dấu hiệu tạo đáy quanh vùng 83.00 và bắt đầu nhịp hồi phục ngắn hạn. 2. Giá đã cắt lên trên đường SMA20 (83.92) với lực mua cải thiện trong các nến gần nhất. 3. Dự báo từ Kronos xác nhận khả năng giá sẽ tiếp tục hướng tới vùng 84.30 trong các nến tới. 4. Thiết lập lệnh mua với điểm dừng lỗ tại 83.20 để tối ưu tỷ lệ rủi ro trên lợi nhuận.",
+          "invalidation": "Giá phá vỡ vùng hỗ trợ 83.00 hoặc đường SMA20 bị mất mốc hỗ trợ.",
+          "contextId": "df3f143c-f964-46d4-9edb-75b46a06bace",
+          "quote": {
+            "venue": "OKX",
+            "instId": "HYPE-USDT-SWAP",
+            "symbol": "HYPEUSDT",
+            "bid": 84.037,
+            "ask": 84.038,
+            "bidQty": 5.7,
+            "askQty": 3.2,
+            "time": 1793832828370,
+            "fetchedAt": 1793832828629,
+            "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
+          },
+          "rules": {
+            "venue": "OKX",
+            "instId": "HYPE-USDT-SWAP",
+            "quantityUnit": "BASE_COIN",
+            "contractSize": 0.1,
+            "tickSize": 0.001,
+            "stepSize": 0.1,
+            "minQty": 0.1,
+            "maxQty": 3.2,
+            "minNotional": 0,
+            "notionalRule": "CONTRACT_LOT_ONLY"
+          },
+          "lastAggId": null,
+          "replayTime": 1793832829636,
+          "funding": 0,
+          "fundingEvents": [],
+          "venue": "OKX",
+          "instId": "HYPE-USDT-SWAP",
+          "contractSize": 0.1,
+          "contracts": 2,
+          "lastVenueTradeId": null,
+          "lastFundingCheckedAt": 1793832830133,
+          "replayBehind": false
         }
       ],
       "decisions": [
@@ -1765,6 +1828,49 @@
           "capturedAt": 1793694900578,
           "tradeId": "AI-15m-1793694600000",
           "venue": "OKX"
+        },
+        {
+          "contextId": "df3f143c-f964-46d4-9edb-75b46a06bace",
+          "frame": "15m",
+          "action": "LONG",
+          "symbol": "HYPEUSDT",
+          "allocationPct": 0.05,
+          "sl": 83.2,
+          "tp": 85.5,
+          "method": "SMA_RECLAMATION_FORECAST_ALIGNMENT",
+          "reason": "1. HYPE đang cho thấy dấu hiệu tạo đáy quanh vùng 83.00 và bắt đầu nhịp hồi phục ngắn hạn. 2. Giá đã cắt lên trên đường SMA20 (83.92) với lực mua cải thiện trong các nến gần nhất. 3. Dự báo từ Kronos xác nhận khả năng giá sẽ tiếp tục hướng tới vùng 84.30 trong các nến tới. 4. Thiết lập lệnh mua với điểm dừng lỗ tại 83.20 để tối ưu tỷ lệ rủi ro trên lợi nhuận.",
+          "invalidation": "Giá phá vỡ vùng hỗ trợ 83.00 hoặc đường SMA20 bị mất mốc hỗ trợ.",
+          "modelVersion": "gemini-3-flash-preview",
+          "kronos": {
+            "status": "AVAILABLE",
+            "model": "NeoQuasar/Kronos-small",
+            "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+            "generatedAt": 1793832769128,
+            "evidence": "contexts/kronos-df3f143c-f964-46d4-9edb-75b46a06bace.json",
+            "inputHashes": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "95acdeaff175ca38ca50a25a24ea54043da84e2969475b69e7d69fb6131641c8"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "1aa613a43354f7b479e6f070cae410c329ab2f3261e743b0aa66480bb32a176c"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "b1e3b9e3e869b6bb41f2ef2c6f8abbc215aa598bb70fbdfb2714741327e87807"
+              },
+              {
+                "symbol": "HYPEUSDT",
+                "sha256": "1df1df6b716f2bf69a8797169e161b4783e22ea8e908a89de66974ab7de54557"
+              }
+            ]
+          },
+          "cycleAt": 1793832300000,
+          "decidedAt": 1793832828629,
+          "capturedAt": 1793832802526,
+          "tradeId": "AI-15m-1793832300000",
+          "venue": "OKX"
         }
       ],
       "reviews": [
@@ -1777,6 +1883,11 @@
           "tradeId": "AI-15m-1793678400000",
           "time": 1793694894476,
           "lesson": "[Gemini gemini-3-flash-preview] The original thesis identified a bearish trend via SMA20/50 rejection and psychological resistance at 77,000. Observed results show that the price immediately moved against the position, peaking at 77,126.9—dangerously close to the 77,130 stop loss—before reversing to reach the take-profit target. Fees totaled 0.068933298132 USDT with zero funding impact. Speculatively, the breach of the 77,000 'resistance' suggests a liquidity grab or stop-run occurred prior to the actual move down. The trade's success was contingent on the ATR-based stop loss placement (320 ticks from entry) rather than the immediate validity of the SMA rejection, as the technical indicators were temporarily invalidated by the 77,126.9 spike. Future entries should account for potential volatility spikes above psychological round numbers."
+        },
+        {
+          "tradeId": "AI-15m-1793694600000",
+          "time": 1793832779540,
+          "lesson": "[Gemini gemini-3-flash-preview] Observed Result: The trade hit the stop-loss trigger at 76880, resulting in a realized loss of 0.3746 USDT. The exit price of 76895.38 indicates slippage of approximately 15.38 USDT per BTC. Original Thesis: Anticipated a bearish continuation based on the SMA20 being below the SMA50 and a perceived rejection at the SMA resistance on the 15m timeframe. Fees/Funding: Entry fees were 0.03445 USDT and exit fees were 0.03460 USDT; funding was zero. Speculative Causes: The price did not respect the SMA resistance and instead entered a steady upward drift, suggesting that the initial rejection was a temporary pause rather than a structural reversal. The stop-loss was placed approximately 1.6x ATR away from entry, which proved insufficient to withstand the localized volatility that preceded the eventual break above the SMA50."
         }
       ],
       "curve": [
@@ -1887,7 +1998,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3040420717",
-          "lastFundingCheckedAt": 1793813796550,
+          "lastFundingCheckedAt": 1793832772890,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -2567,7 +2678,13 @@
           "venue": "OKX"
         }
       ],
-      "reviews": [],
+      "reviews": [
+        {
+          "tradeId": "AI-1h-1793678400000",
+          "time": 1793832787052,
+          "lesson": "[Gemini gemini-3-flash-preview] Observed result: The trade hit the stop loss (SL) at an exit price of 77465.49, slightly higher than the trigger price of 77450, resulting in a net loss of 0.51 USDT. Original Thesis: The entry was based on trend continuation and SMA rejection, anticipating a move to 75800 as price was trading below the SMA20 and SMA50 on the 1H frame with a bearish candle structure. Fees/Funding: Entry fees were 0.0268, exit fees 0.0271, and a minor funding credit of 0.0053 was received during the hold. Speculative causes: Price momentum shifted upward, breaching the SMA20 invalidation level (77337.5) and creating a squeeze against the short position. Lesson: While the technical setup was aligned with the prevailing 1H trend, the breach of the SMA20 invalidation point confirmed a trend shift or local reversal; strict adherence to stop loss levels is critical when price action contradicts the moving average alignment, and slippage must be accounted for in risk calculations."
+        }
+      ],
       "curve": [
         {
           "time": 1793611142037,
@@ -3439,7 +3556,7 @@
               ]
             ]
           },
-          "lastFundingCheckedAt": 1793813829238,
+          "lastFundingCheckedAt": 1793832773133,
           "replayBehind": false,
           "closedAt": 1793784741431,
           "triggerPrice": 78500,
@@ -3494,7 +3611,13 @@
           "venue": "OKX"
         }
       ],
-      "reviews": [],
+      "reviews": [
+        {
+          "tradeId": "AI-4h-1793678400000",
+          "time": 1793832797421,
+          "lesson": "[Gemini gemini-3-flash-preview] Observation: The SHORT position on BTCUSDT at 76781.94 was closed at 78515.70 after hitting the stop loss (SL 78500). Total PnL was -1.247 USDT, which includes entry/exit fees of 0.054 and cumulative funding payments of 0.021. Thesis: The trade was based on a trend continuation strategy, citing price action below the SMA20/50 and a market structure of lower highs and lower lows on the 4h frame. Speculative Cause: The bearish momentum failed to materialize into a break of psychological support. Instead, price action transitioned into a reversal, spiking through the moving averages and the previous local high, which triggered the stop. Lesson: While the setup correctly identified the prevailing trend at the time of entry, the failure of the price to move toward the 74000 target within 24 hours suggests the bearish pressure was exhausting. In trend continuation setups, if price remains stagnant or consolidates near the entry for multiple 4h candles, the probability of a reversal increases. Future iterations should monitor for 'failed continuation' signals to exit manually before a full SL hit."
+        }
+      ],
       "curve": [
         {
           "time": 1793611142037,
@@ -3582,6 +3705,15 @@
       "expiresAt": 1793695140578,
       "bootstrap": false,
       "snapshotPath": "/tmp/paper-cloud-TyPdFM/contexts/8bb5957c-5760-4bff-9749-4227d7caaf0e.json"
+    },
+    {
+      "id": "df3f143c-f964-46d4-9edb-75b46a06bace",
+      "frame": "15m",
+      "cycleAt": 1793832300000,
+      "capturedAt": 1793832802526,
+      "expiresAt": 1793833042526,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-fYC9rI/contexts/df3f143c-f964-46d4-9edb-75b46a06bace.json"
     }
   ],
   "rejections": [
@@ -3594,9 +3726,9 @@
     }
   ],
   "worker": {
-    "startedAt": 1793813793695,
-    "lastTick": 1793813798810,
-    "lastSuccess": 1793813829238,
+    "startedAt": 1793832770036,
+    "lastTick": 1793832828640,
+    "lastSuccess": 1793832830133,
     "error": null
   },
   "quotes": {
@@ -3604,48 +3736,48 @@
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 80273.1,
-      "ask": 80273.2,
-      "bidQty": 2.1704,
-      "askQty": 8.946900000000001,
-      "time": 1793813798567,
-      "fetchedAt": 1793813799048,
+      "bid": 80725.3,
+      "ask": 80725.4,
+      "bidQty": 0.9299,
+      "askQty": 13.5729,
+      "time": 1793832828068,
+      "fetchedAt": 1793832828886,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2422.65,
-      "ask": 2422.66,
-      "bidQty": 88.86000000000001,
-      "askQty": 244.587,
-      "time": 1793813798468,
-      "fetchedAt": 1793813799398,
+      "bid": 2438.13,
+      "ask": 2438.14,
+      "bidQty": 212.36599999999999,
+      "askQty": 55.175000000000004,
+      "time": 1793832828967,
+      "fetchedAt": 1793832829131,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 95.71,
-      "ask": 95.72,
-      "bidQty": 466.72,
-      "askQty": 938.13,
-      "time": 1793813799068,
-      "fetchedAt": 1793813799551,
+      "bid": 96.05,
+      "ask": 96.06,
+      "bidQty": 1070.61,
+      "askQty": 636.81,
+      "time": 1793832829063,
+      "fetchedAt": 1793832829389,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 84.696,
-      "ask": 84.697,
-      "bidQty": 0.1,
-      "askQty": 112.10000000000001,
-      "time": 1793813799543,
-      "fetchedAt": 1793813799809,
+      "bid": 84.037,
+      "ask": 84.038,
+      "bidQty": 5.7,
+      "askQty": 3.5,
+      "time": 1793832829468,
+      "fetchedAt": 1793832829636,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
