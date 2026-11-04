@@ -89,7 +89,8 @@ export function createCloudServer({key,cycle=runCycle,clock=Date.now,forecastMar
       for(const name of names)if(safeFile(sub+'/'+name))files[sub+'/'+name]=await fs.readFile(path.join(directory,sub,name),'utf8');
      }
      validateState(JSON.parse(files['state.json']));
-     const body=JSON.stringify({runId:input.runId,baseRevision:input.baseRevision,ok:!error,error,files,provisional:true});
+     const diagnostics=files['state-view.json']?JSON.parse(files['state-view.json']).cycleDiagnostics:null;
+     const body=JSON.stringify({runId:input.runId,baseRevision:input.baseRevision,ok:!error,error,diagnostics,files,provisional:true});
      const responseTime=clock();return {body,headers:{'x-paper-time':String(responseTime),'x-paper-signature':sign(key,'response',responseTime,body)}};
     }finally{
      if(path.dirname(directory)!==os.tmpdir()||!path.basename(directory).startsWith('paper-cloud-'))throw Error('Invalid cleanup path');

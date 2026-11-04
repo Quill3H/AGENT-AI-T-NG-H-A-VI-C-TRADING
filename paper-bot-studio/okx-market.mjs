@@ -5,6 +5,7 @@ const wireTime=v=>typeof v==='string'&&/^\d+$/.test(v)&&Number.isSafeInteger(Num
 export class OkxMarket {
  constructor({fetcher=fetch,clock=Date.now,pause=ms=>new Promise(r=>setTimeout(r,ms)),allowEstimatedFunding=false,deadline=Infinity,allowCandleCoverage=false}={}){
   this.venue='OKX';this.fetcher=fetcher;this.clock=clock;this.pause=pause;this.allowEstimatedFunding=allowEstimatedFunding;
+  this.diagnostics={requests:0,byEndpoint:{}};
   this.allowCandleCoverage=allowCandleCoverage;this.coverageCache=new Map();this.deadline=deadline;this.queue=Promise.resolve();this.lastRequest=0;this.blockedUntil=0;this.instruments=new Map();this.fundingCache=new Map();this.replayCache=new Map();
  }
  instId(symbol){if(!SYMBOLS.includes(symbol))throw Error('Unknown OKX symbol');return symbol.replace('USDT','-USDT-SWAP');}
@@ -18,7 +19,7 @@ export class OkxMarket {
    if(!r.ok){if([418,429].includes(r.status))this.blockedUntil=this.clock()+Math.max(60000,(Number(r.headers?.get('retry-after'))||0)*1000);throw Error('OKX HTTP '+r.status+': '+endpoint);}
    const body=await r.json();if(body.code!=='0'||!Array.isArray(body.data))throw Error('OKX API '+String(body.code)+': '+endpoint);return body.data;
   };
-  const result=this.queue.then(request);this.queue=result.catch(()=>{});return result;
+  const result=this.queue.then(async()=>{const start=this.clock();let failed=false;try{return await request();}catch(e){failed=true;throw e;}finally{this.diagnostics.requests++;const d=this.diagnostics.byEndpoint[endpoint]??={calls:0,elapsedMs:0,failed:0};d.calls++;d.elapsedMs+=Math.max(0,this.clock()-start);if(failed)d.failed++;}});this.queue=result.catch(()=>{});return result;
  }
  async instrument(symbol){
   const cached=this.instruments.get(symbol);if(cached&&this.clock()-cached.time<3600000)return cached.value;
@@ -63,7 +64,7 @@ export class OkxMarket {
   if(cutoff===from)return {events:[],complete:true,through:cutoff};
   // A closed trade-price candle strictly inside unchanged levels proves no touch.
   // Candles that might touch still require chronological native-trade replay.
-  const end=Math.floor(cutoff/60000)*60000,start=Math.floor(from/60000)*60000;
+  const start=Math.floor(from/60000)*60000,end=Math.min(Math.floor(cutoff/60000)*60000,start+299*60000);
   if(this.allowCandleCoverage&&!(trade.managementEvents?.length)&&positive(trade.sl)&&positive(trade.tp)&&end>from&&end-start<=299*60000){
    let cached=this.coverageCache.get(trade.symbol);
    if(!cached||cached.end!==end){

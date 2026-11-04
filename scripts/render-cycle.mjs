@@ -44,7 +44,7 @@ export async function invokeCloud({directory,key,endpoint='https://paper-studio-
   await fs.rm(staged,{recursive:true,force:true});
  }
  await fs.writeFile(path.join(directory,'.cloud-ready'),JSON.stringify({runId:result.runId,baseRevision,ok:result.ok}));
- return {ok:result.ok,error:result.error,runId:result.runId};
+ return {ok:result.ok,error:result.error,runId:result.runId,diagnostics:result.diagnostics??null};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{
