@@ -4,12 +4,12 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1793832830133,
+  "updatedAt": 1793874288433,
   "wallets": [
     {
       "frame": "15m",
       "initial": 100,
-      "balance": 99.42179512211098,
+      "balance": 99.23994316400064,
       "enabled": true,
       "trades": [
         {
@@ -72,7 +72,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3039651135",
-          "lastFundingCheckedAt": 1793832772135,
+          "lastFundingCheckedAt": 1793874268509,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -423,7 +423,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3039940165",
-          "lastFundingCheckedAt": 1793832772386,
+          "lastFundingCheckedAt": 1793874268759,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1418,7 +1418,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3040210057",
-          "lastFundingCheckedAt": 1793832772639,
+          "lastFundingCheckedAt": 1793874268998,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1682,7 +1682,7 @@
           "balanceAtEntry": 99.43020060287098,
           "equityAtEntry": 99.43020060287098,
           "openedAt": 1793832828629,
-          "status": "OPEN",
+          "status": "SL",
           "method": "SMA_RECLAMATION_FORECAST_ALIGNMENT",
           "reason": "1. HYPE đang cho thấy dấu hiệu tạo đáy quanh vùng 83.00 và bắt đầu nhịp hồi phục ngắn hạn. 2. Giá đã cắt lên trên đường SMA20 (83.92) với lực mua cải thiện trong các nến gần nhất. 3. Dự báo từ Kronos xác nhận khả năng giá sẽ tiếp tục hướng tới vùng 84.30 trong các nến tới. 4. Thiết lập lệnh mua với điểm dừng lỗ tại 83.20 để tối ưu tỷ lệ rủi ro trên lợi nhuận.",
           "invalidation": "Giá phá vỡ vùng hỗ trợ 83.00 hoặc đường SMA20 bị mất mốc hỗ trợ.",
@@ -1711,17 +1711,160 @@
             "minNotional": 0,
             "notionalRule": "CONTRACT_LOT_ONLY"
           },
-          "lastAggId": null,
-          "replayTime": 1793832829636,
-          "funding": 0,
-          "fundingEvents": [],
+          "lastAggId": 170,
+          "replayTime": 1793851632404,
+          "funding": 0.000755897889641846,
+          "fundingEvents": [
+            {
+              "time": 1793836800000,
+              "rate": -0.0000451099189369,
+              "price": 83.784,
+              "amount": 0.000755897889641846,
+              "venue": "OKX",
+              "estimated": true,
+              "priceMethod": "MARK_1M_PRE_EVENT_PROXY",
+              "priceWindow": {
+                "openTime": 1793836740000,
+                "closeTime": 1793836799999
+              },
+              "source": "https://www.okx.com/api/v5/public/funding-rate-history",
+              "priceSource": "https://www.okx.com/api/v5/market/history-mark-price-candles"
+            }
+          ],
           "venue": "OKX",
           "instId": "HYPE-USDT-SWAP",
           "contractSize": 0.1,
           "contracts": 2,
-          "lastVenueTradeId": null,
-          "lastFundingCheckedAt": 1793832830133,
-          "replayBehind": false
+          "lastVenueTradeId": "404076925",
+          "lastFundingCheckedAt": 1793874276274,
+          "replayBehind": false,
+          "replayProof": {
+            "venue": "OKX",
+            "source": "https://www.okx.com/api/v5/market/history-candles",
+            "method": "CONFIRMED_NO_TOUCH",
+            "from": 1793850719999,
+            "through": 1793851619999,
+            "bars": [
+              [
+                "1793850660000",
+                "83.768",
+                "83.788",
+                "83.744",
+                "83.784"
+              ],
+              [
+                "1793850720000",
+                "83.784",
+                "83.855",
+                "83.774",
+                "83.791"
+              ],
+              [
+                "1793850780000",
+                "83.79",
+                "83.911",
+                "83.765",
+                "83.871"
+              ],
+              [
+                "1793850840000",
+                "83.865",
+                "83.897",
+                "83.833",
+                "83.836"
+              ],
+              [
+                "1793850900000",
+                "83.835",
+                "83.879",
+                "83.828",
+                "83.857"
+              ],
+              [
+                "1793850960000",
+                "83.858",
+                "83.858",
+                "83.848",
+                "83.849"
+              ],
+              [
+                "1793851020000",
+                "83.849",
+                "83.849",
+                "83.823",
+                "83.823"
+              ],
+              [
+                "1793851080000",
+                "83.823",
+                "83.823",
+                "83.678",
+                "83.689"
+              ],
+              [
+                "1793851140000",
+                "83.689",
+                "83.689",
+                "83.55",
+                "83.555"
+              ],
+              [
+                "1793851200000",
+                "83.554",
+                "83.554",
+                "83.42",
+                "83.469"
+              ],
+              [
+                "1793851260000",
+                "83.474",
+                "83.521",
+                "83.397",
+                "83.398"
+              ],
+              [
+                "1793851320000",
+                "83.398",
+                "83.498",
+                "83.381",
+                "83.403"
+              ],
+              [
+                "1793851380000",
+                "83.403",
+                "83.434",
+                "83.285",
+                "83.304"
+              ],
+              [
+                "1793851440000",
+                "83.304",
+                "83.386",
+                "83.208",
+                "83.28"
+              ],
+              [
+                "1793851500000",
+                "83.28",
+                "83.309",
+                "83.28",
+                "83.284"
+              ],
+              [
+                "1793851560000",
+                "83.281",
+                "83.281",
+                "83.209",
+                "83.213"
+              ]
+            ]
+          },
+          "closedAt": 1793851632404,
+          "triggerPrice": 83.2,
+          "exit": 83.18336000000001,
+          "exitFee": 0.008318336,
+          "pnl": -0.1902574388703546,
+          "r": -0.9960426957485614
         }
       ],
       "decisions": [
@@ -1888,6 +2031,11 @@
           "tradeId": "AI-15m-1793694600000",
           "time": 1793832779540,
           "lesson": "[Gemini gemini-3-flash-preview] Observed Result: The trade hit the stop-loss trigger at 76880, resulting in a realized loss of 0.3746 USDT. The exit price of 76895.38 indicates slippage of approximately 15.38 USDT per BTC. Original Thesis: Anticipated a bearish continuation based on the SMA20 being below the SMA50 and a perceived rejection at the SMA resistance on the 15m timeframe. Fees/Funding: Entry fees were 0.03445 USDT and exit fees were 0.03460 USDT; funding was zero. Speculative Causes: The price did not respect the SMA resistance and instead entered a steady upward drift, suggesting that the initial rejection was a temporary pause rather than a structural reversal. The stop-loss was placed approximately 1.6x ATR away from entry, which proved insufficient to withstand the localized volatility that preceded the eventual break above the SMA50."
+        },
+        {
+          "tradeId": "AI-15m-1793832300000",
+          "time": 1793874283307,
+          "lesson": "[Gemini gemini-3-flash-preview] Observed Result: The long position was closed by stop loss at an exit price of 83.18, resulting in a loss of -0.19 USDT (-0.996R). Original Thesis: The entry was predicated on a bottoming formation near 83.00, price reclaiming the 15m SMA20 (83.92), and a predictive alignment for a move toward 84.30. Fees/Funding: Transaction fees totaled 0.0167 USDT; the trade received a small funding credit of 0.00075 USDT. Speculative Causes: The breakout above the SMA20 lacked sufficient volume to initiate a trend reversal, leading to a slow bleed back into the support zone. The stop loss at 83.20 was placed too close to the local support floor of 83.00, making it highly susceptible to minor volatility or a liquidity sweep. To improve future performance, stop losses should be placed below the identified invalidation level (83.00) rather than exactly on the path to it, or position sizing should be adjusted to allow for a wider buffer during SMA reclamation attempts."
         }
       ],
       "curve": [
@@ -1912,6 +2060,12 @@
           "eventTime": 1793698118149,
           "value": 99.43020060287098,
           "tradeId": "AI-15m-1793694600000"
+        },
+        {
+          "time": 1793874276038,
+          "eventTime": 1793851632404,
+          "value": 99.23994316400064,
+          "tradeId": "AI-15m-1793832300000"
         }
       ],
       "blocked": null
@@ -1998,7 +2152,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3040420717",
-          "lastFundingCheckedAt": 1793832772890,
+          "lastFundingCheckedAt": 1793874269255,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -3556,7 +3710,7 @@
               ]
             ]
           },
-          "lastFundingCheckedAt": 1793832773133,
+          "lastFundingCheckedAt": 1793874269501,
           "replayBehind": false,
           "closedAt": 1793784741431,
           "triggerPrice": 78500,
@@ -3714,6 +3868,15 @@
       "expiresAt": 1793833042526,
       "bootstrap": false,
       "snapshotPath": "/tmp/paper-cloud-fYC9rI/contexts/df3f143c-f964-46d4-9edb-75b46a06bace.json"
+    },
+    {
+      "id": "f7532b81-aaf1-45d5-9e35-3a417603db64",
+      "frame": "15m",
+      "cycleAt": 1793873700000,
+      "capturedAt": 1793874288424,
+      "expiresAt": 1793874528424,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-5QKZb9/contexts/f7532b81-aaf1-45d5-9e35-3a417603db64.json"
     }
   ],
   "rejections": [
@@ -3726,9 +3889,9 @@
     }
   ],
   "worker": {
-    "startedAt": 1793832770036,
-    "lastTick": 1793832828640,
-    "lastSuccess": 1793832830133,
+    "startedAt": 1793874265638,
+    "lastTick": 1793874283319,
+    "lastSuccess": 1793874284214,
     "error": null
   },
   "quotes": {
@@ -3736,48 +3899,48 @@
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 80725.3,
-      "ask": 80725.4,
-      "bidQty": 0.9299,
-      "askQty": 13.5729,
-      "time": 1793832828068,
-      "fetchedAt": 1793832828886,
+      "bid": 80485.1,
+      "ask": 80485.2,
+      "bidQty": 7.84,
+      "askQty": 13.9673,
+      "time": 1793874282416,
+      "fetchedAt": 1793874283487,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2438.13,
-      "ask": 2438.14,
-      "bidQty": 212.36599999999999,
-      "askQty": 55.175000000000004,
-      "time": 1793832828967,
-      "fetchedAt": 1793832829131,
+      "bid": 2420.1,
+      "ask": 2420.11,
+      "bidQty": 132.84,
+      "askQty": 159.55700000000002,
+      "time": 1793874283368,
+      "fetchedAt": 1793874283681,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 96.05,
-      "ask": 96.06,
-      "bidQty": 1070.61,
-      "askQty": 636.81,
-      "time": 1793832829063,
-      "fetchedAt": 1793832829389,
+      "bid": 96.82,
+      "ask": 96.83,
+      "bidQty": 786.39,
+      "askQty": 811.75,
+      "time": 1793874282966,
+      "fetchedAt": 1793874283972,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 84.037,
-      "ask": 84.038,
-      "bidQty": 5.7,
-      "askQty": 3.5,
-      "time": 1793832829468,
-      "fetchedAt": 1793832829636,
+      "bid": 82.617,
+      "ask": 82.618,
+      "bidQty": 53,
+      "askQty": 59,
+      "time": 1793874283672,
+      "fetchedAt": 1793874284214,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
