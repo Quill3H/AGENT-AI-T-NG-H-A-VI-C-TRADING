@@ -1,0 +1,38 @@
+{
+  "contextId": "a6a8ea74-adcf-4aa7-90c5-7941655a58e0",
+  "frame": "15m",
+  "action": "SHORT",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.04,
+  "sl": 76510,
+  "tp": 74500,
+  "method": "SMA_RESISTANCE_TREND_FOLLOWING",
+  "reason": "1. Giá 75829.9 hiện nằm dưới cả SMA20 (75999.43) và SMA50 (77271.32), xác nhận cấu trúc giảm ổn định. 2. Chỉ số ATR14 đạt 339.57 cho thấy biên độ dao động phù hợp để đặt dừng lỗ trên mức kháng cự SMA20. 3. Dự báo từ hệ thống Kronos cho thấy giá sẽ tiếp tục giảm về vùng 75666.74 trong các nến tiếp theo. 4. Áp lực bán gia tăng khi giá liên tục bị từ chối tại ngưỡng tâm lý 76000.",
+  "invalidation": "Giá đóng cửa nến 15m vượt qua mức 76600 phá vỡ cấu trúc giảm hiện tại.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1793921966325,
+    "evidence": "contexts/kronos-a6a8ea74-adcf-4aa7-90c5-7941655a58e0.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "55f4176bf64594541b7b44b43d4a504e50fead0a50fd88cd35cde46a42b5a7c5"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "3551ba20665bd210813e5f4db92ec65b4d18d516b4f9c688a0914f74868be246"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "75ee273668376d51dc4c811940caef8f42817d4e4a2d9bb2704ccae51e1b42f4"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "c39931eedc0169a72ed656b448b64d1b3a73c29f662879a2724d9a9845c356f5"
+      }
+    ]
+  }
+}

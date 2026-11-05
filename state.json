@@ -4,12 +4,12 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1793902275432,
+  "updatedAt": 1793921994724,
   "wallets": [
     {
       "frame": "15m",
       "initial": 100,
-      "balance": 99.23994316400064,
+      "balance": 99.21340377294064,
       "enabled": true,
       "trades": [
         {
@@ -72,7 +72,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3039651135",
-          "lastFundingCheckedAt": 1793902273186,
+          "lastFundingCheckedAt": 1793921969284,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -423,7 +423,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3039940165",
-          "lastFundingCheckedAt": 1793902273436,
+          "lastFundingCheckedAt": 1793921969531,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1418,7 +1418,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3040210057",
-          "lastFundingCheckedAt": 1793902273688,
+          "lastFundingCheckedAt": 1793921969790,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1736,7 +1736,7 @@
           "contractSize": 0.1,
           "contracts": 2,
           "lastVenueTradeId": "404076925",
-          "lastFundingCheckedAt": 1793902273937,
+          "lastFundingCheckedAt": 1793921970035,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1865,6 +1865,69 @@
           "exitFee": 0.008318336,
           "pnl": -0.1902574388703546,
           "r": -0.9960426957485614
+        },
+        {
+          "id": "AI-15m-1793921400000",
+          "frame": "15m",
+          "symbol": "BTCUSDT",
+          "side": "SHORT",
+          "entry": 75826.8316,
+          "sl": 76510,
+          "tp": 74500,
+          "qty": 0.0007,
+          "notional": 53.07878212,
+          "entryFee": 0.02653939106,
+          "plannedLoss": 0.5422525267599937,
+          "riskPct": 0.00546405519261418,
+          "allocationRequested": 0.04,
+          "allocationPct": 0.03565686720334894,
+          "leverage": 15,
+          "initialMargin": 3.5385854746666667,
+          "riskPolicy": "MARGIN_ALLOCATION_PER_TRADE_CUMULATIVE",
+          "riskBasis": "BOOKED_BALANCE_BEFORE_ENTRY",
+          "balanceAtEntry": 99.23994316400064,
+          "equityAtEntry": 99.23994316400064,
+          "openedAt": 1793921993236,
+          "status": "OPEN",
+          "method": "SMA_RESISTANCE_TREND_FOLLOWING",
+          "reason": "1. Giá 75829.9 hiện nằm dưới cả SMA20 (75999.43) và SMA50 (77271.32), xác nhận cấu trúc giảm ổn định. 2. Chỉ số ATR14 đạt 339.57 cho thấy biên độ dao động phù hợp để đặt dừng lỗ trên mức kháng cự SMA20. 3. Dự báo từ hệ thống Kronos cho thấy giá sẽ tiếp tục giảm về vùng 75666.74 trong các nến tiếp theo. 4. Áp lực bán gia tăng khi giá liên tục bị từ chối tại ngưỡng tâm lý 76000.",
+          "invalidation": "Giá đóng cửa nến 15m vượt qua mức 76600 phá vỡ cấu trúc giảm hiện tại.",
+          "contextId": "a6a8ea74-adcf-4aa7-90c5-7941655a58e0",
+          "quote": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "symbol": "BTCUSDT",
+            "bid": 75842,
+            "ask": 75842.1,
+            "bidQty": 5.0726,
+            "askQty": 10.034400000000002,
+            "time": 1793921992641,
+            "fetchedAt": 1793921993236,
+            "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
+          },
+          "rules": {
+            "venue": "OKX",
+            "instId": "BTC-USDT-SWAP",
+            "quantityUnit": "BASE_COIN",
+            "contractSize": 0.01,
+            "tickSize": 0.1,
+            "stepSize": 0.0001,
+            "minQty": 0.0001,
+            "maxQty": 5.0726,
+            "minNotional": 0,
+            "notionalRule": "CONTRACT_LOT_ONLY"
+          },
+          "lastAggId": 1,
+          "replayTime": 1793921994229,
+          "funding": 0,
+          "fundingEvents": [],
+          "venue": "OKX",
+          "instId": "BTC-USDT-SWAP",
+          "contractSize": 0.01,
+          "contracts": 0.06999999999999999,
+          "lastVenueTradeId": "3051051646",
+          "lastFundingCheckedAt": 1793921994724,
+          "replayBehind": false
         }
       ],
       "decisions": [
@@ -2014,6 +2077,49 @@
           "capturedAt": 1793832802526,
           "tradeId": "AI-15m-1793832300000",
           "venue": "OKX"
+        },
+        {
+          "contextId": "a6a8ea74-adcf-4aa7-90c5-7941655a58e0",
+          "frame": "15m",
+          "action": "SHORT",
+          "symbol": "BTCUSDT",
+          "allocationPct": 0.04,
+          "sl": 76510,
+          "tp": 74500,
+          "method": "SMA_RESISTANCE_TREND_FOLLOWING",
+          "reason": "1. Giá 75829.9 hiện nằm dưới cả SMA20 (75999.43) và SMA50 (77271.32), xác nhận cấu trúc giảm ổn định. 2. Chỉ số ATR14 đạt 339.57 cho thấy biên độ dao động phù hợp để đặt dừng lỗ trên mức kháng cự SMA20. 3. Dự báo từ hệ thống Kronos cho thấy giá sẽ tiếp tục giảm về vùng 75666.74 trong các nến tiếp theo. 4. Áp lực bán gia tăng khi giá liên tục bị từ chối tại ngưỡng tâm lý 76000.",
+          "invalidation": "Giá đóng cửa nến 15m vượt qua mức 76600 phá vỡ cấu trúc giảm hiện tại.",
+          "modelVersion": "gemini-3-flash-preview",
+          "kronos": {
+            "status": "AVAILABLE",
+            "model": "NeoQuasar/Kronos-small",
+            "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+            "generatedAt": 1793921966325,
+            "evidence": "contexts/kronos-a6a8ea74-adcf-4aa7-90c5-7941655a58e0.json",
+            "inputHashes": [
+              {
+                "symbol": "BTCUSDT",
+                "sha256": "55f4176bf64594541b7b44b43d4a504e50fead0a50fd88cd35cde46a42b5a7c5"
+              },
+              {
+                "symbol": "ETHUSDT",
+                "sha256": "3551ba20665bd210813e5f4db92ec65b4d18d516b4f9c688a0914f74868be246"
+              },
+              {
+                "symbol": "SOLUSDT",
+                "sha256": "75ee273668376d51dc4c811940caef8f42817d4e4a2d9bb2704ccae51e1b42f4"
+              },
+              {
+                "symbol": "HYPEUSDT",
+                "sha256": "c39931eedc0169a72ed656b448b64d1b3a73c29f662879a2724d9a9845c356f5"
+              }
+            ]
+          },
+          "cycleAt": 1793921400000,
+          "decidedAt": 1793921993236,
+          "capturedAt": 1793921975816,
+          "tradeId": "AI-15m-1793921400000",
+          "venue": "OKX"
         }
       ],
       "reviews": [
@@ -2152,7 +2258,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3040420717",
-          "lastFundingCheckedAt": 1793902274191,
+          "lastFundingCheckedAt": 1793921970281,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -3710,7 +3816,7 @@
               ]
             ]
           },
-          "lastFundingCheckedAt": 1793902274452,
+          "lastFundingCheckedAt": 1793921970537,
           "replayBehind": false,
           "closedAt": 1793784741431,
           "triggerPrice": 78500,
@@ -3877,6 +3983,15 @@
       "expiresAt": 1793874528424,
       "bootstrap": false,
       "snapshotPath": "/tmp/paper-cloud-5QKZb9/contexts/f7532b81-aaf1-45d5-9e35-3a417603db64.json"
+    },
+    {
+      "id": "a6a8ea74-adcf-4aa7-90c5-7941655a58e0",
+      "frame": "15m",
+      "cycleAt": 1793921400000,
+      "capturedAt": 1793921975816,
+      "expiresAt": 1793922215816,
+      "bootstrap": false,
+      "snapshotPath": "/tmp/paper-cloud-RMvWtX/contexts/a6a8ea74-adcf-4aa7-90c5-7941655a58e0.json"
     }
   ],
   "rejections": [
@@ -3889,9 +4004,9 @@
     }
   ],
   "worker": {
-    "startedAt": 1793902270971,
-    "lastTick": 1793902274465,
-    "lastSuccess": 1793902275432,
+    "startedAt": 1793921967168,
+    "lastTick": 1793921993246,
+    "lastSuccess": 1793921994724,
     "error": null
   },
   "quotes": {
@@ -3899,48 +4014,48 @@
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 76045.9,
-      "ask": 76046,
-      "bidQty": 9.0469,
-      "askQty": 1.4678,
-      "time": 1793902273584,
-      "fetchedAt": 1793902274694,
+      "bid": 75842,
+      "ask": 75842.1,
+      "bidQty": 5.0747,
+      "askQty": 10.034400000000002,
+      "time": 1793921992765,
+      "fetchedAt": 1793921993491,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2254.71,
-      "ask": 2254.72,
-      "bidQty": 121.82900000000001,
-      "askQty": 103.43900000000002,
-      "time": 1793902273837,
-      "fetchedAt": 1793902274941,
+      "bid": 2230.64,
+      "ask": 2230.65,
+      "bidQty": 82.864,
+      "askQty": 211.968,
+      "time": 1793921993374,
+      "fetchedAt": 1793921993729,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 89.33,
-      "ask": 89.34,
-      "bidQty": 2825.56,
-      "askQty": 563.1,
-      "time": 1793902274074,
-      "fetchedAt": 1793902275192,
+      "bid": 89.09,
+      "ask": 89.1,
+      "bidQty": 1082.3,
+      "askQty": 2025.89,
+      "time": 1793921993049,
+      "fetchedAt": 1793921993981,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 77.869,
-      "ask": 77.87,
-      "bidQty": 60.400000000000006,
-      "askQty": 29.400000000000002,
-      "time": 1793902275136,
-      "fetchedAt": 1793902275432,
+      "bid": 76.844,
+      "ask": 76.845,
+      "bidQty": 10.3,
+      "askQty": 52.400000000000006,
+      "time": 1793921993570,
+      "fetchedAt": 1793921994229,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
