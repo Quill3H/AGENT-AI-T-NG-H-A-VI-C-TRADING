@@ -4,7 +4,7 @@
   "venue": "OKX",
   "fundingPolicy": "MARK_1M_PRE_EVENT_PROXY",
   "createdAt": 1793611142037,
-  "updatedAt": 1794410433090,
+  "updatedAt": 1794434730972,
   "wallets": [
     {
       "frame": "15m",
@@ -72,7 +72,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3039651135",
-          "lastFundingCheckedAt": 1794410431820,
+          "lastFundingCheckedAt": 1794434729716,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -423,7 +423,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3039940165",
-          "lastFundingCheckedAt": 1794410432085,
+          "lastFundingCheckedAt": 1794434729966,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1418,7 +1418,7 @@
           "contractSize": 0.01,
           "contracts": 0.09,
           "lastVenueTradeId": "3040210057",
-          "lastFundingCheckedAt": 1794410432321,
+          "lastFundingCheckedAt": 1794434730220,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -1736,7 +1736,7 @@
           "contractSize": 0.1,
           "contracts": 2,
           "lastVenueTradeId": "404076925",
-          "lastFundingCheckedAt": 1794410432577,
+          "lastFundingCheckedAt": 1794434730471,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -3005,7 +3005,7 @@
           "contractSize": 0.01,
           "contracts": 0.06999999999999999,
           "lastVenueTradeId": "3040420717",
-          "lastFundingCheckedAt": 1794410432826,
+          "lastFundingCheckedAt": 1794434730721,
           "replayBehind": false,
           "replayProof": {
             "venue": "OKX",
@@ -4563,7 +4563,7 @@
               ]
             ]
           },
-          "lastFundingCheckedAt": 1794410433090,
+          "lastFundingCheckedAt": 1794434730972,
           "replayBehind": false,
           "closedAt": 1793784741431,
           "triggerPrice": 78500,
@@ -4787,8 +4787,8 @@
     }
   ],
   "worker": {
-    "startedAt": 1794410397391,
-    "lastTick": 1794410397398,
+    "startedAt": 1794434695340,
+    "lastTick": 1794434695346,
     "lastSuccess": 1794169791117,
     "error": "15m: AI-15m-1793921400000: OKX one-minute replay exceeded bounded page coverage"
   },
@@ -4797,48 +4797,48 @@
       "venue": "OKX",
       "instId": "BTC-USDT-SWAP",
       "symbol": "BTCUSDT",
-      "bid": 73543.6,
-      "ask": 73543.7,
-      "bidQty": 3.6336000000000004,
-      "askQty": 5.5059000000000005,
-      "time": 1794410397966,
-      "fetchedAt": 1794410398545,
+      "bid": 74391,
+      "ask": 74391.1,
+      "bidQty": 5.7017,
+      "askQty": 4.3247,
+      "time": 1794434695830,
+      "fetchedAt": 1794434696433,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP"
     },
     "ETHUSDT": {
       "venue": "OKX",
       "instId": "ETH-USDT-SWAP",
       "symbol": "ETHUSDT",
-      "bid": 2056.27,
-      "ask": 2056.28,
-      "bidQty": 73.147,
-      "askQty": 129.29500000000002,
-      "time": 1794410398374,
-      "fetchedAt": 1794410398793,
+      "bid": 2069.29,
+      "ask": 2069.3,
+      "bidQty": 222.44600000000003,
+      "askQty": 20.61,
+      "time": 1794434695983,
+      "fetchedAt": 1794434696681,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP"
     },
     "SOLUSDT": {
       "venue": "OKX",
       "instId": "SOL-USDT-SWAP",
       "symbol": "SOLUSDT",
-      "bid": 83.84,
-      "ask": 83.85,
-      "bidQty": 2267.95,
-      "askQty": 709.92,
-      "time": 1794410397971,
-      "fetchedAt": 1794410399030,
+      "bid": 84.49,
+      "ask": 84.5,
+      "bidQty": 741.7,
+      "askQty": 1331.81,
+      "time": 1794434696868,
+      "fetchedAt": 1794434696930,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT-SWAP"
     },
     "HYPEUSDT": {
       "venue": "OKX",
       "instId": "HYPE-USDT-SWAP",
       "symbol": "HYPEUSDT",
-      "bid": 72.575,
-      "ask": 72.576,
-      "bidQty": 1.8,
-      "askQty": 27.700000000000003,
-      "time": 1794410398371,
-      "fetchedAt": 1794410399279,
+      "bid": 72.759,
+      "ask": 72.76,
+      "bidQty": 13.700000000000001,
+      "askQty": 10.9,
+      "time": 1794434697075,
+      "fetchedAt": 1794434697180,
       "source": "https://www.okx.com/api/v5/market/ticker?instId=HYPE-USDT-SWAP"
     }
   }
