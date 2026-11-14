@@ -10,3 +10,7 @@ Observed Actions run 43592442015 fails before Gemini: the open BTC 15m trade at 
 4. Replay the actual historical position read-only against a copied ledger; independent review before proposed publication. Keep remote ledger authoritative.
 
 Affected callers: server.mjs tick/manage, gemini-paper.mjs catch-up loop, render-service.mjs. Their partial-progress contract remains unchanged.
+
+## Authorized deployment and bounded optimization
+
+Owner approved GitHub/Render deployment and useful optimizations on 2026-11-14. PR #20 merged as f82f560; that SHA is live on Render. Optimize only unnecessary Kronos bootstrap when the same existing due-frame predicate is empty: move ledger read/preflight ahead of pip/source/model cache, preserve Python validation, always run recovery and persist signed partial outcomes. Use one shared selector and recheck during preparation. If a frame becomes due after a skipped bootstrap, it waits for a later scheduled run rather than receiving an unvalidated forecast. Do not infer inevitable failure from a stale blocked/healthy flag. Separate review/test evidence required.

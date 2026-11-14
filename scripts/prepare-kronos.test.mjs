@@ -1,8 +1,38 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {fetchKronosInputs} from './prepare-kronos.mjs';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {dueKronosFrames,fetchKronosInputs,prepareKronos} from './prepare-kronos.mjs';
+import {newState} from '../paper-bot-studio/engine.mjs';
 import {sign} from './cloud-transport.mjs';
 const key='fixture-only';
+test('shared Kronos preflight preserves due-window and ledger admission checks',()=>{
+ const now=Date.UTC(2026,10,14,12),state=newState(now,'OKX');
+ assert.deepEqual(dueKronosFrames(state,now),['15m','1h','4h']);
+ assert.deepEqual(dueKronosFrames(state,now+600000),['15m','1h','4h']);
+ assert.deepEqual(dueKronosFrames(state,now+600001),[]);
+ assert.deepEqual(dueKronosFrames(state,now+899999),[]);
+ assert.deepEqual(dueKronosFrames(state,now+900000),['15m']);
+ state.wallets[0].decisions.push({cycleAt:now});
+ assert.deepEqual(dueKronosFrames(state,now),['1h','4h']);
+ state.wallets[1].blocked='Replaying market history';
+ assert.deepEqual(dueKronosFrames(state,now),['4h'],'one blocked wallet does not suppress another eligible frame');
+ state.wallets[2].enabled=false;
+ assert.deepEqual(dueKronosFrames(state,now),[]);
+ state.wallets[2].enabled=true;state.wallets[2].balance=0;
+ assert.deepEqual(dueKronosFrames(state,now),[]);
+ assert.throws(()=>dueKronosFrames({},now),/Invalid paper ledger/);
+});
+test('preparation with no eligible frame writes an empty bundle without capture or Python',async t=>{
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'kronos-preflight-'));
+ t.after(()=>fs.rm(directory,{recursive:true,force:true}));
+ const state=newState(Date.now(),'OKX');for(const w of state.wallets)w.enabled=false;
+ await fs.writeFile(path.join(directory,'state.json'),JSON.stringify(state));
+ const output=path.join(directory,'forecast.json');
+ await prepareKronos({directory,output,key:'',python:'must-not-execute'});
+ assert.deepEqual(JSON.parse(await fs.readFile(output,'utf8')),{version:1,frames:[],errors:{}});
+});
 test('verify input signature before handing any candles to inference',async()=>{
  const body=JSON.stringify({version:1,frames:[],errors:{}}),time=Date.now();
  const fetcher=async(url,opts)=>{assert.equal(url,'https://paper-studio-connectivity.onrender.com/kronos/input');assert.ok(!opts.body.includes(key));return new Response(body,{headers:{'x-paper-time':String(time),'x-paper-signature':sign(key,'response',time,body)}});};
