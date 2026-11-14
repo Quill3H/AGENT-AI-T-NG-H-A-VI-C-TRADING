@@ -1,0 +1,38 @@
+{
+  "contextId": "b5b0bfb2-7f98-47bf-804c-fda9f69bd97b",
+  "frame": "15m",
+  "action": "SHORT",
+  "symbol": "BTCUSDT",
+  "allocationPct": 0.05,
+  "sl": 65750,
+  "tp": 63800,
+  "method": "TREND_CONTINUATION_SMA_REJECTION",
+  "reason": "1. Giá BTC hiện đang nằm sâu dưới cả hai đường SMA20 (66265) và SMA50 (66809), xác nhận xu hướng giảm mạnh. 2. Các cây nến 15m gần đây cho thấy áp lực bán áp đảo với mức giá liên tục tạo đáy thấp mới. 3. Chỉ số ATR14 cao (472.8) cho thấy biến động lớn, ủng hộ kịch bản tiếp diễn đà giảm từ các đợt bán tháo trước đó. 4. Dự báo Kronos chỉ ra giá sẽ duy trì ở mức thấp và khó có sự phục hồi đáng kể trong các chu kỳ tới.",
+  "invalidation": "Giá đóng cửa nến 15m trên mức 66000 hoặc phá vỡ đường SMA20.",
+  "modelVersion": "gemini-3-flash-preview",
+  "kronos": {
+    "status": "AVAILABLE",
+    "model": "NeoQuasar/Kronos-small",
+    "modelRevision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "generatedAt": 1794674839263,
+    "evidence": "contexts/kronos-b5b0bfb2-7f98-47bf-804c-fda9f69bd97b.json",
+    "inputHashes": [
+      {
+        "symbol": "BTCUSDT",
+        "sha256": "bfaf9dbc195173f409135e69d14cb0876f8e3d6b74db443cf99d018c86549731"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "sha256": "6ddc76b12531668973f764bf41e56a035943a2ef7a9570be26eda333ffe7fdaf"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "sha256": "cd214780f9c923f7c5b4877f2662a810f308f3ffbb2016972e3c9861d746279a"
+      },
+      {
+        "symbol": "HYPEUSDT",
+        "sha256": "69721bd4b28e549f800ff1ca877b9325d2e8182dc5322f77cf13a6acc4d323f6"
+      }
+    ]
+  }
+}
