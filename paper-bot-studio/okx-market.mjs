@@ -82,7 +82,8 @@ export class OkxMarket {
     if(through>from)return {events:[],complete:through===cutoff,through,proof:{venue:'OKX',source:ROOT+'/api/v5/market/history-candles',method:'CONFIRMED_NO_TOUCH',from,through,bars:safe}};
    }
   }
-  const target=Math.min(cutoff,from+60000),cache=this.replayCache.get(trade.symbol);
+  let target=Math.min(cutoff,from+60000);const cache=this.replayCache.get(trade.symbol);
+  if(cache?.through===from&&cache.from<from)target=Math.min(target,from+2*(cache.through-cache.from));
   let rows;
   if(cache&&cache.from<=from&&cache.through>=target)rows=cache.rows;
   else{
@@ -94,9 +95,12 @@ export class OkxMarket {
     const sorted=[...batch].sort((a,b)=>BigInt(a.tradeId)<BigInt(b.tradeId)?-1:BigInt(a.tradeId)>BigInt(b.tradeId)?1:0),oldest=sorted[0];
     if(previousOldest!==null&&BigInt(oldest.tradeId)>=BigInt(previousOldest))throw Error('OKX replay pagination stalled');previousOldest=oldest.tradeId;
     if(Number(oldest.ts)<=from){covered=true;break;}
-    after=oldest.tradeId;type='1';
+    // Dense minutes need a smaller proven prefix, never an unverified suffix.
+    if(page%8===7&&target>from+1){
+     target=from+Math.floor((target-from)/2);after=String(target+1);type='2';found.clear();previousOldest=null;
+    }else{after=oldest.tradeId;type='1';}
    }
-   if(!covered)throw Error('OKX one-minute replay exceeded bounded page coverage');
+   if(!covered)throw Error('OKX native replay exceeded bounded page coverage');
    rows=[...found.values()];this.replayCache.set(trade.symbol,{from,through:target,rows});
   }
   const selected=rows.filter(r=>Number(r.ts)>from&&Number(r.ts)<=target).sort((a,b)=>BigInt(a.tradeId)<BigInt(b.tradeId)?-1:BigInt(a.tradeId)>BigInt(b.tradeId)?1:0);
