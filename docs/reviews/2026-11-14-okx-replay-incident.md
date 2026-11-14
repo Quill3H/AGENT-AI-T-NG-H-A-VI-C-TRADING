@@ -47,3 +47,13 @@ AUTHOR_VERIFIED: final workflow Node suite 116 pass, 0 fail/skip; Kronos Python 
 Real historical replay using the final adapter and copied ledger advanced from `1794174899999` to `1794174914073` (14.074 seconds of very dense history), with funding validation, before the shared 180-second deadline. It made 717 public requests across replay/candle/funding endpoints. The position remained OPEN; no full closure or end-to-end cloud recovery is claimed. The signed cloud partial-progress persistence has passing integration coverage, but production recovery after deployment remains NOT_VERIFIED. Further scheduled runs must carry the authoritative saved prefix forward; no fake completion or entry bypass is introduced.
 
 No GitHub branch was pushed, no Render deployment was performed, and no production ledger was changed. Publication requires the owner authorization prescribed by AGENTS.md for external mutations. GitHub CLI is not authenticated in this environment. Browser authentication was sufficient to inspect Actions.
+
+## Authorized deployment and preparation optimization
+
+Owner approved publication, deployment and useful optimizations. PR #20 merged as `f82f5605a32a24cba6449490fe5f4628474ac05c`, primary checkout synchronized, Render deployment `dep-dbs8nnk9v7es73c1c4j0` reports Live; `/health` returned PAPER_CLOUD. Render source branch changed to main (auto-deploy stays off), and build syntax checks now cover render-service.mjs and okx-market.mjs instead of the obsolete connectivity probe.
+
+Run `43615773260` exercised the deployed patch: signed partial ledger was committed and replayTime advanced from 1794174899999 to 1794174913979. It still failed honestly at the 180-second recovery deadline before Gemini. A second manual run was started to continue from the committed boundary.
+
+The next small optimization shares the existing due-frame selector with an early workflow preflight. Pip install, pinned Kronos source checkout, model cache and inference are skipped when no frame is eligible. Python validation, Render recovery and signed ledger preservation remain unconditional. An empty advisory bundle is initialized for the skipped branch. Preparation rechecks eligibility if bootstrap was selected. A frame becoming due after skipped bootstrap waits for a later scheduled run; the existing missing-advisory gate still blocks entry.
+
+Author verification for this change: 118 Node tests, 3 Python tests, Ruby YAML parse and `git diff --check` pass. No global suppression based on stale wallet.blocked or worker.healthy flags was added. Independent review and live workflow observations are recorded in the task delivery report.

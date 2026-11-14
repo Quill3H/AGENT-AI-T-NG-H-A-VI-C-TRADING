@@ -6,6 +6,10 @@ import {promisify} from 'node:util';
 import {sign,verify,validateState} from './cloud-transport.mjs';
 import {FRAMES} from '../paper-bot-studio/engine.mjs';
 const ENDPOINT='https://paper-studio-connectivity.onrender.com';
+export function dueKronosFrames(state,now=Date.now()){
+ validateState(state);
+ return Object.entries(FRAMES).filter(([frame,ms])=>{const w=state.wallets.find(w=>w.frame===frame),cycleAt=Math.floor(now/ms)*ms;return w.enabled&&!w.blocked&&w.balance>0&&now-cycleAt<=600000&&!w.decisions.some(d=>d.cycleAt>=cycleAt);}).map(([frame])=>frame);
+}
 export async function fetchKronosInputs({key,frames,endpoint=ENDPOINT,fetcher=fetch}={}){
  if(endpoint!==ENDPOINT)throw Error('Unapproved forecast endpoint');
  const body=JSON.stringify({task:'KRONOS_INPUT_V1',frames}),time=Date.now();
@@ -18,8 +22,8 @@ export async function fetchKronosInputs({key,frames,endpoint=ENDPOINT,fetcher=fe
 export async function prepareKronos({directory=path.resolve(process.env.PAPER_DATA_DIR??'paper-state'),output=path.resolve(process.env.KRONOS_FORECAST_PATH??'.kronos/forecast.json'),key=process.env.GEMINI_API_KEY,python=process.env.KRONOS_PYTHON??'python',source=path.resolve('.kronos/source'),models=path.resolve('.kronos/models')}={}){
  await fs.mkdir(path.dirname(output),{recursive:true});
  await fs.writeFile(output,JSON.stringify({version:1,frames:[],errors:{setup:'Inference not completed'}}));
- const state=validateState(JSON.parse(await fs.readFile(path.join(directory,'state.json'),'utf8'))),now=Date.now();
- const frames=Object.entries(FRAMES).filter(([frame,ms])=>{const w=state.wallets.find(w=>w.frame===frame),cycleAt=Math.floor(now/ms)*ms;return w.enabled&&!w.blocked&&w.balance>0&&now-cycleAt<=600000&&!w.decisions.some(d=>d.cycleAt>=cycleAt);}).map(([frame])=>frame);
+ const state=JSON.parse(await fs.readFile(path.join(directory,'state.json'),'utf8'));
+ const frames=dueKronosFrames(state);
  if(!frames.length){await fs.writeFile(output,JSON.stringify({version:1,frames:[],errors:{}}));return;}
  try{
   const input=await fetchKronosInputs({key,frames}),inputPath=path.join(path.dirname(output),'input.json');
